@@ -1,0 +1,254 @@
+import 'dart:math';
+import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:hydrify/constants/app_colors.dart';
+import 'package:hydrify/constants/app_dimensions.dart';
+
+class CustomCircularWaterProgressIndicator extends StatelessWidget {
+  const CustomCircularWaterProgressIndicator({
+    super.key,
+    required this.height,
+    required this.width,
+    required this.backgroundColor,
+    required this.progressBackgroundColor,
+    required this.percentageValue,
+    this.progressColor,
+    this.center,
+    this.boxShadow,
+  });
+
+  final double width;
+  final double height;
+  final Color backgroundColor;
+  final Color? progressColor;
+  final Color progressBackgroundColor;
+  final double percentageValue;
+  final Widget? center;
+  final List<BoxShadow>? boxShadow;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: width,
+      height: height,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        // 🔥 FULL BACKGROUND COLOR BEHIND THE INDICATOR (YOUR REQUIREMENT)
+        color: progressBackgroundColor,
+        boxShadow: boxShadow,
+      ),
+      padding: EdgeInsets.all(AppDimensions.dim2.w),
+      alignment: Alignment.center,
+      child: Container(
+        // Background inner circle (optional if you want dual-layer effect)
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: backgroundColor,
+        ),
+        child: CustomPaint(
+          size: Size(width, height),
+          painter: _WaterArcPainter(
+            percentage: percentageValue,
+            baseArcColor: Colors.white,
+            progressBackgroundColor: AppColors.white.withOpacity(0.40),
+            progressColor: progressColor ?? Color(0XFF1C8DBB),
+            strokeWidth: AppDimensions.dim8.w,
+          ),
+          child: Center(child: center),
+        ),
+      ),
+    );
+  }
+}
+
+class _WaterArcPainter extends CustomPainter {
+  final double percentage;
+  final double strokeWidth;
+  final Color baseArcColor;
+  final Color progressBackgroundColor;
+  final Color progressColor;
+
+  _WaterArcPainter({
+    required this.percentage,
+    required this.strokeWidth,
+    required this.baseArcColor,
+    required this.progressBackgroundColor,
+    required this.progressColor,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final rect = Offset.zero & size;
+
+    final startAngle = -pi * 0.68;
+    final sweepAngle = -pi * 1.65;
+
+    final deflatedRect = rect.deflate(strokeWidth / 1.5);
+
+    // --- FULL ELLIPSE BACKGROUND ---
+    final ellipseBgPaint = Paint()
+      ..color = progressBackgroundColor
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = strokeWidth
+      ..strokeCap = StrokeCap.round;
+
+    canvas.drawArc(
+      deflatedRect,
+      0,
+      2 * pi,
+      false,
+      ellipseBgPaint,
+    );
+
+    // --- WHITE BASE ARC ---
+    final baseArc = Paint()
+      ..color = baseArcColor
+      ..strokeWidth = strokeWidth
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round;
+
+    canvas.drawArc(
+      deflatedRect,
+      startAngle,
+      sweepAngle,
+      false,
+      baseArc,
+    );
+
+    // --- PROGRESS ARC ---
+    final progressArc = Paint()
+      ..color = progressColor
+      ..strokeWidth = strokeWidth
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round;
+
+    final progressSweep = sweepAngle * (percentage / 100);
+
+    canvas.drawArc(
+      deflatedRect,
+      startAngle,
+      progressSweep,
+      false,
+      progressArc,
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => true;
+}
+
+// --------------------------------- IGNORE BELOW THIS LINE --------------------------------- ///
+
+// import 'dart:math';
+// import 'package:flutter/material.dart';
+// import 'package:flutter_screenutil/flutter_screenutil.dart';
+// import 'package:hydrify/constants/app_colors.dart';
+// import 'package:hydrify/constants/app_dimensions.dart';
+
+// class CustomCircularWaterProgressIndicator extends StatelessWidget {
+//   const CustomCircularWaterProgressIndicator({
+//     super.key,
+//     required this.height,
+//     required this.width,
+//     required this.backgroundColor,
+//     required this.progressBackgroundColor,
+//     required this.percentageValue,
+//     this.progressColor,
+//     this.center,
+//     this.boxShadow,
+//   });
+
+//   final double width;
+//   final double height;
+//   final Color backgroundColor;
+//   final Color? progressColor;
+//   final Color progressBackgroundColor;
+//   final double percentageValue;
+//   final Widget? center;
+//   final List<BoxShadow>? boxShadow;
+
+//   @override
+//   Widget build(BuildContext context) {
+//     return Container(
+//       width: width,
+//       height: height,
+//       decoration: BoxDecoration(
+//         color: backgroundColor,
+//         shape: BoxShape.circle,
+//         boxShadow: boxShadow,
+//       ),
+//       padding: EdgeInsets.all(AppDimensions.dim2.w),
+//       alignment: Alignment.center,
+//       child: CustomPaint(
+//         size: Size(width, height),
+//         painter: _WaterArcPainter(
+//           percentage: percentageValue,
+//           baseArcColor: Colors.white, // white ellipse
+//           progressBackgroundColor: AppColors.white.withOpacity(0.50),
+//           progressColor: progressColor ?? Colors.blue,
+//           strokeWidth: AppDimensions.dim8.w, // same as shown in image
+//         ),
+//         child: Center(child: center),
+//       ),
+//     );
+//   }
+// }
+
+// class _WaterArcPainter extends CustomPainter {
+//   final double percentage;
+//   final double strokeWidth;
+//   final Color baseArcColor;
+//   final Color progressBackgroundColor;
+//   final Color progressColor;
+
+//   _WaterArcPainter({
+//     required this.percentage,
+//     required this.strokeWidth,
+//     required this.baseArcColor,
+//     required this.progressBackgroundColor,
+//     required this.progressColor,
+//   });
+
+//   @override
+//   void paint(Canvas canvas, Size size) {
+//     final rect = Offset.zero & size;
+
+//     final startAngle = -pi * 0.68; // starts on upper-left (same as your image)
+//     final sweepAngle = -pi * 1.65; // an ellipse-like arc with gap
+
+//     // --- WHITE BASE ARC ---
+//     final baseArc = Paint()
+//       ..color = baseArcColor
+//       ..strokeWidth = strokeWidth
+//       ..style = PaintingStyle.stroke
+//       ..strokeCap = StrokeCap.round;
+
+//     canvas.drawArc(
+//       rect.deflate(strokeWidth / 1.5),
+//       startAngle,
+//       sweepAngle,
+//       false,
+//       baseArc,
+//     );
+
+//     // ---- PROGRESS ARC (colored) ----
+//     final progressArc = Paint()
+//       ..color = progressColor
+//       ..strokeWidth = strokeWidth
+//       ..style = PaintingStyle.stroke
+//       ..strokeCap = StrokeCap.round;
+
+//     final progressSweep = sweepAngle * (percentage / 100);
+
+//     canvas.drawArc(
+//       rect.deflate(strokeWidth / 1.5),
+//       startAngle,
+//       progressSweep,
+//       false,
+//       progressArc,
+//     );
+//   }
+
+//   @override
+//   bool shouldRepaint(covariant CustomPainter oldDelegate) => true;
+// }

@@ -1,0 +1,32 @@
+<svg width="96" height="96" viewBox="0 0 96 96" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g clip-path="url(#clip0_3774_11981)">
+<g filter="url(#filter0_ii_3774_11981)">
+<path fill-rule="evenodd" clip-rule="evenodd" d="M81.6004 48C81.6004 71.1958 62.7962 90 39.6004 90C29.5369 90 20.2837 86.4531 13.0483 80.5437L8.91024 77.164C7.00054 75.6041 8.23602 72.5129 10.6947 72.6994L16.0224 73.103C19.0476 73.3319 22.1704 73.1454 25.0876 72.575C18.5155 66.4447 14.4003 57.7049 14.4003 48C14.4003 24.8037 33.2073 6 56.4029 6C66.4666 6 75.7196 9.54677 82.9549 15.4563L87.0932 18.8362C89.0025 20.396 87.7673 23.487 85.3086 23.3007L79.9809 22.8972C76.9556 22.6681 73.8325 22.8548 70.9152 23.425C77.4869 29.5556 81.6004 38.2956 81.6004 48ZM47.9996 60.6C54.9585 60.6 60.5996 54.959 60.5996 48C60.5996 41.041 54.9585 35.4 47.9996 35.4C41.0406 35.4 35.3996 41.041 35.3996 48C35.3996 54.959 41.0406 60.6 47.9996 60.6Z" fill="url(#paint0_linear_3774_11981)"/>
+</g>
+</g>
+<defs>
+<filter id="filter0_ii_3774_11981" x="7.97754" y="4.6" width="80.0482" height="86.8" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+<feFlood flood-opacity="0" result="BackgroundImageFix"/>
+<feBlend mode="normal" in="SourceGraphic" in2="BackgroundImageFix" result="shape"/>
+<feColorMatrix in="SourceAlpha" type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0" result="hardAlpha"/>
+<feOffset dy="1.4"/>
+<feGaussianBlur stdDeviation="2.8"/>
+<feComposite in2="hardAlpha" operator="arithmetic" k2="-1" k3="1"/>
+<feColorMatrix type="matrix" values="0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 1 0"/>
+<feBlend mode="normal" in2="shape" result="effect1_innerShadow_3774_11981"/>
+<feColorMatrix in="SourceAlpha" type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0" result="hardAlpha"/>
+<feOffset dy="-1.4"/>
+<feGaussianBlur stdDeviation="2.8"/>
+<feComposite in2="hardAlpha" operator="arithmetic" k2="-1" k3="1"/>
+<feColorMatrix type="matrix" values="0 0 0 0 0.650972 0 0 0 0 0.675608 0 0 0 0 0.716667 0 0 0 0.5 0"/>
+<feBlend mode="normal" in2="effect1_innerShadow_3774_11981" result="effect2_innerShadow_3774_11981"/>
+</filter>
+<linearGradient id="paint0_linear_3774_11981" x1="76.4994" y1="15" x2="39.2817" y2="98.7845" gradientUnits="userSpaceOnUse">
+<stop stop-color="#F2F6FA"/>
+<stop offset="1" stop-color="#8C99AE"/>
+</linearGradient>
+<clipPath id="clip0_3774_11981">
+<rect width="96" height="96" fill="white"/>
+</clipPath>
+</defs>
+</svg>

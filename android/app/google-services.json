@@ -1,0 +1,54 @@
+{
+  "project_info": {
+    "project_number": "312198031425",
+    "project_id": "sipnudge-7c920",
+    "storage_bucket": "sipnudge-7c920.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:312198031425:android:5299e677b7d8d48abb3ec0",
+        "android_client_info": {
+          "package_name": "com.sipnudge.sipnudge"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "312198031425-7481cc9cgvr5p6lp96he6v8qh7ofshq4.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.sipnudge.sipnudge",
+            "certificate_hash": "40a4a10c8e3a3372ccda8ae9f4c2c8d00741750a"
+          }
+        },
+        {
+          "client_id": "312198031425-1anbbbolrdq9vl9opho7dunv3nr36j96.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCkZlnCtae11E6Ypej-aHyoaL-RhKfVWKQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "312198031425-1anbbbolrdq9vl9opho7dunv3nr36j96.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "312198031425-k6b4j9vp20abqtitijct96b148vgt2tl.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.sipnudge.sipnudge"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

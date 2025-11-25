@@ -1,0 +1,2 @@
+D:/Flutter-Projects/sipnudge_flutter_frontend/android/app/.cxx/RelWithDebInfo/125r1u66/arm64-v8a/CMakeFiles/edit_cache.dir
+D:/Flutter-Projects/sipnudge_flutter_frontend/android/app/.cxx/RelWithDebInfo/125r1u66/arm64-v8a/CMakeFiles/rebuild_cache.dir
