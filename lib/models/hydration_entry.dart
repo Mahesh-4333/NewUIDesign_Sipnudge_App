@@ -49,7 +49,7 @@ extension HydrationSlotX on HydrationSlot {
 }
 
 /// Represents a single hydration entry for a time slot.
-class HydrationEntry extends Equatable {
+class HydrationEntry {
   final HydrationSlot slot;
   final TimeOfDay startTime;
   final TimeOfDay endTime;
@@ -95,8 +95,20 @@ class HydrationEntry extends Equatable {
   }
 
   @override
-  List<Object> get props =>
-      [slot, startTime, endTime, amount, waterDrank, status];
+  List<Object?> get props => [
+        slot,
+        startTime.hour,
+        startTime.minute,
+        endTime.hour,
+        endTime.minute,
+        amount,
+        waterDrank,
+        status,
+      ];
+
+  // @override
+  // List<Object> get props =>
+  //     [slot, startTime, endTime, amount, waterDrank, status];
 }
 
 /// Represents a time range in the day.

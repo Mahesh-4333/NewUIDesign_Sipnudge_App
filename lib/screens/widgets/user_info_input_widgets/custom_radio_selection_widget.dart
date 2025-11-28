@@ -230,7 +230,7 @@ class CustomRadioSelectionWidget extends StatelessWidget {
           width: tileWidth,
         ),
         buildTile(
-          name: AppStrings.veg,
+          name: AppStrings.vegan,
           icon: "assets/images/vegdieticon_selected.svg",
           isSelected: state.dietType == DietType.vegetarian,
           onTap: () {

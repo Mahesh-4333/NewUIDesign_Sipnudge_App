@@ -59,10 +59,18 @@
 	<string>This allows us to access photos for sharing.</string>
 	<key>NSUserNotificationUsageDescription</key>
 	<string>This app uses notifications to remind you to stay hydrated.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Required for audio playback.</string>
+	<key>NSCalendarsUsageDescription</key>
+	<string>Calendar access is required to schedule hydration reminders.</string>
+
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>Speech recognition access is required for audio routing purposes.</string>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
 	<key>UIBackgroundModes</key>
 	<array>
+		<string>audio</string> <!-- REQUIRED for ringtone / alarms -->
 		<string>bluetooth-central</string>
 		<string>fetch</string>
 		<string>remote-notification</string>

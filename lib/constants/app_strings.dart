@@ -100,7 +100,7 @@ class AppStrings {
   static const balanced = "Standard Balanced Diet";
   static const standardBalancedDiet = "Standard\nBalanced Diet";
   static const veg = "Vegetarian";
-  static const vegan = "Vegan";
+  static const vegan = "Vegan Diet";
   static const highProtein = "High Protein Diet";
   static const processedDiet = "High Sodium Processed Diet";
   static const highSodiumDiet = "High Sodium\nProcessed Diet";

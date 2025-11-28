@@ -18,6 +18,7 @@ import 'package:hydrify/helpers/shared_pref_helper.dart';
 import 'package:hydrify/helpers/water_consumption_data_helper.dart';
 import 'package:hydrify/models/hydration_entry.dart';
 import 'package:hydrify/providers/weather_provider.dart';
+import 'package:hydrify/screens/notification.dart';
 
 import 'package:hydrify/screens/widgets/ble_device_selection_sheet.dart';
 import 'package:hydrify/screens/widgets/custom_circular_loader/custom_circular_progress_indicator.dart';
@@ -25,6 +26,7 @@ import 'package:hydrify/screens/widgets/custom_circular_loader/custom_circular_w
 import 'package:hydrify/screens/widgets/greeting_widget.dart';
 import 'package:hydrify/screens/widgets/user_info_input_widgets/custom_beating_ble_status_indicator.dart';
 import 'package:hydrify/screens/widgets/water_wave_widget.dart';
+import 'package:hydrify/services/notification_service.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -58,6 +60,24 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
+
+    // New Code to initialize NotificationService
+    NotificationService().init(
+      onTap: (slot) {
+        final entries = context.read<HydrationCubit>().state.entries;
+
+        final entry = entries.firstWhere((e) => e.slot == slot,
+            orElse: () => HydrationEntry(
+                  slot: slot,
+                  amount: 0,
+                  startTime: TimeOfDay.now(),
+                  endTime: TimeOfDay.now(),
+                ));
+
+        showHydrationPopup(context, slot, entry.amount as int);
+      },
+    );
+    //==================================================================
 
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       final prefs = await SharedPreferences.getInstance();

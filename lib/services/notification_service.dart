@@ -1,9 +1,11 @@
 import 'dart:developer';
 
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:hydrify/helpers/shared_pref_helper.dart';
 import 'package:timezone/data/latest.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
 import '../models/hydration_entry.dart';
+import 'package:audioplayers/audioplayers.dart';
 
 typedef NotificationTapCallback = void Function(HydrationSlot slot);
 
@@ -15,32 +17,120 @@ class NotificationService {
   final FlutterLocalNotificationsPlugin _plugin =
       FlutterLocalNotificationsPlugin();
 
+  final AudioPlayer _alarmPlayer = AudioPlayer();
+
   NotificationTapCallback? onNotificationTap;
+
+  Future<void> _startRingtoneLoop(String soundFile) async {
+    await _alarmPlayer.setReleaseMode(ReleaseMode.loop);
+    await _alarmPlayer.play(
+      AssetSource("assets/ringtones/$soundFile.mp3"), // adjust your folder
+    );
+  }
+
+  Future<void> _stopRingtone() async {
+    await _alarmPlayer.stop();
+  }
+
+  Future<String> _getSelectedRingtoneFile() async {
+    final selected = await SharedPrefsHelper.getSelectedRingtone() ?? 0;
+    return "ringtone${selected + 1}"; // ringtone1, ringtone2...
+  }
+
+  // Future<String> _getSelectedRingtoneFile() async {
+  //   final selectedSoundIndex =
+  //       await SharedPrefsHelper.getSelectedRingtone() ?? 0;
+  //   return "ringtone${selectedSoundIndex + 1}";
+
+  //   // switch (selectedSoundIndex) {
+  //   //   case 1:
+  //   //     return "ringtone2";
+  //   //   case 2:
+  //   //     return "ringtone3";
+  //   //   case 3:
+  //   //     return "ringtone4";
+  //   //   case 4:
+  //   //     return "ringtone5";
+  //   //   case 5:
+  //   //     return "ringtone6";
+  //   //   case 6:
+  //   //     return "ringtone7";
+  //   //   case 7:
+  //   //     return "ringtone8";
+  //   //   case 8:
+  //   //     return "ringtone9";
+  //   //   case 9:
+  //   //     return "ringtone10";
+  //   //   default:
+  //   //     return "ringtone1";
+  //   // }
+  // }
+
   Future<void> init({NotificationTapCallback? onTap}) async {
     tz.initializeTimeZones();
 
     const androidSettings =
         AndroidInitializationSettings('@mipmap/ic_launcher');
 
-    const iosSettings = DarwinInitializationSettings();
+    final iosSettings = DarwinInitializationSettings(
+      notificationCategories: <DarwinNotificationCategory>[
+        DarwinNotificationCategory(
+          'hydration_category', // Identifier
+          actions: <DarwinNotificationAction>[
+            DarwinNotificationAction.plain(
+              'STOP_ACTION', // iOS action ID
+              'Stop', // Button title
+              options: {DarwinNotificationActionOption.foreground},
+            ),
+          ],
+        ),
+      ],
+    );
 
-    const initSettings = InitializationSettings(
+    final initSettings = InitializationSettings(
       android: androidSettings,
       iOS: iosSettings,
     );
 
     onNotificationTap = onTap;
 
-    await _plugin.initialize(
-      initSettings,
-      onDidReceiveNotificationResponse: (details) {
-        final payload = details.payload;
-        if (payload != null) {
-          final slot = HydrationSlot.values[int.parse(payload)];
-          onNotificationTap?.call(slot);
-        }
-      },
-    );
+    await _plugin.initialize(initSettings,
+        // onDidReceiveNotificationResponse: (details) {
+        //   final payload = details.payload;
+        //   if (payload != null) {
+        //     final slot = HydrationSlot.values[int.parse(payload)];
+        //     onNotificationTap?.call(slot);
+        //   }
+        // },
+
+        // onDidReceiveNotificationResponse: (details) {
+        //   final payload = details.payload;
+        //   if (payload != null) {
+        //     final slotIndex = int.parse(payload);
+        //     onNotificationTap?.call(HydrationSlot.values[slotIndex]);
+        //   }
+        // },
+
+        onDidReceiveNotificationResponse: (details) async {
+      final payload = details.payload;
+      final actionId = details.actionId;
+
+      // STOP BUTTON PRESSED
+      if (actionId != null && actionId.startsWith("STOP_")) {
+        final slotIndex = int.parse(actionId.replaceFirst("STOP_", ""));
+        await _stopRingtone();
+        cancelReminder(HydrationSlot.values[slotIndex]);
+        return;
+      }
+
+      // 🔥 Normal tap = start ringtone
+      if (payload != null) {
+        final slotIndex = int.parse(payload);
+        final soundFile = await _getSelectedRingtoneFile();
+        _startRingtoneLoop(soundFile); // 🔥 start ringtone HERE
+        onNotificationTap?.call(HydrationSlot.values[slotIndex]);
+      }
+    });
 
     // 🔹 iOS permissions
     await _plugin
@@ -132,25 +222,83 @@ class NotificationService {
         "(${entry.amount}ml) at $notifyAt (current time: $now)",
       );
 
+      // await _plugin.zonedSchedule(
+      //   entry.slot.index, // unique ID per slot
+      //   "Hydration Reminder",
+      //   "Only 10 minutes left for ${entry.slot.label} – Drink ${entry.amount} ml",
+      //   tz.TZDateTime.from(notifyAt, tz.local),
+      //   NotificationDetails(
+      //     android: AndroidNotificationDetails(
+      //       //'hydration_channel',
+      //       'hydration_unique_channel_${entry.slot.index}', // UNIQUE channel
+      //       // 'Hydration Reminders',
+      //       // channelDescription: 'Reminds you to drink water on time',
+      //       'Hydration Popup',
+      //       channelDescription: 'Shows popup hydration reminders',
+      //       importance: Importance.max,
+      //       priority: Priority.high,
+      //       fullScreenIntent:
+      //           false, // set true only if you want fullscreen dialog
+      //       playSound: true,
+      //       groupKey: null, // 🔥 Prevent grouping
+      //       setAsGroupSummary: false, // 🔥 Prevent merging
+      //       actions: [
+      //         AndroidNotificationAction(
+      //           'STOP_${entry.slot.index}',
+      //           'Stop',
+      //           showsUserInterface: false,
+      //           cancelNotification: true,
+      //         ),
+      //       ],
+      //     ),
+      //     iOS: const DarwinNotificationDetails(),
+      //   ),
+      //   androidScheduleMode: AndroidScheduleMode.exact,
+      //   payload: entry.slot.index.toString(),
+      //   matchDateTimeComponents: null,
+      // );
+
+      final soundFile = await _getSelectedRingtoneFile();
+      // Start looping ringtone
+      _startRingtoneLoop(soundFile);
       await _plugin.zonedSchedule(
-        entry.slot.index, // unique ID per slot
+        entry.slot.index,
         "Hydration Reminder",
         "Only 10 minutes left for ${entry.slot.label} – Drink ${entry.amount} ml",
         tz.TZDateTime.from(notifyAt, tz.local),
         NotificationDetails(
           android: AndroidNotificationDetails(
-            'hydration_channel',
-            'Hydration Reminders',
-            channelDescription: 'Reminds you to drink water on time',
+            'hydration_channel_${entry.slot.index}_$soundFile', // unique per slot
+            'Hydration Popup',
+            channelDescription: 'Popup hydration reminders',
             importance: Importance.max,
-            priority: Priority.high,
+            priority: Priority.max,
             playSound: true,
+            sound: RawResourceAndroidNotificationSound(soundFile),
+            groupKey: null, // 🚫 no grouping
+            setAsGroupSummary: false, // 🚫 no merging
+            category: AndroidNotificationCategory.alarm,
+            fullScreenIntent: true,
+            visibility: NotificationVisibility.public,
+            ongoing: true, // Notification stays until STOP
+            autoCancel: false, // (true only if you want fullscreen popup)
+
+            actions: <AndroidNotificationAction>[
+              AndroidNotificationAction(
+                'STOP_${entry.slot.index}',
+                'STOP',
+                icon: DrawableResourceAndroidBitmap('stop_ic'),
+                showsUserInterface: true,
+                cancelNotification: true,
+              ),
+            ],
           ),
-          iOS: const DarwinNotificationDetails(),
+          iOS: const DarwinNotificationDetails(
+            categoryIdentifier: 'hydration_category',
+          ),
         ),
-        androidScheduleMode: AndroidScheduleMode.exact,
+        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
         payload: entry.slot.index.toString(),
-        matchDateTimeComponents: null,
       );
 
       log(
