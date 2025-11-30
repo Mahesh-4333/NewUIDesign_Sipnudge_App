@@ -1,4 +1,5 @@
 import 'dart:developer';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:hydrify/cubit/ble/ble_cubit.dart';
@@ -8,7 +9,6 @@ import 'package:hydrify/helpers/database_helper.dart';
 import 'package:hydrify/helpers/shared_pref_helper.dart';
 import 'package:hydrify/models/hydration_entry.dart';
 import 'package:hydrify/services/notification_service.dart';
-import 'package:intl/intl.dart';
 
 class HydrationCubit extends Cubit<HydrationState> {
   final HydrationSync ble;
@@ -219,7 +219,7 @@ class HydrationCubit extends Cubit<HydrationState> {
     final updatedEntry = updated.firstWhere((e) => e.slot == slot);
     final notificationService = NotificationService();
     await notificationService.cancelReminder(slot);
-    await notificationService.scheduleHydrationReminders([updatedEntry]);
+    // await notificationService.scheduleHydrationReminders([updatedEntry]);
     await notificationService.testNotification();
     await _dbHelper.insertOrUpdateSlot(updatedEntry);
     ble.queueHydrationSlots(updated);

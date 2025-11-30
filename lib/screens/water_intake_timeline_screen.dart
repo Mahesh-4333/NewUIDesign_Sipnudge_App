@@ -1,5 +1,6 @@
 import 'dart:math';
 import 'dart:ui' as ui;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -8,7 +9,6 @@ import 'package:hydrify/constants/app_colors.dart';
 import 'package:hydrify/constants/app_dimensions.dart';
 import 'package:hydrify/constants/app_font_styles.dart';
 import 'package:hydrify/constants/app_strings.dart';
-import 'package:hydrify/cubit/ble/ble_cubit.dart';
 import 'package:hydrify/cubit/bottle/bottle_data_cubit.dart';
 import 'package:hydrify/cubit/hydration/hydration_cubit.dart';
 import 'package:hydrify/cubit/hydration/hydration_state.dart';
@@ -16,7 +16,6 @@ import 'package:hydrify/helpers/shared_pref_helper.dart';
 import 'package:hydrify/helpers/water_consumption_data_helper.dart';
 import 'package:hydrify/models/bottle_data.dart';
 import 'package:hydrify/models/hydration_entry.dart';
-import 'package:hydrify/screens/widgets/animated_bottom_navbar_widget.dart';
 import 'package:hydrify/services/ui_utils_service.dart';
 import 'package:intl/intl.dart';
 
@@ -98,7 +97,7 @@ class _WaterIntakeTimelineState extends State<WaterIntakeTimelineScreen> {
                 SizedBox(height: AppDimensions.dim20.h),
                 buildHydrationTable(context, state),
                 SizedBox(height: AppDimensions.dim20.h),
-                const AnimatedBottomNavBar(),
+                // const AnimatedBottomNavBar(),
               ],
             ),
           ),
@@ -780,7 +779,8 @@ class _WaterIntakeTimelineState extends State<WaterIntakeTimelineScreen> {
                           ),
                         )
                       ],
-                    )
+                    ),
+                    SizedBox(height: 100.h),
                   ],
                 ),
               ),

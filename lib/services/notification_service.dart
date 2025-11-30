@@ -1,11 +1,13 @@
 import 'dart:developer';
+import 'dart:io';
 
+import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:hydrify/helpers/shared_pref_helper.dart';
 import 'package:timezone/data/latest.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
+
 import '../models/hydration_entry.dart';
-import 'package:audioplayers/audioplayers.dart';
 
 typedef NotificationTapCallback = void Function(HydrationSlot slot);
 
@@ -24,7 +26,7 @@ class NotificationService {
   Future<void> _startRingtoneLoop(String soundFile) async {
     await _alarmPlayer.setReleaseMode(ReleaseMode.loop);
     await _alarmPlayer.play(
-      AssetSource("assets/ringtones/$soundFile.mp3"), // adjust your folder
+      AssetSource("ringtones/$soundFile.mp3"), // adjust your folder
     );
   }
 
@@ -94,6 +96,163 @@ class NotificationService {
 
     onNotificationTap = onTap;
 
+    if (Platform.isAndroid) {
+      const AndroidNotificationChannel channelRingtone1 =
+          AndroidNotificationChannel(
+        'channel_ringtone1',
+        'Channel Ringtone1',
+        description: 'Notification for stackfood orders',
+        importance: Importance.high,
+        playSound: true,
+        sound: RawResourceAndroidNotificationSound('ringtone1'),
+      );
+
+      const AndroidNotificationChannel channelRingtone2 =
+          AndroidNotificationChannel(
+        'channel_ringtone2',
+        'Channel Ringtone2',
+        description: 'General notifications',
+        importance: Importance.high,
+        playSound: true,
+        sound: RawResourceAndroidNotificationSound('ringtone2'),
+      );
+
+      const AndroidNotificationChannel channelRingtone3 =
+          AndroidNotificationChannel(
+        'channel_ringtone3',
+        'Channel Ringtone3',
+        description: 'General notifications',
+        importance: Importance.high,
+        playSound: true,
+        sound: RawResourceAndroidNotificationSound('ringtone3'),
+      );
+
+      const AndroidNotificationChannel channelRingtone4 =
+          AndroidNotificationChannel(
+        'channel_ringtone4',
+        'Channel Ringtone4',
+        description: 'General notifications',
+        importance: Importance.high,
+        playSound: true,
+        sound: RawResourceAndroidNotificationSound('ringtone4'),
+      );
+
+      const AndroidNotificationChannel channelRingtone5 =
+          AndroidNotificationChannel(
+        'channel_ringtone5',
+        'Channel Ringtone5',
+        description: 'General notifications',
+        importance: Importance.high,
+        playSound: true,
+        sound: RawResourceAndroidNotificationSound('ringtone5'),
+      );
+
+      const AndroidNotificationChannel channelRingtone6 =
+          AndroidNotificationChannel(
+        'channel_ringtone6',
+        'Channel Ringtone6',
+        description: 'General notifications',
+        importance: Importance.high,
+        playSound: true,
+        sound: RawResourceAndroidNotificationSound('ringtone6'),
+      );
+
+      const AndroidNotificationChannel channelRingtone7 =
+          AndroidNotificationChannel(
+        'channel_ringtone7',
+        'Channel Ringtone7',
+        description: 'General notifications',
+        importance: Importance.high,
+        playSound: true,
+        sound: RawResourceAndroidNotificationSound('ringtone7'),
+      );
+
+      const AndroidNotificationChannel channelRingtone8 =
+          AndroidNotificationChannel(
+        'channel_ringtone8',
+        'Channel Ringtone8',
+        description: 'General notifications',
+        importance: Importance.high,
+        playSound: true,
+        sound: RawResourceAndroidNotificationSound('ringtone8'),
+      );
+
+      const AndroidNotificationChannel channelRingtone9 =
+          AndroidNotificationChannel(
+        'channel_ringtone9',
+        'Channel Ringtone9',
+        description: 'General notifications',
+        importance: Importance.high,
+        playSound: true,
+        sound: RawResourceAndroidNotificationSound('ringtone9'),
+      );
+
+      const AndroidNotificationChannel channelRingtone10 =
+          AndroidNotificationChannel(
+        'channel_ringtone10',
+        'Channel Ringtone10',
+        description: 'General notifications',
+        importance: Importance.high,
+        playSound: true,
+        sound: RawResourceAndroidNotificationSound('ringtone10'),
+      );
+
+      const AndroidNotificationChannel channelRingtone11 =
+          AndroidNotificationChannel(
+        'channel_ringtone11',
+        'Channel Ringtone11',
+        description: 'General notifications',
+        importance: Importance.high,
+        playSound: true,
+        sound: RawResourceAndroidNotificationSound('ringtone11'),
+      );
+
+      const AndroidNotificationChannel channelRingtone12 =
+          AndroidNotificationChannel(
+        'channel_ringtone12',
+        'Channel Ringtone12',
+        description: 'General notifications',
+        importance: Importance.high,
+        playSound: true,
+        sound: RawResourceAndroidNotificationSound('ringtone12'),
+      );
+
+      const AndroidNotificationChannel channelRingtone13 =
+          AndroidNotificationChannel(
+        'channel_ringtone13',
+        'Channel Ringtone13',
+        description: 'General notifications',
+        importance: Importance.high,
+        playSound: true,
+        sound: RawResourceAndroidNotificationSound('ringtone13'),
+      );
+
+      // 🔹 Android 13+ runtime notification permission
+      final androidImplementation =
+          _plugin.resolvePlatformSpecificImplementation<
+              AndroidFlutterLocalNotificationsPlugin>();
+      await androidImplementation?.requestNotificationsPermission();
+      await androidImplementation?.requestExactAlarmsPermission();
+      if (androidImplementation != null) {
+        await androidImplementation.createNotificationChannel(channelRingtone1);
+        await androidImplementation.createNotificationChannel(channelRingtone2);
+        await androidImplementation.createNotificationChannel(channelRingtone3);
+        await androidImplementation.createNotificationChannel(channelRingtone4);
+        await androidImplementation.createNotificationChannel(channelRingtone5);
+        await androidImplementation.createNotificationChannel(channelRingtone6);
+        await androidImplementation.createNotificationChannel(channelRingtone7);
+        await androidImplementation.createNotificationChannel(channelRingtone8);
+        await androidImplementation.createNotificationChannel(channelRingtone9);
+        await androidImplementation
+            .createNotificationChannel(channelRingtone10);
+        await androidImplementation
+            .createNotificationChannel(channelRingtone11);
+        await androidImplementation
+            .createNotificationChannel(channelRingtone12);
+        await androidImplementation
+            .createNotificationChannel(channelRingtone13);
+      }
+    }
     await _plugin.initialize(initSettings,
         // onDidReceiveNotificationResponse: (details) {
         //   final payload = details.payload;
@@ -143,45 +302,7 @@ class NotificationService {
         .resolvePlatformSpecificImplementation<
             MacOSFlutterLocalNotificationsPlugin>()
         ?.requestPermissions(alert: true, badge: true, sound: true);
-
-    // 🔹 Android 13+ runtime notification permission
-    final androidImplementation = _plugin.resolvePlatformSpecificImplementation<
-        AndroidFlutterLocalNotificationsPlugin>();
-    await androidImplementation?.requestNotificationsPermission();
-    await androidImplementation?.requestExactAlarmsPermission();
   }
-
-  // Future<void> init({NotificationTapCallback? onTap}) async {
-  //   tz.initializeTimeZones();
-
-  //   const androidSettings =
-  //       AndroidInitializationSettings('@mipmap/ic_launcher');
-  //   const iosSettings = DarwinInitializationSettings();
-
-  //   const initSettings = InitializationSettings(
-  //     android: androidSettings,
-  //     iOS: iosSettings,
-  //   );
-
-  //   onNotificationTap = onTap;
-
-  //   await _plugin.initialize(
-  //     initSettings,
-  //     onDidReceiveNotificationResponse: (details) {
-  //       final payload = details.payload;
-  //       if (payload != null) {
-  //         final slot = HydrationSlot.values[int.parse(payload)];
-  //         onNotificationTap?.call(slot);
-  //       }
-  //     },
-  //   );
-
-  //   // iOS only
-  //   await _plugin
-  //       .resolvePlatformSpecificImplementation<
-  //           IOSFlutterLocalNotificationsPlugin>()
-  //       ?.requestPermissions(alert: true, badge: true, sound: true);
-  // }
 
   /// Schedule a reminder with slot & goal info
   Future<void> scheduleHydrationReminders(List<HydrationEntry> entries) async {
@@ -259,60 +380,74 @@ class NotificationService {
       // );
 
       final soundFile = await _getSelectedRingtoneFile();
+      print(soundFile);
+      print(entry.slot.index);
       // Start looping ringtone
-      _startRingtoneLoop(soundFile);
-      await _plugin.zonedSchedule(
-        entry.slot.index,
-        "Hydration Reminder",
-        "Only 10 minutes left for ${entry.slot.label} – Drink ${entry.amount} ml",
-        tz.TZDateTime.from(notifyAt, tz.local),
-        NotificationDetails(
-          android: AndroidNotificationDetails(
-            'hydration_channel_${entry.slot.index}_$soundFile', // unique per slot
-            'Hydration Popup',
-            channelDescription: 'Popup hydration reminders',
-            importance: Importance.max,
-            priority: Priority.max,
-            playSound: true,
-            sound: RawResourceAndroidNotificationSound(soundFile),
-            groupKey: null, // 🚫 no grouping
-            setAsGroupSummary: false, // 🚫 no merging
-            category: AndroidNotificationCategory.alarm,
-            fullScreenIntent: true,
-            visibility: NotificationVisibility.public,
-            ongoing: true, // Notification stays until STOP
-            autoCancel: false, // (true only if you want fullscreen popup)
+      // _startRingtoneLoop(soundFile);
 
-            actions: <AndroidNotificationAction>[
-              AndroidNotificationAction(
-                'STOP_${entry.slot.index}',
-                'STOP',
-                icon: DrawableResourceAndroidBitmap('stop_ic'),
-                showsUserInterface: true,
-                cancelNotification: true,
-              ),
-            ],
+      try {
+        await _plugin.zonedSchedule(
+          entry.slot.index,
+          "Hydration Reminder",
+          "Only 10 minutes left for ${entry.slot.label} – Drink ${entry.amount} ml",
+          tz.TZDateTime.from(notifyAt, tz.local),
+          NotificationDetails(
+            android: AndroidNotificationDetails(
+              'channel_$soundFile', // unique per slot
+              'Hydration Popup',
+              channelDescription: 'Popup hydration reminders',
+              importance: Importance.max,
+              priority: Priority.max,
+              playSound: true,
+              sound: RawResourceAndroidNotificationSound(soundFile),
+              // groupKey: null, // 🚫 no grouping
+              // setAsGroupSummary: false, // 🚫 no merging
+              // category: AndroidNotificationCategory.alarm,
+              // fullScreenIntent: true,
+              // visibility: NotificationVisibility.public,
+            ),
+            iOS: DarwinNotificationDetails(),
           ),
-          iOS: const DarwinNotificationDetails(
-            categoryIdentifier: 'hydration_category',
-          ),
-        ),
-        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-        payload: entry.slot.index.toString(),
-      );
-
-      log(
+          androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+          payload: entry.slot.index.toString(),
+        );
+        print(
           "[NotificationService] Successfully scheduled for ${entry.slot.label} "
           "at ${tz.TZDateTime.from(notifyAt, tz.local)}",
-          name: "NotificationService");
+        );
+      } catch (e) {
+        print("Error while scheduling the notification ${e.toString()}");
+      }
     }
   }
 
   Future<void> testNotification() async {
-    // final now = DateTime.now();
-    // final notifyAt = now.add(const Duration(seconds: 20));
+    final soundFile = await _getSelectedRingtoneFile();
+    print(soundFile);
+    try {
+      await _plugin.show(
+        6, // test ID
+        'channel_2',
+        "This is a test notification fired",
+        NotificationDetails(
+          android: AndroidNotificationDetails(
+            'channel_$soundFile',
+            'Test Notifications',
+            channelDescription: 'Used for testing notifications',
+            importance: Importance.max,
+            priority: Priority.high,
+            playSound: true,
+            sound: RawResourceAndroidNotificationSound(soundFile),
+          ),
+          iOS: DarwinNotificationDetails(),
+        ),
+      );
+      print("Success =====>");
+    } catch (e) {
+      print("Error =====> ${e.toString()}");
+    }
 
-    // await _plugin.zonedSchedule(
+    // // await _plugin.zonedSchedule(
     //   9999, // test ID
     //   "Test Notification",
     //   "This is a test notification fired at $notifyAt",

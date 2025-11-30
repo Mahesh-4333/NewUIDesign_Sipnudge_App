@@ -8,7 +8,6 @@ import 'package:hydrify/constants/app_font_styles.dart';
 import 'package:hydrify/constants/app_strings.dart';
 import 'package:hydrify/cubit/FaQ/faq_cubit.dart';
 import 'package:hydrify/cubit/FaQ/faq_state.dart';
-import 'package:hydrify/screens/widgets/animated_bottom_navbar_widget.dart';
 
 class FAQ_Page extends StatefulWidget {
   const FAQ_Page({super.key});
@@ -102,10 +101,124 @@ class _FAQPageView extends StatelessWidget {
                         /// FAQ Items
                         BlocBuilder<FaqCubit, FaqState>(
                           builder: (context, state) {
-                            final categoryFaqs =
-                                cubit.faqData[state.selectedCategory]!;
+                            final selectedCategory = state.selectedCategory;
+
+                            // 🔎 If searching → show only results for selected category
+                            if (state.searchQuery.isNotEmpty) {
+                              final resultsForCategory = state.filteredFaqs
+                                  .where((item) =>
+                                      item['category'] == selectedCategory)
+                                  .toList();
+
+                              if (resultsForCategory.isEmpty) {
+                                return Padding(
+                                  padding: EdgeInsets.symmetric(
+                                      horizontal: AppDimensions.dim24.w),
+                                  child: Text(
+                                    'No results found in "$selectedCategory".',
+                                    style: TextStyle(
+                                      fontFamily:
+                                          AppFontStyles.urbanistFontFamily,
+                                      fontVariations: [
+                                        AppFontStyles.semiBoldFontVariation
+                                      ],
+                                      fontSize: AppFontStyles.fontSize_16.sp,
+                                      color: AppColors.bluegray,
+                                    ),
+                                  ),
+                                );
+                              }
+
+                              return Column(
+                                children: resultsForCategory.map((item) {
+                                  final question = item['question']!;
+                                  final answer = item['answer']!;
+
+                                  return Column(
+                                    children: [
+                                      Container(
+                                        width: AppDimensions.dim380.w,
+                                        padding: EdgeInsets.all(
+                                            AppDimensions.dim20.w),
+                                        decoration: BoxDecoration(
+                                          color: AppColors.white,
+                                          borderRadius: BorderRadius.circular(
+                                              AppDimensions.radius_16.r),
+                                          border: Border.all(
+                                              color: AppColors.greywith80),
+                                          boxShadow: [
+                                            BoxShadow(
+                                              color: AppColors.black
+                                                  .withOpacity(0.25),
+                                              blurRadius:
+                                                  AppDimensions.radius_4.r,
+                                              offset: Offset(
+                                                AppDimensions.radius_4.r,
+                                                AppDimensions.radius_4.r,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            /// Question
+                                            Text(
+                                              question,
+                                              style: TextStyle(
+                                                fontFamily: AppFontStyles
+                                                    .urbanistFontFamily,
+                                                fontVariations: [
+                                                  AppFontStyles
+                                                      .fontWeightVariation600,
+                                                ],
+                                                fontSize: AppFontStyles
+                                                    .fontSize_18.sp,
+                                                color: AppColors.bluegray,
+                                              ),
+                                            ),
+                                            SizedBox(
+                                                height: AppDimensions.dim10.h),
+
+                                            const Divider(
+                                                color: AppColors.verylightgray),
+                                            SizedBox(
+                                                height: AppDimensions.dim10.h),
+
+                                            /// Answer
+                                            Text(
+                                              answer,
+                                              style: TextStyle(
+                                                fontFamily: AppFontStyles
+                                                    .urbanistFontFamily,
+                                                fontVariations: [
+                                                  AppFontStyles
+                                                      .semiBoldFontVariation,
+                                                ],
+                                                fontSize: AppFontStyles
+                                                    .fontSize_16.sp,
+                                                color: AppColors.bluegray,
+                                                letterSpacing: 0.2.sp,
+                                                height: 1.5,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                      SizedBox(height: AppDimensions.dim20.h),
+                                    ],
+                                  );
+                                }).toList(),
+                              );
+                            }
+
+                            // 🟦 No search: normal category + expansion behavior
+                            final categoryFaqs = context
+                                .read<FaqCubit>()
+                                .faqData[selectedCategory]!;
                             final expandedMap =
-                                state.isExpandedMap[state.selectedCategory]!;
+                                state.isExpandedMap[selectedCategory]!;
 
                             return Column(
                               children:
@@ -117,9 +230,10 @@ class _FAQPageView extends StatelessWidget {
 
                                 return Column(
                                   children: [
-                                    /// Whole Container Tappable
                                     GestureDetector(
-                                      onTap: () => cubit.toggleExpansion(index),
+                                      onTap: () => context
+                                          .read<FaqCubit>()
+                                          .toggleExpansion(index),
                                       child: Container(
                                         width: AppDimensions.dim380.w,
                                         padding: EdgeInsets.all(
@@ -165,20 +279,11 @@ class _FAQPageView extends StatelessWidget {
                                                     ),
                                                   ),
                                                 ),
-                                                // Image.asset(
-                                                //   isExpanded
-                                                //       ? 'assets/expand_less.png'
-                                                //       : 'assets/expand_more.png',
-                                                //   width: AppDimensions.dim16.w,
-                                                //   height: AppDimensions.dim16.h,
-                                                // ),
                                                 SizedBox(
                                                     width:
                                                         AppDimensions.dim8.w),
                                               ],
                                             ),
-
-                                            /// Animated Expand/Collapse
                                             AnimatedSize(
                                               duration: const Duration(
                                                   milliseconds: 300),
@@ -232,7 +337,7 @@ class _FAQPageView extends StatelessWidget {
                               }),
                             );
                           },
-                        ),
+                        )
                       ],
                     ),
                   ),
@@ -240,13 +345,13 @@ class _FAQPageView extends StatelessWidget {
               ),
 
               /// Bottom Navigation
-              Padding(
-                  padding: EdgeInsets.only(
-                    bottom: AppDimensions.dim5.h,
-                    right: AppDimensions.dim15.w,
-                    left: AppDimensions.dim15.w,
-                  ),
-                  child: AnimatedBottomNavBar()),
+              // Padding(
+              //     padding: EdgeInsets.only(
+              //       bottom: AppDimensions.dim5.h,
+              //       right: AppDimensions.dim15.w,
+              //       left: AppDimensions.dim15.w,
+              //     ),
+              //     child: AnimatedBottomNavBar()),
             ],
           ),
         ),
@@ -293,12 +398,8 @@ class _FAQPageView extends StatelessWidget {
 
   /// ----------------- Search Box -----------------
   Widget _buildSearchBox(FaqCubit cubit) {
-    final controller = TextEditingController();
-
     return BlocBuilder<FaqCubit, FaqState>(
       builder: (context, state) {
-        controller.text = state.searchQuery;
-
         return Container(
           width: AppDimensions.dim380.w,
           height: AppDimensions.dim65.h,
@@ -329,7 +430,6 @@ class _FAQPageView extends StatelessWidget {
               SizedBox(width: AppDimensions.dim12.w),
               Expanded(
                 child: TextField(
-                  controller: controller,
                   onChanged: cubit.filterSearch,
                   decoration: InputDecoration(
                     hintText: 'Search',

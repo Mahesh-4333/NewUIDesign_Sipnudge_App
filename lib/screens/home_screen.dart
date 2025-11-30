@@ -1,11 +1,10 @@
 import 'dart:developer';
-import 'dart:math' hide log;
 import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_svg/svg.dart';
-import 'package:gradient_borders/box_borders/gradient_box_border.dart';
 import 'package:hydrify/constants/app_colors.dart';
 import 'package:hydrify/constants/app_dimensions.dart';
 import 'package:hydrify/constants/app_font_styles.dart';
@@ -19,7 +18,6 @@ import 'package:hydrify/helpers/water_consumption_data_helper.dart';
 import 'package:hydrify/models/hydration_entry.dart';
 import 'package:hydrify/providers/weather_provider.dart';
 import 'package:hydrify/screens/notification.dart';
-
 import 'package:hydrify/screens/widgets/ble_device_selection_sheet.dart';
 import 'package:hydrify/screens/widgets/custom_circular_loader/custom_circular_progress_indicator.dart';
 import 'package:hydrify/screens/widgets/custom_circular_loader/custom_circular_water_progress_indicator.dart';
@@ -41,7 +39,7 @@ class _HomeScreenState extends State<HomeScreen> {
   late AnimationController _controller;
   late Animation<double> _shadowOffsetAnimation;
   bool _isPickerShown = false;
-
+  bool hasConnectedBefore = false;
   @override
   // void initState() {
   //   super.initState();
@@ -78,17 +76,23 @@ class _HomeScreenState extends State<HomeScreen> {
       },
     );
     //==================================================================
-
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       final prefs = await SharedPreferences.getInstance();
-      bool hasConnectedBefore = prefs.getBool('ble_connected_once') ?? false;
+      hasConnectedBefore = prefs.getBool('ble_connected_once') ?? false;
+
+      // 🔹 read current bottle volume from cubit
+      final bottleState = context.read<BottleDataCubit>().state;
+      final double currentVolume = bottleState.volume;
 
       if (hasConnectedBefore) {
-        // ✅ Already connected before — skip dialog, auto connect
         context.read<BleCubit>().start();
       } else {
-        // 🚀 First time user — show start journey dialog
-        _showStartJourneyDialog(context);
+        if (currentVolume < 600) {
+          _showStartJourneyDialog(context);
+        } else {
+          context.read<BleCubit>().start();
+          await prefs.setBool('ble_connected_once', true);
+        }
       }
     });
   }

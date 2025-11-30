@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:hydrify/constants/app_colors.dart';
 import 'package:hydrify/constants/app_dimensions.dart';
 import 'package:hydrify/screens/widgets/chart_widgets/custom_chart_data_widget.dart';
 import 'package:hydrify/screens/widgets/chart_widgets/drink_types_widget.dart';

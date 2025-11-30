@@ -5,7 +5,6 @@ import 'package:hydrify/constants/app_colors.dart';
 import 'package:hydrify/constants/app_dimensions.dart';
 import 'package:hydrify/constants/app_font_styles.dart';
 import 'package:hydrify/constants/app_strings.dart';
-import 'package:hydrify/screens/widgets/animated_bottom_navbar_widget.dart';
 import 'package:hydrify/screens/widgets/help&support_widgets/help&support_menu_items.dart';
 
 class HelpAndSupportPage extends StatelessWidget {
@@ -140,12 +139,12 @@ class HelpAndSupportPage extends StatelessWidget {
                       HelpMenuItem(
                         title: AppStrings.faq,
                         iconPathArrow: ("assets/arrow.png"),
-                        route: "/faq",
+                        route: "faq",
                       ),
                       HelpMenuItem(
                         title: AppStrings.contactsupport,
                         iconPathArrow: ("assets/arrow.png"),
-                        route: "/contact_support",
+                        route: "contact_support",
                       ),
                       HelpMenuItem(
                         title: AppStrings.privacyPolicy,
@@ -170,17 +169,17 @@ class HelpAndSupportPage extends StatelessWidget {
                 ),
               ),
 
-              //SizedBox(height: ),
-              const Spacer(),
+              // //SizedBox(height: ),
+              // const Spacer(),
 
-              // 🔹 Bottom Navigation
-              Padding(
-                  padding: EdgeInsets.only(
-                    bottom: AppDimensions.dim5.h,
-                    right: AppDimensions.dim15.w,
-                    left: AppDimensions.dim15.w,
-                  ),
-                  child: AnimatedBottomNavBar()),
+              // // 🔹 Bottom Navigation
+              // Padding(
+              //     padding: EdgeInsets.only(
+              //       bottom: AppDimensions.dim5.h,
+              //       right: AppDimensions.dim15.w,
+              //       left: AppDimensions.dim15.w,
+              //     ),
+              //     child: AnimatedBottomNavBar()),
             ],
           ),
         ),

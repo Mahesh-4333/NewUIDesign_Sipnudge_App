@@ -1,18 +1,22 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:hydrify/services/user_manager.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-
 import 'package:hydrify/constants/app_colors.dart';
 import 'package:hydrify/constants/app_dimensions.dart';
 import 'package:hydrify/constants/app_font_styles.dart';
 import 'package:hydrify/constants/app_strings.dart';
 import 'package:hydrify/cubit/profile_screen_in_setting/profile_cubit.dart';
 import 'package:hydrify/cubit/profile_screen_in_setting/profile_state.dart';
+import 'package:hydrify/screens/contact_support_page.dart';
+import 'package:hydrify/screens/drink_reminder_page.dart';
+import 'package:hydrify/screens/faq_page.dart';
+import 'package:hydrify/screens/help&support_page.dart';
+import 'package:hydrify/screens/preferences_page.dart';
+import 'package:hydrify/screens/user_personal_info_input_screen..dart';
 import 'package:hydrify/screens/widgets/logout_widgets/logout_bottom_sheet.dart';
 import 'package:hydrify/screens/widgets/setting_screen_widget/editableProfileAvatar.dart';
 import 'package:hydrify/screens/widgets/setting_screen_widget/profile_menu_item.dart';
+import 'package:hydrify/services/user_manager.dart';
 
 class SettingScreen extends StatefulWidget {
   const SettingScreen({super.key});
@@ -49,46 +53,158 @@ class _SettingScreenState extends State<SettingScreen> {
     super.dispose();
   }
 
+  // void _handleNavigation(BuildContext context, String title) {
+  //   try {
+  //     switch (title) {
+  //       case AppStrings.personalinfo:
+  //         Navigator.pushNamed(context, '/personalinfo');
+  //         break;
+  //       case AppStrings.drinkreminder:
+  //         Navigator.pushNamed(context, '/drinkreminder');
+  //         break;
+  //       case AppStrings.sipnudgebottle:
+  //         Navigator.pushNamed(context, '/sipnudge_bottle');
+  //         break;
+  //       case AppStrings.preferences:
+  //         Navigator.pushNamed(context, '/preferences');
+  //         break;
+  //       case AppStrings.dataAnalytics:
+  //         Navigator.pushNamed(context, '/data&analytics');
+  //         break;
+  //       case AppStrings.linkaccounts:
+  //         Navigator.pushNamed(context, '/linked_accounts');
+  //         break;
+  //       case AppStrings.helpandsupport:
+  //         Navigator.pushNamed(context, '/support');
+  //         break;
+  //       case AppStrings.accountandsecurity:
+  //         Navigator.pushNamed(context, '/account_security');
+  //         break;
+  //       case AppStrings.logout:
+  //         _showLogoutConfirmation(context);
+  //         break;
+  //       default:
+  //         ScaffoldMessenger.of(context).showSnackBar(
+  //           SnackBar(
+  //             content: Text('$title screen coming soon!',
+  //                 style: TextStyle(
+  //                   color: AppColors.white,
+  //                   fontSize: AppFontStyles.fontSize_20.sp,
+  //                   fontFamily: AppFontStyles.urbanistFontFamily,
+  //                   fontVariations: [AppFontStyles.boldFontVariation],
+  //                 )),
+  //           ),
+  //         );
+  //     }
+  //   } catch (e, s) {
+  //     debugPrint("Navigation error for '$title': $e\n$s");
+  //     ScaffoldMessenger.of(context).showSnackBar(
+  //       const SnackBar(content: Text('Page Coming Soon...')),
+  //     );
+  //   }
+  // }
+
   void _handleNavigation(BuildContext context, String title) {
     try {
+      final navigator = Navigator.of(context); // this is the tab's Navigator
+
       switch (title) {
         case AppStrings.personalinfo:
-          Navigator.pushNamed(context, '/personalinfo');
+          navigator.push(
+            MaterialPageRoute(
+              builder: (_) => UserInfoInputScreen(fromSettings: true),
+            ),
+          );
           break;
+
         case AppStrings.drinkreminder:
-          Navigator.pushNamed(context, '/drinkreminder');
+          navigator.push(
+            MaterialPageRoute(
+              builder: (_) => const DrinkReminderPage(),
+            ),
+          );
           break;
-        case AppStrings.sipnudgebottle:
-          Navigator.pushNamed(context, '/sipnudge_bottle');
-          break;
+
+        // case AppStrings.sipnudgebottle:
+        //   navigator.push(
+        //     MaterialPageRoute(
+        //       builder: (_) => const SipNudgeBottleScreen(),
+        //     ),
+        //   );
+        //   break;
+
         case AppStrings.preferences:
-          Navigator.pushNamed(context, '/preferences');
+          navigator.push(
+            MaterialPageRoute(
+              builder: (_) => const PreferencesPage(),
+            ),
+          );
           break;
-        case AppStrings.dataAnalytics:
-          Navigator.pushNamed(context, '/data&analytics');
-          break;
-        case AppStrings.linkaccounts:
-          Navigator.pushNamed(context, '/linked_accounts');
-          break;
+
+        // case AppStrings.dataAnalytics:
+        //   navigator.push(
+        //     MaterialPageRoute(
+        //       builder: (_) => const DataAnalyticsScreen(),
+        //     ),
+        //   );
+        //   break;
+
+        // case AppStrings.linkaccounts:
+        //   navigator.push(
+        //     MaterialPageRoute(
+        //       builder: (_) => const LinkedAccountsScreen(),
+        //     ),
+        //   );
+        //   break;
+
         case AppStrings.helpandsupport:
-          Navigator.pushNamed(context, '/support');
+          navigator.push(
+            MaterialPageRoute(
+              builder: (_) => const HelpAndSupportPage(),
+            ),
+          );
           break;
-        case AppStrings.accountandsecurity:
-          Navigator.pushNamed(context, '/account_security');
+        case 'faq':
+          navigator.push(
+            MaterialPageRoute(
+              builder: (_) => FAQ_Page(),
+            ),
+          );
+
           break;
+
+        case 'contact_support':
+          navigator.push(
+            MaterialPageRoute(
+              builder: (_) => ContactSupportPage(),
+            ),
+          );
+
+          break;
+        // case AppStrings.accountandsecurity:
+        //   navigator.push(
+        //     MaterialPageRoute(
+        //       builder: (_) => const AccountSecurityScreen(),
+        //     ),
+        //   );
+        //   break;
+
         case AppStrings.logout:
           _showLogoutConfirmation(context);
           break;
+
         default:
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('$title screen coming soon!',
-                  style: TextStyle(
-                    color: AppColors.white,
-                    fontSize: AppFontStyles.fontSize_20.sp,
-                    fontFamily: AppFontStyles.urbanistFontFamily,
-                    fontVariations: [AppFontStyles.boldFontVariation],
-                  )),
+              content: Text(
+                '$title screen coming soon!',
+                style: TextStyle(
+                  color: AppColors.white,
+                  fontSize: AppFontStyles.fontSize_20.sp,
+                  fontFamily: AppFontStyles.urbanistFontFamily,
+                  fontVariations: [AppFontStyles.boldFontVariation],
+                ),
+              ),
             ),
           );
       }
