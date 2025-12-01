@@ -48,15 +48,20 @@ class _BottomNavScreenNewState extends State<BottomNavScreenNew> {
       onWillPop: _onWillPop,
       child: Scaffold(
         extendBody: true,
-        bottomNavigationBar: Padding(
-          padding: EdgeInsets.only(
-            left: AppDimensions.defaultPadding.w,
-            right: AppDimensions.defaultPadding.w,
-            bottom: AppDimensions.dim28.h,
-          ),
-          child: SizedBox(
-            height: AppDimensions.dim88.h,
-            child: const AnimatedBottomNavBar(),
+        bottomNavigationBar: SafeArea(
+          top: false,
+          left: false,
+          right: false,
+          child: Padding(
+            padding: EdgeInsets.only(
+              left: AppDimensions.defaultPadding.w,
+              right: AppDimensions.defaultPadding.w,
+              bottom: AppDimensions.dim28.h,
+            ),
+            child: SizedBox(
+              height: AppDimensions.dim88.h,
+              child: const AnimatedBottomNavBar(),
+            ),
           ),
         ),
         body: Container(

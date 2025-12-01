@@ -103,19 +103,15 @@ class _FAQPageView extends StatelessWidget {
                           builder: (context, state) {
                             final selectedCategory = state.selectedCategory;
 
-                            // 🔎 If searching → show only results for selected category
                             if (state.searchQuery.isNotEmpty) {
-                              final resultsForCategory = state.filteredFaqs
-                                  .where((item) =>
-                                      item['category'] == selectedCategory)
-                                  .toList();
+                              final results = state.filteredFaqs;
 
-                              if (resultsForCategory.isEmpty) {
+                              if (results.isEmpty) {
                                 return Padding(
                                   padding: EdgeInsets.symmetric(
                                       horizontal: AppDimensions.dim24.w),
                                   child: Text(
-                                    'No results found in "$selectedCategory".',
+                                    'No results found for "${state.searchQuery}".',
                                     style: TextStyle(
                                       fontFamily:
                                           AppFontStyles.urbanistFontFamily,
@@ -129,84 +125,137 @@ class _FAQPageView extends StatelessWidget {
                                 );
                               }
 
+                              // 🔹 Group results by category
+                              final Map<String, List<Map<String, String>>>
+                                  grouped = {};
+                              for (final item in results) {
+                                final category = item['category']!;
+                                grouped
+                                    .putIfAbsent(category, () => [])
+                                    .add(item);
+                              }
+
                               return Column(
-                                children: resultsForCategory.map((item) {
-                                  final question = item['question']!;
-                                  final answer = item['answer']!;
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: grouped.entries.map((entry) {
+                                  final category = entry.key;
+                                  final items = entry.value;
 
                                   return Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
-                                      Container(
-                                        width: AppDimensions.dim380.w,
-                                        padding: EdgeInsets.all(
-                                            AppDimensions.dim20.w),
-                                        decoration: BoxDecoration(
-                                          color: AppColors.white,
-                                          borderRadius: BorderRadius.circular(
-                                              AppDimensions.radius_16.r),
-                                          border: Border.all(
-                                              color: AppColors.greywith80),
-                                          boxShadow: [
-                                            BoxShadow(
-                                              color: AppColors.black
-                                                  .withOpacity(0.25),
-                                              blurRadius:
-                                                  AppDimensions.radius_4.r,
-                                              offset: Offset(
-                                                AppDimensions.radius_4.r,
-                                                AppDimensions.radius_4.r,
-                                              ),
-                                            ),
-                                          ],
+                                      // 🧩 Category title (shown once per group)
+                                      Padding(
+                                        padding: EdgeInsets.symmetric(
+                                          horizontal: AppDimensions.dim24.w,
                                         ),
-                                        child: Column(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.start,
-                                          children: [
-                                            /// Question
-                                            Text(
-                                              question,
-                                              style: TextStyle(
-                                                fontFamily: AppFontStyles
-                                                    .urbanistFontFamily,
-                                                fontVariations: [
-                                                  AppFontStyles
-                                                      .fontWeightVariation600,
-                                                ],
-                                                fontSize: AppFontStyles
-                                                    .fontSize_18.sp,
-                                                color: AppColors.bluegray,
-                                              ),
-                                            ),
-                                            SizedBox(
-                                                height: AppDimensions.dim10.h),
-
-                                            const Divider(
-                                                color: AppColors.verylightgray),
-                                            SizedBox(
-                                                height: AppDimensions.dim10.h),
-
-                                            /// Answer
-                                            Text(
-                                              answer,
-                                              style: TextStyle(
-                                                fontFamily: AppFontStyles
-                                                    .urbanistFontFamily,
-                                                fontVariations: [
-                                                  AppFontStyles
-                                                      .semiBoldFontVariation,
-                                                ],
-                                                fontSize: AppFontStyles
-                                                    .fontSize_16.sp,
-                                                color: AppColors.bluegray,
-                                                letterSpacing: 0.2.sp,
-                                                height: 1.5,
-                                              ),
-                                            ),
-                                          ],
+                                        child: Text(
+                                          category,
+                                          style: TextStyle(
+                                            fontFamily: AppFontStyles
+                                                .urbanistFontFamily,
+                                            fontVariations: [
+                                              AppFontStyles.regularFontVariation
+                                            ],
+                                            fontSize:
+                                                AppFontStyles.fontSize_14.sp,
+                                            color: AppColors.gray400,
+                                          ),
                                         ),
                                       ),
-                                      SizedBox(height: AppDimensions.dim20.h),
+                                      SizedBox(height: AppDimensions.dim12.h),
+
+                                      // 🔁 All items under this category
+                                      ...items.map((item) {
+                                        final question = item['question']!;
+                                        final answer = item['answer']!;
+
+                                        return Column(
+                                          children: [
+                                            Container(
+                                              width: AppDimensions.dim380.w,
+                                              padding: EdgeInsets.all(
+                                                  AppDimensions.dim20.w),
+                                              decoration: BoxDecoration(
+                                                color: AppColors.white,
+                                                borderRadius:
+                                                    BorderRadius.circular(
+                                                        AppDimensions
+                                                            .radius_16.r),
+                                                border: Border.all(
+                                                    color:
+                                                        AppColors.greywith80),
+                                                boxShadow: [
+                                                  BoxShadow(
+                                                    color: AppColors.black
+                                                        .withOpacity(0.25),
+                                                    blurRadius: AppDimensions
+                                                        .radius_4.r,
+                                                    offset: Offset(
+                                                      AppDimensions.radius_4.r,
+                                                      AppDimensions.radius_4.r,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                              child: Column(
+                                                crossAxisAlignment:
+                                                    CrossAxisAlignment.start,
+                                                children: [
+                                                  /// Question
+                                                  Text(
+                                                    question,
+                                                    style: TextStyle(
+                                                      fontFamily: AppFontStyles
+                                                          .urbanistFontFamily,
+                                                      fontVariations: [
+                                                        AppFontStyles
+                                                            .fontWeightVariation600,
+                                                      ],
+                                                      fontSize: AppFontStyles
+                                                          .fontSize_18.sp,
+                                                      color: AppColors.bluegray,
+                                                    ),
+                                                  ),
+                                                  SizedBox(
+                                                      height: AppDimensions
+                                                          .dim10.h),
+
+                                                  const Divider(
+                                                      color: AppColors
+                                                          .verylightgray),
+                                                  SizedBox(
+                                                      height: AppDimensions
+                                                          .dim10.h),
+
+                                                  /// Answer
+                                                  Text(
+                                                    answer,
+                                                    style: TextStyle(
+                                                      fontFamily: AppFontStyles
+                                                          .urbanistFontFamily,
+                                                      fontVariations: [
+                                                        AppFontStyles
+                                                            .semiBoldFontVariation,
+                                                      ],
+                                                      fontSize: AppFontStyles
+                                                          .fontSize_16.sp,
+                                                      color: AppColors.bluegray,
+                                                      letterSpacing: 0.2.sp,
+                                                      height: 1.5,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                            SizedBox(
+                                                height: AppDimensions.dim20.h),
+                                          ],
+                                        );
+                                      }),
+
+                                      SizedBox(height: AppDimensions.dim12.h),
                                     ],
                                   );
                                 }).toList(),

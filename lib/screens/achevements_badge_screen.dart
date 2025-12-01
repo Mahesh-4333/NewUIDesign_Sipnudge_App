@@ -198,10 +198,38 @@ class AchievementsBadgeScreen extends StatelessWidget {
           Align(
             alignment: Alignment.topCenter,
             child: isUnlocked
-                ? Image.asset(
-                    "assets/images/goals_levels_img.png",
-                    width: AppDimensions.dim107.w,
-                    height: AppDimensions.dim111.h,
+                ? Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      Image.asset(
+                        "assets/images/goals_levels_img.png",
+                        width: AppDimensions.dim107.w,
+                        height: AppDimensions.dim111.h,
+                      ),
+                      ShaderMask(
+                        shaderCallback: (bounds) => const LinearGradient(
+                          colors: [
+                            Color(0xFF16446F),
+                            Color(0xFF2569A9),
+                            Color(0xFF59ADFB),
+                          ],
+                        ).createShader(
+                          Rect.fromLTWH(0, 0, bounds.width, bounds.height),
+                        ),
+                        blendMode: BlendMode.srcIn,
+                        child: Text(
+                          level,
+                          style: TextStyle(
+                            color: AppColors.white,
+                            fontFamily: AppFontStyles.urbanistFontFamily,
+                            fontVariations: [
+                              AppFontStyles.extraBoldFontVariation
+                            ],
+                            fontSize: AppFontStyles.fontSize_28,
+                          ),
+                        ),
+                      )
+                    ],
                   )
                 : Image.asset(
                     "assets/images/lock_goals_levels_img.png",
@@ -211,33 +239,33 @@ class AchievementsBadgeScreen extends StatelessWidget {
           ),
 
           // Center LEVEL NUMBER on unlocked badge
-          if (isUnlocked)
-            Positioned.fill(
-              child: Align(
-                alignment: Alignment(0, -0.1), // slight upward adjustment
-                child: ShaderMask(
-                  shaderCallback: (bounds) => const LinearGradient(
-                    colors: [
-                      Color(0xFF16446F),
-                      Color(0xFF2569A9),
-                      Color(0xFF59ADFB),
-                    ],
-                  ).createShader(
-                    Rect.fromLTWH(0, 0, bounds.width, bounds.height),
-                  ),
-                  blendMode: BlendMode.srcIn,
-                  child: Text(
-                    level,
-                    style: TextStyle(
-                      color: AppColors.white,
-                      fontFamily: AppFontStyles.urbanistFontFamily,
-                      fontVariations: [AppFontStyles.extraBoldFontVariation],
-                      fontSize: AppFontStyles.fontSize_28,
-                    ),
-                  ),
-                ),
-              ),
-            ),
+          // if (isUnlocked)
+          //   Positioned.fill(
+          //     child: Align(
+          //       alignment: Alignment(0, -0.3), // slight upward adjustment
+          //       child: ShaderMask(
+          //         shaderCallback: (bounds) => const LinearGradient(
+          //           colors: [
+          //             Color(0xFF16446F),
+          //             Color(0xFF2569A9),
+          //             Color(0xFF59ADFB),
+          //           ],
+          //         ).createShader(
+          //           Rect.fromLTWH(0, 0, bounds.width, bounds.height),
+          //         ),
+          //         blendMode: BlendMode.srcIn,
+          //         child: Text(
+          //           level,
+          //           style: TextStyle(
+          //             color: AppColors.white,
+          //             fontFamily: AppFontStyles.urbanistFontFamily,
+          //             fontVariations: [AppFontStyles.extraBoldFontVariation],
+          //             fontSize: AppFontStyles.fontSize_28,
+          //           ),
+          //         ),
+          //       ),
+          //     ),
+          //   ),
 
           // "Level x" text + liter text (centered)
           Positioned(

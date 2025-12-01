@@ -157,9 +157,9 @@ class FaqCubit extends Cubit<FaqState> {
 
     if (trimmed.isEmpty) {
       emit(state.copyWith(
-        searchQuery: '',
-        filteredFaqs: _allFaqItems,
-      ));
+          searchQuery: '',
+          filteredFaqs: _allFaqItems,
+          selectedCategory: 'General'));
     } else {
       final q = trimmed.toLowerCase();
       final filtered = _allFaqItems.where((item) {
@@ -169,6 +169,7 @@ class FaqCubit extends Cubit<FaqState> {
       }).toList();
 
       emit(state.copyWith(
+        selectedCategory: '',
         searchQuery: trimmed,
         filteredFaqs: filtered,
       ));
