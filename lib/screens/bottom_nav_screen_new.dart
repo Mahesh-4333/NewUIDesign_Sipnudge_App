@@ -52,6 +52,7 @@ class _BottomNavScreenNewState extends State<BottomNavScreenNew> {
           top: false,
           left: false,
           right: false,
+          bottom: false,
           child: Padding(
             padding: EdgeInsets.only(
               left: AppDimensions.defaultPadding.w,

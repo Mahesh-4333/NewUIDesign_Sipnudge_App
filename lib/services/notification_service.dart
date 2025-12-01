@@ -335,9 +335,10 @@ class NotificationService {
             "[NotificationService] Skipping reminder for ${entry.slot.label} "
             "(${entry.amount}ml) because notifyAt=$notifyAt is before now=$now",
             name: "NotificationService");
-        // continue;
+        print("Skipping reminder for");
+        continue;
       }
-
+      print('Scheduling reminder for');
       log(
         "[NotificationService] Scheduling reminder for ${entry.slot.label} "
         "(${entry.amount}ml) at $notifyAt (current time: $now)",

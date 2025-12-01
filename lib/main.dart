@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:http/http.dart' as http;
 import 'package:hydrify/constants/app_font_styles.dart';
 import 'package:hydrify/cubit/Preferences/preferences_cubit.dart';
 import 'package:hydrify/cubit/account&security/account&security_cubit.dart';
@@ -32,20 +33,15 @@ import 'package:hydrify/screens/about_us.dart';
 import 'package:hydrify/screens/account&security_page.dart';
 import 'package:hydrify/screens/achevements_badge_screen.dart';
 import 'package:hydrify/screens/analysis_screen.dart';
-
 import 'package:hydrify/screens/contact_support_page.dart';
 import 'package:hydrify/screens/data_and_analytics_screen.dart';
 import 'package:hydrify/screens/drink_reminder_page.dart';
 import 'package:hydrify/screens/faq_page.dart';
 import 'package:hydrify/screens/help&support_page.dart';
 import 'package:hydrify/screens/home_screen.dart';
-import 'package:hydrify/screens/lifestyleinfoscreen.dart';
 import 'package:hydrify/screens/link_accounts_page.dart';
-import 'package:hydrify/screens/notification.dart';
 import 'package:hydrify/screens/personal_info_in_setting.dart';
-import 'package:hydrify/screens/personalinfo.dart';
 import 'package:hydrify/screens/preferences_page.dart';
-import 'package:hydrify/screens/ringtone_screen.dart';
 import 'package:hydrify/screens/settings_screen.dart';
 import 'package:hydrify/screens/splash_screen.dart';
 import 'package:hydrify/screens/user_info_daily_goal_screen.dart';
@@ -57,7 +53,6 @@ import 'package:hydrify/services/notification_service.dart';
 import 'package:hydrify/services/user_manager.dart';
 import 'package:hydrify/services/weather_service.dart';
 import 'package:provider/provider.dart';
-import 'package:http/http.dart' as http;
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -150,69 +145,74 @@ class MyApp extends StatelessWidget {
             minTextAdapt: true,
             designSize: const Size(440, 956),
             builder: (_, child) {
-              return MaterialApp(
-                debugShowCheckedModeBanner: false,
-                theme: ThemeData(
-                  appBarTheme: const AppBarTheme(
-                    centerTitle: true,
-                    iconTheme: IconThemeData(),
+              return Padding(
+                padding: EdgeInsets.only(
+                    bottom: MediaQuery.of(context).viewPadding.bottom),
+                child: MaterialApp(
+                  debugShowCheckedModeBanner: false,
+                  theme: ThemeData(
+                    appBarTheme: const AppBarTheme(
+                      centerTitle: true,
+                      iconTheme: IconThemeData(),
+                    ),
+                    fontFamily: AppFontStyles.museoModernoFontFamily,
                   ),
-                  fontFamily: AppFontStyles.museoModernoFontFamily,
+                  home: child,
+                  routes: {
+                    //'/dailygoalpage': (context) => DailyGoalPage(),
+
+                    '/dailygoalpage': (context) =>
+                        UserInfoDailyGoalScreen(waterGoal: 0),
+
+                    '/homepage': (context) => HomeScreen(),
+
+                    '/analysis': (context) => AnalysisScreen(),
+
+                    // '/lifestyleinfo': (context) => LifeStyleInfoPage(),
+
+                    '/lifestyleinfo': (context) =>
+                        UserLifestyleInfoInputScreen(),
+
+                    //'/profilescreen': (context) => ProfileScreenPage(),
+
+                    '/settingscreen': (context) => SettingScreen(),
+
+                    '/personalinfo': (context) =>
+                        UserInfoInputScreen(fromSettings: true),
+
+                    //'/personalinfo': (context) => PersonalInfoPage(),
+
+                    '/achievement': (context) => AchievementsBadgeScreen(),
+
+                    '/personalinfoinsetting': (context) =>
+                        PersonalInfoScreenInSetting(),
+
+                    '/drinkreminder': (context) => DrinkReminderPage(),
+
+                    '/preferences': (context) => PreferencesPage(),
+
+                    '/account_security': (context) => AccountAndSecurityPage(),
+
+                    '/linked_accounts': (context) => LinkAccountsPage(),
+
+                    '/support': (context) => HelpAndSupportPage(),
+
+                    '/waterintaketimeline': (context) =>
+                        WaterIntakeTimelineScreen(),
+
+                    '/faq': (context) => FAQ_Page(),
+
+                    '/aboutus': (context) => AboutUs(),
+
+                    '/contact_support': (context) => ContactSupportPage(),
+
+                    '/data&analytics': (context) => DataAndAnalyticsPage(),
+
+                    // '/privacypolicy': (context) => PrivacyPolicy(),
+
+                    // '/termsofservices': (context) => TermsOfServices(),
+                  },
                 ),
-                home: child,
-                routes: {
-                  //'/dailygoalpage': (context) => DailyGoalPage(),
-
-                  '/dailygoalpage': (context) =>
-                      UserInfoDailyGoalScreen(waterGoal: 0),
-
-                  '/homepage': (context) => HomeScreen(),
-
-                  '/analysis': (context) => AnalysisScreen(),
-
-                  // '/lifestyleinfo': (context) => LifeStyleInfoPage(),
-
-                  '/lifestyleinfo': (context) => UserLifestyleInfoInputScreen(),
-
-                  //'/profilescreen': (context) => ProfileScreenPage(),
-
-                  '/settingscreen': (context) => SettingScreen(),
-
-                  '/personalinfo': (context) =>
-                      UserInfoInputScreen(fromSettings: true),
-
-                  //'/personalinfo': (context) => PersonalInfoPage(),
-
-                  '/achievement': (context) => AchievementsBadgeScreen(),
-
-                  '/personalinfoinsetting': (context) =>
-                      PersonalInfoScreenInSetting(),
-
-                  '/drinkreminder': (context) => DrinkReminderPage(),
-
-                  '/preferences': (context) => PreferencesPage(),
-
-                  '/account_security': (context) => AccountAndSecurityPage(),
-
-                  '/linked_accounts': (context) => LinkAccountsPage(),
-
-                  '/support': (context) => HelpAndSupportPage(),
-
-                  '/waterintaketimeline': (context) =>
-                      WaterIntakeTimelineScreen(),
-
-                  '/faq': (context) => FAQ_Page(),
-
-                  '/aboutus': (context) => AboutUs(),
-
-                  '/contact_support': (context) => ContactSupportPage(),
-
-                  '/data&analytics': (context) => DataAndAnalyticsPage(),
-
-                  // '/privacypolicy': (context) => PrivacyPolicy(),
-
-                  // '/termsofservices': (context) => TermsOfServices(),
-                },
               );
             },
             child: SplashScreen(),
