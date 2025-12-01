@@ -406,7 +406,11 @@ class NotificationService {
               // fullScreenIntent: true,
               // visibility: NotificationVisibility.public,
             ),
-            iOS: DarwinNotificationDetails(),
+            iOS: DarwinNotificationDetails(
+                presentAlert: true,
+                presentBadge: true,
+                presentSound: true,
+                sound: '$soundFile.wav'),
           ),
           androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
           payload: entry.slot.index.toString(),
@@ -439,7 +443,11 @@ class NotificationService {
             playSound: true,
             sound: RawResourceAndroidNotificationSound(soundFile),
           ),
-          iOS: DarwinNotificationDetails(),
+          iOS: DarwinNotificationDetails(
+              presentAlert: true,
+              presentBadge: true,
+              presentSound: true,
+              sound: '$soundFile.wav'),
         ),
       );
       print("Success =====>");

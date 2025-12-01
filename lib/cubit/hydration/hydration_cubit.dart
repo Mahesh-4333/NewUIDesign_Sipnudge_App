@@ -219,8 +219,8 @@ class HydrationCubit extends Cubit<HydrationState> {
     final updatedEntry = updated.firstWhere((e) => e.slot == slot);
     final notificationService = NotificationService();
     await notificationService.cancelReminder(slot);
-    // await notificationService.scheduleHydrationReminders([updatedEntry]);
-    await notificationService.testNotification();
+    await notificationService.scheduleHydrationReminders([updatedEntry]);
+    // await notificationService.testNotification();
     await _dbHelper.insertOrUpdateSlot(updatedEntry);
     ble.queueHydrationSlots(updated);
   }
