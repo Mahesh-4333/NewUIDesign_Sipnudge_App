@@ -10,7 +10,7 @@ import 'package:hydrify/constants/app_font_styles.dart';
 import 'package:hydrify/constants/app_strings.dart';
 import 'package:hydrify/cubit/bottle/bottle_data_cubit.dart';
 import 'package:hydrify/cubit/filter/filter_cubit.dart';
-import 'package:hydrify/models/bottle_data.dart';
+import 'package:hydrify/models/hydration_summary.dart';
 import 'package:hydrify/screens/widgets/chart_widgets/area_chart_widget.dart';
 import 'package:hydrify/screens/widgets/chart_widgets/column_chart_widget.dart';
 
@@ -155,42 +155,52 @@ class _CustomChartDataWidgetState extends State<CustomChartDataWidget> {
               final filterCubit = context.read<FilterCubit>();
               DateTime startDate;
               DateTime endDate;
-              if (filterState.currentInterval == FilterInterval.weekly) {
-                startDate = filterState.currentDate.subtract(
-                  Duration(days: filterState.currentDate.weekday % 7),
-                );
-                startDate =
-                    DateTime(startDate.year, startDate.month, startDate.day);
 
-                endDate = startDate.add(const Duration(days: 6));
+              final current = filterState.currentDate;
+
+              if (filterState.currentInterval == FilterInterval.weekly) {
+                // Align with your chart: week starts on Monday
+                DateTime weekStart = current
+                    .subtract(Duration(days: current.weekday - 1)); // Mon
+                weekStart =
+                    DateTime(weekStart.year, weekStart.month, weekStart.day);
+
+                startDate = weekStart;
+
+                final weekEnd = weekStart.add(const Duration(days: 6)); // Sun
                 endDate = DateTime(
-                  endDate.year,
-                  endDate.month,
-                  endDate.day,
+                  weekEnd.year,
+                  weekEnd.month,
+                  weekEnd.day,
                   23,
                   59,
                   59,
-                  999,
+                  999999, // 23:59:59.999999
                 );
+              } else if (filterState.currentInterval ==
+                  FilterInterval.monthly) {
+                // Full month
+                startDate = DateTime(current.year, current.month, 1);
+                endDate = DateTime(current.year, current.month + 1, 1)
+                    .subtract(const Duration(microseconds: 1));
+              } else if (filterState.currentInterval == FilterInterval.yearly) {
+                // ✨ Full year
+                startDate = DateTime(current.year, 1, 1);
+                endDate = DateTime(current.year + 1, 1, 1)
+                    .subtract(const Duration(microseconds: 1));
               } else {
-                startDate = DateTime(
-                  filterState.currentDate.year,
-                  filterState.currentDate.month,
-                  1,
-                );
-                endDate = DateTime(
-                  filterState.currentDate.year,
-                  filterState.currentDate.month + 1,
-                  1,
-                ).subtract(const Duration(microseconds: 1));
+                // fallback (optional)
+                startDate = DateTime(current.year, current.month, current.day);
+                endDate = DateTime(current.year, current.month, current.day, 23,
+                    59, 59, 999999);
               }
 
               log("Start date is $startDate , end date is $endDate");
 
-              return FutureBuilder<List<BottleData>>(
+              return FutureBuilder<List<HydrationDaySummary>>(
                 future: context
                     .read<BottleDataCubit>()
-                    .getHistoryForDateRange(startDate, endDate),
+                    .getHydrationSummariesForRange(startDate, endDate),
                 builder: (context, snapshot) {
                   if (snapshot.hasError) {
                     return Center(
@@ -225,12 +235,12 @@ class _CustomChartDataWidgetState extends State<CustomChartDataWidget> {
                     replacement: FlAreaChartWidget(
                       interval: filterState.currentInterval,
                       currentDate: filterState.currentDate,
-                      bottleData: snapshot.data!,
+                      bottleData: snapshot.data ?? [],
                     ),
                     child: FlColumnChartWidget(
                       interval: filterState.currentInterval,
                       currentDate: filterState.currentDate,
-                      bottleData: snapshot.data!,
+                      bottleData: snapshot.data ?? [],
                     ),
                   );
                 },

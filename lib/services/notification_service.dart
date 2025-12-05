@@ -315,113 +315,52 @@ class NotificationService {
         minutes: entry.endTime.minute,
       ));
 
-      final startDateTime = today.add(Duration(
-        hours: entry.startTime.hour,
-        minutes: entry.startTime.minute,
-      ));
-
+// --- compute notifyAt as you already do ---
       var notifyAt = endDateTime.subtract(const Duration(minutes: 10));
-      log(
-          "[NotificationService] Slot: ${entry.slot.label} (${entry.amount}ml)\n"
-          "   StartTime = $startDateTime\n"
-          "   EndTime   = $endDateTime\n"
-          "   NotifyAt  = $notifyAt\n"
-          "   Now       = $now",
-          name: "NotificationService");
+      final tzNow = tz.TZDateTime.now(tz.local);
+      tz.TZDateTime scheduledDate = tz.TZDateTime.from(notifyAt, tz.local);
 
-      if (notifyAt.isBefore(now)) {
-        notifyAt = now.add(const Duration(minutes: 2));
-        log(
-            "[NotificationService] Skipping reminder for ${entry.slot.label} "
-            "(${entry.amount}ml) because notifyAt=$notifyAt is before now=$now",
-            name: "NotificationService");
-        print("Skipping reminder for");
-        continue;
+// If scheduled time for today already passed, schedule for next day
+      if (scheduledDate.isBefore(tzNow)) {
+        scheduledDate = scheduledDate.add(const Duration(days: 1));
+        log("[NotificationService] notify time passed for today, scheduling for next day: $scheduledDate");
       }
-      print('Scheduling reminder for');
-      log(
-        "[NotificationService] Scheduling reminder for ${entry.slot.label} "
-        "(${entry.amount}ml) at $notifyAt (current time: $now)",
-      );
 
-      // await _plugin.zonedSchedule(
-      //   entry.slot.index, // unique ID per slot
-      //   "Hydration Reminder",
-      //   "Only 10 minutes left for ${entry.slot.label} – Drink ${entry.amount} ml",
-      //   tz.TZDateTime.from(notifyAt, tz.local),
-      //   NotificationDetails(
-      //     android: AndroidNotificationDetails(
-      //       //'hydration_channel',
-      //       'hydration_unique_channel_${entry.slot.index}', // UNIQUE channel
-      //       // 'Hydration Reminders',
-      //       // channelDescription: 'Reminds you to drink water on time',
-      //       'Hydration Popup',
-      //       channelDescription: 'Shows popup hydration reminders',
-      //       importance: Importance.max,
-      //       priority: Priority.high,
-      //       fullScreenIntent:
-      //           false, // set true only if you want fullscreen dialog
-      //       playSound: true,
-      //       groupKey: null, // 🔥 Prevent grouping
-      //       setAsGroupSummary: false, // 🔥 Prevent merging
-      //       actions: [
-      //         AndroidNotificationAction(
-      //           'STOP_${entry.slot.index}',
-      //           'Stop',
-      //           showsUserInterface: false,
-      //           cancelNotification: true,
-      //         ),
-      //       ],
-      //     ),
-      //     iOS: const DarwinNotificationDetails(),
-      //   ),
-      //   androidScheduleMode: AndroidScheduleMode.exact,
-      //   payload: entry.slot.index.toString(),
-      //   matchDateTimeComponents: null,
-      // );
-
+// then schedule with daily repeat
       final soundFile = await _getSelectedRingtoneFile();
-      print(soundFile);
-      print(entry.slot.index);
-      // Start looping ringtone
-      // _startRingtoneLoop(soundFile);
 
       try {
         await _plugin.zonedSchedule(
           entry.slot.index,
           "Hydration Reminder",
           "Only 10 minutes left for ${entry.slot.label} – Drink ${entry.amount} ml",
-          tz.TZDateTime.from(notifyAt, tz.local),
+          scheduledDate,
           NotificationDetails(
             android: AndroidNotificationDetails(
-              'channel_$soundFile', // unique per slot
+              'channel_$soundFile',
               'Hydration Popup',
               channelDescription: 'Popup hydration reminders',
               importance: Importance.max,
               priority: Priority.max,
               playSound: true,
               sound: RawResourceAndroidNotificationSound(soundFile),
-              // groupKey: null, // 🚫 no grouping
-              // setAsGroupSummary: false, // 🚫 no merging
-              // category: AndroidNotificationCategory.alarm,
-              // fullScreenIntent: true,
-              // visibility: NotificationVisibility.public,
             ),
             iOS: DarwinNotificationDetails(
-                presentAlert: true,
-                presentBadge: true,
-                presentSound: true,
-                sound: '$soundFile.wav'),
+              presentAlert: true,
+              presentBadge: true,
+              presentSound: true,
+              sound: '$soundFile.wav',
+            ),
           ),
           androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
           payload: entry.slot.index.toString(),
+          // THIS IS THE KEY — repeat daily at the same time:
+          matchDateTimeComponents: DateTimeComponents.time,
         );
-        print(
-          "[NotificationService] Successfully scheduled for ${entry.slot.label} "
-          "at ${tz.TZDateTime.from(notifyAt, tz.local)}",
-        );
+
+        log("[NotificationService] Successfully scheduled (daily) for ${entry.slot.label} at $scheduledDate");
       } catch (e) {
-        print("Error while scheduling the notification ${e.toString()}");
+        log("[NotificationService] Error while scheduling: $e");
       }
     }
   }
