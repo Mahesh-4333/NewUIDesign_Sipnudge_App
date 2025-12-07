@@ -1,22 +1,8 @@
 # Miscellaneous
-*.class
-*.log
-*.pyc
-*.swp
-.DS_Store
-.atom/
-.build/
-.buildlog/
-.history
-.svn/
-.swiftpm/
-migrate_working_dir/
+...
 
 # IntelliJ related
-*.iml
-*.ipr
-*.iws
-.idea/
+...
 
 # The .vscode folder contains launch configuration and tasks you configure in
 # VS Code which you may wish to be included in version control, so this line
@@ -32,6 +18,7 @@ migrate_working_dir/
 .pub-cache/
 .pub/
 /build/
+**pubspec.lock** <--- **ADD THIS**
 
 # Symbolication related
 app.*.symbols
@@ -43,3 +30,6 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+**/android/local.properties** <--- **ADD THIS**
+**/android/.gradle/** <--- **ADD THIS**
+**/android/build/** <--- **ADD THIS**
