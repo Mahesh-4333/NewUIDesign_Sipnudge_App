@@ -25,7 +25,7 @@ import 'package:hydrify/screens/widgets/custom_circular_loader/custom_circular_w
 import 'package:hydrify/screens/widgets/greeting_widget.dart';
 import 'package:hydrify/screens/widgets/user_info_input_widgets/custom_beating_ble_status_indicator.dart';
 import 'package:hydrify/screens/widgets/water_wave_widget.dart';
-import 'package:hydrify/services/notification_service.dart';
+import 'package:hydrify/services/notification/notification_service.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -63,7 +63,8 @@ class _HomeScreenState extends State<HomeScreen> {
     // New Code to initialize NotificationService
     NotificationService().init(
       onTap: (slot) {
-        final entries = context.read<HydrationCubit>().state.entries;
+        final entries =
+            context.read<HydrationCubit>().state.entries;
 
         final entry = entries.firstWhere((e) => e.slot == slot,
             orElse: () => HydrationEntry(
@@ -79,7 +80,8 @@ class _HomeScreenState extends State<HomeScreen> {
     //==================================================================
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       final prefs = await SharedPreferences.getInstance();
-      hasConnectedBefore = prefs.getBool('ble_connected_once') ?? false;
+      hasConnectedBefore =
+          prefs.getBool('ble_connected_once') ?? false;
 
       // 🔹 read current bottle volume from cubit
       final bottleState = context.read<BottleDataCubit>().state;
@@ -113,7 +115,8 @@ class _HomeScreenState extends State<HomeScreen> {
                 onTap: () => Navigator.of(context).pop(),
                 child: BackdropFilter(
                   filter: ImageFilter.blur(sigmaX: 6, sigmaY: 6),
-                  child: Container(color: Colors.black.withOpacity(0)),
+                  child: Container(
+                      color: Colors.black.withOpacity(0)),
                 ), // 👈 tap anywhere to close
               ),
             ),
@@ -134,29 +137,31 @@ class _HomeScreenState extends State<HomeScreen> {
             //   ),
             Center(
               child: Container(
-                width: AppDimensions.dim310.w, // 🔥 reduced width (was 310)
+                width: AppDimensions
+                    .dim310.w, // 🔥 reduced width (was 310)
                 height: AppDimensions.dim210.h,
                 decoration: BoxDecoration(
                   color: Color(0xFFFFFFFF),
-                  borderRadius:
-                      BorderRadius.circular(AppDimensions.radius_10.r),
+                  borderRadius: BorderRadius.circular(
+                      AppDimensions.radius_10.r),
                   border: Border.all(
-                    color: AppColors.startJourneyPopupBorderColor,
+                    color:
+                        AppColors.startJourneyPopupBorderColor,
                     width: AppDimensions.dim1.w,
                   ),
                   boxShadow: [
                     BoxShadow(
                       color: AppColors.black.withOpacity(0.25),
                       blurRadius: AppDimensions.dim4.r,
-                      offset:
-                          Offset(AppDimensions.dim4.w, AppDimensions.dim4.h),
+                      offset: Offset(AppDimensions.dim4.w,
+                          AppDimensions.dim4.h),
                     ),
                   ],
                 ),
 
                 child: ClipRRect(
-                  borderRadius:
-                      BorderRadius.circular(AppDimensions.radius_16.r),
+                  borderRadius: BorderRadius.circular(
+                      AppDimensions.radius_16.r),
                   child: Stack(
                     children: [
                       Positioned(
@@ -168,8 +173,8 @@ class _HomeScreenState extends State<HomeScreen> {
                           children: [
                             Image.asset(
                               'assets/images/black_bottle.png',
-                              width: AppDimensions
-                                  .dim150.w, // 🔥 reduced to match new width
+                              width: AppDimensions.dim150
+                                  .w, // 🔥 reduced to match new width
                               fit: BoxFit.cover,
                             ),
                             SizedBox(
@@ -177,22 +182,25 @@ class _HomeScreenState extends State<HomeScreen> {
                             ),
                             Padding(
                               padding: EdgeInsets.symmetric(
-                                  horizontal: AppDimensions.dim20.w),
+                                  horizontal:
+                                      AppDimensions.dim20.w),
                               child: Column(
                                 children: [
                                   Text(
                                     "Start your journey right fill your bottle",
-                                    textAlign:
-                                        TextAlign.center, // 🔥 center text
+                                    textAlign: TextAlign
+                                        .center, // 🔥 center text
                                     style: TextStyle(
                                       color: AppColors.bluegray,
-                                      fontFamily:
-                                          AppFontStyles.museoModernoFontFamily,
+                                      fontFamily: AppFontStyles
+                                          .museoModernoFontFamily,
                                       fontVariations: [
-                                        AppFontStyles.boldFontVariation,
+                                        AppFontStyles
+                                            .boldFontVariation,
                                       ],
                                       fontSize: AppFontStyles
-                                          .fontSize_13.sp, // 🔥 reduced
+                                          .fontSize_13
+                                          .sp, // 🔥 reduced
                                     ),
                                   ),
                                   Text(
@@ -200,53 +208,66 @@ class _HomeScreenState extends State<HomeScreen> {
                                     textAlign: TextAlign.center,
                                     style: TextStyle(
                                       color: AppColors.bluegray,
-                                      fontFamily:
-                                          AppFontStyles.museoModernoFontFamily,
+                                      fontFamily: AppFontStyles
+                                          .museoModernoFontFamily,
                                       fontVariations: [
-                                        AppFontStyles.boldFontVariation,
+                                        AppFontStyles
+                                            .boldFontVariation,
                                       ],
                                       fontSize: AppFontStyles
-                                          .fontSize_13.sp, // 🔥 reduced
+                                          .fontSize_13
+                                          .sp, // 🔥 reduced
                                     ),
                                   ),
                                 ],
                               ),
                             ),
-                            SizedBox(height: AppDimensions.dim20.h),
+                            SizedBox(
+                                height: AppDimensions.dim20.h),
                             SizedBox(
                               width: AppDimensions.dim118.w,
                               height: AppDimensions.dim26.h,
                               child: ElevatedButton(
                                 style: ElevatedButton.styleFrom(
-                                  backgroundColor: AppColors.bluegray,
+                                  backgroundColor:
+                                      AppColors.bluegray,
                                   shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(
-                                        AppDimensions.radius_40.r),
+                                    borderRadius:
+                                        BorderRadius.circular(
+                                            AppDimensions
+                                                .radius_40.r),
                                   ),
                                   side: BorderSide(
-                                    color: const Color(0xFF98DAFF),
+                                    color:
+                                        const Color(0xFF98DAFF),
                                     width: AppDimensions.dim1.w,
                                   ),
                                 ),
                                 onPressed: () async {
                                   Navigator.of(context).pop();
-                                  context.read<BleCubit>().start();
+                                  context
+                                      .read<BleCubit>()
+                                      .start();
 
                                   final prefs =
-                                      await SharedPreferences.getInstance();
+                                      await SharedPreferences
+                                          .getInstance();
                                   await prefs.setBool(
-                                      'ble_connected_once', true);
+                                      'ble_connected_once',
+                                      true);
                                 },
                                 child: Text(
                                   "Start",
                                   style: TextStyle(
                                     color: AppColors.white,
-                                    fontFamily:
-                                        AppFontStyles.museoModernoFontFamily,
+                                    fontFamily: AppFontStyles
+                                        .museoModernoFontFamily,
                                     fontVariations: [
-                                      AppFontStyles.boldFontVariation
+                                      AppFontStyles
+                                          .boldFontVariation
                                     ],
-                                    fontSize: AppFontStyles.fontSize_14.sp,
+                                    fontSize: AppFontStyles
+                                        .fontSize_14.sp,
                                   ),
                                 ),
                               ),
@@ -341,14 +362,18 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               BlocBuilder<HydrationCubit, HydrationState>(
                 buildWhen: (p, c) =>
-                    p.currentSlotConsumption != c.currentSlotConsumption ||
-                    p.currentSlotPercentage != c.currentSlotPercentage ||
+                    p.currentSlotConsumption !=
+                        c.currentSlotConsumption ||
+                    p.currentSlotPercentage !=
+                        c.currentSlotPercentage ||
                     p.currentSlotEntry != c.currentSlotEntry,
                 builder: (context, state) {
                   final slotName =
-                      state.currentSlotEntry?.slot.label ?? "Off-Slot Time";
+                      state.currentSlotEntry?.slot.label ??
+                          "Off-Slot Time";
 
-                  final consumption = state.currentSlotConsumption;
+                  final consumption =
+                      state.currentSlotConsumption;
                   final percentage = state.currentSlotPercentage;
 
                   return _buildTodayStats(
@@ -367,31 +392,39 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               BlocBuilder<BottleDataCubit, BottleDataState>(
                 buildWhen: (previous, current) =>
-                    previous.volumePercent != current.volumePercent,
+                    previous.volumePercent !=
+                    current.volumePercent,
                 builder: (context, state) {
                   return FutureBuilder(future: () {
                     DateTime now = DateTime.now();
 
-                    DateTime startDate = DateTime(now.year, now.month, now.day);
+                    DateTime startDate =
+                        DateTime(now.year, now.month, now.day);
 
                     DateTime endDate = startDate
                         .add(const Duration(days: 1))
-                        .subtract(const Duration(milliseconds: 1));
+                        .subtract(
+                            const Duration(milliseconds: 1));
 
                     return context
                         .read<BottleDataCubit>()
-                        .getHistoryForDateRange(startDate, endDate);
+                        .getHistoryForDateRange(
+                            startDate, endDate);
                   }(), builder: (context, snapshot) {
                     double completionPercent = 0;
                     double waterVolumeConsumed = 0;
 
-                    if (snapshot.hasData || snapshot.data?.isNotEmpty == true) {
+                    if (snapshot.hasData ||
+                        snapshot.data?.isNotEmpty == true) {
                       waterVolumeConsumed =
-                          WaterConsumptionCalculator.calculateDailyConsumption(
-                              snapshot.data!);
+                          WaterConsumptionCalculator
+                              .calculateDailyConsumption(
+                                  snapshot.data!);
 
-                      completionPercent = WaterConsumptionCalculator
-                          .calculateCompletionPercentage(waterVolumeConsumed);
+                      completionPercent =
+                          WaterConsumptionCalculator
+                              .calculateCompletionPercentage(
+                                  waterVolumeConsumed);
                     }
                     return _buildGoalText(completionPercent);
                   });
@@ -406,7 +439,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildAppBar(BuildContext context) {
     return Padding(
-      padding: EdgeInsets.symmetric(horizontal: AppDimensions.defaultPadding),
+      padding: EdgeInsets.symmetric(
+          horizontal: AppDimensions.defaultPadding),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
@@ -436,29 +470,34 @@ class _HomeScreenState extends State<HomeScreen> {
                         height: AppDimensions.dim60.w,
                         width: AppDimensions.dim60.w,
                         backgroundColor: AppColors.bluegray,
-                        progressBackgroundColor: Color(0XFFDDECDC),
+                        progressBackgroundColor:
+                            Color(0XFFDDECDC),
                         progressColor: state.battery <= 20
                             ? const Color(0xFFFF0000) // red
                             : const Color(0XFF43E73E), // green
                         // progressColor: Color(0XFF43E73E),
-                        percentageValue: state.battery.toDouble(),
+                        percentageValue:
+                            state.battery.toDouble(),
                         center: TweenAnimationBuilder<int>(
                           tween: IntTween(
                             begin: 0,
                             end: state.battery,
                           ),
-                          duration: const Duration(milliseconds: 500),
+                          duration:
+                              const Duration(milliseconds: 500),
                           curve: Curves.fastEaseInToSlowEaseOut,
                           builder: (context, value, child) {
                             return Text(
                               "$value%",
                               style: TextStyle(
                                 color: AppColors.white,
-                                fontFamily:
-                                    AppFontStyles.museoModernoFontFamily,
-                                fontSize: AppFontStyles.fontSize_12,
+                                fontFamily: AppFontStyles
+                                    .museoModernoFontFamily,
+                                fontSize:
+                                    AppFontStyles.fontSize_12,
                                 fontVariations: [
-                                  AppFontStyles.fontWeightVariation600,
+                                  AppFontStyles
+                                      .fontWeightVariation600,
                                 ],
                               ),
                             );
@@ -500,7 +539,8 @@ class _HomeScreenState extends State<HomeScreen> {
           WidgetsBinding.instance.addPostFrameCallback((_) {
             weatherProvider.fetchWeatherForCurrentLocation();
           });
-          return const Center(child: CircularProgressIndicator());
+          return const Center(
+              child: CircularProgressIndicator());
         }
 
         var iconPath = weatherProvider.getWeatherIcon();
@@ -520,8 +560,8 @@ class _HomeScreenState extends State<HomeScreen> {
         // }
 
         return Padding(
-          padding:
-              EdgeInsets.symmetric(horizontal: AppDimensions.defaultPadding),
+          padding: EdgeInsets.symmetric(
+              horizontal: AppDimensions.defaultPadding),
           child: Row(
             children: [
               Column(
@@ -529,13 +569,14 @@ class _HomeScreenState extends State<HomeScreen> {
                   // Wrap SvgPicture.asset with error handling
                   SizedBox(
                     height: AppDimensions.dim45.h,
-                    width: AppDimensions.dim45.h, // Add width for debugging
+                    width: AppDimensions
+                        .dim45.h, // Add width for debugging
 
                     child: _buildWeatherIconWidget(iconPath),
                   ),
                   SizedBox(
-                      height:
-                          AppDimensions.dim8.h), // Changed from width to height
+                      height: AppDimensions.dim8
+                          .h), // Changed from width to height
                   Text(
                     '${weatherData.temperature.round()}°C / ${weatherData.humidity.round()}%',
                     style: TextStyle(
@@ -553,7 +594,8 @@ class _HomeScreenState extends State<HomeScreen> {
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  mainAxisAlignment:
+                      MainAxisAlignment.spaceBetween,
                   children: [
                     SizedBox(
                       child: RichText(
@@ -564,23 +606,28 @@ class _HomeScreenState extends State<HomeScreen> {
                               text: AppStrings.itsA,
                               style: TextStyle(
                                 color: AppColors.bluegray,
-                                fontFamily:
-                                    AppFontStyles.museoModernoFontFamily,
-                                fontSize: AppFontStyles.fontSize_14,
+                                fontFamily: AppFontStyles
+                                    .museoModernoFontFamily,
+                                fontSize:
+                                    AppFontStyles.fontSize_14,
                                 fontVariations: [
-                                  AppFontStyles.regularFontVariation,
+                                  AppFontStyles
+                                      .regularFontVariation,
                                 ],
                               ),
                             ),
                             TextSpan(
-                              text: weatherProvider.getWeatherDescription(),
+                              text: weatherProvider
+                                  .getWeatherDescription(),
                               style: TextStyle(
                                 color: AppColors.bluegray,
-                                fontFamily:
-                                    AppFontStyles.museoModernoFontFamily,
-                                fontSize: AppFontStyles.fontSize_14,
+                                fontFamily: AppFontStyles
+                                    .museoModernoFontFamily,
+                                fontSize:
+                                    AppFontStyles.fontSize_14,
                                 fontVariations: [
-                                  AppFontStyles.boldFontVariation,
+                                  AppFontStyles
+                                      .boldFontVariation,
                                 ],
                               ),
                             ),
@@ -588,11 +635,13 @@ class _HomeScreenState extends State<HomeScreen> {
                               text: AppStrings.today,
                               style: TextStyle(
                                 color: AppColors.bluegray,
-                                fontFamily:
-                                    AppFontStyles.museoModernoFontFamily,
-                                fontSize: AppFontStyles.fontSize_14,
+                                fontFamily: AppFontStyles
+                                    .museoModernoFontFamily,
+                                fontSize:
+                                    AppFontStyles.fontSize_14,
                                 fontVariations: [
-                                  AppFontStyles.regularFontVariation,
+                                  AppFontStyles
+                                      .regularFontVariation,
                                 ],
                               ),
                             ),
@@ -647,9 +696,11 @@ class _HomeScreenState extends State<HomeScreen> {
             bottom: AppDimensions.dim55.h,
             left: AppDimensions.dim182.w,
             child: SizedBox(
-              child: BlocBuilder<BottleDataCubit, BottleDataState>(
+              child: BlocBuilder<BottleDataCubit,
+                      BottleDataState>(
                   buildWhen: (previous, current) =>
-                      previous.volumePercent != current.volumePercent ||
+                      previous.volumePercent !=
+                          current.volumePercent ||
                       previous.volume != current.volume,
                   builder: (context, state) {
                     return FutureBuilder(future: () {
@@ -660,22 +711,28 @@ class _HomeScreenState extends State<HomeScreen> {
 
                       DateTime endDate = startDate
                           .add(const Duration(days: 1))
-                          .subtract(const Duration(milliseconds: 1));
+                          .subtract(
+                              const Duration(milliseconds: 1));
 
                       return context
                           .read<BottleDataCubit>()
-                          .getHistoryForDateRange(startDate, endDate);
+                          .getHistoryForDateRange(
+                              startDate, endDate);
                     }(), builder: (context, snapshot) {
                       double completionPercent = 0;
                       double waterVolumeConsumed = 0;
 
                       if (snapshot.hasData ||
                           snapshot.data?.isNotEmpty == true) {
-                        waterVolumeConsumed = WaterConsumptionCalculator
-                            .calculateDailyConsumption(snapshot.data!);
+                        waterVolumeConsumed =
+                            WaterConsumptionCalculator
+                                .calculateDailyConsumption(
+                                    snapshot.data!);
 
-                        completionPercent = WaterConsumptionCalculator
-                            .calculateCompletionPercentage(waterVolumeConsumed);
+                        completionPercent =
+                            WaterConsumptionCalculator
+                                .calculateCompletionPercentage(
+                                    waterVolumeConsumed);
                       }
 
                       return CustomCircularWaterProgressIndicator(
@@ -700,15 +757,15 @@ class _HomeScreenState extends State<HomeScreen> {
                             blurRadius: AppDimensions.dim4.r,
                             spreadRadius: AppDimensions.dim1.r,
                             color: Colors.black.withOpacity(.3),
-                            offset: Offset(
-                                AppDimensions.dim2.w, AppDimensions.dim2.h),
+                            offset: Offset(AppDimensions.dim2.w,
+                                AppDimensions.dim2.h),
                           ),
                           BoxShadow(
                             blurRadius: AppDimensions.dim4.r,
                             spreadRadius: AppDimensions.dim1.r,
                             color: Colors.black.withOpacity(.3),
-                            offset: Offset(
-                                -AppDimensions.dim1.w, -AppDimensions.dim1.h),
+                            offset: Offset(-AppDimensions.dim1.w,
+                                -AppDimensions.dim1.h),
                           ),
                         ],
                         backgroundColor: Color(0xFF767676),
@@ -722,45 +779,57 @@ class _HomeScreenState extends State<HomeScreen> {
                             shape: BoxShape.circle,
                           ),
                           child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
+                            mainAxisAlignment:
+                                MainAxisAlignment.center,
                             children: [
                               TweenAnimationBuilder<double>(
                                 tween: Tween<double>(
                                   begin: 0.0,
-                                  end: waterVolumeConsumed / 1000,
+                                  end:
+                                      waterVolumeConsumed / 1000,
                                 ),
-                                duration: Duration(milliseconds: 500),
-                                curve: Curves.fastEaseInToSlowEaseOut,
-                                builder: (context, value, child) {
+                                duration:
+                                    Duration(milliseconds: 500),
+                                curve: Curves
+                                    .fastEaseInToSlowEaseOut,
+                                builder:
+                                    (context, value, child) {
                                   return Text(
                                     "${value.toStringAsFixed(1)}L",
                                     style: TextStyle(
                                       color: AppColors.white,
-                                      fontSize: AppFontStyles.fontSize_18,
+                                      fontSize: AppFontStyles
+                                          .fontSize_18,
                                       fontVariations: [
-                                        AppFontStyles.boldFontVariation
+                                        AppFontStyles
+                                            .boldFontVariation
                                       ],
                                     ),
                                   );
                                 },
                               ),
                               FutureBuilder<int?>(
-                                future: SharedPrefsHelper.getUserGoal(),
+                                future: SharedPrefsHelper
+                                    .getUserGoal(),
                                 builder: (context, snapshot) {
                                   double userGoalLiters = 0.0;
 
                                   if (snapshot.hasData &&
                                       snapshot.data != null) {
-                                    userGoalLiters = snapshot.data! / 1000.0;
+                                    userGoalLiters =
+                                        snapshot.data! / 1000.0;
                                   }
 
                                   return Text(
                                     "/${userGoalLiters.toStringAsFixed(1)}L",
                                     style: TextStyle(
-                                      color: AppColors.lightSkyBlue,
-                                      fontSize: AppFontStyles.fontSize_10,
+                                      color:
+                                          AppColors.lightSkyBlue,
+                                      fontSize: AppFontStyles
+                                          .fontSize_10,
                                       fontVariations: [
-                                        AppFontStyles.semiBoldFontVariation,
+                                        AppFontStyles
+                                            .semiBoldFontVariation,
                                       ],
                                     ),
                                   );
@@ -779,18 +848,20 @@ class _HomeScreenState extends State<HomeScreen> {
             left: AppDimensions.dim184.w,
             child: BlocBuilder<BottleDataCubit, BottleDataState>(
               buildWhen: (previous, current) =>
-                  previous.volumePercent != current.volumePercent,
+                  previous.volumePercent !=
+                  current.volumePercent,
               builder: (context, state) {
                 return Container(
                   decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(AppDimensions.dim187),
+                    borderRadius: BorderRadius.circular(
+                        AppDimensions.dim187),
                     boxShadow: [
                       BoxShadow(
                         blurRadius: AppDimensions.dim4.r,
                         spreadRadius: AppDimensions.dim1.r,
                         color: Colors.black.withOpacity(.25),
-                        offset:
-                            Offset(AppDimensions.dim4.w, AppDimensions.dim4.h),
+                        offset: Offset(AppDimensions.dim4.w,
+                            AppDimensions.dim4.h),
                       )
                     ],
                   ),
@@ -813,9 +884,11 @@ class _HomeScreenState extends State<HomeScreen> {
             child: Container(
               width: AppDimensions.dim66.w,
               alignment: Alignment.center,
-              child: BlocBuilder<BottleDataCubit, BottleDataState>(
+              child:
+                  BlocBuilder<BottleDataCubit, BottleDataState>(
                 buildWhen: (previous, current) =>
-                    previous.volumePercent != current.volumePercent,
+                    previous.volumePercent !=
+                    current.volumePercent,
                 builder: (context, state) {
                   return TweenAnimationBuilder<int>(
                     tween: IntTween(
@@ -847,7 +920,8 @@ class _HomeScreenState extends State<HomeScreen> {
             child: Container(
               width: AppDimensions.dim50.w,
               alignment: Alignment.center,
-              child: BlocBuilder<BottleDataCubit, BottleDataState>(
+              child:
+                  BlocBuilder<BottleDataCubit, BottleDataState>(
                 buildWhen: (previous, current) =>
                     previous.volume != current.volume,
                 builder: (context, state) {
@@ -963,7 +1037,8 @@ class _HomeScreenState extends State<HomeScreen> {
       onTap: () async {},
       child: Container(
         height: AppDimensions.dim80.h,
-        margin: EdgeInsets.symmetric(horizontal: AppDimensions.dim20.w),
+        margin: EdgeInsets.symmetric(
+            horizontal: AppDimensions.dim20.w),
         decoration: BoxDecoration(
           color: AppColors.white,
           boxShadow: [
@@ -971,7 +1046,8 @@ class _HomeScreenState extends State<HomeScreen> {
               blurRadius: AppDimensions.dim4.r,
               spreadRadius: 0,
               color: Colors.black.withOpacity(.25),
-              offset: Offset(AppDimensions.dim2.w, AppDimensions.dim2.h),
+              offset: Offset(
+                  AppDimensions.dim2.w, AppDimensions.dim2.h),
             )
           ],
           border:
@@ -987,8 +1063,10 @@ class _HomeScreenState extends State<HomeScreen> {
               //   width: AppDimensions.dim1.w,
               // ),
               Border.all(
-                  color: AppColors.greywith80, width: AppDimensions.dim1),
-          borderRadius: BorderRadius.circular(AppDimensions.dim90.r),
+                  color: AppColors.greywith80,
+                  width: AppDimensions.dim1),
+          borderRadius:
+              BorderRadius.circular(AppDimensions.dim90.r),
         ),
         padding: EdgeInsets.symmetric(
           horizontal: AppDimensions.dim16.w,
@@ -1004,7 +1082,8 @@ class _HomeScreenState extends State<HomeScreen> {
                 children: [
                   Positioned.fill(
                     child: ImageFiltered(
-                      imageFilter: ImageFilter.blur(sigmaX: 0, sigmaY: 1.3.w),
+                      imageFilter: ImageFilter.blur(
+                          sigmaX: 0, sigmaY: 1.3.w),
                       child: Transform.translate(
                         offset: Offset(0, AppDimensions.dim3.h),
                         child: Opacity(
@@ -1042,7 +1121,8 @@ class _HomeScreenState extends State<HomeScreen> {
                     textAlign: TextAlign.center,
                     maxLines: 1,
                     style: TextStyle(
-                      fontFamily: AppFontStyles.urbanistFontFamily,
+                      fontFamily:
+                          AppFontStyles.urbanistFontFamily,
                       color: AppColors.bluegray,
                       fontSize: AppFontStyles.fontSize_12,
                       fontVariations: [
@@ -1063,7 +1143,8 @@ class _HomeScreenState extends State<HomeScreen> {
                       if (value < 1000) {
                         displayValue = "$value ml";
                       } else {
-                        displayValue = "${(value / 1000).toStringAsFixed(1)} L";
+                        displayValue =
+                            "${(value / 1000).toStringAsFixed(1)} L";
                       }
                       return Text(
                         displayValue,
@@ -1071,7 +1152,8 @@ class _HomeScreenState extends State<HomeScreen> {
                         textAlign: TextAlign.center,
                         maxLines: 1,
                         style: TextStyle(
-                          fontFamily: AppFontStyles.urbanistFontFamily,
+                          fontFamily:
+                              AppFontStyles.urbanistFontFamily,
                           color: AppColors.bluegray,
                           fontSize: AppFontStyles.fontSize_16,
                           fontVariations: [
@@ -1140,7 +1222,8 @@ class _HomeScreenState extends State<HomeScreen> {
                     textAlign: TextAlign.center,
                     maxLines: 1,
                     style: TextStyle(
-                      fontFamily: AppFontStyles.urbanistFontFamily,
+                      fontFamily:
+                          AppFontStyles.urbanistFontFamily,
                       color: AppColors.bluegray,
                       fontSize: AppFontStyles.fontSize_12,
                       fontVariations: [
@@ -1162,7 +1245,8 @@ class _HomeScreenState extends State<HomeScreen> {
                         textAlign: TextAlign.center,
                         maxLines: 1,
                         style: TextStyle(
-                          fontFamily: AppFontStyles.urbanistFontFamily,
+                          fontFamily:
+                              AppFontStyles.urbanistFontFamily,
                           color: AppColors.bluegray,
                           fontSize: AppFontStyles.fontSize_16,
                           fontVariations: [
@@ -1189,7 +1273,8 @@ class _HomeScreenState extends State<HomeScreen> {
           style: TextStyle(
             fontSize: AppFontStyles.fontSize_16,
             color: AppColors.bluegray,
-            height: AppFontStyles.getLineHeight(AppFontStyles.fontSize_16, 120),
+            height: AppFontStyles.getLineHeight(
+                AppFontStyles.fontSize_16, 120),
             fontVariations: [
               AppFontStyles.semiBoldFontVariation,
             ],
