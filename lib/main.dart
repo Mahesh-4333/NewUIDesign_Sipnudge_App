@@ -53,7 +53,7 @@ import 'package:hydrify/screens/user_lifestyle_info_input_screen.dart';
 import 'package:hydrify/screens/user_personal_info_input_screen..dart';
 import 'package:hydrify/screens/water_intake_timeline_screen.dart';
 import 'package:hydrify/services/location_service.dart';
-import 'package:hydrify/services/notification_service.dart';
+import 'package:hydrify/services/notification/notification_service.dart';
 import 'package:hydrify/services/user_manager.dart';
 import 'package:hydrify/services/weather_service.dart';
 import 'package:provider/provider.dart';
@@ -61,7 +61,8 @@ import 'package:http/http.dart' as http;
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await FlutterBluePlus.setLogLevel(LogLevel.verbose, color: true);
+  await FlutterBluePlus.setLogLevel(LogLevel.verbose,
+      color: true);
 
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
@@ -69,7 +70,8 @@ Future<void> main() async {
 
   if (kDebugMode) {
     try {
-      FirebaseFunctions.instance.useFunctionsEmulator('127.0.0.1', 5001);
+      FirebaseFunctions.instance
+          .useFunctionsEmulator('127.0.0.1', 5001);
     } catch (e) {
       print('Error connecting to functions emulator: $e');
     }
@@ -124,19 +126,25 @@ class MyApp extends StatelessWidget {
         BlocProvider(create: (_) => UserInfoCubit(dbHelper)),
         BlocProvider(create: (_) => BottomNavCubit()),
         ChangeNotifierProvider(
-            lazy: false, create: (_) => AuthenticationProvider()),
-        ChangeNotifierProvider(lazy: false, create: (_) => UserInfoProvider()),
+            lazy: false,
+            create: (_) => AuthenticationProvider()),
+        ChangeNotifierProvider(
+            lazy: false, create: (_) => UserInfoProvider()),
         BlocProvider(create: (context) => FilterCubit()),
         ChangeNotifierProvider(
-            create: (_) => WeatherProvider(weatherService, locationService)),
-        BlocProvider(create: (context) => BottleDataCubit(bleCubit)),
+            create: (_) => WeatherProvider(
+                weatherService, locationService)),
+        BlocProvider(
+            create: (context) => BottleDataCubit(bleCubit)),
         BlocProvider(create: (context) => ReminderCubit()),
         BlocProvider(create: (context) => ReminderTimeCubit()),
-        BlocProvider(create: (context) => ReminderIntervalCubit()),
+        BlocProvider(
+            create: (context) => ReminderIntervalCubit()),
         BlocProvider(create: (context) => LevelCubit()),
         BlocProvider(create: (context) => ProfileCubit()),
         BlocProvider(create: (context) => LinkAccountsCubit()),
-        BlocProvider(create: (context) => AccountSecurityCubit()),
+        BlocProvider(
+            create: (context) => AccountSecurityCubit()),
         BlocProvider(create: (context) => HelpAndSupportCubit()),
         BlocProvider(create: (context) => PersonalInfoCubit()),
         BlocProvider(create: (context) => DrinkReminderCubit()),
@@ -157,7 +165,8 @@ class MyApp extends StatelessWidget {
                     centerTitle: true,
                     iconTheme: IconThemeData(),
                   ),
-                  fontFamily: AppFontStyles.museoModernoFontFamily,
+                  fontFamily:
+                      AppFontStyles.museoModernoFontFamily,
                 ),
                 home: child,
                 routes: {
@@ -172,7 +181,8 @@ class MyApp extends StatelessWidget {
 
                   // '/lifestyleinfo': (context) => LifeStyleInfoPage(),
 
-                  '/lifestyleinfo': (context) => UserLifestyleInfoInputScreen(),
+                  '/lifestyleinfo': (context) =>
+                      UserLifestyleInfoInputScreen(),
 
                   //'/profilescreen': (context) => ProfileScreenPage(),
 
@@ -183,18 +193,22 @@ class MyApp extends StatelessWidget {
 
                   //'/personalinfo': (context) => PersonalInfoPage(),
 
-                  '/achievement': (context) => AchievementsBadgeScreen(),
+                  '/achievement': (context) =>
+                      AchievementsBadgeScreen(),
 
                   '/personalinfoinsetting': (context) =>
                       PersonalInfoScreenInSetting(),
 
-                  '/drinkreminder': (context) => DrinkReminderPage(),
+                  '/drinkreminder': (context) =>
+                      DrinkReminderPage(),
 
                   '/preferences': (context) => PreferencesPage(),
 
-                  '/account_security': (context) => AccountAndSecurityPage(),
+                  '/account_security': (context) =>
+                      AccountAndSecurityPage(),
 
-                  '/linked_accounts': (context) => LinkAccountsPage(),
+                  '/linked_accounts': (context) =>
+                      LinkAccountsPage(),
 
                   '/support': (context) => HelpAndSupportPage(),
 
@@ -205,9 +219,11 @@ class MyApp extends StatelessWidget {
 
                   '/aboutus': (context) => AboutUs(),
 
-                  '/contact_support': (context) => ContactSupportPage(),
+                  '/contact_support': (context) =>
+                      ContactSupportPage(),
 
-                  '/data&analytics': (context) => DataAndAnalyticsPage(),
+                  '/data&analytics': (context) =>
+                      DataAndAnalyticsPage(),
 
                   // '/privacypolicy': (context) => PrivacyPolicy(),
 

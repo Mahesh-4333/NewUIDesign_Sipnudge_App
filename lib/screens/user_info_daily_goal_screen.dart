@@ -18,7 +18,7 @@ import 'package:hydrify/screens/widgets/auth_button_widget.dart';
 import 'package:hydrify/screens/widgets/user_info_input_widgets/custom_gradient_slider_widget.dart';
 
 import 'package:hydrify/screens/widgets/water_wave_widget.dart';
-import 'package:hydrify/services/notification_service.dart';
+import 'package:hydrify/services/notification/notification_service.dart';
 import 'package:provider/provider.dart';
 
 class UserInfoDailyGoalScreen extends StatefulWidget {
@@ -33,7 +33,8 @@ class UserInfoDailyGoalScreen extends StatefulWidget {
       _UserInfoDailyGoalScreenState();
 }
 
-class _UserInfoDailyGoalScreenState extends State<UserInfoDailyGoalScreen> {
+class _UserInfoDailyGoalScreenState
+    extends State<UserInfoDailyGoalScreen> {
   late double convertedWaterGoal;
   String unit = "mL";
   String displayWaterGoal = "";
@@ -75,8 +76,10 @@ class _UserInfoDailyGoalScreenState extends State<UserInfoDailyGoalScreen> {
     double minGoal = (goalInLiters * 0.7).clamp(1.0, 2.5);
     double maxGoal = (goalInLiters * 1.3).clamp(2.5, 5.0);
 
-    minGoal = minGoal > goalInLiters ? goalInLiters * 0.8 : minGoal;
-    maxGoal = maxGoal < goalInLiters ? goalInLiters * 1.2 : maxGoal;
+    minGoal =
+        minGoal > goalInLiters ? goalInLiters * 0.8 : minGoal;
+    maxGoal =
+        maxGoal < goalInLiters ? goalInLiters * 1.2 : maxGoal;
 
     tickValues = [
       minGoal,
@@ -132,7 +135,8 @@ class _UserInfoDailyGoalScreenState extends State<UserInfoDailyGoalScreen> {
               style: TextStyle(
                   color: AppColors.bluegray,
                   fontSize: AppFontStyles.fontSize_24,
-                  fontFamily: AppFontStyles.museoModernoFontFamily,
+                  fontFamily:
+                      AppFontStyles.museoModernoFontFamily,
                   fontVariations: [
                     AppFontStyles.boldFontVariation,
                   ]),
@@ -149,7 +153,9 @@ class _UserInfoDailyGoalScreenState extends State<UserInfoDailyGoalScreen> {
                     color: AppColors.bluegray,
                     fontSize: AppFontStyles.fontSize_36,
                     fontFamily: AppFontStyles.urbanistFontFamily,
-                    fontVariations: [AppFontStyles.boldFontVariation],
+                    fontVariations: [
+                      AppFontStyles.boldFontVariation
+                    ],
                     shadows: [
                       Shadow(
                         blurRadius: AppDimensions.dim5,
@@ -164,8 +170,11 @@ class _UserInfoDailyGoalScreenState extends State<UserInfoDailyGoalScreen> {
                   style: TextStyle(
                     color: AppColors.bluegray,
                     fontSize: AppFontStyles.fontSize_32,
-                    fontFamily: AppFontStyles.museoModernoFontFamily,
-                    fontVariations: [AppFontStyles.regularFontVariation],
+                    fontFamily:
+                        AppFontStyles.museoModernoFontFamily,
+                    fontVariations: [
+                      AppFontStyles.regularFontVariation
+                    ],
                     shadows: [
                       Shadow(
                         blurRadius: AppDimensions.dim5,
@@ -188,7 +197,8 @@ class _UserInfoDailyGoalScreenState extends State<UserInfoDailyGoalScreen> {
                   BoxShadow(
                     blurRadius: AppDimensions.radius_5,
                     color: Colors.black.withOpacity(.4),
-                    offset: Offset(AppDimensions.dim5, AppDimensions.dim5),
+                    offset: Offset(
+                        AppDimensions.dim5, AppDimensions.dim5),
                   )
                 ],
               ),
@@ -198,7 +208,8 @@ class _UserInfoDailyGoalScreenState extends State<UserInfoDailyGoalScreen> {
                 waveCount: 4,
                 // fillPercent: ((convertedWaterGoal / 1000) - tickValues.first) /
                 //     (tickValues.last - tickValues.first),
-                fillPercent: (((convertedWaterGoal / 1000) - tickValues.first) /
+                fillPercent: (((convertedWaterGoal / 1000) -
+                            tickValues.first) /
                         (tickValues.last - tickValues.first))
                     .clamp(0.0, 1.0),
 
@@ -238,11 +249,13 @@ class _UserInfoDailyGoalScreenState extends State<UserInfoDailyGoalScreen> {
                 setState(() {
                   if (unit == "mL") {
                     // mL → Liters
-                    convertedWaterGoal = convertedWaterGoal / 1000;
+                    convertedWaterGoal =
+                        convertedWaterGoal / 1000;
                     unit = "L";
                   } else {
                     // Liters → mL
-                    convertedWaterGoal = convertedWaterGoal * 1000;
+                    convertedWaterGoal =
+                        convertedWaterGoal * 1000;
                     unit = "mL";
                   }
 
@@ -255,8 +268,8 @@ class _UserInfoDailyGoalScreenState extends State<UserInfoDailyGoalScreen> {
                 height: AppDimensions.dim46.h,
                 decoration: BoxDecoration(
                   color: AppColors.white,
-                  borderRadius:
-                      BorderRadius.circular(AppDimensions.radius_50.r),
+                  borderRadius: BorderRadius.circular(
+                      AppDimensions.radius_50.r),
                   border: Border.all(
                     color: AppColors.greywith80,
                     width: 1.w,
@@ -265,7 +278,8 @@ class _UserInfoDailyGoalScreenState extends State<UserInfoDailyGoalScreen> {
                     BoxShadow(
                       color: Colors.black.withOpacity(0.25),
                       blurRadius: AppDimensions.radius_5,
-                      offset: Offset(AppDimensions.dim3, AppDimensions.dim3),
+                      offset: Offset(AppDimensions.dim3,
+                          AppDimensions.dim3),
                     ),
                   ],
                 ),
@@ -276,7 +290,9 @@ class _UserInfoDailyGoalScreenState extends State<UserInfoDailyGoalScreen> {
                     color: AppColors.greywith80,
                     fontSize: AppFontStyles.fontSize_16,
                     fontFamily: AppFontStyles.urbanistFontFamily,
-                    fontVariations: [AppFontStyles.semiBoldFontVariation],
+                    fontVariations: [
+                      AppFontStyles.semiBoldFontVariation
+                    ],
                   ),
                 ),
               ),
@@ -299,10 +315,13 @@ class _UserInfoDailyGoalScreenState extends State<UserInfoDailyGoalScreen> {
               await context
                   .read<UserInfoCubit>()
                   .saveUser(context.read<UserInfoCubit>().state);
-              await SharedPrefsHelper.setPersonalInfoSubmitted(true);
-              await SharedPrefsHelper.setWaterGoal(convertedWaterGoal.toInt());
+              await SharedPrefsHelper.setPersonalInfoSubmitted(
+                  true);
+              await SharedPrefsHelper.setWaterGoal(
+                  convertedWaterGoal.toInt());
 
-              final slots = generateHydrationSlots(convertedWaterGoal);
+              final slots =
+                  generateHydrationSlots(convertedWaterGoal);
               for (var slot in slots) {
                 log("Slot: ${slot.slot.label}, Water to drink: ${slot.amount} mL");
               }
@@ -314,8 +333,11 @@ class _UserInfoDailyGoalScreenState extends State<UserInfoDailyGoalScreen> {
                   slot,
                 );
               }
-              context.read<BleCubit>().queueHydrationSlots(slots);
-              NotificationService().scheduleHydrationReminders(slots);
+              context
+                  .read<BleCubit>()
+                  .queueHydrationSlots(slots);
+              NotificationService()
+                  .scheduleHydrationReminders(slots);
 
               Navigator.pushAndRemoveUntil(
                   context,
