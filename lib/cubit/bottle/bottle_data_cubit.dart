@@ -51,6 +51,7 @@ class BottleDataCubit extends Cubit<BottleDataState> {
   }
 
   Future<void> _handleBleStateChange(BleState bleState) async {
+    print("30d -> connected");
     if (bleState.status != BleStatus.connected) {
       log("⚠️ Skipping DB insert — BLE not connected (state: ${bleState.status})");
       return;
