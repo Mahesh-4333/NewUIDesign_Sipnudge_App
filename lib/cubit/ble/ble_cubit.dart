@@ -21,6 +21,7 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
   final Guid dataUUID = Guid("6E400003-B5A3-F393-E0A9-E50E24DCCA9E");
   final Guid hydrationDataUUID = Guid("6E400004-B5A3-F393-E0A9-E50E24DCCA9E");
   final Guid ackUUID = Guid("6E400002-B5A3-F393-E0A9-E50E24DCCA9E");
+
   final Guid hydrationCharUUID = Guid("6E400005-B5A3-F393-E0A9-E50E24DCCA9E");
   final Guid water30DaysDataUUID = Guid("6E400006-B5A3-F393-E0A9-E50E24DCCA9E");
 
@@ -328,45 +329,6 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
         return;
       }
 
-      // 🩵 Main data (battery, volume, percent)
-      _dataChar!.onValueReceived.listen((value) {
-        final data = String.fromCharCodes(value);
-        log("Received data: $data", name: "BLE_Cubit");
-        _parseData(data);
-        _sendAck(device);
-      });
-      await _dataChar!.setNotifyValue(true);
-
-      // 💧 Hydration history data
-      _hydrationDataChar?.onValueReceived.listen((value) {
-        final data = String.fromCharCodes(value);
-        log("HydrationDataReceived: $data", name: "BLE_Cubit");
-        var slots = _parseHydrationData(data);
-        if (slots.isNotEmpty) _hydrationController.add(slots);
-        _sendAck(device, sendAckToHydrationSlotsCharacteristic: true);
-      });
-      await _hydrationDataChar?.setNotifyValue(true);
-
-      // 🔹 NEW: Real-time hydration slot data (slotId/Target/Consumed)
-      if (_hydrationChar != null) {
-        await _hydrationChar!.setNotifyValue(true);
-        // Inside _discoverServices where you listen to _hydrationChar:
-        _hydrationChar!.onValueReceived.listen((value) async {
-          final data = String.fromCharCodes(value);
-          log("Hydration Slot Data: $data", name: "BLE_Cubit");
-
-          final updatedEntries = _parseHydrationSlotData(data);
-          if (updatedEntries.isNotEmpty) {
-            _hydrationController.add(updatedEntries);
-            for (final updatedEntry in updatedEntries) {
-              await dbHelper.insertOrUpdateSlot(updatedEntry);
-            }
-          }
-
-          _sendAck(device);
-        });
-      }
-
       if (_hydration30DaysChar != null) {
         await _hydration30DaysChar!.setNotifyValue(true);
         _hydration30DaysChar!.onValueReceived.listen((value) async {
@@ -392,17 +354,17 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
 
               // Save to DB in bulk (fast)
               await dbHelper.bulkUpsert30Days(list);
-
+              emit(state.copyWith(isHydration30DaysDataSync: true));
               log("[BLE_Cubit] Saved ${list.length} day summaries to DB",
                   name: "BLE_Cubit");
 
               // Optionally emit to UI stream:
               // _hydrationController.add(list.map((e) => convertToHydrationEntryIfNeeded(e)).toList());
 
-              for (final day in parsed) {
+              for (final day in list) {
                 // Example debug print (you already log inside parser)
-                print("30d -> ${day['dayIndex']} : ${day['date']} "
-                    "target=${day['target']} consumed=${day['consumed']}");
+                print("30d -> ${day.dayIndex} : ${day.date} "
+                    "target=${day.target} consumed=${day.consumed}  percentage ${(day.consumed / day.target) * 100}");
               }
             }
 
@@ -412,6 +374,45 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
           }
         });
       }
+      // 🔹 NEW: Real-time hydration slot data (slotId/Target/Consumed)
+      if (_hydrationChar != null) {
+        await _hydrationChar!.setNotifyValue(true);
+        // Inside _discoverServices where you listen to _hydrationChar:
+        _hydrationChar!.onValueReceived.listen((value) async {
+          final data = String.fromCharCodes(value);
+          log("Hydration Slot Data: $data", name: "BLE_Cubit");
+
+          final updatedEntries = _parseHydrationSlotData(data);
+          if (updatedEntries.isNotEmpty) {
+            _hydrationController.add(updatedEntries);
+            for (final updatedEntry in updatedEntries) {
+              await dbHelper.insertOrUpdateSlot(updatedEntry);
+            }
+          }
+
+          _sendAck(device);
+        });
+      }
+      await _hydrationDataChar?.setNotifyValue(true);
+
+      // 💧 Hydration history data
+      _hydrationDataChar?.onValueReceived.listen((value) {
+        final data = String.fromCharCodes(value);
+        log("HydrationDataReceived: $data", name: "BLE_Cubit");
+        var slots = _parseHydrationData(data);
+        if (slots.isNotEmpty) _hydrationController.add(slots);
+        _sendAck(device, sendAckToHydrationSlotsCharacteristic: true);
+      });
+
+      await _dataChar!.setNotifyValue(true);
+
+      // 🩵 Main data (battery, volume, percent)
+      _dataChar!.onValueReceived.listen((value) {
+        final data = String.fromCharCodes(value);
+        log("Received data: $data", name: "BLE_Cubit");
+        _parseData(data);
+        _sendAck(device);
+      });
 
       emit(state.copyWith(
         status: BleStatus.connected,
@@ -547,13 +548,14 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
 
       // Parse epoch (first token). Detect secs vs millis.
       final epochToken = parts.first;
+
       final epochNum = int.tryParse(epochToken);
       if (epochNum == null) {
         log("Invalid epoch in 30-days payload: '$epochToken'",
             name: "BLE_Cubit");
         return results;
       }
-
+      print("30d -> $epochNum");
       // Heuristic: if epoch looks like milliseconds (> 1e12) treat as ms, else seconds.
       final epochMillis =
           (epochNum > 1000000000000) ? epochNum : epochNum * 1000;
@@ -675,7 +677,7 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
       final payload = _pendingSlots.map((slot) {
         final start = _timeOfDayToEpoch(slot.startTime);
         final end = _timeOfDayToEpoch(slot.endTime);
-        return "${slot.slot.label}/${slot.slot.index}/$start/$end/${slot.amount}";
+        return "${slot.slot.label}/${slot.slot.index}/$start/$end/${slot.amount.toInt()}";
       }).join("|");
 
       log("Flushing hydration slots: $payload");

@@ -20,7 +20,7 @@ class BleState {
   final int? percent;
   final List<ScanResult> scannedDevices;
   final bool isFirstConnection;
-
+  final bool isHydration30DaysDataSync;
   const BleState({
     this.status = BleStatus.idle,
     this.message = '',
@@ -29,6 +29,7 @@ class BleState {
     this.percent,
     this.scannedDevices = const [],
     this.isFirstConnection = true,
+    this.isHydration30DaysDataSync = false,
   });
 
   BleState copyWith({
@@ -39,15 +40,17 @@ class BleState {
     final int? percent,
     List<ScanResult>? scannedDevices,
     bool? isFirstConnection,
+    bool? isHydration30DaysDataSync,
   }) {
     return BleState(
-      status: status ?? this.status,
-      message: message ?? this.message,
-      battery: battery ?? this.battery,
-      volume: volume ?? this.volume,
-      percent: percent ?? this.percent,
-      scannedDevices: scannedDevices ?? this.scannedDevices,
-      isFirstConnection: isFirstConnection ?? this.isFirstConnection,
-    );
+        status: status ?? this.status,
+        message: message ?? this.message,
+        battery: battery ?? this.battery,
+        volume: volume ?? this.volume,
+        percent: percent ?? this.percent,
+        scannedDevices: scannedDevices ?? this.scannedDevices,
+        isFirstConnection: isFirstConnection ?? this.isFirstConnection,
+        isHydration30DaysDataSync:
+            isHydration30DaysDataSync ?? this.isHydration30DaysDataSync);
   }
 }
