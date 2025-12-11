@@ -56,8 +56,9 @@ import 'package:provider/provider.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await FlutterBluePlus.setLogLevel(LogLevel.verbose,
-      color: true);
+  // 🔥 Load SharedPreferences before the app starts
+  await UserManager().init();
+  await FlutterBluePlus.setLogLevel(LogLevel.verbose, color: true);
 
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
@@ -65,8 +66,7 @@ Future<void> main() async {
 
   if (kDebugMode) {
     try {
-      FirebaseFunctions.instance
-          .useFunctionsEmulator('127.0.0.1', 5001);
+      FirebaseFunctions.instance.useFunctionsEmulator('127.0.0.1', 5001);
     } catch (e) {
       print('Error connecting to functions emulator: $e');
     }
@@ -121,25 +121,19 @@ class MyApp extends StatelessWidget {
         BlocProvider(create: (_) => UserInfoCubit(dbHelper)),
         BlocProvider(create: (_) => BottomNavCubit()),
         ChangeNotifierProvider(
-            lazy: false,
-            create: (_) => AuthenticationProvider()),
-        ChangeNotifierProvider(
-            lazy: false, create: (_) => UserInfoProvider()),
+            lazy: false, create: (_) => AuthenticationProvider()),
+        ChangeNotifierProvider(lazy: false, create: (_) => UserInfoProvider()),
         BlocProvider(create: (context) => FilterCubit()),
         ChangeNotifierProvider(
-            create: (_) => WeatherProvider(
-                weatherService, locationService)),
-        BlocProvider(
-            create: (context) => BottleDataCubit(bleCubit)),
+            create: (_) => WeatherProvider(weatherService, locationService)),
+        BlocProvider(create: (context) => BottleDataCubit(bleCubit)),
         BlocProvider(create: (context) => ReminderCubit()),
         BlocProvider(create: (context) => ReminderTimeCubit()),
-        BlocProvider(
-            create: (context) => ReminderIntervalCubit()),
+        BlocProvider(create: (context) => ReminderIntervalCubit()),
         BlocProvider(create: (context) => LevelCubit()),
         BlocProvider(create: (context) => ProfileCubit()),
         BlocProvider(create: (context) => LinkAccountsCubit()),
-        BlocProvider(
-            create: (context) => AccountSecurityCubit()),
+        BlocProvider(create: (context) => AccountSecurityCubit()),
         BlocProvider(create: (context) => HelpAndSupportCubit()),
         BlocProvider(create: (context) => PersonalInfoCubit()),
         BlocProvider(create: (context) => DrinkReminderCubit()),
@@ -153,87 +147,76 @@ class MyApp extends StatelessWidget {
             minTextAdapt: true,
             designSize: const Size(440, 956),
             builder: (_, child) {
-              return Padding(
-                padding: EdgeInsets.only(
-                    bottom: MediaQuery.of(context)
-                        .viewPadding
-                        .bottom),
-                child: MaterialApp(
-                  debugShowCheckedModeBanner: false,
-                  theme: ThemeData(
-                    appBarTheme: const AppBarTheme(
-                      centerTitle: true,
-                      iconTheme: IconThemeData(),
-                    ),
-                    fontFamily:
-                        AppFontStyles.museoModernoFontFamily,
+              // return Padding(
+              //   padding: EdgeInsets.only(
+              //       bottom: MediaQuery.of(context)
+              //           .viewPadding
+              //           .bottom),
+              return MaterialApp(
+                debugShowCheckedModeBanner: false,
+                theme: ThemeData(
+                  appBarTheme: const AppBarTheme(
+                    centerTitle: true,
+                    iconTheme: IconThemeData(),
                   ),
-                  home: child,
-                  routes: {
-                    //'/dailygoalpage': (context) => DailyGoalPage(),
-
-                    '/dailygoalpage': (context) =>
-                        UserInfoDailyGoalScreen(waterGoal: 0),
-
-                    '/homepage': (context) => HomeScreen(),
-
-                    '/analysis': (context) => AnalysisScreen(),
-
-                    // '/lifestyleinfo': (context) => LifeStyleInfoPage(),
-
-                    '/lifestyleinfo': (context) =>
-                        UserLifestyleInfoInputScreen(),
-
-                    //'/profilescreen': (context) => ProfileScreenPage(),
-
-                    '/settingscreen': (context) =>
-                        SettingScreen(),
-
-                    '/personalinfo': (context) =>
-                        UserInfoInputScreen(fromSettings: true),
-
-                    //'/personalinfo': (context) => PersonalInfoPage(),
-
-                    '/achievement': (context) =>
-                        AchievementsBadgeScreen(),
-
-                    '/personalinfoinsetting': (context) =>
-                        PersonalInfoScreenInSetting(),
-
-                    '/drinkreminder': (context) =>
-                        DrinkReminderPage(),
-
-                    '/preferences': (context) =>
-                        PreferencesPage(),
-
-                    '/account_security': (context) =>
-                        AccountAndSecurityPage(),
-
-                    '/linked_accounts': (context) =>
-                        LinkAccountsPage(),
-
-                    '/support': (context) =>
-                        HelpAndSupportPage(),
-
-                    '/waterintaketimeline': (context) =>
-                        WaterIntakeTimelineScreen(),
-
-                    '/faq': (context) => FAQ_Page(),
-
-                    '/aboutus': (context) => AboutUs(),
-
-                    '/contact_support': (context) =>
-                        ContactSupportPage(),
-
-                    '/data&analytics': (context) =>
-                        DataAndAnalyticsPage(),
-
-                    // '/privacypolicy': (context) => PrivacyPolicy(),
-
-                    // '/termsofservices': (context) => TermsOfServices(),
-                  },
+                  fontFamily: AppFontStyles.museoModernoFontFamily,
                 ),
+                home: child,
+                routes: {
+                  //'/dailygoalpage': (context) => DailyGoalPage(),
+
+                  '/dailygoalpage': (context) =>
+                      UserInfoDailyGoalScreen(waterGoal: 0),
+
+                  '/homepage': (context) => HomeScreen(),
+
+                  '/analysis': (context) => AnalysisScreen(),
+
+                  // '/lifestyleinfo': (context) => LifeStyleInfoPage(),
+
+                  '/lifestyleinfo': (context) => UserLifestyleInfoInputScreen(),
+
+                  //'/profilescreen': (context) => ProfileScreenPage(),
+
+                  '/settingscreen': (context) => SettingScreen(),
+
+                  '/personalinfo': (context) =>
+                      UserInfoInputScreen(fromSettings: true),
+
+                  //'/personalinfo': (context) => PersonalInfoPage(),
+
+                  '/achievement': (context) => AchievementsBadgeScreen(),
+
+                  '/personalinfoinsetting': (context) =>
+                      PersonalInfoScreenInSetting(),
+
+                  '/drinkreminder': (context) => DrinkReminderPage(),
+
+                  '/preferences': (context) => PreferencesPage(),
+
+                  '/account_security': (context) => AccountAndSecurityPage(),
+
+                  '/linked_accounts': (context) => LinkAccountsPage(),
+
+                  '/support': (context) => HelpAndSupportPage(),
+
+                  '/waterintaketimeline': (context) =>
+                      WaterIntakeTimelineScreen(),
+
+                  '/faq': (context) => FAQ_Page(),
+
+                  '/aboutus': (context) => AboutUs(),
+
+                  '/contact_support': (context) => ContactSupportPage(),
+
+                  '/data&analytics': (context) => DataAndAnalyticsPage(),
+
+                  // '/privacypolicy': (context) => PrivacyPolicy(),
+
+                  // '/termsofservices': (context) => TermsOfServices(),
+                },
               );
+              //);
             },
             child: SplashScreen(),
           );

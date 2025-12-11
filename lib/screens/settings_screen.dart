@@ -34,7 +34,15 @@ class _SettingScreenState extends State<SettingScreen> {
   @override
   void initState() {
     super.initState();
+    // Listen for changes
+    UserManager().addListener(_onNameChanged);
     _loadSavedName();
+  }
+
+  void _onNameChanged(String newName) {
+    setState(() {
+      _nameController.text = newName;
+    });
   }
 
   Future<void> _loadSavedName() async {
@@ -48,6 +56,7 @@ class _SettingScreenState extends State<SettingScreen> {
 
   @override
   void dispose() {
+    UserManager().removeListener(_onNameChanged);
     _nameController.dispose();
     _nameFocusNode.dispose();
     super.dispose();
@@ -110,7 +119,7 @@ class _SettingScreenState extends State<SettingScreen> {
 
       switch (title) {
         case AppStrings.personalinfo:
-          navigator.push(
+          Navigator.of(context, rootNavigator: true).push(
             MaterialPageRoute(
               builder: (_) => UserInfoInputScreen(fromSettings: true),
             ),
@@ -218,7 +227,7 @@ class _SettingScreenState extends State<SettingScreen> {
 
   void _showLogoutConfirmation(BuildContext context) {
     showModalBottomSheet(
-      context: context,
+      context: Navigator.of(context, rootNavigator: true).context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       barrierColor: AppColors.black.withOpacity(0),
@@ -422,7 +431,6 @@ class _SettingScreenState extends State<SettingScreen> {
                       // ),
                     ),
                     SizedBox(height: AppDimensions.dim165.h),
-
                   ],
                 ),
               ),

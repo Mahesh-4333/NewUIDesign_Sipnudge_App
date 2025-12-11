@@ -212,8 +212,9 @@ class PreferencesPage extends StatelessWidget {
                                 info: formattedGoal,
                                 iconpatharrow: "assets/arrow.png",
                                 onTap: () {
-                                  Navigator.push(
-                                    context,
+                                  Navigator.of(context, rootNavigator: true)
+                                      .push(
+                                    //context,
                                     MaterialPageRoute(
                                       builder: (_) => UserInfoDailyGoalScreen(
                                         waterGoal: goal.toDouble(),

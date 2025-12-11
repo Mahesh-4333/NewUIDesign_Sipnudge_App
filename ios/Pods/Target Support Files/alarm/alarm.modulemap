@@ -1,0 +1,6 @@
+framework module alarm {
+  umbrella header "alarm-umbrella.h"
+
+  export *
+  module * { export * }
+}

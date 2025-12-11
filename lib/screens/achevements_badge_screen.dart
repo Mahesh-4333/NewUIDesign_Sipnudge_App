@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -24,8 +26,7 @@ class AchievementsBadgeScreen extends StatelessWidget {
             width: double.infinity,
             decoration: BoxDecoration(
               image: DecorationImage(
-                image: AssetImage(
-                    "assets/images/app_background.png"),
+                image: AssetImage("assets/images/app_background.png"),
                 fit: BoxFit.cover,
               ),
               //color: Color(0XFFFFFFFF),
@@ -36,8 +37,7 @@ class AchievementsBadgeScreen extends StatelessWidget {
                   child: Container(
                       decoration: BoxDecoration(
                         image: DecorationImage(
-                          image: AssetImage(
-                              "assets/images/app_background.png"),
+                          image: AssetImage("assets/images/app_background.png"),
                           fit: BoxFit.cover,
                         ),
                         // gradient: LinearGradient(
@@ -49,9 +49,7 @@ class AchievementsBadgeScreen extends StatelessWidget {
                       alignment: Alignment.center,
                       child: Stack(
                         children: [
-                          Positioned(
-                              child:
-                                  ConcentricCirclesAnimation()),
+                          Positioned(child: ConcentricCirclesAnimation()),
                           Positioned(
                             left: AppDimensions.dim75.w,
                             top: AppDimensions.dim90.w,
@@ -84,20 +82,15 @@ class AchievementsBadgeScreen extends StatelessWidget {
                         ),
                       ],
                       borderRadius: BorderRadius.only(
-                        topLeft: Radius.circular(
-                            AppDimensions.radius_24.r),
-                        topRight: Radius.circular(
-                            AppDimensions.radius_24.r),
+                        topLeft: Radius.circular(AppDimensions.radius_24.r),
+                        topRight: Radius.circular(AppDimensions.radius_24.r),
                       ),
                     ),
-                    padding: EdgeInsets.all(
-                        AppDimensions.padding_20.h),
+                    padding: EdgeInsets.all(AppDimensions.padding_20.h),
                     child: GridView.builder(
-                      padding: EdgeInsets.only(
-                          bottom: AppDimensions.dim100.h),
+                      padding: EdgeInsets.only(bottom: AppDimensions.dim100.h),
                       physics: const BouncingScrollPhysics(),
-                      gridDelegate:
-                          SliverGridDelegateWithFixedCrossAxisCount(
+                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                         crossAxisCount: 3,
                         childAspectRatio: 1.2.r,
                         mainAxisSpacing: 24.h,
@@ -110,9 +103,7 @@ class AchievementsBadgeScreen extends StatelessWidget {
                         return GestureDetector(
                           onTap: () {
                             if (level > currentLevel) {
-                              context
-                                  .read<LevelCubit>()
-                                  .updateLevel(level);
+                              context.read<LevelCubit>().updateLevel(level);
                               showLevelUpDialog(
                                 context,
                                 level,
@@ -120,8 +111,7 @@ class AchievementsBadgeScreen extends StatelessWidget {
                               );
                             }
                           },
-                          child: getLevelBadges(
-                              level.toString(), isUnlocked),
+                          child: getLevelBadges(level.toString(), isUnlocked),
                         );
                       },
                     ),
@@ -146,8 +136,8 @@ class AchievementsBadgeScreen extends StatelessWidget {
           child: Align(
             alignment: Alignment.center,
             child: Transform.translate(
-              offset: Offset(-16.w,
-                  0), // move slightly left (use +8.w for right)
+              offset:
+                  Offset(-16.w, 0), // move slightly left (use +8.w for right)
               child: Image.asset(
                 "assets/images/goals_new_img.png",
                 width: AppDimensions.dim330.w,
@@ -210,42 +200,10 @@ class AchievementsBadgeScreen extends StatelessWidget {
           Align(
             alignment: Alignment.topCenter,
             child: isUnlocked
-                ? Stack(
-                    alignment: Alignment.center,
-                    children: [
-                      Image.asset(
-                        "assets/images/goals_levels_img.png",
-                        width: AppDimensions.dim107.w,
-                        height: AppDimensions.dim111.h,
-                      ),
-                      ShaderMask(
-                        shaderCallback: (bounds) =>
-                            const LinearGradient(
-                          colors: [
-                            Color(0xFF16446F),
-                            Color(0xFF2569A9),
-                            Color(0xFF59ADFB),
-                          ],
-                        ).createShader(
-                          Rect.fromLTWH(
-                              0, 0, bounds.width, bounds.height),
-                        ),
-                        blendMode: BlendMode.srcIn,
-                        child: Text(
-                          level,
-                          style: TextStyle(
-                            color: AppColors.white,
-                            fontFamily:
-                                AppFontStyles.urbanistFontFamily,
-                            fontVariations: [
-                              AppFontStyles
-                                  .extraBoldFontVariation
-                            ],
-                            fontSize: AppFontStyles.fontSize_28,
-                          ),
-                        ),
-                      )
-                    ],
+                ? Image.asset(
+                    "assets/images/goals_levels_img.png",
+                    width: AppDimensions.dim107.w,
+                    height: AppDimensions.dim111.h,
                   )
                 : Image.asset(
                     "assets/images/lock_goals_levels_img.png",
@@ -258,30 +216,27 @@ class AchievementsBadgeScreen extends StatelessWidget {
           if (isUnlocked)
             Positioned.fill(
               child: Align(
-                alignment: Alignment(
-                    0, -.25.h), // slight upward adjustment
+                alignment: Platform.isIOS
+                    ? const Alignment(0, -0.25) // iOS moves text slightly DOWN
+                    : const Alignment(0, -0.1), // Android normal
+
                 child: ShaderMask(
-                  shaderCallback: (bounds) =>
-                      const LinearGradient(
+                  shaderCallback: (bounds) => const LinearGradient(
                     colors: [
                       Color(0xFF16446F),
                       Color(0xFF2569A9),
                       Color(0xFF59ADFB),
                     ],
                   ).createShader(
-                    Rect.fromLTWH(
-                        0, 0, bounds.width, bounds.height),
+                    Rect.fromLTWH(0, 0, bounds.width, bounds.height),
                   ),
                   blendMode: BlendMode.srcIn,
                   child: Text(
                     level,
                     style: TextStyle(
                       color: AppColors.white,
-                      fontFamily:
-                          AppFontStyles.urbanistFontFamily,
-                      fontVariations: [
-                        AppFontStyles.extraBoldFontVariation
-                      ],
+                      fontFamily: AppFontStyles.urbanistFontFamily,
+                      fontVariations: [AppFontStyles.extraBoldFontVariation],
                       fontSize: AppFontStyles.fontSize_28,
                     ),
                   ),
@@ -302,9 +257,7 @@ class AchievementsBadgeScreen extends StatelessWidget {
                   style: TextStyle(
                     color: AppColors.bluegray,
                     fontFamily: AppFontStyles.urbanistFontFamily,
-                    fontVariations: [
-                      AppFontStyles.boldFontVariation
-                    ],
+                    fontVariations: [AppFontStyles.boldFontVariation],
                     fontSize: AppFontStyles.fontSize_14,
                   ),
                 ),
@@ -314,9 +267,7 @@ class AchievementsBadgeScreen extends StatelessWidget {
                   style: TextStyle(
                     color: AppColors.bluegray,
                     fontFamily: AppFontStyles.urbanistFontFamily,
-                    fontVariations: [
-                      AppFontStyles.regularFontVariation
-                    ],
+                    fontVariations: [AppFontStyles.regularFontVariation],
                     fontSize: AppFontStyles.fontSize_10,
                   ),
                 ),
@@ -332,8 +283,7 @@ class AchievementsBadgeScreen extends StatelessWidget {
     String level,
   ) {
     return Container(
-      padding: EdgeInsets.symmetric(
-          horizontal: AppDimensions.dim20.w),
+      padding: EdgeInsets.symmetric(horizontal: AppDimensions.dim20.w),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.center,
@@ -353,9 +303,7 @@ class AchievementsBadgeScreen extends StatelessWidget {
             textAlign: TextAlign.center,
             style: TextStyle(
               fontFamily: AppFontStyles.urbanistFontFamily,
-              fontVariations: [
-                AppFontStyles.fontWeightVariation600
-              ],
+              fontVariations: [AppFontStyles.fontWeightVariation600],
               color: AppColors.bluegray,
               fontSize: AppFontStyles.fontSize_14.sp,
             ),

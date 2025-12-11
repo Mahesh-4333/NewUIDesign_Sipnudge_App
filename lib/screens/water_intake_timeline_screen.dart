@@ -516,7 +516,7 @@ class _WaterIntakeTimelineState extends State<WaterIntakeTimelineScreen> {
         .firstWhere((e) => e.slot == slot);
 
     showModalBottomSheet(
-      context: context,
+      context: Navigator.of(context, rootNavigator: true).context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (context) {
@@ -602,7 +602,9 @@ class _WaterIntakeTimelineState extends State<WaterIntakeTimelineScreen> {
                           ),
                         ),
                         GestureDetector(
-                          onTap: () => Navigator.pop(context),
+                          onTap: () =>
+                              Navigator.of(context, rootNavigator: true)
+                                  .pop(context),
                           child: Icon(
                             Icons.close,
                             color: AppColors.black,
@@ -681,7 +683,7 @@ class _WaterIntakeTimelineState extends State<WaterIntakeTimelineScreen> {
                               onTap: () => pickTime(false),
                               child: Container(
                                 padding: EdgeInsets.symmetric(
-                                    horizontal: 16.w, vertical: 14.h),
+                                    horizontal: 16.w, vertical: 10.h),
                                 decoration: BoxDecoration(
                                   color: const Color(0x90000000),
                                   borderRadius: BorderRadius.circular(50.r),
@@ -780,7 +782,7 @@ class _WaterIntakeTimelineState extends State<WaterIntakeTimelineScreen> {
                         )
                       ],
                     ),
-                    SizedBox(height: 100.h),
+                    // SizedBox(height: 100.h),
                   ],
                 ),
               ),
