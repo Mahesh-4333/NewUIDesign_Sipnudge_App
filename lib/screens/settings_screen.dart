@@ -220,6 +220,7 @@ class _SettingScreenState extends State<SettingScreen> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
+      useRootNavigator: true,
       backgroundColor: Colors.transparent,
       barrierColor: AppColors.black.withOpacity(0),
       builder: (_) {
@@ -422,7 +423,6 @@ class _SettingScreenState extends State<SettingScreen> {
                       // ),
                     ),
                     SizedBox(height: AppDimensions.dim165.h),
-
                   ],
                 ),
               ),

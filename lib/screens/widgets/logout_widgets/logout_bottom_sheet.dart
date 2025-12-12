@@ -1,13 +1,12 @@
-import 'dart:io';
 import 'dart:ui';
+
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:hydrify/constants/app_colors.dart';
 import 'package:hydrify/constants/app_dimensions.dart';
 import 'package:hydrify/constants/app_font_styles.dart';
 import 'package:hydrify/constants/app_strings.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:hydrify/screens/auth/local_auth_screen.dart';
 import 'package:hydrify/services/user_manager.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -148,6 +147,7 @@ class LogoutBottomSheet extends StatelessWidget {
                           ),
                           onPressed: () async {
                             try {
+                              // 1Logout & clear data
                               await FirebaseAuth.instance.signOut();
                               await UserManager().clear();
 
@@ -155,18 +155,21 @@ class LogoutBottomSheet extends StatelessWidget {
                                   await SharedPreferences.getInstance();
                               await prefs.clear();
 
-                              if (Platform.isIOS) {
-                                if (context.mounted) {
-                                  Navigator.of(context).pushAndRemoveUntil(
-                                    MaterialPageRoute(
-                                      builder: (context) => LocalAuthScreen(),
-                                    ),
-                                    (route) => false,
-                                  );
-                                }
-                              }
-                              SystemNavigator.pop();
+                              if (!context.mounted) return;
+
+                              // Close the bottom sheet (optional but nice)
+                              Navigator.of(context, rootNavigator: true).pop();
+
+                              //  Navigate to LocalAuthScreen as new root
+                              Navigator.of(context, rootNavigator: true)
+                                  .pushAndRemoveUntil(
+                                MaterialPageRoute(
+                                  builder: (_) => const LocalAuthScreen(),
+                                ),
+                                (route) => false,
+                              );
                             } catch (e) {
+                              if (!context.mounted) return;
                               ScaffoldMessenger.of(context).showSnackBar(
                                 SnackBar(
                                   content: Text(
