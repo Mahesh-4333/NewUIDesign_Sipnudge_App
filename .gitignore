@@ -1,35 +1,143 @@
-# Miscellaneous
-...
+# -------------------------
+# OS / Global
+# -------------------------
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
 
-# IntelliJ related
-...
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
 
-# The .vscode folder contains launch configuration and tasks you configure in
-# VS Code which you may wish to be included in version control, so this line
-# is commented out by default.
-#.vscode/
+# -------------------------
+# Editors / IDEs
+# -------------------------
+# IntelliJ / Android Studio
+*.iml
+*.ipr
+*.iws
+.idea/
+.idea/*
 
-# Flutter/Dart/Pub related
-**/doc/api/
-**/ios/Flutter/.last_build_id
+# VS Code (commented by default in your original; keep if you use VS Code)
+.vscode/
+
+# -------------------------
+# Flutter / Dart / Pub
+# -------------------------
+# Dart/Flutter tooling
 .dart_tool/
 .flutter-plugins
 .flutter-plugins-dependencies
-.pub-cache/
+.packages
 .pub/
+.pub-cache/
+
+# Generated API docs
+**/doc/api/
+
+# Build output
 /build/
-**pubspec.lock** <--- **ADD THIS**
+**/build/
 
-# Symbolication related
-app.*.symbols
+# Flutter iOS ephemeral / artifacts
+**/ios/Flutter/.last_build_id
+Flutter/ephemeral/
+Flutter/Generated.xcconfig
+Flutter/ephemeral
+Flutter/flutter_assets/
+Flutter/Flutter.framework
+Flutter/App.framework
+Flutter/Flutter.podspec
+Flutter/app.flx
+Flutter/app.zip
+Flutter/flutter_export_environment.sh
 
-# Obfuscation related
-app.*.map.json
+# Pub lock (you requested to add)
+pubspec.lock
+**pubspec.lock**   # kept for clarity if needed in patterns
 
-# Android Studio will place build artifacts here
+# -------------------------
+# Android
+# -------------------------
+# Local properties & gradle
+**/android/local.properties          # <--- ADD THIS
+**/android/.gradle/                  # <--- ADD THIS
+**/android/build/                    # <--- ADD THIS
+
+# Android Studio artifacts
 /android/app/debug
-/android/app/profile
-/android/app/release
-**/android/local.properties** <--- **ADD THIS**
-**/android/.gradle/** <--- **ADD THIS**
-**/android/build/** <--- **ADD THIS**
+**/dgph
+*.mode1v3
+*.mode2v3
+*.moved-aside
+*.pbxuser
+*.perspectivev3
+**/*sync/
+
+# -------------------------
+# iOS
+# -------------------------
+# Xcode
+DerivedData/
+**/DerivedData/
+xcuserdata/
+*.xcuserstate
+*.xcworkspace
+*.xcuserdata
+*.xcuserdatad
+*.pbxuser
+!default.mode1v3
+!default.mode2v3
+!default.pbxuser
+!default.perspectivev3
+
+# CocoaPods
+**/Pods/
+**/.symlinks/
+
+# Symbolication & obfuscation
+app.*.symbols
+app.*.map.json
+ServiceDefinitions.json
+Runner/GeneratedPluginRegistrant.*
+
+# -------------------------
+# Generated / Temporary / Cache
+# -------------------------
+.sconsign.dblite
+.tags*
+**/.vagrant/
+**/.generated/
+profile
+*.log
+*.tmp
+*.temp
+
+# Misc
+Icon?
+profile
+
+# -------------------------
+# Security / Secrets (do NOT commit)
+# -------------------------
+# (Keep local.properties ignored above; it contains sdk paths.)
+# Add other env or secret files here if needed, e.g.:
+# .env
+# secrets.json
+
+# -------------------------
+# Exceptions to ignore rules (explicitly keep)
+# -------------------------
+# Keep these files in repo even if they match patterns above
+!default.mode1v3
+!default.mode2v3
+!default.pbxuser
+!default.perspectivev3
+
+# -------------------------
+# Fallback: ensure we don't accidentally ignore the gitignore itself
+# -------------------------
+!.gitignore

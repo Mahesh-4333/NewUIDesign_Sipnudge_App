@@ -41,6 +41,8 @@ class _HomeScreenState extends State<HomeScreen> {
   late Animation<double> _shadowOffsetAnimation;
   bool _isPickerShown = false;
   bool hasConnectedBefore = false;
+  bool _startJourneyDialogOpen = false;
+
   @override
   // void initState() {
   //   super.initState();
@@ -89,7 +91,7 @@ class _HomeScreenState extends State<HomeScreen> {
         context.read<BleCubit>().start();
       } else {
         if (currentVolume < 600) {
-          _showStartJourneyDialog(context);
+          tryShowStartJourneyDialog(context);
         } else {
           context.read<BleCubit>().start();
           await prefs.setBool('ble_connected_once', true);
@@ -98,7 +100,14 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
+  void tryShowStartJourneyDialog(BuildContext context) {
+    if (_startJourneyDialogOpen) return;
+    _showStartJourneyDialog(context);
+  }
+
   void _showStartJourneyDialog(BuildContext context) {
+    _startJourneyDialogOpen = true;
+
     showDialog(
       context: context,
       barrierDismissible: true, // 👈 allow tap outside to close
@@ -266,7 +275,9 @@ class _HomeScreenState extends State<HomeScreen> {
           ],
         );
       },
-    );
+    ).then((_) {
+      _startJourneyDialogOpen = false; // dialog closed
+    });
   }
 
   @override
@@ -312,6 +323,11 @@ class _HomeScreenState extends State<HomeScreen> {
               _isPickerShown = false;
             });
           });
+        }
+
+        if (state.status == BleStatus.connected &&
+            ((state.volume ?? 0) < 600)) {
+          // tryShowStartJourneyDialog(context);
         }
       },
       child: Scaffold(
@@ -536,8 +552,11 @@ class _HomeScreenState extends State<HomeScreen> {
                   SizedBox(
                       height:
                           AppDimensions.dim8.h), // Changed from width to height
+
                   Text(
-                    '${weatherData.temperature.round()}°C / ${weatherData.humidity.round()}%',
+                    weatherData == null
+                        ? ''
+                        : '${weatherData.temperature.round()}°C / ${weatherData.humidity.round()}%',
                     style: TextStyle(
                       fontSize: AppFontStyles.fontSize_16,
                       fontFamily: AppFontStyles.poppinsFamily,

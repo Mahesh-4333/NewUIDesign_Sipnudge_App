@@ -354,7 +354,8 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
 
               // Save to DB in bulk (fast)
               await dbHelper.bulkUpsert30Days(list);
-              emit(state.copyWith(isHydration30DaysDataSync: true));
+              emit(state.copyWith(
+                  isHydration30DaysDataSync: true, historyData: data));
               log("[BLE_Cubit] Saved ${list.length} day summaries to DB",
                   name: "BLE_Cubit");
 
@@ -380,6 +381,7 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
         // Inside _discoverServices where you listen to _hydrationChar:
         _hydrationChar!.onValueReceived.listen((value) async {
           final data = String.fromCharCodes(value);
+          emit(state.copyWith(slotData: data));
           log("Hydration Slot Data: $data", name: "BLE_Cubit");
 
           final updatedEntries = _parseHydrationSlotData(data);
@@ -449,7 +451,8 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
       if (p.contains('percent=')) percent = int.tryParse(p.split('=')[1]);
     }
 
-    emit(state.copyWith(battery: battery, volume: volume, percent: percent));
+    emit(state.copyWith(
+        battery: battery, volume: volume, percent: percent, bottleData: data));
   }
 
   List<HydrationEntry> _parseHydrationData(String payload) {
@@ -556,13 +559,15 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
         return results;
       }
       print("30d -> $epochNum");
+
       // Heuristic: if epoch looks like milliseconds (> 1e12) treat as ms, else seconds.
       final epochMillis =
-          (epochNum > 1000000000000) ? epochNum : epochNum * 1000;
+          (epochNum.toString().length == 13) ? epochNum : epochNum * 1000;
       DateTime startDate =
           DateTime.fromMillisecondsSinceEpoch(epochMillis).toLocal();
 
-      log("30-days startDate parsed as: $startDate", name: "BLE_Cubit");
+      log("30-days startDate parsed as: $startDate  $epochMillis $epochNum ",
+          name: "BLE_Cubit");
 
       // Iterate remaining segments
       final segments = parts.sublist(1); // drop epoch
@@ -680,8 +685,11 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
         return "${slot.slot.label}/${slot.slot.index}/$start/$end/${slot.amount.toInt()}";
       }).join("|");
 
-      log("Flushing hydration slots: $payload");
-      await _ackChar!.write(payload.codeUnits, withoutResponse: true);
+      log("Flushing hydration slots: ${"$payload|End/7/${_timeOfDayToEpoch(TimeOfDay(hour: 23, minute: 55))}/${_timeOfDayToEpoch(TimeOfDay(hour: 23, minute: 56))}/0"}");
+      await _ackChar!.write(
+          "$payload|End/7/${_timeOfDayToEpoch(TimeOfDay(hour: 23, minute: 55))}/${_timeOfDayToEpoch(TimeOfDay(hour: 23, minute: 56))}/0"
+              .codeUnits,
+          withoutResponse: true);
       _pendingSlots.clear();
       print(
           '============> success  $payload   =====> unit ${payload.codeUnits}');

@@ -190,7 +190,7 @@ class _WaterIntakeTimelineState extends State<WaterIntakeTimelineScreen> {
               ),
               child: ListView.separated(
                 padding: EdgeInsets.zero,
-                physics: const NeverScrollableScrollPhysics(),
+                // physics: const NeverScrollableScrollPhysics(),
                 shrinkWrap: false,
                 itemCount: state.entries.length,
                 separatorBuilder: (_, __) => Divider(
@@ -305,18 +305,18 @@ class _WaterIntakeTimelineState extends State<WaterIntakeTimelineScreen> {
                               mainAxisAlignment: MainAxisAlignment.end,
                               children: [
                                 Icon(
-                                  item.status == HydrationStatus.completed
+                                  item.waterDrank.toInt() >= item.amount.toInt()
                                       ? Icons.check
                                       : Icons.radio_button_unchecked,
                                   size: 16.sp,
-                                  color:
-                                      item.status == HydrationStatus.completed
-                                          ? Color(0xFF0CAE00)
-                                          : Color(0xFFC1B50F),
+                                  color: item.waterDrank.toInt() >=
+                                          item.amount.toInt()
+                                      ? Color(0xFF0CAE00)
+                                      : Color(0xFFC1B50F),
                                 ),
                                 SizedBox(width: 4.w),
                                 Text(
-                                  item.status == HydrationStatus.completed
+                                  item.waterDrank.toInt() >= item.amount.toInt()
                                       ? "Completed"
                                       : "Pending",
                                   textAlign: TextAlign.left,
@@ -327,10 +327,10 @@ class _WaterIntakeTimelineState extends State<WaterIntakeTimelineScreen> {
                                     fontVariations: [
                                       AppFontStyles.semiBoldFontVariation
                                     ],
-                                    color:
-                                        item.status == HydrationStatus.completed
-                                            ? Color(0xFF0CAE00)
-                                            : Color(0xFFC1B50F),
+                                    color: item.waterDrank.toInt() >=
+                                            item.amount.toInt()
+                                        ? Color(0xFF0CAE00)
+                                        : Color(0xFFC1B50F),
                                   ),
                                 ),
                               ],
