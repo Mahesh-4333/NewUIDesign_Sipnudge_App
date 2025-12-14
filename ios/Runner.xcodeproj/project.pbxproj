@@ -557,7 +557,7 @@
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 6;
-				DEVELOPMENT_TEAM = 44GUMW823C;
+				DEVELOPMENT_TEAM = GY75D7JV5W;
 				ENABLE_BITCODE = NO;
 				INFOPLIST_FILE = Runner/Info.plist;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
@@ -566,7 +566,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = v2x2.4;
-				PRODUCT_BUNDLE_IDENTIFIER = com.sipnudge.test;
+				PRODUCT_BUNDLE_IDENTIFIER = com.sipnudge.sipnudgeV2x10;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
@@ -751,7 +751,7 @@
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 6;
-				DEVELOPMENT_TEAM = 44GUMW823C;
+				DEVELOPMENT_TEAM = GY75D7JV5W;
 				ENABLE_BITCODE = NO;
 				INFOPLIST_FILE = Runner/Info.plist;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
@@ -760,7 +760,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = v2x2.4;
-				PRODUCT_BUNDLE_IDENTIFIER = com.sipnudge.test;
+				PRODUCT_BUNDLE_IDENTIFIER = com.sipnudge.sipnudgeV2x10;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
@@ -785,7 +785,7 @@
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 6;
-				DEVELOPMENT_TEAM = 44GUMW823C;
+				DEVELOPMENT_TEAM = GY75D7JV5W;
 				ENABLE_BITCODE = NO;
 				INFOPLIST_FILE = Runner/Info.plist;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
@@ -794,7 +794,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = v2x2.4;
-				PRODUCT_BUNDLE_IDENTIFIER = com.sipnudge.test;
+				PRODUCT_BUNDLE_IDENTIFIER = com.sipnudge.sipnudgeV2x10;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";

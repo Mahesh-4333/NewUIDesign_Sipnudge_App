@@ -1,0 +1,26 @@
+# Flutter/Dart
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+.vs/
+.vscode/
+
+# Build
+/build
+/ios/.symlinks/
+/android/local.properties
+/android/.gradle
+/ios/Flutter/Generated.xcconfig
+/ios/Flutter/ephemeral/
+/macos/Flutter/ephemeral/
+/windows/flutter/ephemeral/
+/linux/flutter/ephemeral/
+
+# IDE/OS generated files (Crucial for what you are seeing)
+*.iml
+*.iws
+*.ipr
+.idea/
+.DS_Store
+UserInterfaceState.xcuserstate
