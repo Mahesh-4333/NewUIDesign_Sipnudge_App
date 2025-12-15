@@ -112,6 +112,7 @@ class MyApp extends StatelessWidget {
     final dbHelper = DatabaseHelper();
     final bleCubit = BleCubit();
     final hydrationCubit = HydrationCubit(ble: bleCubit);
+
     return MultiProvider(
       providers: [
         BlocProvider(create: (_) => bleCubit),

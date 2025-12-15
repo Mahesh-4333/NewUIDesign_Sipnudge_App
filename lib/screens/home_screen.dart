@@ -11,6 +11,7 @@ import 'package:hydrify/constants/app_font_styles.dart';
 import 'package:hydrify/constants/app_strings.dart';
 import 'package:hydrify/cubit/ble/ble_cubit.dart';
 import 'package:hydrify/cubit/bottle/bottle_data_cubit.dart';
+import 'package:hydrify/cubit/bottom_nav/bottom_nav_cubit.dart';
 import 'package:hydrify/cubit/hydration/hydration_cubit.dart';
 import 'package:hydrify/cubit/hydration/hydration_state.dart';
 import 'package:hydrify/helpers/shared_pref_helper.dart';
@@ -42,7 +43,7 @@ class _HomeScreenState extends State<HomeScreen> {
   bool _isPickerShown = false;
   bool hasConnectedBefore = false;
   bool _startJourneyDialogOpen = false;
-
+  double userGoalLiters = 0;
   @override
   // void initState() {
   //   super.initState();
@@ -102,7 +103,9 @@ class _HomeScreenState extends State<HomeScreen> {
 
   void tryShowStartJourneyDialog(BuildContext context) {
     if (_startJourneyDialogOpen) return;
-    _showStartJourneyDialog(context);
+    if ((context.read<BottomNavCubit>().state.selectedTab.index == 0)) {
+      _showStartJourneyDialog(context);
+    }
   }
 
   void _showStartJourneyDialog(BuildContext context) {
@@ -327,7 +330,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
         if (state.status == BleStatus.connected &&
             ((state.volume ?? 0) < 600)) {
-          // tryShowStartJourneyDialog(context);
+          tryShowStartJourneyDialog(context);
         }
       },
       child: Scaffold(
@@ -407,7 +410,8 @@ class _HomeScreenState extends State<HomeScreen> {
                               snapshot.data!);
 
                       completionPercent = WaterConsumptionCalculator
-                          .calculateCompletionPercentage(waterVolumeConsumed);
+                          .calculateCompletionPercentage(
+                              waterVolumeConsumed, userGoalLiters * 1000);
                     }
                     return _buildGoalText(completionPercent);
                   });
@@ -554,9 +558,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           AppDimensions.dim8.h), // Changed from width to height
 
                   Text(
-                    weatherData == null
-                        ? ''
-                        : '${weatherData.temperature.round()}°C / ${weatherData.humidity.round()}%',
+                    '${weatherData.temperature.round()}°C / ${weatherData.humidity.round()}%',
                     style: TextStyle(
                       fontSize: AppFontStyles.fontSize_16,
                       fontFamily: AppFontStyles.poppinsFamily,
@@ -694,7 +696,8 @@ class _HomeScreenState extends State<HomeScreen> {
                             .calculateDailyConsumption(snapshot.data!);
 
                         completionPercent = WaterConsumptionCalculator
-                            .calculateCompletionPercentage(waterVolumeConsumed);
+                            .calculateCompletionPercentage(
+                                waterVolumeConsumed, userGoalLiters * 1000);
                       }
 
                       return CustomCircularWaterProgressIndicator(
@@ -766,7 +769,7 @@ class _HomeScreenState extends State<HomeScreen> {
                               FutureBuilder<int?>(
                                 future: SharedPrefsHelper.getUserGoal(),
                                 builder: (context, snapshot) {
-                                  double userGoalLiters = 0.0;
+                                  userGoalLiters = 0.0;
 
                                   if (snapshot.hasData &&
                                       snapshot.data != null) {

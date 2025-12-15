@@ -1,9 +1,9 @@
+import 'dart:developer' as developer;
+
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:local_auth/local_auth.dart';
-import 'dart:developer' as developer;
-
 
 class AuthenticationProvider with ChangeNotifier {
   final FirebaseAuth _auth = FirebaseAuth.instance;
@@ -24,7 +24,6 @@ class AuthenticationProvider with ChangeNotifier {
   Future<bool> authenticateWithBiometrics() async {
     try {
       final canCheck = await _localAuth.canCheckBiometrics ||
-      
           await _localAuth.isDeviceSupported();
       if (!canCheck) return false;
 
@@ -41,7 +40,7 @@ class AuthenticationProvider with ChangeNotifier {
       return didAuthenticate;
     } catch (e) {
       developer.log('Biometric auth error: $e', name: 'auth_provider');
-      return true;
+      return false;
     }
   }
 
