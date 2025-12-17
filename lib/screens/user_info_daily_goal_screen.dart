@@ -335,7 +335,7 @@ class _UserInfoDailyGoalScreenState
                   .read<BleCubit>()
                   .queueHydrationSlots(slots);
               NotificationService()
-                  .scheduleHydrationReminders(slots);
+                  .resetAllHydrationReminders(slots);
 
               Navigator.pushAndRemoveUntil(
                   context,

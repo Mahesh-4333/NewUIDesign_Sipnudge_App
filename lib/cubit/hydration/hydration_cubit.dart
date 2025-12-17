@@ -233,10 +233,10 @@ class HydrationCubit extends Cubit<HydrationState> {
     final updatedEntry =
         updated.firstWhere((e) => e.slot == slot);
     final notificationService = NotificationService();
-    await notificationService.cancelReminder(slot);
+
     await notificationService
-        .scheduleHydrationReminders([updatedEntry]);
-    // await notificationService.testNotification();
+        .rescheduleSlotForFuture(updatedEntry);
+
     await _dbHelper.insertOrUpdateSlot(updatedEntry);
     ble.queueHydrationSlots(updated);
   }
@@ -274,7 +274,6 @@ class HydrationCubit extends Cubit<HydrationState> {
         entries: currentEntries, totalDrank: total.round()));
     _calculateCurrentSlotStatus();
   }
-
 
   void subscribeToBleUpdates(BleCubit bleCubit) {
     bleCubit.hydrationUpdates.listen((entries) {
@@ -370,4 +369,3 @@ class _Interval {
   final int end;
   _Interval(this.start, this.end);
 }
-
