@@ -497,6 +497,39 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildWeatherInfo() {
     return Consumer<WeatherProvider>(
       builder: (context, weatherProvider, child) {
+        if (!weatherProvider.isInternetAvailable) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            weatherProvider.fetchWeatherForCurrentLocation();
+          });
+
+          return Padding(
+            padding:
+                EdgeInsets.symmetric(horizontal: AppDimensions.defaultPadding),
+            child: Row(
+              children: [
+                SizedBox(
+                  height: AppDimensions.dim45.h,
+                  width: AppDimensions.dim45.h, // Add width for debugging
+
+                  child: _buildWeatherIconWidget(weatherProvider.offlineIcon),
+                ),
+                SizedBox(width: AppDimensions.dim12.w),
+                Flexible(
+                  child: Text(
+                    weatherProvider.offlineMessage,
+                    style: TextStyle(
+                      fontSize: AppFontStyles.fontSize_16,
+                      color: AppColors.bluegray,
+                      fontVariations: [
+                        AppFontStyles.regularFontVariation,
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          );
+        }
         if (weatherProvider.isLoading) {
           return Column(
             crossAxisAlignment: CrossAxisAlignment.center,

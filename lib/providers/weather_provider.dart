@@ -1,9 +1,10 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
-import '../services/weather_service.dart';
-import '../services/location_service.dart';
 import 'package:geolocator/geolocator.dart';
+
+import '../services/location_service.dart';
+import '../services/weather_service.dart';
 
 class WeatherProvider extends ChangeNotifier {
   final WeatherService _weatherService;
