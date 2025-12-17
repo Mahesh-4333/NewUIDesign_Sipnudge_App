@@ -87,7 +87,6 @@ class _HomeScreenState extends State<HomeScreen> {
       // 🔹 read current bottle volume from cubit
       final bottleState = context.read<BottleDataCubit>().state;
       final double currentVolume = bottleState.volume;
-
       if (hasConnectedBefore) {
         context.read<BleCubit>().start();
       } else {
@@ -169,101 +168,89 @@ class _HomeScreenState extends State<HomeScreen> {
                 child: ClipRRect(
                   borderRadius:
                       BorderRadius.circular(AppDimensions.radius_16.r),
-                  child: Stack(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
                     children: [
-                      Positioned(
-                        bottom: AppDimensions.dim10.h,
-                        left: 0,
-                        right: 0,
+                      SizedBox(
+                        height: AppDimensions.dim15.h,
+                      ),
+                      Image.asset(
+                        'assets/images/black_bottle.png',
+                        width: AppDimensions
+                            .dim150.w, // 🔥 reduced to match new width
+                        fit: BoxFit.cover,
+                      ),
+                      SizedBox(
+                        height: AppDimensions.dim15.h,
+                      ),
+                      Padding(
+                        padding: EdgeInsets.symmetric(
+                            horizontal: AppDimensions.dim20.w),
                         child: Column(
-                          mainAxisSize: MainAxisSize.min,
                           children: [
-                            Image.asset(
-                              'assets/images/black_bottle.png',
-                              width: AppDimensions
-                                  .dim150.w, // 🔥 reduced to match new width
-                              fit: BoxFit.cover,
-                            ),
-                            SizedBox(
-                              height: AppDimensions.dim15.h,
-                            ),
-                            Padding(
-                              padding: EdgeInsets.symmetric(
-                                  horizontal: AppDimensions.dim20.w),
-                              child: Column(
-                                children: [
-                                  Text(
-                                    "Start your journey right fill your bottle",
-                                    textAlign:
-                                        TextAlign.center, // 🔥 center text
-                                    style: TextStyle(
-                                      color: AppColors.bluegray,
-                                      fontFamily:
-                                          AppFontStyles.museoModernoFontFamily,
-                                      fontVariations: [
-                                        AppFontStyles.boldFontVariation,
-                                      ],
-                                      fontSize: AppFontStyles
-                                          .fontSize_13.sp, // 🔥 reduced
-                                    ),
-                                  ),
-                                  Text(
-                                    "till 600ml to ensure accurate data.",
-                                    textAlign: TextAlign.center,
-                                    style: TextStyle(
-                                      color: AppColors.bluegray,
-                                      fontFamily:
-                                          AppFontStyles.museoModernoFontFamily,
-                                      fontVariations: [
-                                        AppFontStyles.boldFontVariation,
-                                      ],
-                                      fontSize: AppFontStyles
-                                          .fontSize_13.sp, // 🔥 reduced
-                                    ),
-                                  ),
+                            Text(
+                              "Start your journey right fill your bottle",
+                              textAlign: TextAlign.center, // 🔥 center text
+                              style: TextStyle(
+                                color: AppColors.bluegray,
+                                fontFamily:
+                                    AppFontStyles.museoModernoFontFamily,
+                                fontVariations: [
+                                  AppFontStyles.boldFontVariation,
                                 ],
+                                fontSize:
+                                    AppFontStyles.fontSize_13.sp, // 🔥 reduced
                               ),
                             ),
-                            SizedBox(height: AppDimensions.dim20.h),
-                            SizedBox(
-                              width: AppDimensions.dim118.w,
-                              height: AppDimensions.dim26.h,
-                              child: ElevatedButton(
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: AppColors.bluegray,
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(
-                                        AppDimensions.radius_40.r),
-                                  ),
-                                  side: BorderSide(
-                                    color: const Color(0xFF98DAFF),
-                                    width: AppDimensions.dim1.w,
-                                  ),
-                                ),
-                                onPressed: () async {
-                                  Navigator.of(context).pop();
-                                  context.read<BleCubit>().start();
-
-                                  final prefs =
-                                      await SharedPreferences.getInstance();
-                                  await prefs.setBool(
-                                      'ble_connected_once', true);
-                                },
-                                child: Text(
-                                  "Start",
-                                  style: TextStyle(
-                                    color: AppColors.white,
-                                    fontFamily:
-                                        AppFontStyles.museoModernoFontFamily,
-                                    fontVariations: [
-                                      AppFontStyles.boldFontVariation
-                                    ],
-                                    fontSize: AppFontStyles.fontSize_14.sp,
-                                  ),
-                                ),
+                            Text(
+                              "till 600ml to ensure accurate data.",
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                color: AppColors.bluegray,
+                                fontFamily:
+                                    AppFontStyles.museoModernoFontFamily,
+                                fontVariations: [
+                                  AppFontStyles.boldFontVariation,
+                                ],
+                                fontSize:
+                                    AppFontStyles.fontSize_13.sp, // 🔥 reduced
                               ),
                             ),
                           ],
+                        ),
+                      ),
+                      SizedBox(height: AppDimensions.dim20.h),
+                      SizedBox(
+                        width: AppDimensions.dim118.w,
+                        height: AppDimensions.dim26.h,
+                        child: ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.bluegray,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(
+                                  AppDimensions.radius_40.r),
+                            ),
+                            side: BorderSide(
+                              color: const Color(0xFF98DAFF),
+                              width: AppDimensions.dim1.w,
+                            ),
+                          ),
+                          onPressed: () async {
+                            Navigator.of(context).pop();
+                            context.read<BleCubit>().start();
+
+                            final prefs = await SharedPreferences.getInstance();
+                            await prefs.setBool('ble_connected_once', true);
+                          },
+                          child: Text(
+                            "Start",
+                            style: TextStyle(
+                              color: AppColors.white,
+                              fontFamily: AppFontStyles.museoModernoFontFamily,
+                              fontVariations: [AppFontStyles.boldFontVariation],
+                              fontSize: AppFontStyles.fontSize_14.sp,
+                            ),
+                          ),
                         ),
                       ),
                     ],
