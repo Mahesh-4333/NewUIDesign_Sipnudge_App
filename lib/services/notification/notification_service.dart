@@ -1,8 +1,10 @@
 import 'dart:developer';
+import 'dart:io';
 
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:hydrify/helpers/shared_pref_helper.dart';
 import 'package:hydrify/models/hydration_entry.dart';
+import 'package:hydrify/services/google_calendar_manager.dart';
 import 'package:timezone/data/latest.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
 import 'notification_manager.dart';
@@ -42,7 +44,9 @@ class NotificationService {
             DarwinNotificationAction.plain(
               'STOP_ACTION', // iOS action ID
               'Stop', // Button title
-              options: {DarwinNotificationActionOption.foreground},
+               options: {
+
+      },
             ),
           ],
         ),
@@ -61,6 +65,10 @@ class NotificationService {
       onDidReceiveNotificationResponse: (details) async {
         final payload = details.payload;
         final actionId = details.actionId;
+        if (details.actionId == 'STOP_ACTION') {
+    await _plugin.cancel(details.id!);
+    return;
+  }
 
         // 🔥 STOP BUTTON PRESSED (Handles both Android Action and iOS Category Action)
         if (actionId != null && actionId.startsWith("STOP")) {
@@ -92,122 +100,148 @@ class NotificationService {
     // Permissions are now handled in NotificationManager.instance.initialize()
   }
 
+
+
+
+
   Future<String> _getSelectedRingtoneAssetPath() async {
     // Original logic: index 0 -> ringtone1
     final selected = await SharedPrefsHelper.getSelectedRingtone() ?? 0;
     final fileName = "ringtone${selected + 1}";
-
-    // The 'alarm' package expects the path relative to the assets root,
-    // not prefixed with 'assets/ringtones/'.
-    // It should be 'ringtones/ringtone1.mp3' if your assets folder is set up correctly.
     return "assets/ringtones/$fileName.mp3";
   }
 
   /// Schedule a reminder with slot & goal info
-  Future<void> scheduleHydrationReminders(List<HydrationEntry> entries) async {
-    final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
+Future<void> scheduleHydrationReminders(List<HydrationEntry> entries) async {
+  final now = DateTime.now();
+  final today = DateTime(now.year, now.month, now.day);
 
-    final assetPath = await _getSelectedRingtoneAssetPath();
+  final assetPath = await _getSelectedRingtoneAssetPath();
 
-    for (final entry in entries) {
-      final endDateTime = today.add(Duration(
-        hours: entry.endTime.hour,
-        minutes: entry.endTime.minute,
-      ));
+  for (final entry in entries) {
+    final endDateTime = today.add(Duration(
+      hours: entry.endTime.hour,
+      minutes: entry.endTime.minute,
+    ));
 
-      var notifyAt = endDateTime.subtract(const Duration(minutes: 10));
+    final notifyAt = endDateTime.subtract(const Duration(minutes: 10));
 
-      // Schedule the alarm to ring exactly at notifyAt
-      if (notifyAt.isBefore(now)) {
-        log(
-            "[NotificationService] Skipping reminder for ${entry.slot.label} "
-            "(${entry.amount}ml) because notifyAt=$notifyAt is before now=$now",
-            name: "NotificationService");
-        continue;
-      }
-
+    if (notifyAt.isBefore(now)) {
       log(
-        "[NotificationService] Scheduling ALARM and Notification for ${entry.slot.label} "
-        "(${entry.amount}ml) at $notifyAt (current time: $now)",
+        "[NotificationService] Skipping reminder for ${entry.slot.label} "
+        "because notifyAt=$notifyAt < now=$now",
       );
-
-      final customTitle = "Hydration Reminder";
-      final customBody =
-          "Only 10 minutes left for ${entry.slot.label} – Drink ${entry.amount} ml";
-
-      final alarmSet = await NotificationManager.instance.setReliableAlarm(
-        id: entry.slot.index,
-        dateTime: notifyAt,
-        assetAudioPath: assetPath,
-        // Pass the custom text
-        title: customTitle,
-        body: customBody,
-        stopButtonText: 'Drink Water & Stop',
-        maxDurationSeconds: 5,
-      );
-
-      if (!alarmSet) {
-        log('Failed to set reliable alarm for ${entry.slot.label}');
-        continue;
-      }
-/*
-      // 2. Schedule a simple local notification to display the custom body/title
-      // This serves as a backup display and maintains the payload tap logic.
-      await _plugin.zonedSchedule(
-        entry.slot.index, // unique ID per slot
-        "Hydration Reminder", // TITLE (Kept from original)
-        "Only 10 minutes left for ${entry.slot.label} – Drink ${entry.amount} ml", // BODY (Kept from original)
-        tz.TZDateTime.from(notifyAt, tz.local),
-        NotificationDetails(
-          android: AndroidNotificationDetails(
-            'hydration_channel_${entry.slot.index}',
-            'Hydration Popup',
-            channelDescription: 'Popup hydration reminders',
-            importance: Importance.max,
-            priority: Priority.max,
-            playSound: false, // The Alarm package handles the sound
-            groupKey: null,
-            setAsGroupSummary: false,
-            category: AndroidNotificationCategory.alarm,
-            fullScreenIntent: true, // Let the Alarm package handle this
-            visibility: NotificationVisibility.public,
-            ongoing: true,
-            autoCancel: false,
-
-            // ACTION BUTTONS (Kept from original logic)
-            actions: <AndroidNotificationAction>[
-              const AndroidNotificationAction(
-                'STOP_ACTION', // Use a generic STOP ID here
-                'STOP',
-                // icon: DrawableResourceAndroidBitmap('stop_ic'), // Requires resource setup
-                showsUserInterface: true,
-                cancelNotification: true, // Cancels the *local* notification
-              ),
-            ],
-          ),
-          // iOS Category Identifier is needed for the action
-          iOS: const DarwinNotificationDetails(
-            categoryIdentifier: 'hydration_category',
-          ),
-        ),
-        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-        payload: entry.slot.index.toString(),
-      );
-*/
-      log(
-          "[NotificationService] Successfully scheduled for ${entry.slot.label} "
-          "at ${tz.TZDateTime.from(notifyAt, tz.local)}",
-          name: "NotificationService");
+      continue;
     }
-  }
 
-  Future<void> cancelReminder(HydrationSlot slot) async {
-    // Cancel the local notification
-    await _plugin.cancel(slot.index);
-    // Cancel the scheduled alarm from the alarm package
+    /// 🔍 CHECK CALENDAR
+    final shouldSilence =
+        await _shouldSilenceHydrationReminder(notifyAt);
+
+    log(
+      "[NotificationService] Scheduling ${shouldSilence ? 'SILENT' : 'NORMAL'} "
+      "reminder for ${entry.slot.label} at $notifyAt",
+    );
+
+    final title = "Hydration Reminder";
+    final body =
+        "Only 10 minutes left for ${entry.slot.label} – Drink ${entry.amount} ml";
+
+    if (Platform.isIOS) {
+      await _scheduleIOSHydrationNotification(
+        id: entry.slot.index,
+        notifyAt: notifyAt,
+        title: title,
+        body: body,
+        payload: entry.slot.index.toString(),
+        isSilent: shouldSilence, 
+      );
+
+      log('[iOS] Notification scheduled (${shouldSilence ? "silent" : "normal"})');
+    } else {
+      
+        /// 🔔 NORMAL ALARM
+        final alarmSet =
+            await NotificationManager.instance.setReliableAlarm(
+          id: entry.slot.index,
+          dateTime: notifyAt,
+          assetAudioPath: assetPath,
+          title: title,
+          body: body,
+          stopButtonText: 'Drink Water & Stop',
+          maxDurationSeconds: 5,
+          isSilent: shouldSilence,
+        );
+
+        if (!alarmSet) {
+          log('Failed to set Android alarm for ${entry.slot.label}');
+          continue;
+        }
+      }
+    
+
+    log(
+      "[NotificationService] Successfully scheduled for ${entry.slot.label} "
+      "at $notifyAt",
+    );
+  }
+}
+
+
+Future<void> _scheduleIOSHydrationNotification({
+  required int id,
+  required DateTime notifyAt,
+  required String title,
+  required String body,
+  required String payload,
+  required bool isSilent
+
+}) async {
+   final selected = await SharedPrefsHelper.getSelectedRingtone() ?? 0;
+    final fileName = "ringtone${selected + 1}.caf";
+  log("=-=-=-=- IOS Reminder set ${fileName}");
+  await _plugin.zonedSchedule(
+    id,
+    title,
+    body,
+    tz.TZDateTime.from(notifyAt, tz.local),
+     NotificationDetails(
+      iOS: DarwinNotificationDetails(
+        sound: fileName, 
+        presentAlert: true,
+        presentSound: !isSilent,
+        interruptionLevel:isSilent? InterruptionLevel.passive :InterruptionLevel.timeSensitive,
+        categoryIdentifier: 'hydration_category',
+        
+      ),
+    ),
+
+    payload: payload, androidScheduleMode: AndroidScheduleMode.alarmClock,
+  );
+}
+
+Future<bool> _shouldSilenceHydrationReminder(DateTime notifyAt) async {
+  try {
+    final calendarManager = GoogleCalendarManager();
+    return await calendarManager.hasEventDuring(
+      notifyAt,
+      notifyAt.add(const Duration(minutes: 5)),
+    );
+  } catch (e) {
+    log('[Calendar] Failed to check calendar: $e');
+    return false; // fail-safe → normal reminder
+  }
+}
+
+
+Future<void> cancelReminder(HydrationSlot slot) async {
+  await _plugin.cancel(slot.index);
+
+  if (Platform.isAndroid) {
     await NotificationManager.instance.stopAlarm(slot.index);
   }
+}
+
 
   Future<void> cancelAll() async {
     await _plugin.cancelAll();
@@ -215,4 +249,10 @@ class NotificationService {
     await NotificationManager.instance
         .stopAlarm(0); // The alarm package's stopAll uses 0
   }
+
+
+
+
 }
+
+

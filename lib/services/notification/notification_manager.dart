@@ -66,7 +66,9 @@ class NotificationManager {
   Future<void> initialize() async {
     await _requestRequiredPermissions();
 
+  if (Platform.isAndroid) {
     await Alarm.init();
+  }
 
     const AndroidInitializationSettings initializationSettingsAndroid =
         AndroidInitializationSettings('@mipmap/ic_launcher');
@@ -173,6 +175,7 @@ class NotificationManager {
     required String assetAudioPath,
     required String title,
     required String body,
+    required bool isSilent,
     String stopButtonText = 'Stop Alarm',
     int maxDurationSeconds = 5,
   }) async {
@@ -183,7 +186,7 @@ class NotificationManager {
     );
 
     var volumeSettings = VolumeSettings.fade(
-      volume: 1.0,
+      volume: isSilent?0.0:1.0,
       fadeDuration: const Duration(seconds: 3),
       volumeEnforced: true,
     );
@@ -191,11 +194,10 @@ class NotificationManager {
     final alarmSettings = AlarmSettings(
       id: id,
 
+
       dateTime: dateTime,
 
       assetAudioPath: assetAudioPath,
-
-      // Loop is true, the timer below handles the automatic stop.
 
       loopAudio: false,
 
@@ -205,10 +207,10 @@ class NotificationManager {
 
       volumeSettings: volumeSettings,
 
-      androidFullScreenIntent: true, // Triggers a full-screen alert
+      androidFullScreenIntent: false, // Triggers a full-screen alert
 
       warningNotificationOnKill:
-          true, // Helps prevent the OS from killing the background service
+          false, // Helps prevent the OS from killing the background service
     );
 
     try {

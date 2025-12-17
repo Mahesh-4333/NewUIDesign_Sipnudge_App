@@ -2,6 +2,7 @@ import 'dart:developer';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:hydrify/cubit/ble/ble_cubit.dart';
 import 'package:hydrify/cubit/hydration/hydration_state.dart';
 import 'package:hydrify/cubit/hydration/hydration_sync.dart';
@@ -26,7 +27,7 @@ class HydrationCubit extends Cubit<HydrationState> {
   }
 
   // -------------------- INITIALIZATION --------------------
-  
+
   Future<void> _init() async {
     try {
       // Listen to BLE hydration updates
