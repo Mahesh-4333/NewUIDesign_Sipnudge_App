@@ -12,8 +12,7 @@ import 'package:permission_handler/permission_handler.dart';
 
 // --- Global Setup ---
 
-final FlutterLocalNotificationsPlugin
-    _flutterLocalNotificationsPlugin =
+final FlutterLocalNotificationsPlugin _flutterLocalNotificationsPlugin =
     FlutterLocalNotificationsPlugin();
 
 // --- Notification Response Handler (Handles button taps/notification taps) ---
@@ -60,8 +59,7 @@ class NotificationManager {
 
   NotificationManager._();
 
-  static final NotificationManager instance =
-      NotificationManager._();
+  static final NotificationManager instance = NotificationManager._();
 
   /// Initializes both the Alarm and Local Notification packages, and requests permissions.
 
@@ -72,12 +70,10 @@ class NotificationManager {
       await Alarm.init();
     }
 
-    const AndroidInitializationSettings
-        initializationSettingsAndroid =
+    const AndroidInitializationSettings initializationSettingsAndroid =
         AndroidInitializationSettings('@mipmap/ic_launcher');
 
-    const DarwinInitializationSettings
-        initializationSettingsDarwin =
+    const DarwinInitializationSettings initializationSettingsDarwin =
         DarwinInitializationSettings();
 
     const InitializationSettings initializationSettings =
@@ -88,8 +84,7 @@ class NotificationManager {
 
     await _flutterLocalNotificationsPlugin.initialize(
       initializationSettings,
-      onDidReceiveNotificationResponse:
-          onDidReceiveNotificationResponse,
+      onDidReceiveNotificationResponse: onDidReceiveNotificationResponse,
       onDidReceiveBackgroundNotificationResponse:
           onDidReceiveNotificationResponse,
     );
@@ -107,15 +102,12 @@ class NotificationManager {
 
       // Request SCHEDULE_EXACT_ALARM (CRITICAL for accurate alarms on Android 12+)
 
-      var exactAlarmStatus =
-          await Permission.scheduleExactAlarm.status;
+      var exactAlarmStatus = await Permission.scheduleExactAlarm.status;
 
       if (!exactAlarmStatus.isGranted) {
-        debugPrint(
-            'Exact Alarm permission not granted. Requesting...');
+        debugPrint('Exact Alarm permission not granted. Requesting...');
 
-        var result =
-            await Permission.scheduleExactAlarm.request();
+        var result = await Permission.scheduleExactAlarm.request();
 
         if (!result.isGranted && result.isPermanentlyDenied) {
           debugPrint(
@@ -143,10 +135,8 @@ class NotificationManager {
   }) async {
     final actions = customActions ??
         <AndroidNotificationAction>[
-          const AndroidNotificationAction(
-              'DISMISS_ACTION', 'Dismiss'),
-          const AndroidNotificationAction(
-              'SNOOZE_ACTION', 'Snooze'),
+          const AndroidNotificationAction('DISMISS_ACTION', 'Dismiss'),
+          const AndroidNotificationAction('SNOOZE_ACTION', 'Snooze'),
         ];
 
     const String channelId = 'simple_action_channel';
@@ -157,8 +147,7 @@ class NotificationManager {
         AndroidNotificationDetails(
       channelId,
       channelName,
-      channelDescription:
-          'Channel for notifications with interactive buttons.',
+      channelDescription: 'Channel for notifications with interactive buttons.',
       importance: Importance.max,
       priority: Priority.high,
       actions: actions,
@@ -197,7 +186,7 @@ class NotificationManager {
     );
 
     var volumeSettings = VolumeSettings.fade(
-      volume: isSilent ? 0.0 : 1.0,
+      volume: isSilent ? 0.0 : 0.3,
       fadeDuration: const Duration(seconds: 3),
       volumeEnforced: true,
     );
@@ -215,8 +204,7 @@ class NotificationManager {
     );
 
     try {
-      final result =
-          await Alarm.set(alarmSettings: alarmSettings);
+      final result = await Alarm.set(alarmSettings: alarmSettings);
 
       log('Alarm ID $id set for $dateTime. Success: $result');
 

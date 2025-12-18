@@ -16,6 +16,14 @@
 /macos/Flutter/ephemeral/
 /windows/flutter/ephemeral/
 /linux/flutter/ephemeral/
+# Kotlin / Android garbage
+android/.kotlin/
+android/**/.kotlin/
+android/**/errors/*.log
+
+# Flutter generated
+ios/Flutter/flutter_export_environment.sh
+
 
 # IDE/OS generated files (Crucial for what you are seeing)
 *.iml
@@ -24,3 +32,5 @@
 .idea/
 .DS_Store
 UserInterfaceState.xcuserstate
+
+

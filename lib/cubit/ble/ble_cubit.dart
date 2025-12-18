@@ -17,18 +17,25 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
   final _hydrationController =
       StreamController<List<HydrationEntry>>.broadcast();
 
-  final Guid serviceUUID = Guid("6E400001-B5A3-F393-E0A9-E50E24DCCA9E");
-  final Guid dataUUID = Guid("6E400003-B5A3-F393-E0A9-E50E24DCCA9E");
-  final Guid hydrationDataUUID = Guid("6E400004-B5A3-F393-E0A9-E50E24DCCA9E");
-  final Guid ackUUID = Guid("6E400002-B5A3-F393-E0A9-E50E24DCCA9E");
+  final Guid serviceUUID =
+      Guid("6E400001-B5A3-F393-E0A9-E50E24DCCA9E");
+  final Guid dataUUID =
+      Guid("6E400003-B5A3-F393-E0A9-E50E24DCCA9E");
+  final Guid hydrationDataUUID =
+      Guid("6E400004-B5A3-F393-E0A9-E50E24DCCA9E");
+  final Guid ackUUID =
+      Guid("6E400002-B5A3-F393-E0A9-E50E24DCCA9E");
 
-  final Guid hydrationCharUUID = Guid("6E400005-B5A3-F393-E0A9-E50E24DCCA9E");
-  final Guid water30DaysDataUUID = Guid("6E400006-B5A3-F393-E0A9-E50E24DCCA9E");
+  final Guid hydrationCharUUID =
+      Guid("6E400005-B5A3-F393-E0A9-E50E24DCCA9E");
+  final Guid water30DaysDataUUID =
+      Guid("6E400006-B5A3-F393-E0A9-E50E24DCCA9E");
 
   BluetoothCharacteristic? _dataChar;
   BluetoothCharacteristic? _ackChar;
   BluetoothCharacteristic? _hydrationDataChar;
-  BluetoothCharacteristic? _hydrationChar; // 🔹 NEW for 7-slot hydration data
+  BluetoothCharacteristic?
+      _hydrationChar; // 🔹 NEW for 7-slot hydration data
   BluetoothCharacteristic? _hydration30DaysChar;
 
   StreamSubscription<List<ScanResult>>? _scanSub;
@@ -56,7 +63,8 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
       savedDeviceName = prefs.getString('last_device_name');
       savedDeviceId = prefs.getString('last_device_id');
 
-      final bool isFirst = (savedDeviceName == null || savedDeviceId == null);
+      final bool isFirst =
+          (savedDeviceName == null || savedDeviceId == null);
       emit(state.copyWith(
         status: BleStatus.initializing,
         message: "Initializing Bluetooth",
@@ -71,7 +79,8 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
     });
   }
 
-  Future<void> _waitForBluetoothOn(Future<void> Function() onReady) async {
+  Future<void> _waitForBluetoothOn(
+      Future<void> Function() onReady) async {
     if (await FlutterBluePlus.isSupported == false) {
       emit(state.copyWith(
         status: BleStatus.error,
@@ -80,7 +89,8 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
       return;
     }
 
-    final currentState = await FlutterBluePlus.adapterState.first;
+    final currentState =
+        await FlutterBluePlus.adapterState.first;
     if (currentState == BluetoothAdapterState.on) {
       await onReady();
       return;
@@ -107,7 +117,8 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
     ));
 
     _scanSub?.cancel();
-    FlutterBluePlus.startScan(timeout: const Duration(seconds: 20));
+    FlutterBluePlus.startScan(
+        timeout: const Duration(seconds: 20));
 
     _scanSub = FlutterBluePlus.scanResults.listen((results) {
       for (var r in results) {
@@ -124,13 +135,15 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
         }
       }
     }, onError: (e) {
-      emit(state.copyWith(status: BleStatus.error, message: "Scan error: $e"));
+      emit(state.copyWith(
+          status: BleStatus.error, message: "Scan error: $e"));
       _rescan(lastDeviceOnly: true);
     });
 
     Future.delayed(const Duration(seconds: 20), () {
       if (state.status == BleStatus.scanning) {
-        FlutterBluePlus.stopScan().then((_) => _scanForLastDevice());
+        FlutterBluePlus.stopScan()
+            .then((_) => _scanForLastDevice());
       }
     });
   }
@@ -178,7 +191,8 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
     ));
 
     _scanSub?.cancel();
-    FlutterBluePlus.startScan(timeout: const Duration(seconds: 20));
+    FlutterBluePlus.startScan(
+        timeout: const Duration(seconds: 20));
 
     _scanSub = FlutterBluePlus.scanResults.listen((results) {
       if (results.isNotEmpty) {
@@ -193,13 +207,15 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
         }
       }
     }, onError: (e) {
-      emit(state.copyWith(status: BleStatus.error, message: "Scan error: $e"));
+      emit(state.copyWith(
+          status: BleStatus.error, message: "Scan error: $e"));
       _rescan();
     });
 
     Future.delayed(const Duration(seconds: 20), () async {
       if (state.status == BleStatus.scanning) {
-        FlutterBluePlus.stopScan().then((_) => _scanForAllDevices());
+        FlutterBluePlus.stopScan()
+            .then((_) => _scanForAllDevices());
       }
     });
   }
@@ -250,7 +266,8 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
   // BLE connection
   // ---------------------------------------------------------------------------
 
-  Future<void> connectToSelectedDevice(BluetoothDevice device) async {
+  Future<void> connectToSelectedDevice(
+      BluetoothDevice device) async {
     FlutterBluePlus.stopScan();
     _scanSub?.cancel();
     _connectToDevice(device);
@@ -263,7 +280,8 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
     ));
 
     try {
-      await device.connect(autoConnect: false, timeout: Duration(seconds: 6));
+      await device.connect(
+          autoConnect: false, timeout: Duration(seconds: 6));
       await device.connectionState
           .where((s) => s == BluetoothConnectionState.connected)
           .first;
@@ -271,21 +289,25 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
       _listenToConnection(device);
 
       final prefs = await SharedPreferences.getInstance();
-      final wasFirst = (savedDeviceId == null || savedDeviceName == null);
+      final wasFirst =
+          (savedDeviceId == null || savedDeviceName == null);
       await prefs.setString('last_device_id', device.id.id);
       await prefs.setString('last_device_name', device.name);
 
       savedDeviceId = device.id.id;
       savedDeviceName = device.name;
-      if (wasFirst) emit(state.copyWith(isFirstConnection: false));
+      if (wasFirst)
+        emit(state.copyWith(isFirstConnection: false));
 
       await _discoverServices(device);
       await prefs.setBool('ble_connected_once', true);
     } catch (e) {
       emit(state.copyWith(
-          status: BleStatus.error, message: "Connection failed: $e"));
+          status: BleStatus.error,
+          message: "Connection failed: $e"));
       _rescan(
-          lastDeviceOnly: (savedDeviceId != null || savedDeviceName != null));
+          lastDeviceOnly: (savedDeviceId != null ||
+              savedDeviceName != null));
     }
   }
 
@@ -301,8 +323,10 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
           for (var c in s.characteristics) {
             if (c.uuid == dataUUID) _dataChar = c;
             if (c.uuid == ackUUID) _ackChar = c;
-            if (c.uuid == hydrationDataUUID) _hydrationDataChar = c;
-            if (c.uuid == hydrationCharUUID) _hydrationChar = c; // ✅ new
+            if (c.uuid == hydrationDataUUID)
+              _hydrationDataChar = c;
+            if (c.uuid == hydrationCharUUID)
+              _hydrationChar = c; // ✅ new
             if (c.uuid == water30DaysDataUUID) {
               _hydration30DaysChar = c; // ✅ new
             }
@@ -331,17 +355,21 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
 
       if (_hydration30DaysChar != null) {
         await _hydration30DaysChar!.setNotifyValue(true);
-        _hydration30DaysChar!.onValueReceived.listen((value) async {
+        _hydration30DaysChar!.onValueReceived
+            .listen((value) async {
           try {
             final data = String.fromCharCodes(value);
-            log("Hydration 30 days Raw: $data", name: "BLE_Cubit");
+            log("Hydration 30 days Raw: $data",
+                name: "BLE_Cubit");
 
             final parsed = _parse30DaysHydration(data);
             if (parsed.isNotEmpty) {
-              final List<HydrationDaySummary> list = parsed.map((m) {
+              final List<HydrationDaySummary> list =
+                  parsed.map((m) {
                 // m['date'] is a DateTime from the parser — normalize to local midnight
                 final DateTime rawDate = m['date'] as DateTime;
-                final date = DateTime(rawDate.year, rawDate.month, rawDate.day);
+                final date = DateTime(
+                    rawDate.year, rawDate.month, rawDate.day);
                 // midnight
                 return HydrationDaySummary(
                   date: date,
@@ -354,7 +382,8 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
 
               // Save to DB in bulk (fast)
               await dbHelper.bulkUpsert30Days(list);
-              emit(state.copyWith(isHydration30DaysDataSync: true));
+              emit(state.copyWith(
+                  isHydration30DaysDataSync: true));
               log("[BLE_Cubit] Saved ${list.length} day summaries to DB",
                   name: "BLE_Cubit");
 
@@ -401,7 +430,8 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
         log("HydrationDataReceived: $data", name: "BLE_Cubit");
         var slots = _parseHydrationData(data);
         if (slots.isNotEmpty) _hydrationController.add(slots);
-        _sendAck(device, sendAckToHydrationSlotsCharacteristic: true);
+        _sendAck(device,
+            sendAckToHydrationSlotsCharacteristic: true);
       });
 
       await _dataChar!.setNotifyValue(true);
@@ -429,7 +459,9 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
         status: BleStatus.error,
         message: "Service discovery failed: $e",
       ));
-      _rescan(lastDeviceOnly: savedDeviceId != null || savedDeviceName != null);
+      _rescan(
+          lastDeviceOnly:
+              savedDeviceId != null || savedDeviceName != null);
     }
   }
 
@@ -444,19 +476,25 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
     int? percent;
 
     for (var p in parts) {
-      if (p.contains('battery=')) battery = int.tryParse(p.split('=')[1]);
-      if (p.contains('volume=')) volume = double.tryParse(p.split('=')[1]);
-      if (p.contains('percent=')) percent = int.tryParse(p.split('=')[1]);
+      if (p.contains('battery='))
+        battery = int.tryParse(p.split('=')[1]);
+      if (p.contains('volume='))
+        volume = double.tryParse(p.split('=')[1]);
+      if (p.contains('percent='))
+        percent = int.tryParse(p.split('=')[1]);
     }
 
-    emit(state.copyWith(battery: battery, volume: volume, percent: percent));
+    emit(state.copyWith(
+        battery: battery, volume: volume, percent: percent));
   }
 
   List<HydrationEntry> _parseHydrationData(String payload) {
-    if (payload.isEmpty || payload.toLowerCase() == "na") return [];
+    if (payload.isEmpty || payload.toLowerCase() == "na")
+      return [];
     return payload.split("|").map((entry) {
       final parts = entry.split("/");
-      if (parts.length < 5) throw FormatException("Invalid payload: $entry");
+      if (parts.length < 5)
+        throw FormatException("Invalid payload: $entry");
 
       final index = int.parse(parts[1]);
       final startEpoch = int.parse(parts[2]);
@@ -494,7 +532,8 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
         final parts = s.split('/');
         if (parts.length < 3) {
           // malformed segment — skip
-          log("Skipping malformed hydration segment: '$s'", name: "BLE_Cubit");
+          log("Skipping malformed hydration segment: '$s'",
+              name: "BLE_Cubit");
           continue;
         }
 
@@ -502,13 +541,18 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
         final target = double.tryParse(parts[1].trim());
         final consumed = double.tryParse(parts[2].trim());
 
-        if (slotId == null || target == null || consumed == null) {
-          log("Failed to parse numbers in segment: '$s'", name: "BLE_Cubit");
+        if (slotId == null ||
+            target == null ||
+            consumed == null) {
+          log("Failed to parse numbers in segment: '$s'",
+              name: "BLE_Cubit");
           continue;
         }
 
-        if (slotId < 0 || slotId >= HydrationSlot.values.length) {
-          log("Invalid slot index $slotId in segment: '$s'", name: "BLE_Cubit");
+        if (slotId < 0 ||
+            slotId >= HydrationSlot.values.length) {
+          log("Invalid slot index $slotId in segment: '$s'",
+              name: "BLE_Cubit");
           continue;
         }
 
@@ -517,8 +561,10 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
 
         results.add(HydrationEntry(
           slot: slot,
-          startTime: TimeOfDay(hour: now.hour, minute: now.minute),
-          endTime: TimeOfDay(hour: now.hour, minute: (now.minute + 1) % 60),
+          startTime:
+              TimeOfDay(hour: now.hour, minute: now.minute),
+          endTime: TimeOfDay(
+              hour: now.hour, minute: (now.minute + 1) % 60),
           waterDrank: consumed,
           amount: target,
         ));
@@ -534,7 +580,8 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
   /// Parses a 30-days hydration payload of the form:
   /// "1758076200|0/2000/1800|1/2000/1800|2/2000/1800|...|29/2000/1800"
   /// Returns a list of maps: { "dayIndex": int, "date": DateTime, "target": double, "consumed": double, "raw": String }
-  List<Map<String, dynamic>> _parse30DaysHydration(String payload) {
+  List<Map<String, dynamic>> _parse30DaysHydration(
+      String payload) {
     final List<Map<String, dynamic>> results = [];
 
     try {
@@ -543,7 +590,8 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
       payload = payload.trim();
 
       // Split into parts: first part is epoch, rest are day segments
-      final parts = payload.split('|').map((s) => s.trim()).toList();
+      final parts =
+          payload.split('|').map((s) => s.trim()).toList();
       if (parts.isEmpty) return results;
 
       // Parse epoch (first token). Detect secs vs millis.
@@ -557,12 +605,15 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
       }
       print("30d -> $epochNum");
       // Heuristic: if epoch looks like milliseconds (> 1e12) treat as ms, else seconds.
-      final epochMillis =
-          (epochNum > 1000000000000) ? epochNum : epochNum * 1000;
+      final epochMillis = (epochNum > 1000000000000)
+          ? epochNum
+          : epochNum * 1000;
       DateTime startDate =
-          DateTime.fromMillisecondsSinceEpoch(epochMillis).toLocal();
+          DateTime.fromMillisecondsSinceEpoch(epochMillis)
+              .toLocal();
 
-      log("30-days startDate parsed as: $startDate", name: "BLE_Cubit");
+      log("30-days startDate parsed as: $startDate",
+          name: "BLE_Cubit");
 
       // Iterate remaining segments
       final segments = parts.sublist(1); // drop epoch
@@ -572,7 +623,8 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
         final segParts = seg.split('/');
         // Expected: index/target/consumed  (some firmwares might omit index; handle both)
         if (segParts.length < 2) {
-          log("Skipping malformed 30-days segment: '$seg'", name: "BLE_Cubit");
+          log("Skipping malformed 30-days segment: '$seg'",
+              name: "BLE_Cubit");
           continue;
         }
 
@@ -620,14 +672,16 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
         results.add(entry);
       }
     } catch (e) {
-      log("Error parsing 30-days hydration payload: $e", name: "BLE_Cubit");
+      log("Error parsing 30-days hydration payload: $e",
+          name: "BLE_Cubit");
     }
 
     return results;
   }
 
   Future<void> _sendAck(BluetoothDevice device,
-      {bool sendAckToHydrationSlotsCharacteristic = false}) async {
+      {bool sendAckToHydrationSlotsCharacteristic =
+          false}) async {
     // try {
     //   if (sendAckToHydrationSlotsCharacteristic) {
     //     await _hydrationDataChar?.write("ACK".codeUnits, withoutResponse: true);
@@ -645,7 +699,8 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
 
   void _listenToConnection(BluetoothDevice device) {
     _connectionSub?.cancel();
-    _connectionSub = device.connectionState.listen((stateChange) {
+    _connectionSub =
+        device.connectionState.listen((stateChange) {
       switch (stateChange) {
         case BluetoothConnectionState.connected:
           emit(state.copyWith(
@@ -681,7 +736,8 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
       }).join("|");
 
       log("Flushing hydration slots: $payload");
-      await _ackChar!.write(payload.codeUnits, withoutResponse: true);
+      await _ackChar!
+          .write(payload.codeUnits, withoutResponse: true);
       _pendingSlots.clear();
       print(
           '============> success  $payload   =====> unit ${payload.codeUnits}');
@@ -693,30 +749,34 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
     } catch (e) {
       print('============> error ${e.toString()}');
 
-      emit(
-          state.copyWith(status: BleStatus.error, message: "Flush failed: $e"));
+      emit(state.copyWith(
+          status: BleStatus.error, message: "Flush failed: $e"));
     }
   }
 
   int _timeOfDayToEpoch(TimeOfDay tod) {
     final now = DateTime.now();
-    final dt = DateTime(now.year, now.month, now.day, tod.hour, tod.minute);
+    final dt = DateTime(
+        now.year, now.month, now.day, tod.hour, tod.minute);
     return dt.millisecondsSinceEpoch ~/ 1000;
   }
 
   TimeOfDay _epochToTimeOfDay(int epoch) {
-    final date = DateTime.fromMillisecondsSinceEpoch(epoch * 1000);
+    final date =
+        DateTime.fromMillisecondsSinceEpoch(epoch * 1000);
     return TimeOfDay(hour: date.hour, minute: date.minute);
   }
 
   @override
-  Future<void> queueHydrationSlots(List<HydrationEntry> entries) async {
+  Future<void> queueHydrationSlots(
+      List<HydrationEntry> entries) async {
     _pendingSlots.clear();
     _pendingSlots.addAll(entries);
     if (state.status == BleStatus.connected) {
       await _flushPendingSlots();
     } else {
-      emit(state.copyWith(message: "Device not connected, will sync later"));
+      emit(state.copyWith(
+          message: "Device not connected, will sync later"));
     }
   }
 
@@ -732,7 +792,8 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
       state.copyWith(
         status: BleStatus.scanning,
         isFirstConnection: true,
-        message: "Device forgotten. \nReady to scan for new devices.",
+        message:
+            "Device forgotten. \nReady to scan for new devices.",
       ),
     );
 
@@ -744,7 +805,8 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
         status: BleStatus.scanning,
         isFirstConnection: true,
         scannedDevices: [],
-        message: "Device forgotten. \nReady to scan for new devices.",
+        message:
+            "Device forgotten. \nReady to scan for new devices.",
       ),
     );
 
