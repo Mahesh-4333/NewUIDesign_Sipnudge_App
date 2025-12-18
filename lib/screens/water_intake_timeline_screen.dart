@@ -9,6 +9,7 @@ import 'package:hydrify/constants/app_colors.dart';
 import 'package:hydrify/constants/app_dimensions.dart';
 import 'package:hydrify/constants/app_font_styles.dart';
 import 'package:hydrify/constants/app_strings.dart';
+import 'package:hydrify/cubit/ble/ble_cubit.dart';
 import 'package:hydrify/cubit/bottle/bottle_data_cubit.dart';
 import 'package:hydrify/cubit/hydration/hydration_cubit.dart';
 import 'package:hydrify/cubit/hydration/hydration_state.dart';
@@ -35,8 +36,9 @@ class _WaterIntakeTimelineState extends State<WaterIntakeTimelineScreen> {
     super.initState();
     final hydrationCubit = context.read<HydrationCubit>();
     final bottleCubit = context.read<BottleDataCubit>();
-    //final bleCubit = context.read<BleCubit>();
-
+    final bleCubit = context.read<BleCubit>();
+    bleCubit.checkAndResetForNewDay(hydrationCubit
+        .generateDefaultHydrationSlots(hydrationCubit.state.goal.toDouble()));
     //hydrationCubit.subscribeToBleUpdates(bleCubit);
 
     hydrationCubit.loadSlotsFromDb();

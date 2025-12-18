@@ -32,113 +32,120 @@ class WaterConsumptionCalculator {
   }
 
   // Calculate completion percentage
-  static double calculateCompletionPercentage(double consumedVolume) {
-    return (consumedVolume / DAILY_GOAL_ML * 100).clamp(0, 100);
-  }
-
-  // Get weekly consumption data
-  static List<WaterConsumptionData> getWeeklyData(
-    List<BottleData> allReadings,
-    DateTime weekStart,
+  static double calculateCompletionPercentage(
+    double consumedVolume,
+    double goal,
   ) {
-    List<WaterConsumptionData> weeklyData = [];
+    if (goal <= 0) return 0.0;
 
-    for (int i = 0; i < 7; i++) {
-      DateTime currentDate = weekStart.add(Duration(days: i));
-      DateTime nextDate = currentDate.add(const Duration(days: 1));
-
-      // Include readings at exactly currentDate
-      List<BottleData> dayReadings = allReadings
-          .where((reading) =>
-              reading.timestamp.isAtSameMomentAs(currentDate) ||
-              (reading.timestamp.isAfter(currentDate) &&
-                  reading.timestamp.isBefore(nextDate)))
-          .toList();
-
-      double consumption = calculateDailyConsumption(dayReadings);
-      double percentage = calculateCompletionPercentage(consumption);
-
-      weeklyData.add(WaterConsumptionData(
-        date: currentDate,
-        consumedVolume: consumption,
-        completionPercentage: percentage,
-      ));
-    }
-
-    return weeklyData;
+    final percentage = (consumedVolume / goal) * 100;
+    print("goal data==> $consumedVolume $goal");
+    return double.parse(percentage.toStringAsFixed(1));
   }
 
-  static List<WaterConsumptionData> getMonthlyData(
-    List<BottleData> allReadings,
-    DateTime month,
-  ) {
-    List<WaterConsumptionData> monthlyData = [];
+  // // Get weekly consumption data
+  // static List<WaterConsumptionData> getWeeklyData(
+  //   List<BottleData> allReadings,
+  //   DateTime weekStart,
+  // ) {
+  //   List<WaterConsumptionData> weeklyData = [];
 
-    int daysInMonth = DateTime(month.year, month.month + 1, 0).day;
+  //   for (int i = 0; i < 7; i++) {
+  //     DateTime currentDate = weekStart.add(Duration(days: i));
+  //     DateTime nextDate = currentDate.add(const Duration(days: 1));
 
-    for (int i = 1; i <= daysInMonth; i++) {
-      DateTime currentDate = DateTime(month.year, month.month, i);
-      DateTime nextDate = DateTime(month.year, month.month, i + 1);
+  //     // Include readings at exactly currentDate
+  //     List<BottleData> dayReadings = allReadings
+  //         .where((reading) =>
+  //             reading.timestamp.isAtSameMomentAs(currentDate) ||
+  //             (reading.timestamp.isAfter(currentDate) &&
+  //                 reading.timestamp.isBefore(nextDate)))
+  //         .toList();
 
-      List<BottleData> dayReadings = allReadings
-          .where((reading) =>
-              reading.timestamp.isAfter(currentDate) &&
-              reading.timestamp.isBefore(nextDate))
-          .toList();
+  //     double consumption = calculateDailyConsumption(dayReadings);
+  //     double percentage = calculateCompletionPercentage(consumption);
 
-      double consumption = calculateDailyConsumption(dayReadings);
-      double percentage = calculateCompletionPercentage(consumption);
+  //     weeklyData.add(WaterConsumptionData(
+  //       date: currentDate,
+  //       consumedVolume: consumption,
+  //       completionPercentage: percentage,
+  //     ));
+  //   }
 
-      monthlyData.add(WaterConsumptionData(
-        date: currentDate,
-        consumedVolume: consumption,
-        completionPercentage: percentage,
-      ));
-    }
+  //   return weeklyData;
+  // }
 
-    return monthlyData;
-  }
+  // static List<WaterConsumptionData> getMonthlyData(
+  //   List<BottleData> allReadings,
+  //   DateTime month,
+  // ) {
+  //   List<WaterConsumptionData> monthlyData = [];
 
-  static List<WaterConsumptionData> getYearlyData(
-    List<BottleData> allReadings,
-    DateTime year,
-  ) {
-    List<WaterConsumptionData> yearlyData = [];
+  //   int daysInMonth = DateTime(month.year, month.month + 1, 0).day;
 
-    for (int month = 1; month <= 12; month++) {
-      DateTime monthDate = DateTime(year.year, month);
+  //   for (int i = 1; i <= daysInMonth; i++) {
+  //     DateTime currentDate = DateTime(month.year, month.month, i);
+  //     DateTime nextDate = DateTime(month.year, month.month, i + 1);
 
-      // Get daily data for this month
-      List<WaterConsumptionData> monthlyData =
-          getMonthlyData(allReadings, monthDate);
+  //     List<BottleData> dayReadings = allReadings
+  //         .where((reading) =>
+  //             reading.timestamp.isAfter(currentDate) &&
+  //             reading.timestamp.isBefore(nextDate))
+  //         .toList();
 
-      if (monthlyData.isNotEmpty) {
-        double avgConsumption =
-            monthlyData.map((d) => d.consumedVolume).reduce((a, b) => a + b) /
-                monthlyData.length;
+  //     double consumption = calculateDailyConsumption(dayReadings);
+  //     double percentage = calculateCompletionPercentage(consumption);
 
-        double avgPercentage = monthlyData
-                .map((d) => d.completionPercentage)
-                .reduce((a, b) => a + b) /
-            monthlyData.length;
+  //     monthlyData.add(WaterConsumptionData(
+  //       date: currentDate,
+  //       consumedVolume: consumption,
+  //       completionPercentage: percentage,
+  //     ));
+  //   }
 
-        yearlyData.add(WaterConsumptionData(
-          date: monthDate, // represent the month
-          consumedVolume: avgConsumption,
-          completionPercentage: avgPercentage,
-        ));
-      } else {
-        // No data for this month → add empty entry
-        yearlyData.add(WaterConsumptionData(
-          date: monthDate,
-          consumedVolume: 0,
-          completionPercentage: 0,
-        ));
-      }
-    }
+  //   return monthlyData;
+  // }
 
-    return yearlyData;
-  }
+  // static List<WaterConsumptionData> getYearlyData(
+  //   List<BottleData> allReadings,
+  //   DateTime year,
+  // ) {
+  //   List<WaterConsumptionData> yearlyData = [];
+
+  //   for (int month = 1; month <= 12; month++) {
+  //     DateTime monthDate = DateTime(year.year, month);
+
+  //     // Get daily data for this month
+  //     List<WaterConsumptionData> monthlyData =
+  //         getMonthlyData(allReadings, monthDate);
+
+  //     if (monthlyData.isNotEmpty) {
+  //       double avgConsumption =
+  //           monthlyData.map((d) => d.consumedVolume).reduce((a, b) => a + b) /
+  //               monthlyData.length;
+
+  //       double avgPercentage = monthlyData
+  //               .map((d) => d.completionPercentage)
+  //               .reduce((a, b) => a + b) /
+  //           monthlyData.length;
+
+  //       yearlyData.add(WaterConsumptionData(
+  //         date: monthDate, // represent the month
+  //         consumedVolume: avgConsumption,
+  //         completionPercentage: avgPercentage,
+  //       ));
+  //     } else {
+  //       // No data for this month → add empty entry
+  //       yearlyData.add(WaterConsumptionData(
+  //         date: monthDate,
+  //         consumedVolume: 0,
+  //         completionPercentage: 0,
+  //       ));
+  //     }
+  //   }
+
+  //   return yearlyData;
+  // }
 
   static List<ChartData> formatChartData(
     List<WaterConsumptionData> consumptionData,

@@ -107,8 +107,46 @@ CREATE TABLE IF NOT EXISTS hydration_day_summaries (
   UNIQUE(date, device_id) ON CONFLICT REPLACE
 );
 ''');
+
+        await db.execute('''
+CREATE TABLE IF NOT EXISTS app_metadata (
+  key TEXT PRIMARY KEY,
+  value TEXT
+);
+''');
       },
     );
+  }
+
+  Future<void> saveLastSyncDate(DateTime date) async {
+    final db = await database;
+
+    await db.insert(
+      'app_metadata',
+      {
+        'key': 'last_hydration_sync',
+        'value': date.toIso8601String(),
+      },
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+
+    log('[DB] Last hydration sync saved: ${date.toIso8601String()}');
+  }
+
+
+  Future<DateTime?> getLastSyncDate() async {
+    final db = await database;
+
+    final result = await db.query(
+      'app_metadata',
+      where: 'key = ?',
+      whereArgs: ['last_hydration_sync'],
+      limit: 1,
+    );
+
+    if (result.isEmpty) return null;
+
+    return DateTime.parse(result.first['value'] as String);
   }
 
   Future<void> insertOrUpdateSlot(HydrationEntry entry,
@@ -153,6 +191,8 @@ CREATE TABLE IF NOT EXISTS hydration_day_summaries (
       log("[DB] Error clearing hydration_slots table: $e");
     }
   }
+
+
 
   Future<List<HydrationEntry>> getAllSlots() async {
     final db = await database;
