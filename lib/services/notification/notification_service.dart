@@ -2,6 +2,7 @@ import 'dart:developer';
 import 'dart:io';
 
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:fluttertoast/fluttertoast.dart';
 import 'package:hydrify/helpers/shared_pref_helper.dart';
 import 'package:hydrify/models/hydration_entry.dart';
 import 'package:hydrify/services/google_calendar_manager.dart';
@@ -9,12 +10,10 @@ import 'package:timezone/data/latest.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
 import 'notification_manager.dart';
 
-typedef NotificationTapCallback = void Function(
-    HydrationSlot slot);
+typedef NotificationTapCallback = void Function(HydrationSlot slot);
 
 class NotificationService {
-  static final NotificationService _instance =
-      NotificationService._internal();
+  static final NotificationService _instance = NotificationService._internal();
   factory NotificationService() => _instance;
   NotificationService._internal();
 
@@ -62,8 +61,7 @@ class NotificationService {
         final actionId = details.actionId;
         if (actionId == 'STOP_ACTION') {
           if (details.id != null) {
-            await NotificationManager.instance
-                .stopAlarm(details.id!);
+            await NotificationManager.instance.stopAlarm(details.id!);
             await _plugin.cancel(details.id!);
           }
           return;
@@ -71,11 +69,9 @@ class NotificationService {
 
         if (actionId != null && actionId.startsWith("STOP")) {
           if (details.id != null) {
-            await NotificationManager.instance
-                .stopAlarm(details.id!);
+            await NotificationManager.instance.stopAlarm(details.id!);
             if (details.id != null) {
-              await NotificationManager.instance
-                  .stopAlarm(details.id!);
+              await NotificationManager.instance.stopAlarm(details.id!);
               await _plugin.cancel(details.id!);
             }
           }
@@ -86,10 +82,8 @@ class NotificationService {
           final slotIndex = int.parse(payload);
           if (payload != null) {
             final slotIndex = int.parse(payload);
-            if (slotIndex >= 0 &&
-                slotIndex < HydrationSlot.values.length) {
-              onNotificationTap
-                  ?.call(HydrationSlot.values[slotIndex]);
+            if (slotIndex >= 0 && slotIndex < HydrationSlot.values.length) {
+              onNotificationTap?.call(HydrationSlot.values[slotIndex]);
             }
           }
         }
@@ -98,14 +92,12 @@ class NotificationService {
   }
 
   Future<String> _getSelectedRingtoneAssetPath() async {
-    final selected =
-        await SharedPrefsHelper.getSelectedRingtone() ?? 0;
+    final selected = await SharedPrefsHelper.getSelectedRingtone() ?? 0;
     final fileName = "ringtone${selected + 1}";
     return "assets/ringtones/$fileName.mp3";
   }
 
-  Future<void> scheduleHydrationReminders(
-      List<HydrationEntry> entries) async {
+  Future<void> scheduleHydrationReminders(List<HydrationEntry> entries) async {
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
 
@@ -117,8 +109,7 @@ class NotificationService {
         minutes: entry.endTime.minute,
       ));
 
-      final notifyAt =
-          endDateTime.subtract(const Duration(minutes: 10));
+      final notifyAt = endDateTime.subtract(const Duration(minutes: 10));
 
       if (notifyAt.isBefore(now)) {
         log(
@@ -128,9 +119,7 @@ class NotificationService {
         continue;
       }
 
-      /// 🔍 CHECK CALENDAR
-      final shouldSilence =
-          await _shouldSilenceHydrationReminder(notifyAt);
+      final shouldSilence = await _shouldSilenceHydrationReminder(notifyAt);
 
       log(
         "[NotificationService] Scheduling ${shouldSilence ? 'SILENT' : 'NORMAL'} "
@@ -154,8 +143,7 @@ class NotificationService {
         log('[iOS] Notification scheduled (${shouldSilence ? "silent" : "normal"})');
       } else {
         /// 🔔 NORMAL ALARM
-        final alarmSet =
-            await NotificationManager.instance.setReliableAlarm(
+        final alarmSet = await NotificationManager.instance.setReliableAlarm(
           id: entry.slot.index,
           dateTime: notifyAt,
           assetAudioPath: assetPath,
@@ -186,8 +174,7 @@ class NotificationService {
       required String body,
       required String payload,
       required bool isSilent}) async {
-    final selected =
-        await SharedPrefsHelper.getSelectedRingtone() ?? 0;
+    final selected = await SharedPrefsHelper.getSelectedRingtone() ?? 0;
     final fileName = "ringtone${selected + 1}.caf";
     log("=-=-=-=- IOS Reminder set ${fileName}");
     await _plugin.zonedSchedule(
@@ -211,11 +198,10 @@ class NotificationService {
     );
   }
 
-  Future<bool> _shouldSilenceHydrationReminder(
-      DateTime notifyAt) async {
+  Future<bool> _shouldSilenceHydrationReminder(DateTime notifyAt) async {
     try {
       final calendarManager = GoogleCalendarManager();
-      return await calendarManager.hasEventDuring(
+      return await calendarManager.hasOverlappingEvent(
         notifyAt,
         notifyAt.add(const Duration(minutes: 5)),
       );
@@ -231,9 +217,7 @@ class NotificationService {
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
 
-    for (int dayOffset = 0;
-        dayOffset < _scheduleDaysAhead;
-        dayOffset++) {
+    for (int dayOffset = 0; dayOffset < _scheduleDaysAhead; dayOffset++) {
       final baseDay = today.add(Duration(days: dayOffset));
 
       for (final entry in entries) {
@@ -242,13 +226,11 @@ class NotificationService {
           minutes: entry.endTime.minute,
         ));
 
-        final notifyAt =
-            endDateTime.subtract(const Duration(minutes: 10));
+        final notifyAt = endDateTime.subtract(const Duration(minutes: 10));
 
         if (notifyAt.isBefore(now)) continue;
 
-        final shouldSilence =
-            await _shouldSilenceHydrationReminder(notifyAt);
+        final shouldSilence = await _shouldSilenceHydrationReminder(notifyAt);
 
         await _scheduleSingleReminder(
           entry: entry,
@@ -299,11 +281,8 @@ class NotificationService {
   Future<void> rescheduleSlotForFuture(
     HydrationEntry updatedEntry,
   ) async {
-    for (int dayOffset = 0;
-        dayOffset < _scheduleDaysAhead;
-        dayOffset++) {
-      final id =
-          _buildNotificationId(updatedEntry.slot, dayOffset);
+    for (int dayOffset = 0; dayOffset < _scheduleDaysAhead; dayOffset++) {
+      final id = _buildNotificationId(updatedEntry.slot, dayOffset);
 
       await _plugin.cancel(id);
 
@@ -346,9 +325,7 @@ class NotificationService {
   Future<void> cancelAllHydrationReminders() async {
     await _plugin.cancelAll();
 
-    for (int dayOffset = 0;
-        dayOffset < _scheduleDaysAhead;
-        dayOffset++) {
+    for (int dayOffset = 0; dayOffset < _scheduleDaysAhead; dayOffset++) {
       for (final slot in HydrationSlot.values) {
         final id = _buildNotificationId(slot, dayOffset);
 

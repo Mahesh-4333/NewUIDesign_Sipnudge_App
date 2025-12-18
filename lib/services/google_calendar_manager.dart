@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
+import 'dart:developer';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:http/http.dart' as http;
 
@@ -84,6 +85,7 @@ class GoogleCalendarManager {
     debugPrint(
       '$_logTag Calendar API status: ${response.statusCode}',
     );
+    log("=-=-=-=-=-=-=-=-=-=-=- response is ${response.body} =-=-=-=-=-=-=-=-=-=-=-");
 
     if (response.statusCode != 200) {
       debugPrint(
@@ -118,6 +120,93 @@ class GoogleCalendarManager {
     }
 
     return events.isNotEmpty;
+  }
+
+  Future<bool> hasOverlappingEvent(
+    DateTime slotStart,
+    DateTime slotEnd,
+  ) async {
+    log("🟦 Checking slot:");
+    log("🟦 Slot start: $slotStart");
+    log("🟦 Slot end  : $slotEnd");
+
+    final signedIn = await ensureSignedIn();
+    if (!signedIn) {
+      log("❌ User not signed in");
+      return false;
+    }
+
+    final authHeaders = await _currentUser!.authHeaders;
+
+    final uri = Uri.parse(
+      'https://www.googleapis.com/calendar/v3/calendars/primary/events'
+      '?timeMin=${slotStart.toUtc().toIso8601String()}'
+      '&timeMax=${slotEnd.toUtc().toIso8601String()}'
+      '&singleEvents=true'
+      '&orderBy=startTime',
+    );
+
+    log("🌐 Request URL:");
+    log(uri.toString());
+
+    final response = await http.get(uri, headers: authHeaders);
+
+    log("📡 Response status: ${response.statusCode}");
+    log("📡 Raw response body:");
+    log(response.body);
+
+    if (response.statusCode != 200) {
+      log("❌ Google Calendar API error");
+      return false;
+    }
+
+    final data = json.decode(response.body);
+    final List events = data['items'] ?? [];
+
+    log("📅 Total events fetched: ${events.length}");
+
+    for (int i = 0; i < events.length; i++) {
+      final event = events[i];
+
+      final startRaw = event['start'];
+      final endRaw = event['end'];
+
+      DateTime eventStart;
+      DateTime eventEnd;
+
+      // ⏰ Timed event
+      if (startRaw['dateTime'] != null) {
+        eventStart = DateTime.parse(startRaw['dateTime']).toLocal();
+        eventEnd = DateTime.parse(endRaw['dateTime']).toLocal();
+      }
+      // 📆 All-day event
+      else {
+        eventStart = DateTime.parse(startRaw['date']).toLocal();
+        eventEnd = DateTime.parse(endRaw['date']).toLocal();
+      }
+
+      log("────────────────────────────");
+      log("📌 Event #$i");
+      log("📌 Title : ${event['summary']}");
+      log("📌 Start : $eventStart");
+      log("📌 End   : $eventEnd");
+
+      final overlaps =
+          eventStart.isBefore(slotEnd) && eventEnd.isAfter(slotStart);
+
+      log("🔍 Overlap check:");
+      log("    eventStart < slotEnd  → ${eventStart.isBefore(slotEnd)}");
+      log("    eventEnd   > slotStart→ ${eventEnd.isAfter(slotStart)}");
+      log("    👉 OVERLAPS = $overlaps");
+
+      if (overlaps) {
+        log("⚠️ CONFLICT FOUND with event: ${event['summary']}");
+        return true;
+      }
+    }
+
+    log("✅ No overlapping events found");
+    return false;
   }
 
   /// Optional: Explicit sign out

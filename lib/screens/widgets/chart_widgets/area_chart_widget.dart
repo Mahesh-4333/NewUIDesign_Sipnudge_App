@@ -322,7 +322,7 @@ class _FlAreaChartWidgetState extends State<FlAreaChartWidget> {
                 chartData[i].completionPercent,
               ),
             ),
-            isCurved: true,
+            isCurved: false,
             color: const Color(0xFF42A5FF),
             barWidth: AppDimensions.dim3.w,
             belowBarData: BarAreaData(
