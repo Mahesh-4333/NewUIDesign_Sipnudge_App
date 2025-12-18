@@ -155,10 +155,9 @@ class MyApp extends StatelessWidget {
             designSize: const Size(440, 956),
             builder: (_, child) {
               return Padding(
+
                 padding: EdgeInsets.only(
-                    bottom: MediaQuery.of(context)
-                        .viewPadding
-                        .bottom),
+                    bottom: 0),
                 child: MaterialApp(
                   debugShowCheckedModeBanner: false,
                   theme: ThemeData(

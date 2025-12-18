@@ -17,6 +17,7 @@ import 'package:hydrify/screens/widgets/auth_button_widget.dart';
 import 'package:hydrify/screens/widgets/user_info_input_widgets/custom_gradient_slider_widget.dart';
 import 'package:hydrify/screens/widgets/water_wave_widget.dart';
 import 'package:hydrify/services/notification/notification_service.dart';
+import 'package:hydrify/services/ui_utils_service.dart';
 import 'package:provider/provider.dart';
 
 import '../services/google_calendar_manager.dart';
@@ -40,6 +41,9 @@ class _UserInfoDailyGoalScreenState extends State<UserInfoDailyGoalScreen> {
   late double initialSliderValue;
   List<double> tickValues = [];
   double widgetMaxGoal = 0;
+
+
+  bool isButtonClicked = false;
 
   @override
   void initState() {
@@ -311,6 +315,14 @@ class _UserInfoDailyGoalScreenState extends State<UserInfoDailyGoalScreen> {
                 color: AppColors.blueGradient,
                 areTwoItems: false,
                 onTap: () async {
+                  if(isButtonClicked == true)
+                  {
+                    return;
+                  }
+                  setState(() {
+                    isButtonClicked = true;
+                  });
+                  UiUtilsService.showLoading(context, "Please wait");
                   await context
                       .read<UserInfoCubit>()
                       .saveUser(context.read<UserInfoCubit>().state);
@@ -329,8 +341,12 @@ class _UserInfoDailyGoalScreenState extends State<UserInfoDailyGoalScreen> {
                       slot,
                     );
                   }
-                  context.read<BleCubit>().queueHydrationSlots(slots);
-                  NotificationService().resetAllHydrationReminders(slots);
+                  await context.read<BleCubit>().queueHydrationSlots(slots);
+                  await NotificationService().resetAllHydrationReminders(slots);
+                  UiUtilsService.dismissLoading(context,);
+                  setState(() {
+                    isButtonClicked= false;
+                  });
                   Navigator.pushAndRemoveUntil(
                       context,
                       MaterialPageRoute(
