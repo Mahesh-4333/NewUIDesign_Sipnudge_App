@@ -5,10 +5,24 @@
 .pub-cache/
 .flutter-plugins
 .flutter-plugins-dependencies
+.packages
+.vs/
+.vscode/
 .metadata
 coverage/
 build/
 
+# Build
+/build
+/ios/.symlinks/
+/android/local.properties
+/android/.gradle
+/ios/Flutter/Generated.xcconfig
+/ios/Flutter/ephemeral/
+/macos/Flutter/ephemeral/
+/windows/flutter/ephemeral/
+/linux/flutter/ephemeral/
+# Kotlin / Android garbage
 # Android
 android/.gradle/
 android/build/
@@ -19,10 +33,13 @@ android/key.properties
 # Kotlin / Android Studio
 android/.idea/
 android/.kotlin/
+android/**/.kotlin/
+android/**/errors/*.log
 *.iml
 *.log
 
 
+# Flutter generated
 
 # iOS
 ios/Pods/
@@ -36,6 +53,11 @@ ios/Flutter/Generated.xcconfig
 ios/Flutter/flutter_export_environment.sh
 ios/Runner/GeneratedPluginRegistrant.*
 
+
+# IDE/OS generated files (Crucial for what you are seeing)
+*.iml
+*.iws
+*.ipr
 # Xcode junk
 **/DerivedData/
 *.pbxuser
@@ -54,6 +76,9 @@ xcuserdata/
 *.swo
 # OS / tooling
 .DS_Store
+UserInterfaceState.xcuserstate
+
+
 Thumbs.db
 .sconsign.dblite
 .tags*

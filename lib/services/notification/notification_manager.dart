@@ -66,7 +66,9 @@ class NotificationManager {
   Future<void> initialize() async {
     await _requestRequiredPermissions();
 
-    await Alarm.init();
+    if (Platform.isAndroid) {
+      await Alarm.init();
+    }
 
     const AndroidInitializationSettings initializationSettingsAndroid =
         AndroidInitializationSettings('@mipmap/ic_launcher');
@@ -173,6 +175,7 @@ class NotificationManager {
     required String assetAudioPath,
     required String title,
     required String body,
+    required bool isSilent,
     String stopButtonText = 'Stop Alarm',
     int maxDurationSeconds = 5,
   }) async {
@@ -183,32 +186,21 @@ class NotificationManager {
     );
 
     var volumeSettings = VolumeSettings.fade(
-      volume: 1.0,
+      volume: isSilent ? 0.0 : 0.3,
       fadeDuration: const Duration(seconds: 3),
       volumeEnforced: true,
     );
 
     final alarmSettings = AlarmSettings(
       id: id,
-
       dateTime: dateTime,
-
       assetAudioPath: assetAudioPath,
-
-      // Loop is true, the timer below handles the automatic stop.
-
       loopAudio: false,
-
       vibrate: true,
-
       notificationSettings: notificationSettings,
-
       volumeSettings: volumeSettings,
-
-      androidFullScreenIntent: true, // Triggers a full-screen alert
-
-      warningNotificationOnKill:
-          true, // Helps prevent the OS from killing the background service
+      androidFullScreenIntent: false,
+      warningNotificationOnKill: false,
     );
 
     try {
@@ -223,8 +215,6 @@ class NotificationManager {
       return false;
     }
   }
-
-  /// Stops a scheduled or currently ringing alarm by its ID.
 
   Future<bool> stopAlarm(int id) async {
     final success = await Alarm.stop(id);

@@ -76,7 +76,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   endTime: TimeOfDay.now(),
                 ));
 
-        showHydrationPopup(context, slot, entry.amount as int);
+        showHydrationPopup(context, slot, entry.amount.toInt());
       },
     );
     //==================================================================
