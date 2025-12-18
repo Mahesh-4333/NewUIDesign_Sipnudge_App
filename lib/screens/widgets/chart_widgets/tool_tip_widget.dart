@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_svg/svg.dart';
 import 'package:hydrify/constants/app_dimensions.dart';
-
 import 'package:hydrify/constants/app_font_styles.dart';
 
 class CustomChartToolTip extends StatelessWidget {
@@ -19,7 +18,7 @@ class CustomChartToolTip extends StatelessWidget {
         children: [
           Positioned(
             child: SvgPicture.asset(
-              "assets/images/tooltip_image1.svg",
+              "assets/images/tooltip.svg",
               width: AppDimensions.dim55.w,
               height: AppDimensions.dim55.h,
             ),
