@@ -137,7 +137,6 @@ class _AchievementsBadgeScreenState extends State<AchievementsBadgeScreen> {
                 fit: BoxFit.cover,
               ),
 <<<<<<< HEAD
-=======
               //color: Color(0XFFFFFFFF),
             ),
             child: Column(
