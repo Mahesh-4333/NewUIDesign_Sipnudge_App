@@ -181,7 +181,7 @@ class _SyncfusionAreaChartWidgetState extends State<SyncfusionAreaChartWidget> {
         double percent = target > 0 ? (consumed / target) * 100 : 0;
         percent = percent.clamp(0, 100);
 
-        return ChartData((i + 1).toString(), 100, consumed, s.date);
+        return ChartData((i + 1).toString(), percent, consumed, s.date);
       });
     } else if (isYearly) {
       final year = widget.currentDate.year;
