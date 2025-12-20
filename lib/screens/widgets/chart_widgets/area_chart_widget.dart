@@ -149,7 +149,7 @@ class _SyncfusionAreaChartWidgetState extends State<SyncfusionAreaChartWidget> {
 
         return ChartData(
           weekLabels[i],
-          100,
+          percent,
           consumed,
           s.date,
         );
