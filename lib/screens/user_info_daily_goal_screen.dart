@@ -17,7 +17,13 @@ import 'package:hydrify/screens/widgets/auth_button_widget.dart';
 import 'package:hydrify/screens/widgets/user_info_input_widgets/custom_gradient_slider_widget.dart';
 import 'package:hydrify/screens/widgets/water_wave_widget.dart';
 import 'package:hydrify/services/notification/notification_service.dart';
+<<<<<<< HEAD
+=======
+import 'package:hydrify/services/ui_utils_service.dart';
+>>>>>>> origin/develop
 import 'package:provider/provider.dart';
+
+import '../services/google_calendar_manager.dart';
 
 class UserInfoDailyGoalScreen extends StatefulWidget {
   const UserInfoDailyGoalScreen({
@@ -38,6 +44,9 @@ class _UserInfoDailyGoalScreenState extends State<UserInfoDailyGoalScreen> {
   late double initialSliderValue;
   List<double> tickValues = [];
   double widgetMaxGoal = 0;
+
+
+  bool isButtonClicked = false;
 
   @override
   void initState() {
@@ -279,49 +288,81 @@ class _UserInfoDailyGoalScreenState extends State<UserInfoDailyGoalScreen> {
                 ),
               ),
             ),
+  
+
           ],
         ),
       ),
       bottomNavigationBar: Container(
         height: AppDimensions.dim60,
         margin: EdgeInsets.only(
+<<<<<<< HEAD
           bottom: AppDimensions.dim33.h,
+=======
+          bottom: 130.h,
+>>>>>>> origin/develop
           left: AppDimensions.defaultPadding.w,
           right: AppDimensions.defaultPadding.w,
         ),
-        child: AuthButton(
-            text: AppStrings.letsHitHydrationGoals,
-            color: AppColors.blueGradient,
-            areTwoItems: false,
-            onTap: () async {
-              await context
-                  .read<UserInfoCubit>()
-                  .saveUser(context.read<UserInfoCubit>().state);
-              await SharedPrefsHelper.setPersonalInfoSubmitted(true);
-              await SharedPrefsHelper.setWaterGoal(convertedWaterGoal.toInt());
-
-              final slots = generateHydrationSlots(convertedWaterGoal);
-              for (var slot in slots) {
-                log("Slot: ${slot.slot.label}, Water to drink: ${slot.amount} mL");
-              }
-
-              final dbHelper = DatabaseHelper();
-              await dbHelper.clearHydrationSlots();
-              for (var slot in slots) {
-                await dbHelper.insertOrUpdateSlot(
-                  slot,
-                );
-              }
-              context.read<BleCubit>().queueHydrationSlots(slots);
-              NotificationService().scheduleHydrationReminders(slots);
-
-              Navigator.pushAndRemoveUntil(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => BottomNavScreenNew(),
+        child: Column(
+          children: [
+                      Text(
+                  "Google Calendar signin might be required \nFor smart snooze and calendar sync ",
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    
+                    color: AppColors.blueGradient,
+                    fontSize: AppFontStyles.fontSize_16,
+                    fontFamily: AppFontStyles.urbanistFontFamily,
+                    fontVariations: [AppFontStyles.semiBoldFontVariation],
                   ),
-                  (route) => false);
-            }),
+                ),
+            AuthButton(
+                text: AppStrings.letsHitHydrationGoals,
+                color: AppColors.blueGradient,
+                areTwoItems: false,
+                onTap: () async {
+                  if(isButtonClicked == true)
+                  {
+                    return;
+                  }
+                  setState(() {
+                    isButtonClicked = true;
+                  });
+                  UiUtilsService.showLoading(context, "Please wait");
+                  await context
+                      .read<UserInfoCubit>()
+                      .saveUser(context.read<UserInfoCubit>().state);
+                  await SharedPrefsHelper.setPersonalInfoSubmitted(true);
+                  await SharedPrefsHelper.setWaterGoal(convertedWaterGoal.toInt());
+            
+                  final slots = generateHydrationSlots(convertedWaterGoal);
+                  for (var slot in slots) {
+                    log("Slot: ${slot.slot.label}, Water to drink: ${slot.amount} mL");
+                  }
+            
+                  final dbHelper = DatabaseHelper();
+                  await dbHelper.clearHydrationSlots();
+                  for (var slot in slots) {
+                    await dbHelper.insertOrUpdateSlot(
+                      slot,
+                    );
+                  }
+                  await context.read<BleCubit>().queueHydrationSlots(slots);
+                  await NotificationService().resetAllHydrationReminders(slots);
+                  UiUtilsService.dismissLoading(context,);
+                  setState(() {
+                    isButtonClicked= false;
+                  });
+                  Navigator.pushAndRemoveUntil(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => BottomNavScreenNew(),
+                      ),
+                      (route) => false);
+                }),
+          ],
+        ),
       ),
     );
   }

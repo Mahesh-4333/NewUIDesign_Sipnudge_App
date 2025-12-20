@@ -11,6 +11,7 @@ import 'package:hydrify/constants/app_font_styles.dart';
 import 'package:hydrify/constants/app_strings.dart';
 import 'package:hydrify/cubit/ble/ble_cubit.dart';
 import 'package:hydrify/cubit/bottle/bottle_data_cubit.dart';
+import 'package:hydrify/cubit/bottom_nav/bottom_nav_cubit.dart';
 import 'package:hydrify/cubit/hydration/hydration_cubit.dart';
 import 'package:hydrify/cubit/hydration/hydration_state.dart';
 import 'package:hydrify/helpers/shared_pref_helper.dart';
@@ -42,6 +43,7 @@ class _HomeScreenState extends State<HomeScreen> {
   bool _isPickerShown = false;
   bool hasConnectedBefore = false;
   bool _startJourneyDialogOpen = false;
+<<<<<<< HEAD
   bool isGuest = false;
 
   void _checkGuestStatus() async {
@@ -52,6 +54,9 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
+=======
+  double userGoalLiters = 0;
+>>>>>>> origin/develop
   @override
   // void initState() {
   //   super.initState();
@@ -85,23 +90,33 @@ class _HomeScreenState extends State<HomeScreen> {
                   endTime: TimeOfDay.now(),
                 ));
 
-        showHydrationPopup(context, slot, entry.amount as int);
+        showHydrationPopup(context, slot, entry.amount.toInt());
       },
     );
     //==================================================================
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       final prefs = await SharedPreferences.getInstance();
       hasConnectedBefore = prefs.getBool('ble_connected_once') ?? false;
+<<<<<<< HEAD
 
       // 🔹 read current bottle volume from cubit
       final bottleState = context.read<BottleDataCubit>().state;
       final double currentVolume = bottleState.volume;
+=======
+>>>>>>> origin/develop
 
+      // 🔹 read current bottle volume from cubit
+      final bottleState = context.read<BottleDataCubit>().state;
+      final double currentVolume = bottleState.volume;
       if (hasConnectedBefore) {
         context.read<BleCubit>().start();
       } else {
         if (currentVolume < 600) {
+<<<<<<< HEAD
           _showStartJourneyDialog(context);
+=======
+          tryShowStartJourneyDialog(context);
+>>>>>>> origin/develop
         } else {
           context.read<BleCubit>().start();
           await prefs.setBool('ble_connected_once', true);
@@ -110,6 +125,7 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
+<<<<<<< HEAD
   void _showStartJourneyDialog(BuildContext context) async {
     // Check if user is logged in as guest by checking email
     final userEmail = await SharedPrefsHelper.getUserEmail();
@@ -119,6 +135,17 @@ class _HomeScreenState extends State<HomeScreen> {
     print('🔍 DEBUG: userEmail = $userEmail, isGuest = $isGuest');
 
     if (!context.mounted) return;
+=======
+  void tryShowStartJourneyDialog(BuildContext context) {
+    if (_startJourneyDialogOpen) return;
+    if ((context.read<BottomNavCubit>().state.selectedTab.index == 0)) {
+      _showStartJourneyDialog(context);
+    }
+  }
+
+  void _showStartJourneyDialog(BuildContext context) {
+    _startJourneyDialogOpen = true;
+>>>>>>> origin/develop
 
     showDialog(
       context: context,
@@ -166,8 +193,10 @@ class _HomeScreenState extends State<HomeScreen> {
                 child: ClipRRect(
                   borderRadius:
                       BorderRadius.circular(AppDimensions.radius_16.r),
-                  child: Stack(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
                     children: [
+<<<<<<< HEAD
                       Positioned(
                         top: isGuest
                             ? AppDimensions.dim19.h
@@ -311,6 +340,51 @@ class _HomeScreenState extends State<HomeScreen> {
                                           ],
                                   ),
                                 ),
+=======
+                      SizedBox(
+                        height: AppDimensions.dim15.h,
+                      ),
+                      Image.asset(
+                        'assets/images/black_bottle.png',
+                        width: AppDimensions
+                            .dim150.w, // 🔥 reduced to match new width
+                        fit: BoxFit.cover,
+                      ),
+                      SizedBox(
+                        height: AppDimensions.dim15.h,
+                      ),
+                      Padding(
+                        padding: EdgeInsets.symmetric(
+                            horizontal: AppDimensions.dim20.w),
+                        child: Column(
+                          children: [
+                            Text(
+                              "Start your journey right fill your bottle",
+                              textAlign: TextAlign.center, // 🔥 center text
+                              style: TextStyle(
+                                color: AppColors.bluegray,
+                                fontFamily:
+                                    AppFontStyles.museoModernoFontFamily,
+                                fontVariations: [
+                                  AppFontStyles.boldFontVariation,
+                                ],
+                                fontSize:
+                                    AppFontStyles.fontSize_13.sp, // 🔥 reduced
+                              ),
+                            ),
+                            Text(
+                              "till 600ml to ensure accurate data.",
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                color: AppColors.bluegray,
+                                fontFamily:
+                                    AppFontStyles.museoModernoFontFamily,
+                                fontVariations: [
+                                  AppFontStyles.boldFontVariation,
+                                ],
+                                fontSize:
+                                    AppFontStyles.fontSize_13.sp, // 🔥 reduced
+>>>>>>> origin/develop
                               ),
                               SizedBox(height: AppDimensions.dim18.h),
                               SizedBox(
@@ -357,6 +431,40 @@ class _HomeScreenState extends State<HomeScreen> {
                           ),
                         ),
                       ),
+                      SizedBox(height: AppDimensions.dim20.h),
+                      SizedBox(
+                        width: AppDimensions.dim118.w,
+                        height: AppDimensions.dim26.h,
+                        child: ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.bluegray,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(
+                                  AppDimensions.radius_40.r),
+                            ),
+                            side: BorderSide(
+                              color: const Color(0xFF98DAFF),
+                              width: AppDimensions.dim1.w,
+                            ),
+                          ),
+                          onPressed: () async {
+                            Navigator.of(context).pop();
+                            context.read<BleCubit>().start();
+
+                            final prefs = await SharedPreferences.getInstance();
+                            await prefs.setBool('ble_connected_once', true);
+                          },
+                          child: Text(
+                            "Start",
+                            style: TextStyle(
+                              color: AppColors.white,
+                              fontFamily: AppFontStyles.museoModernoFontFamily,
+                              fontVariations: [AppFontStyles.boldFontVariation],
+                              fontSize: AppFontStyles.fontSize_14.sp,
+                            ),
+                          ),
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -365,7 +473,9 @@ class _HomeScreenState extends State<HomeScreen> {
           ],
         );
       },
-    );
+    ).then((_) {
+      _startJourneyDialogOpen = false; // dialog closed
+    });
   }
 
   @override
@@ -415,7 +525,11 @@ class _HomeScreenState extends State<HomeScreen> {
 
         if (state.status == BleStatus.connected &&
             ((state.volume ?? 0) < 600)) {
+<<<<<<< HEAD
           // tryShowStartJourneyDialog(context);
+=======
+          tryShowStartJourneyDialog(context);
+>>>>>>> origin/develop
         }
       },
       child: Scaffold(
@@ -495,7 +609,8 @@ class _HomeScreenState extends State<HomeScreen> {
                               snapshot.data!);
 
                       completionPercent = WaterConsumptionCalculator
-                          .calculateCompletionPercentage(waterVolumeConsumed);
+                          .calculateCompletionPercentage(
+                              waterVolumeConsumed, userGoalLiters * 1000);
                     }
                     return _buildGoalText(completionPercent, isGuest);
                   });
@@ -581,6 +696,39 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildWeatherInfo() {
     return Consumer<WeatherProvider>(
       builder: (context, weatherProvider, child) {
+        if (!weatherProvider.isInternetAvailable) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            weatherProvider.fetchWeatherForCurrentLocation();
+          });
+
+          return Padding(
+            padding:
+                EdgeInsets.symmetric(horizontal: AppDimensions.defaultPadding),
+            child: Row(
+              children: [
+                SizedBox(
+                  height: AppDimensions.dim45.h,
+                  width: AppDimensions.dim45.h, // Add width for debugging
+
+                  child: _buildWeatherIconWidget(weatherProvider.offlineIcon),
+                ),
+                SizedBox(width: AppDimensions.dim12.w),
+                Flexible(
+                  child: Text(
+                    weatherProvider.offlineMessage,
+                    style: TextStyle(
+                      fontSize: AppFontStyles.fontSize_16,
+                      color: AppColors.bluegray,
+                      fontVariations: [
+                        AppFontStyles.regularFontVariation,
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          );
+        }
         if (weatherProvider.isLoading) {
           return Column(
             crossAxisAlignment: CrossAxisAlignment.center,
@@ -783,7 +931,8 @@ class _HomeScreenState extends State<HomeScreen> {
                             .calculateDailyConsumption(snapshot.data!);
 
                         completionPercent = WaterConsumptionCalculator
-                            .calculateCompletionPercentage(waterVolumeConsumed);
+                            .calculateCompletionPercentage(
+                                waterVolumeConsumed, userGoalLiters * 1000);
                       }
 
                       return CustomCircularWaterProgressIndicator(
@@ -855,7 +1004,7 @@ class _HomeScreenState extends State<HomeScreen> {
                               FutureBuilder<int?>(
                                 future: SharedPrefsHelper.getUserGoal(),
                                 builder: (context, snapshot) {
-                                  double userGoalLiters = 0.0;
+                                  userGoalLiters = 0.0;
 
                                   if (snapshot.hasData &&
                                       snapshot.data != null) {

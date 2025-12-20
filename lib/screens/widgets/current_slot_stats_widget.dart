@@ -9,10 +9,14 @@ import 'package:hydrify/constants/app_colors.dart';
 import 'package:hydrify/constants/app_dimensions.dart';
 import 'package:hydrify/constants/app_font_styles.dart';
 import 'package:hydrify/cubit/bottle/bottle_data_cubit.dart';
+<<<<<<< HEAD
+=======
+import 'package:hydrify/helpers/shared_pref_helper.dart';
+>>>>>>> origin/develop
 import 'package:hydrify/helpers/water_consumption_data_helper.dart';
 import 'package:intl/intl.dart';
 
-class CurrentSlotStatsWidget extends StatelessWidget {
+class CurrentSlotStatsWidget extends StatefulWidget {
   final String slotName;
   final VoidCallback? onTap;
 
@@ -21,6 +25,22 @@ class CurrentSlotStatsWidget extends StatelessWidget {
     required this.slotName,
     this.onTap,
   });
+
+  @override
+  State<CurrentSlotStatsWidget> createState() => _CurrentSlotStatsWidgetState();
+}
+
+class _CurrentSlotStatsWidgetState extends State<CurrentSlotStatsWidget> {
+  double waterGoal = 0;
+  @override
+  void initState() async {
+    getWaterGoal();
+    super.initState();
+  }
+
+  Future<void> getWaterGoal() async {
+    waterGoal = (await SharedPrefsHelper.getUserGoal() ?? 0).toDouble();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -51,15 +71,15 @@ class CurrentSlotStatsWidget extends StatelessWidget {
 
               completionPercent =
                   WaterConsumptionCalculator.calculateCompletionPercentage(
-                      waterVolumeConsumed);
+                      waterVolumeConsumed, waterGoal);
             }
 
             return _buildStatsCard(
               todayConsumption: waterVolumeConsumed,
               todayConsumptionPercentage: completionPercent,
               formattedTime: DateFormat.jm().format(DateTime.now()),
-              slotName: slotName,
-              onTap: onTap,
+              slotName: widget.slotName,
+              onTap: widget.onTap,
             );
           },
         );

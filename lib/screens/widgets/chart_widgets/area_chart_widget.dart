@@ -1,4 +1,3 @@
-import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:hydrify/constants/app_colors.dart';
@@ -7,16 +6,25 @@ import 'package:hydrify/constants/app_font_styles.dart';
 import 'package:hydrify/cubit/filter/filter_cubit.dart';
 import 'package:hydrify/models/chart_data.dart';
 import 'package:hydrify/models/hydration_summary.dart';
+<<<<<<< HEAD
 import 'package:hydrify/screens/widgets/chart_widgets/column_chart_widget.dart';
 import 'package:hydrify/screens/widgets/chart_widgets/tool_tip_widget.dart';
+=======
+import 'package:hydrify/screens/widgets/chart_widgets/column_chart_widget.dart'; // CustomYAxis
+import 'package:hydrify/screens/widgets/chart_widgets/tool_tip_widget.dart'; // CustomChartToolTip
+import 'package:syncfusion_flutter_charts/charts.dart';
+>>>>>>> origin/develop
 
-class FlAreaChartWidget extends StatefulWidget {
+class SyncfusionAreaChartWidget extends StatefulWidget {
   final FilterInterval interval;
   final DateTime currentDate;
+<<<<<<< HEAD
   // NOTE: This is now HydrationDaySummary, name kept as bottleData so your caller doesn't break
+=======
+>>>>>>> origin/develop
   final List<HydrationDaySummary> bottleData;
 
-  const FlAreaChartWidget({
+  const SyncfusionAreaChartWidget({
     super.key,
     required this.interval,
     required this.currentDate,
@@ -24,15 +32,16 @@ class FlAreaChartWidget extends StatefulWidget {
   });
 
   @override
-  State<FlAreaChartWidget> createState() => _FlAreaChartWidgetState();
+  State<SyncfusionAreaChartWidget> createState() =>
+      _SyncfusionAreaChartWidgetState();
 }
 
-class _FlAreaChartWidgetState extends State<FlAreaChartWidget> {
+class _SyncfusionAreaChartWidgetState extends State<SyncfusionAreaChartWidget> {
   late List<ChartData> chartData;
   final ScrollController _scrollController = ScrollController();
-  Offset? _tooltipPos; // tooltip position in chart coordinates
-  TouchLineBarSpot? _touchedSpot;
-  ChartData? tooltipData;
+  late SelectionBehavior _selectionBehavior;
+  late TooltipBehavior _tooltipBehavior;
+  int? _selectedPointIndex;
 
   final List<String> weekLabels = const [
     'Mon',
@@ -63,6 +72,49 @@ class _FlAreaChartWidgetState extends State<FlAreaChartWidget> {
   void initState() {
     super.initState();
     _updateChartData();
+    _initializeSelectionBehavior();
+    _initializeTooltipBehavior();
+  }
+
+  void _initializeSelectionBehavior() {
+    _selectionBehavior = SelectionBehavior(
+      enable: true,
+      toggleSelection: true,
+      selectedColor: const Color(0xFFA22EFF),
+      unselectedColor: const Color(0xFF42A5FF),
+      selectedBorderColor: Colors.white,
+      selectedBorderWidth: 2,
+      unselectedBorderColor: const Color(0xFF42A5FF),
+      unselectedBorderWidth: AppDimensions.dim3.w,
+    );
+  }
+
+  void _initializeTooltipBehavior() {
+    _tooltipBehavior = TooltipBehavior(
+      enable: true,
+      activationMode: ActivationMode.singleTap,
+      tooltipPosition: TooltipPosition.pointer,
+      duration: 1000,
+      color: Colors.transparent,
+      borderColor: Colors.transparent,
+      borderWidth: 0,
+      canShowMarker: true,
+      shouldAlwaysShow: false,
+      builder: (dynamic data, dynamic point, dynamic series, int pointIndex,
+          int seriesIndex) {
+        if (data == null || data is! ChartData) {
+          return const SizedBox.shrink();
+        }
+
+        final ChartData chartDataPoint = data;
+        final liters = (chartDataPoint.completionVolume ?? 0) / 1000;
+
+        return CustomChartToolTip(
+          isPercent: false,
+          percent: num.parse(liters.toStringAsFixed(2)),
+        );
+      },
+    );
   }
 
   void _updateChartData() {
@@ -70,19 +122,28 @@ class _FlAreaChartWidgetState extends State<FlAreaChartWidget> {
     final isMonthly = widget.interval == FilterInterval.monthly;
     final isYearly = widget.interval == FilterInterval.yearly;
 
+<<<<<<< HEAD
     // Sort summaries by date once
+=======
+>>>>>>> origin/develop
     final sorted = [...widget.bottleData]
       ..sort((a, b) => a.date.compareTo(b.date));
 
     if (isWeekly) {
+<<<<<<< HEAD
       // --- WEEKLY: always 7 days Mon–Sun ---
+=======
+>>>>>>> origin/develop
       DateTime weekStart = widget.currentDate
           .subtract(Duration(days: widget.currentDate.weekday - 1));
       weekStart = DateTime(weekStart.year, weekStart.month, weekStart.day);
 
       chartData = List.generate(7, (i) {
         final dayDate = weekStart.add(Duration(days: i));
+<<<<<<< HEAD
 
+=======
+>>>>>>> origin/develop
         final s = sorted.firstWhere(
           (x) =>
               x.date.year == dayDate.year &&
@@ -102,6 +163,7 @@ class _FlAreaChartWidgetState extends State<FlAreaChartWidget> {
         percent = percent.clamp(0, 100);
 
         return ChartData(
+<<<<<<< HEAD
             weekLabels[i], // Mon..Sun
             percent, // 0–100
             consumed, // ml
@@ -109,6 +171,15 @@ class _FlAreaChartWidgetState extends State<FlAreaChartWidget> {
       });
     } else if (isMonthly) {
       // --- MONTHLY: full calendar month 1..lastDay ---
+=======
+          weekLabels[i],
+          percent,
+          consumed,
+          s.date,
+        );
+      });
+    } else if (isMonthly) {
+>>>>>>> origin/develop
       final year = widget.currentDate.year;
       final month = widget.currentDate.month;
       final firstDay = DateTime(year, month, 1);
@@ -117,7 +188,10 @@ class _FlAreaChartWidgetState extends State<FlAreaChartWidget> {
 
       chartData = List.generate(days, (i) {
         final dayDate = firstDay.add(Duration(days: i));
+<<<<<<< HEAD
 
+=======
+>>>>>>> origin/develop
         final s = sorted.firstWhere(
           (x) =>
               x.date.year == dayDate.year &&
@@ -136,6 +210,7 @@ class _FlAreaChartWidgetState extends State<FlAreaChartWidget> {
         double percent = target > 0 ? (consumed / target) * 100 : 0;
         percent = percent.clamp(0, 100);
 
+<<<<<<< HEAD
         return ChartData(
             (i + 1).toString(), // 1,2,3,...
             percent, // 0–100
@@ -144,14 +219,23 @@ class _FlAreaChartWidgetState extends State<FlAreaChartWidget> {
       });
     } else if (isYearly) {
       // --- YEARLY: always 12 months ---
+=======
+        return ChartData((i + 1).toString(), percent, consumed, s.date);
+      });
+    } else if (isYearly) {
+>>>>>>> origin/develop
       final year = widget.currentDate.year;
       final inYear = sorted.where((x) => x.date.year == year).toList();
 
       chartData = List.generate(12, (i) {
         final monthIndex = i + 1;
+<<<<<<< HEAD
 
         final list = inYear.where((x) => x.date.month == monthIndex).toList();
 
+=======
+        final list = inYear.where((x) => x.date.month == monthIndex).toList();
+>>>>>>> origin/develop
         double target = 0;
         double consumed = 0;
         for (var e in list) {
@@ -162,6 +246,7 @@ class _FlAreaChartWidgetState extends State<FlAreaChartWidget> {
         double percent = target > 0 ? (consumed / target) * 100 : 0;
         percent = percent.clamp(0, 100);
 
+<<<<<<< HEAD
         // Use first day of the month if there is no data for that month
         final dateForPoint =
             list.isNotEmpty ? list.first.date : DateTime(year, monthIndex, 1);
@@ -172,18 +257,32 @@ class _FlAreaChartWidgetState extends State<FlAreaChartWidget> {
           consumed,
           dateForPoint,
         );
+=======
+        final dateForPoint =
+            list.isNotEmpty ? list.first.date : DateTime(year, monthIndex, 1);
+
+        return ChartData(monthLabels[i], percent, consumed, dateForPoint);
+>>>>>>> origin/develop
       });
     } else {
       chartData = [];
     }
 
+<<<<<<< HEAD
     // ignore: avoid_print
     print(
         "DEBUG [Area]: Interval=${widget.interval}, ChartData length=${chartData.length}");
+=======
+    // Reset selection when data changes
+    _selectedPointIndex = null;
+
+    print(
+        "DEBUG [SyncfusionArea]: Interval=${widget.interval}, points=${chartData.length}");
+>>>>>>> origin/develop
   }
 
   @override
-  void didUpdateWidget(covariant FlAreaChartWidget oldWidget) {
+  void didUpdateWidget(covariant SyncfusionAreaChartWidget oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.interval != widget.interval ||
         oldWidget.currentDate != widget.currentDate ||
@@ -197,8 +296,9 @@ class _FlAreaChartWidgetState extends State<FlAreaChartWidget> {
   Widget build(BuildContext context) {
     final isWeekly = widget.interval == FilterInterval.weekly;
     double pointWidth = 50.w;
-    final chartWidth =
-        isWeekly ? AppDimensions.dim365.w : pointWidth * chartData.length;
+    final chartWidth = isWeekly
+        ? AppDimensions.dim365.w
+        : pointWidth * (chartData.isEmpty ? 1 : chartData.length);
 
     return Container(
       color: Colors.transparent,
@@ -216,11 +316,14 @@ class _FlAreaChartWidgetState extends State<FlAreaChartWidget> {
                 height: AppDimensions.dim262.h,
                 child: Row(
                   children: [
+                    // Sticky Y axis (fixed)
                     SizedBox(
                       width: AppDimensions.dim40.w,
                       height: AppDimensions.dim265.h,
                       child: const CustomYAxis(maxY: 100, divisions: 5),
                     ),
+
+                    // Chart area (scrollable horizontally for monthly/yearly)
                     Expanded(
                       child: isWeekly
                           ? Container(
@@ -229,12 +332,18 @@ class _FlAreaChartWidgetState extends State<FlAreaChartWidget> {
                                 left: AppDimensions.dim9.w,
                                 top: AppDimensions.dim9.h,
                               ),
+<<<<<<< HEAD
                               child: _buildLineChart(chartWidth, isWeekly),
+=======
+                              child:
+                                  _buildSyncfusionChart(chartWidth, isWeekly),
+>>>>>>> origin/develop
                             )
                           : SingleChildScrollView(
                               controller: _scrollController,
                               scrollDirection: Axis.horizontal,
                               padding: EdgeInsets.zero,
+                              physics: const BouncingScrollPhysics(),
                               child: Container(
                                 width: chartWidth,
                                 padding: EdgeInsets.only(
@@ -242,7 +351,8 @@ class _FlAreaChartWidgetState extends State<FlAreaChartWidget> {
                                   right: pointWidth / 2,
                                   top: AppDimensions.dim9.h,
                                 ),
-                                child: _buildLineChart(chartWidth, isWeekly),
+                                child:
+                                    _buildSyncfusionChart(chartWidth, isWeekly),
                               ),
                             ),
                     ),
@@ -250,6 +360,7 @@ class _FlAreaChartWidgetState extends State<FlAreaChartWidget> {
                 ),
               ),
             ),
+<<<<<<< HEAD
             if (_tooltipPos != null)
               Positioned(
                 left: (_tooltipPos!.dx) -
@@ -270,12 +381,15 @@ class _FlAreaChartWidgetState extends State<FlAreaChartWidget> {
                   ),
                 ),
               ),
+=======
+>>>>>>> origin/develop
           ],
         ),
       ),
     );
   }
 
+<<<<<<< HEAD
   Widget _buildLineChart(double chartWidth, bool isWeekly) {
     return LineChart(
       LineChartData(
@@ -384,30 +498,124 @@ class _FlAreaChartWidgetState extends State<FlAreaChartWidget> {
               });
             }
           },
+=======
+  Widget _buildSyncfusionChart(double chartWidth, bool isWeekly) {
+    return SfCartesianChart(
+      backgroundColor: Colors.transparent,
+
+      // Enable selection gesture
+      selectionGesture: ActivationMode.singleTap,
+      selectionType: SelectionType.point,
+      enableMultiSelection: false,
+
+      // Tooltip behavior
+      tooltipBehavior: _tooltipBehavior,
+
+      // Selection callback
+      onSelectionChanged: (SelectionArgs args) {
+        if (args.selectedColor != null) {
+          setState(() {
+            _selectedPointIndex = args.pointIndex;
+          });
+          print("Point selected: ${args.pointIndex}");
+        } else {
+          setState(() {
+            _selectedPointIndex = null;
+          });
+          print("Selection cleared");
+        }
+      },
+
+      // Also handle point tap for direct interaction
+
+      // Hide Syncfusion's Y axis
+      primaryYAxis: NumericAxis(
+        isVisible: false,
+        minimum: 0,
+        maximum: 100,
+        interval: 20,
+        axisLine: const AxisLine(width: 0),
+        majorTickLines: const MajorTickLines(size: 0),
+      ),
+
+      primaryXAxis: CategoryAxis(
+        majorGridLines: const MajorGridLines(width: 0),
+        majorTickLines: MajorTickLines(width: 0),
+        axisLine: const AxisLine(width: 0),
+        labelPlacement: LabelPlacement.onTicks,
+        labelStyle: TextStyle(
+          color: AppColors.black,
+          fontFamily: AppFontStyles.urbanistFontFamily,
+          fontSize: AppFontStyles.fontSize_14,
+>>>>>>> origin/develop
         ),
       ),
+
+      plotAreaBorderWidth: 0,
+      margin: EdgeInsets.zero,
+
+      series: <CartesianSeries<ChartData, String>>[
+        AreaSeries<ChartData, String>(
+          dataSource: chartData,
+          xValueMapper: (ChartData d, _) => d.x,
+          yValueMapper: (ChartData d, _) => d.completionPercent,
+
+          // Border styling
+          borderColor: const Color(0xFF42A5FF),
+          borderWidth: AppDimensions.dim3.w,
+
+          // Marker settings for better touch
+          markerSettings: MarkerSettings(
+            isVisible: true,
+            height: AppDimensions.dim10.h,
+            width: AppDimensions.dim10.h,
+            borderWidth: AppDimensions.dim4.w,
+            borderColor: const Color(0xFF42A5FF),
+            color: AppColors.white,
+            shape: DataMarkerType.circle,
+          ),
+
+          // Selection behavior
+          selectionBehavior: _selectionBehavior,
+
+          // Trackball (alternative to selection)
+          enableTooltip: true,
+
+          // Gradient
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              AppColors.blueGradient.withOpacity(0.6),
+              AppColors.blueGradient.withOpacity(0.1),
+            ],
+          ),
+
+          // Data label for selected point
+          dataLabelSettings: DataLabelSettings(
+            isVisible: false, // Set to true if you want labels on all points
+            builder: (dynamic data, dynamic point, dynamic series,
+                int pointIndex, int seriesIndex) {
+              // Show custom tooltip only for selected point
+              if (_selectedPointIndex == pointIndex) {
+                final ChartData chartDataPoint = data as ChartData;
+                final liters = (chartDataPoint.completionVolume ?? 0) / 1000;
+                return CustomChartToolTip(
+                  isPercent: false,
+                  percent: num.parse(liters.toStringAsFixed(2)),
+                );
+              }
+              return const SizedBox.shrink();
+            },
+          ),
+        ),
+      ],
     );
   }
 
-  Offset _spotToPixel(
-    TouchLineBarSpot s, {
-    required double chartWidth,
-    required double chartHeight,
-    required double minX,
-    required double maxX,
-    required double minY,
-    required double maxY,
-    required double leftReserved,
-    required double rightReserved,
-    required double topReserved,
-    required double bottomReserved,
-  }) {
-    final innerW = chartWidth - leftReserved - rightReserved;
-    final innerH = chartHeight - topReserved - bottomReserved;
-
-    final dx = leftReserved + ((s.x - minX) / (maxX - minX)) * innerW;
-    final dy = topReserved + (1 - (s.y - minY) / (maxY - minY)) * innerH;
-
-    return Offset(dx, dy);
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
   }
 }

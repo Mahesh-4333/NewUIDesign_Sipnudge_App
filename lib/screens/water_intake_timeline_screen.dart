@@ -35,8 +35,9 @@ class _WaterIntakeTimelineState extends State<WaterIntakeTimelineScreen> {
     super.initState();
     final hydrationCubit = context.read<HydrationCubit>();
     final bottleCubit = context.read<BottleDataCubit>();
-    //final bleCubit = context.read<BleCubit>();
-
+    final bleCubit = context.read<BleCubit>();
+    bleCubit.checkAndResetForNewDay(hydrationCubit
+        .generateDefaultHydrationSlots(hydrationCubit.state.goal.toDouble()));
     //hydrationCubit.subscribeToBleUpdates(bleCubit);
 
     hydrationCubit.loadSlotsFromDb();
@@ -782,7 +783,11 @@ class _WaterIntakeTimelineState extends State<WaterIntakeTimelineScreen> {
                         )
                       ],
                     ),
+<<<<<<< HEAD
                     // SizedBox(height: 100.h),
+=======
+                    SizedBox(height: 100.h),
+>>>>>>> origin/develop
                   ],
                 ),
               ),

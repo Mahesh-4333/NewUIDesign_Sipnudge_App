@@ -279,11 +279,17 @@ class _UserInfoInputScreenState extends State<UserInfoInputScreen> {
               Container(
                 height: AppDimensions.dim60,
                 margin: EdgeInsets.only(
+<<<<<<< HEAD
                   //top: AppDimensions.padding33.h,
                   top: Platform.isIOS
                       ? AppDimensions.dim155.h
                       : AppDimensions.dim165.h,
                   //bottom: AppDimensions.padding33.h,
+=======
+                  top: AppDimensions.padding33.h,
+
+                  bottom: AppDimensions.padding33.h,
+>>>>>>> origin/develop
                   // left: AppDimensions.defaultPadding.w,
                   // right: AppDimensions.defaultPadding.w,
                 ),

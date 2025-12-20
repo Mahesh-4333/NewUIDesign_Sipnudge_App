@@ -56,7 +56,8 @@ class _RingtoneScreenState extends State<RingtoneScreen> {
   }
 
   /// Handle ringtone selection
-  Future<void> _onRingtoneTap(BuildContext context, int index) async {
+  Future<void> _onRingtoneTap(
+      BuildContext context, int index) async {
     setState(() => selectedIndex = index);
 
     await SharedPrefsHelper.setSelectedRingtone(index);
@@ -69,7 +70,8 @@ class _RingtoneScreenState extends State<RingtoneScreen> {
       await _audioPlayer.setReleaseMode(ReleaseMode.stop);
       await _audioPlayer.setVolume(1.0);
 
-      final assetPath = ringtones[index].replaceFirst("assets/", "");
+      final assetPath =
+          ringtones[index].replaceFirst("assets/", "");
       await _audioPlayer.play(AssetSource(assetPath));
     }
     // 📳 If OFF → vibration only
@@ -114,7 +116,8 @@ class _RingtoneScreenState extends State<RingtoneScreen> {
           body: Container(
             decoration: const BoxDecoration(
               image: DecorationImage(
-                image: AssetImage("assets/images/app_background.png"),
+                image: AssetImage(
+                    "assets/images/app_background.png"),
                 fit: BoxFit.cover,
               ),
             ),
@@ -160,12 +163,14 @@ class _RingtoneScreenState extends State<RingtoneScreen> {
                       horizontal: AppDimensions.dim28.w,
                     ),
                     child: Column(
-                      children: List.generate(ringtones.length, (index) {
+                      children: List.generate(ringtones.length,
+                          (index) {
                         return MenuItemTileWidget(
                           title: "Ringtone",
                           number: "${index + 1}",
                           isSelected: selectedIndex == index,
-                          onTap: () => _onRingtoneTap(context, index),
+                          onTap: () =>
+                              _onRingtoneTap(context, index),
                         );
                       }),
                     ),

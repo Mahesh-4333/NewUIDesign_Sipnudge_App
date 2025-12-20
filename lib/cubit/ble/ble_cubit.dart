@@ -46,6 +46,8 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
   // ---------------------------------------------------------------------------
 
   Future<void> start() async {
+    // await _checkAndResetForNewDay();
+
     emit(state.copyWith(
       status: BleStatus.initializing,
       message: "Initializing...",
@@ -69,6 +71,52 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
         _scanForAllDevices();
       }
     });
+  }
+
+  Future<void> checkAndResetForNewDay(List<HydrationEntry> entry) async {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+
+    final lastDate = await dbHelper.getLastSyncDate();
+
+    // First ever launch
+    if (lastDate == null) {
+      await dbHelper.saveLastSyncDate(today);
+      await dbHelper.clearHydrationSlots();
+
+      for (final updatedEntry in entry) {
+        await dbHelper.insertOrUpdateSlot(updatedEntry);
+      }
+      return;
+    }
+
+    // Same day → do nothing
+    if (lastDate.isAtSameMomentAs(today)) {
+      return;
+    }
+
+    // 🔥 NEW DAY DETECTED
+    log(
+      '[BLE_Cubit] New day detected. Resetting hydration slots.\n'
+      'Last=$lastDate | Today=$today',
+      name: 'BLE_Cubit',
+    );
+
+    // 1️⃣ Clear hydration slots
+    await dbHelper.clearHydrationSlots();
+    for (final updatedEntry in entry) {
+      await dbHelper.insertOrUpdateSlot(updatedEntry);
+    } // 2️⃣ Clear in-memory streams
+    _hydrationController.add([]);
+    if ((state.volume ?? 0) > 600) {
+      // 3️⃣ Update last hydration date
+      await dbHelper.saveLastSyncDate(today);
+    }
+
+    // 4️⃣ Update UI state (optional but recommended)
+    emit(state.copyWith(
+      message: "New day started. Hydration reset.",
+    ));
   }
 
   Future<void> _waitForBluetoothOn(Future<void> Function() onReady) async {
@@ -257,6 +305,8 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
   }
 
   Future<void> _connectToDevice(BluetoothDevice device) async {
+    // await _checkAndResetForNewDay();
+
     emit(state.copyWith(
       status: BleStatus.connecting,
       message: "Connecting to ${device.name}...",
@@ -353,7 +403,14 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
               }).toList();
 
               // Save to DB in bulk (fast)
+<<<<<<< HEAD
               await dbHelper.bulkUpsert30Days(list);
+=======
+              if ((state.volume ?? 0) > 600) {
+                await dbHelper.bulkUpsert30Days(list);
+              }
+
+>>>>>>> origin/develop
               emit(state.copyWith(
                   isHydration30DaysDataSync: true, historyData: data));
               log("[BLE_Cubit] Saved ${list.length} day summaries to DB",
@@ -385,7 +442,13 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
           log("Hydration Slot Data: $data", name: "BLE_Cubit");
 
           final updatedEntries = _parseHydrationSlotData(data);
+<<<<<<< HEAD
           if (updatedEntries.isNotEmpty) {
+=======
+          if (updatedEntries.isNotEmpty && ((state.volume ?? 0) > 600)) {
+            await dbHelper.saveLastSyncDate(DateTime.now());
+
+>>>>>>> origin/develop
             _hydrationController.add(updatedEntries);
             for (final updatedEntry in updatedEntries) {
               await dbHelper.insertOrUpdateSlot(updatedEntry);

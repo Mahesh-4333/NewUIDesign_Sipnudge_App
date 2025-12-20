@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # Miscellaneous
 *.class
 *.log
@@ -23,9 +24,16 @@ migrate_working_dir/
 
 # Flutter / Dart
 build/
+=======
+# Flutter/Dart
+>>>>>>> origin/develop
 .dart_tool/
+.packages
+.pub/
+.pub-cache/
 .flutter-plugins
 .flutter-plugins-dependencies
+<<<<<<< HEAD
 .pub-cache/
 .pub/
 # build/
@@ -116,3 +124,93 @@ app.*.map.json
 # # iOS
 # ios/Pods/
 # ios/.symlinks/
+=======
+.packages
+.vs/
+.vscode/
+.metadata
+coverage/
+build/
+
+# Build
+/build
+/ios/.symlinks/
+/android/local.properties
+/android/.gradle
+/ios/Flutter/Generated.xcconfig
+/ios/Flutter/ephemeral/
+/macos/Flutter/ephemeral/
+/windows/flutter/ephemeral/
+/linux/flutter/ephemeral/
+# Kotlin / Android garbage
+# Android
+android/.gradle/
+android/build/
+android/app/build/
+android/local.properties
+android/key.properties
+
+# Kotlin / Android Studio
+android/.idea/
+android/.kotlin/
+android/**/.kotlin/
+android/**/errors/*.log
+*.iml
+*.log
+
+
+# Flutter generated
+
+# iOS
+ios/Pods/
+ios/.symlinks/
+ios/Flutter/ephemeral/
+ios/Flutter/flutter_assets/
+ios/Flutter/App.framework
+ios/Flutter/Flutter.framework
+ios/Flutter/Flutter.podspec
+ios/Flutter/Generated.xcconfig
+ios/Flutter/flutter_export_environment.sh
+ios/Runner/GeneratedPluginRegistrant.*
+
+
+# IDE/OS generated files (Crucial for what you are seeing)
+*.iml
+*.iws
+*.ipr
+# Xcode junk
+**/DerivedData/
+*.pbxuser
+*.mode1v3
+*.mode2v3
+*.perspectivev3
+*.moved-aside
+*.xcuserstate
+*.xccheckout
+*.xcscmblueprint
+xcuserdata/
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+# OS / tooling
+.DS_Store
+UserInterfaceState.xcuserstate
+
+
+Thumbs.db
+.sconsign.dblite
+.tags*
+.profile
+Icon?
+**/.vagrant/
+**/.generated/
+**/*sync/
+ServiceDefinitions.json
+# Exceptions
+!default.mode1v3
+!default.mode2v3
+!default.pbxuser
+!default.perspectivev3
+>>>>>>> origin/develop
