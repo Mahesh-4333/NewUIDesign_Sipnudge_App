@@ -276,31 +276,24 @@ class _UserInfoInputScreenState extends State<UserInfoInputScreen> {
                   );
                 },
               ),
-              Container(
-                height: AppDimensions.dim60,
-                margin: EdgeInsets.only(
-<<<<<<< HEAD
-                  //top: AppDimensions.padding33.h,
-                  top: Platform.isIOS
-                      ? AppDimensions.dim155.h
-                      : AppDimensions.dim165.h,
-                  //bottom: AppDimensions.padding33.h,
-=======
-                  top: AppDimensions.padding33.h,
-
-                  bottom: AppDimensions.padding33.h,
->>>>>>> origin/develop
-                  // left: AppDimensions.defaultPadding.w,
-                  // right: AppDimensions.defaultPadding.w,
-                ),
-                child: BlocBuilder<UserInfoCubit, UserInfoState>(
-                  builder: (context, state) {
-                    return CustomNextButton(
-                      text: AppStrings.next,
-                      onNextPressed: () {
-                        final height = state.height;
-                        final weight = state.weight;
-                        final age = state.age;
+            ],
+          ),
+        ),
+        bottomNavigationBar: Container(
+          height: AppDimensions.dim60,
+          margin: EdgeInsets.only(
+            bottom: AppDimensions.padding33.h,
+            left: AppDimensions.defaultPadding.w,
+            right: AppDimensions.defaultPadding.w,
+          ),
+          child: BlocBuilder<UserInfoCubit, UserInfoState>(
+            builder: (context, state) {
+              return CustomNextButton(
+                text: AppStrings.next,
+                onNextPressed: () {
+                  final height = state.height;
+                  final weight = state.weight;
+                  final age = state.age;
 
                         if (height == null || weight == null || age == null) {
                           UiUtilsService.showToast(

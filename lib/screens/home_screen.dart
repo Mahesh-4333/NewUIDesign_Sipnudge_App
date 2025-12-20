@@ -41,22 +41,7 @@ class _HomeScreenState extends State<HomeScreen> {
   // late AnimationController _controller;
   // late Animation<double> _shadowOffsetAnimation;
   bool _isPickerShown = false;
-  bool hasConnectedBefore = false;
-  bool _startJourneyDialogOpen = false;
-<<<<<<< HEAD
-  bool isGuest = false;
 
-  void _checkGuestStatus() async {
-    final email = await SharedPrefsHelper.getUserEmail();
-
-    setState(() {
-      isGuest = email == "guest_user";
-    });
-  }
-
-=======
-  double userGoalLiters = 0;
->>>>>>> origin/develop
   @override
   // void initState() {
   //   super.initState();
@@ -96,33 +81,22 @@ class _HomeScreenState extends State<HomeScreen> {
     //==================================================================
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       final prefs = await SharedPreferences.getInstance();
-      hasConnectedBefore = prefs.getBool('ble_connected_once') ?? false;
-<<<<<<< HEAD
+      bool hasConnectedBefore = prefs.getBool('ble_connected_once') ?? false;
 
-      // 🔹 read current bottle volume from cubit
-      final bottleState = context.read<BottleDataCubit>().state;
-      final double currentVolume = bottleState.volume;
-=======
->>>>>>> origin/develop
-
-      // 🔹 read current bottle volume from cubit
-      final bottleState = context.read<BottleDataCubit>().state;
-      final double currentVolume = bottleState.volume;
       if (hasConnectedBefore) {
         context.read<BleCubit>().start();
       } else {
-        if (currentVolume < 600) {
-<<<<<<< HEAD
-          _showStartJourneyDialog(context);
-=======
-          tryShowStartJourneyDialog(context);
->>>>>>> origin/develop
-        } else {
-          context.read<BleCubit>().start();
-          await prefs.setBool('ble_connected_once', true);
-        }
+        // 🚀 First time user — show start journey dialog
+        _showStartJourneyDialog(context);
       }
     });
+  }
+
+  void tryShowStartJourneyDialog(BuildContext context) {
+    if (_startJourneyDialogOpen) return;
+    if ((context.read<BottomNavCubit>().state.selectedTab.index == 0)) {
+      _showStartJourneyDialog(context);
+    }
   }
 
 <<<<<<< HEAD
@@ -144,9 +118,6 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _showStartJourneyDialog(BuildContext context) {
-    _startJourneyDialogOpen = true;
->>>>>>> origin/develop
-
     showDialog(
       context: context,
       barrierDismissible: true,
@@ -193,65 +164,33 @@ class _HomeScreenState extends State<HomeScreen> {
                 child: ClipRRect(
                   borderRadius:
                       BorderRadius.circular(AppDimensions.radius_16.r),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
+                  child: Stack(
                     children: [
-<<<<<<< HEAD
                       Positioned(
-                        top: isGuest
-                            ? AppDimensions.dim19.h
-                            : AppDimensions.dim17.h,
-                        bottom: isGuest
-                            ? AppDimensions.dim10.h
-                            : AppDimensions.dim8.h,
+                        bottom: AppDimensions.dim10.h,
                         left: 0,
                         right: 0,
-                        child: SingleChildScrollView(
-                          padding: EdgeInsets.symmetric(
-                              horizontal: AppDimensions.dim10.w),
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              //if (isGuest) // Show bottle image only for non-guest
-                              Image.asset(
-                                'assets/images/black_bottle.png',
-                                width: AppDimensions.dim150.w,
-                                fit: BoxFit.cover,
-                              ),
-                              SizedBox(
-                                height: isGuest
-                                    ? AppDimensions.dim15.h
-                                    : AppDimensions.dim15.h,
-                              ),
-                              Padding(
-                                padding: EdgeInsets.symmetric(
-                                    horizontal: AppDimensions.dim10.w),
-                                // child: Text(
-                                //   isGuest
-                                //       ? "If you have purchased the bottle and accidentally entered the guest page, "
-                                //           "you can log out from the settings page and log in normally.\n"
-                                //           "If you don't have the bottle and want to use the basic water-reminder feature, "
-                                //           "you can schedule reminders from the settings page > Drink Reminder > Water Intake\n"
-                                //           "Timeline.\n"
-                                //           "You can also place your bottle order directly from the settings page."
-                                //       : "Start your journey right fill your bottle till 600ml to ensure accurate data.",
-                                //   textAlign: TextAlign.center,
-                                //   style: TextStyle(
-                                //     color: AppColors.bluegray,
-                                //     fontFamily:
-                                //         AppFontStyles.museoModernoFontFamily,
-                                //     fontVariations: [
-                                //       AppFontStyles.boldFontVariation,
-                                //     ],
-                                //     fontSize: isGuest
-                                //         ? AppFontStyles.fontSize_13.sp
-                                //         : AppFontStyles.fontSize_13.sp,
-                                //     height: 1.3.sp,
-                                //   ),
-                                // ),
-                                child: RichText(
-                                  textAlign: TextAlign.center,
-                                  text: TextSpan(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Image.asset(
+                              'assets/images/black_bottle.png',
+                              width: AppDimensions
+                                  .dim150.w, // 🔥 reduced to match new width
+                              fit: BoxFit.cover,
+                            ),
+                            SizedBox(
+                              height: AppDimensions.dim15.h,
+                            ),
+                            Padding(
+                              padding: EdgeInsets.symmetric(
+                                  horizontal: AppDimensions.dim20.w),
+                              child: Column(
+                                children: [
+                                  Text(
+                                    "Start your journey right fill your bottle",
+                                    textAlign:
+                                        TextAlign.center, // 🔥 center text
                                     style: TextStyle(
                                       color: AppColors.bluegray,
                                       fontFamily:
@@ -259,210 +198,67 @@ class _HomeScreenState extends State<HomeScreen> {
                                       fontVariations: [
                                         AppFontStyles.boldFontVariation,
                                       ],
-                                      fontSize: isGuest
-                                          ? AppFontStyles.fontSize_13.sp
-                                          : AppFontStyles.fontSize_13.sp,
-                                      height: 1.4.sp,
-                                    ),
-                                    children: isGuest
-                                        ? [
-                                            TextSpan(
-                                              text:
-                                                  "If you have purchased the bottle and accidentally entered the guest page, you can log out from the settings page and log in normally.\n",
-                                              style: TextStyle(
-                                                fontVariations: [
-                                                  AppFontStyles
-                                                      .boldFontVariation,
-                                                ],
-                                              ),
-                                            ),
-
-                                            /// 🔹 Space after paragraph
-                                            // WidgetSpan(
-                                            //   child: SizedBox(height: 15.h),
-                                            // ),
-                                            TextSpan(
-                                              text:
-                                                  "If you don't have the bottle and want to use the basic water-reminder feature, you can schedule reminders from the settings page",
-                                              style: TextStyle(
-                                                fontVariations: [
-                                                  AppFontStyles
-                                                      .boldFontVariation,
-                                                ],
-                                              ),
-                                            ),
-                                            TextSpan(
-                                              text:
-                                                  "> Drink Reminder > Water Intake",
-                                              style: TextStyle(
-                                                fontVariations: [
-                                                  AppFontStyles
-                                                      .boldFontVariation,
-                                                ],
-                                              ),
-                                            ),
-                                            TextSpan(
-                                              text: "\nTimeline.\n",
-                                              style: TextStyle(
-                                                fontVariations: [
-                                                  AppFontStyles
-                                                      .boldFontVariation,
-                                                ],
-                                              ),
-                                            ),
-
-                                            /// 🔹 Space after paragraph
-                                            // WidgetSpan(
-                                            //   child: SizedBox(height: 15.h),
-                                            // ),
-                                            TextSpan(
-                                              text:
-                                                  "You can also place your bottle order directly from the settings page.",
-                                              style: TextStyle(
-                                                fontVariations: [
-                                                  AppFontStyles
-                                                      .boldFontVariation,
-                                                ],
-                                              ),
-                                            ),
-                                          ]
-                                        : [
-                                            TextSpan(
-                                              text:
-                                                  "Start your journey right fill your bottle till 600ml to ensure accurate data.",
-                                              style: TextStyle(
-                                                fontVariations: [
-                                                  AppFontStyles
-                                                      .boldFontVariation,
-                                                ],
-                                              ),
-                                            ),
-                                          ],
-                                  ),
-                                ),
-=======
-                      SizedBox(
-                        height: AppDimensions.dim15.h,
-                      ),
-                      Image.asset(
-                        'assets/images/black_bottle.png',
-                        width: AppDimensions
-                            .dim150.w, // 🔥 reduced to match new width
-                        fit: BoxFit.cover,
-                      ),
-                      SizedBox(
-                        height: AppDimensions.dim15.h,
-                      ),
-                      Padding(
-                        padding: EdgeInsets.symmetric(
-                            horizontal: AppDimensions.dim20.w),
-                        child: Column(
-                          children: [
-                            Text(
-                              "Start your journey right fill your bottle",
-                              textAlign: TextAlign.center, // 🔥 center text
-                              style: TextStyle(
-                                color: AppColors.bluegray,
-                                fontFamily:
-                                    AppFontStyles.museoModernoFontFamily,
-                                fontVariations: [
-                                  AppFontStyles.boldFontVariation,
-                                ],
-                                fontSize:
-                                    AppFontStyles.fontSize_13.sp, // 🔥 reduced
-                              ),
-                            ),
-                            Text(
-                              "till 600ml to ensure accurate data.",
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
-                                color: AppColors.bluegray,
-                                fontFamily:
-                                    AppFontStyles.museoModernoFontFamily,
-                                fontVariations: [
-                                  AppFontStyles.boldFontVariation,
-                                ],
-                                fontSize:
-                                    AppFontStyles.fontSize_13.sp, // 🔥 reduced
->>>>>>> origin/develop
-                              ),
-                              SizedBox(height: AppDimensions.dim18.h),
-                              SizedBox(
-                                width: AppDimensions.dim118.w,
-                                height: AppDimensions.dim26.h,
-                                child: ElevatedButton(
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: AppColors.bluegray,
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(
-                                          AppDimensions.radius_40.r),
-                                    ),
-                                    side: BorderSide(
-                                      color: const Color(0xFF98DAFF),
-                                      width: AppDimensions.dim1.w,
+                                      fontSize: AppFontStyles
+                                          .fontSize_13.sp, // 🔥 reduced
                                     ),
                                   ),
-                                  onPressed: () async {
-                                    Navigator.of(context).pop();
-
-                                    if (!isGuest) {
-                                      context.read<BleCubit>().start();
-                                      final prefs =
-                                          await SharedPreferences.getInstance();
-                                      await prefs.setBool(
-                                          'ble_connected_once', true);
-                                    } else {}
-                                  },
-                                  child: Text(
-                                    isGuest ? "OK" : "Start",
+                                  Text(
+                                    "till 600ml to ensure accurate data.",
+                                    textAlign: TextAlign.center,
                                     style: TextStyle(
-                                      color: AppColors.white,
+                                      color: AppColors.bluegray,
                                       fontFamily:
                                           AppFontStyles.museoModernoFontFamily,
                                       fontVariations: [
-                                        AppFontStyles.boldFontVariation
+                                        AppFontStyles.boldFontVariation,
                                       ],
-                                      fontSize: AppFontStyles.fontSize_14.sp,
+                                      fontSize: AppFontStyles
+                                          .fontSize_13.sp, // 🔥 reduced
                                     ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            SizedBox(height: AppDimensions.dim20.h),
+                            SizedBox(
+                              width: AppDimensions.dim118.w,
+                              height: AppDimensions.dim26.h,
+                              child: ElevatedButton(
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: AppColors.bluegray,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(
+                                        AppDimensions.radius_40.r),
+                                  ),
+                                  side: BorderSide(
+                                    color: const Color(0xFF98DAFF),
+                                    width: AppDimensions.dim1.w,
+                                  ),
+                                ),
+                                onPressed: () async {
+                                  Navigator.of(context).pop();
+                                  context.read<BleCubit>().start();
+
+                                  final prefs =
+                                      await SharedPreferences.getInstance();
+                                  await prefs.setBool(
+                                      'ble_connected_once', true);
+                                },
+                                child: Text(
+                                  "Start",
+                                  style: TextStyle(
+                                    color: AppColors.white,
+                                    fontFamily:
+                                        AppFontStyles.museoModernoFontFamily,
+                                    fontVariations: [
+                                      AppFontStyles.boldFontVariation
+                                    ],
+                                    fontSize: AppFontStyles.fontSize_14.sp,
                                   ),
                                 ),
                               ),
-                            ],
-                          ),
-                        ),
-                      ),
-                      SizedBox(height: AppDimensions.dim20.h),
-                      SizedBox(
-                        width: AppDimensions.dim118.w,
-                        height: AppDimensions.dim26.h,
-                        child: ElevatedButton(
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppColors.bluegray,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(
-                                  AppDimensions.radius_40.r),
                             ),
-                            side: BorderSide(
-                              color: const Color(0xFF98DAFF),
-                              width: AppDimensions.dim1.w,
-                            ),
-                          ),
-                          onPressed: () async {
-                            Navigator.of(context).pop();
-                            context.read<BleCubit>().start();
-
-                            final prefs = await SharedPreferences.getInstance();
-                            await prefs.setBool('ble_connected_once', true);
-                          },
-                          child: Text(
-                            "Start",
-                            style: TextStyle(
-                              color: AppColors.white,
-                              fontFamily: AppFontStyles.museoModernoFontFamily,
-                              fontVariations: [AppFontStyles.boldFontVariation],
-                              fontSize: AppFontStyles.fontSize_14.sp,
-                            ),
-                          ),
+                          ],
                         ),
                       ),
                     ],
@@ -470,6 +266,10 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ),
             ),
+            //),
+
+            //),
+            //),
           ],
         );
       },
@@ -521,15 +321,6 @@ class _HomeScreenState extends State<HomeScreen> {
               _isPickerShown = false;
             });
           });
-        }
-
-        if (state.status == BleStatus.connected &&
-            ((state.volume ?? 0) < 600)) {
-<<<<<<< HEAD
-          // tryShowStartJourneyDialog(context);
-=======
-          tryShowStartJourneyDialog(context);
->>>>>>> origin/develop
         }
       },
       child: Scaffold(

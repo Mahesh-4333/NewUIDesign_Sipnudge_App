@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 # Miscellaneous
 *.class
 *.log
@@ -13,204 +12,37 @@
 .swiftpm/
 migrate_working_dir/
 
-# IntelliJ
+# IntelliJ related
 *.iml
 *.ipr
 *.iws
 .idea/
 
-# VS Code (optional)
+# The .vscode folder contains launch configuration and tasks you configure in
+# VS Code which you may wish to be included in version control, so this line
+# is commented out by default.
 #.vscode/
 
-# Flutter / Dart
-build/
-=======
-# Flutter/Dart
->>>>>>> origin/develop
+# Flutter/Dart/Pub related
+**/doc/api/
+**/ios/Flutter/.last_build_id
 .dart_tool/
 .packages
 .pub/
 .pub-cache/
 .flutter-plugins
 .flutter-plugins-dependencies
-<<<<<<< HEAD
 .pub-cache/
 .pub/
-# build/
+/build/
 
-# Generated docs
-**/doc/api/
-**/ios/Flutter/.last_build_id
-
-# Android
-android/.gradle/
-android/app/build/
-# android/local.properties
-*.apk
-*.aab
-
-# iOS
-ios/Pods/
-ios/build/
-macos/Flutter/ephemeral/
-linux/flutter/ephemeral/
-windows/flutter/ephemeral/
-
-# # iOS
-# ios/Pods/
-# ios/.symlinks/
-# ios/Flutter/Generated.xcconfig
-# ios/Flutter/flutter_export_environment.sh
-
-# Symbolication
+# Symbolication related
 app.*.symbols
 
-# Obfuscation
+# Obfuscation related
 app.*.map.json
 
-
-# =========================
-
-# # Miscellaneous
-# *.class
-# *.log
-# *.pyc
-# *.swp
-# .DS_Store
-# .atom/
-# .build/
-# .buildlog/
-# .history
-# .svn/
-# .swiftpm/
-# migrate_working_dir/
-
-# # IntelliJ related
-# *.iml
-# *.ipr
-# *.iws
-# .idea/
-
-# # The .vscode folder contains launch configuration and tasks you configure in
-# # VS Code which you may wish to be included in version control, so this line
-# # is commented out by default.
-# #.vscode/
-
-# # Flutter/Dart/Pub related
-# **/doc/api/
-# **/ios/Flutter/.last_build_id
-# .dart_tool/
-# .flutter-plugins
-# .flutter-plugins-dependencies
-# .pub-cache/
-# .pub/
-# /build/
-
-# # Symbolication related
-# app.*.symbols
-
-# # Obfuscation related
-# app.*.map.json
-
-# # Android Studio will place build artifacts here
-# /android/app/debug
-# /android/app/profile
-# /android/app/release
-
-# # Android
-# android/.gradle/
-# android/local.properties
-
-# # iOS
-# ios/Pods/
-# ios/.symlinks/
-=======
-.packages
-.vs/
-.vscode/
-.metadata
-coverage/
-build/
-
-# Build
-/build
-/ios/.symlinks/
-/android/local.properties
-/android/.gradle
-/ios/Flutter/Generated.xcconfig
-/ios/Flutter/ephemeral/
-/macos/Flutter/ephemeral/
-/windows/flutter/ephemeral/
-/linux/flutter/ephemeral/
-# Kotlin / Android garbage
-# Android
-android/.gradle/
-android/build/
-android/app/build/
-android/local.properties
-android/key.properties
-
-# Kotlin / Android Studio
-android/.idea/
-android/.kotlin/
-android/**/.kotlin/
-android/**/errors/*.log
-*.iml
-*.log
-
-
-# Flutter generated
-
-# iOS
-ios/Pods/
-ios/.symlinks/
-ios/Flutter/ephemeral/
-ios/Flutter/flutter_assets/
-ios/Flutter/App.framework
-ios/Flutter/Flutter.framework
-ios/Flutter/Flutter.podspec
-ios/Flutter/Generated.xcconfig
-ios/Flutter/flutter_export_environment.sh
-ios/Runner/GeneratedPluginRegistrant.*
-
-
-# IDE/OS generated files (Crucial for what you are seeing)
-*.iml
-*.iws
-*.ipr
-# Xcode junk
-**/DerivedData/
-*.pbxuser
-*.mode1v3
-*.mode2v3
-*.perspectivev3
-*.moved-aside
-*.xcuserstate
-*.xccheckout
-*.xcscmblueprint
-xcuserdata/
-# IDEs
-.vscode/
-.idea/
-*.swp
-*.swo
-# OS / tooling
-.DS_Store
-UserInterfaceState.xcuserstate
-
-
-Thumbs.db
-.sconsign.dblite
-.tags*
-.profile
-Icon?
-**/.vagrant/
-**/.generated/
-**/*sync/
-ServiceDefinitions.json
-# Exceptions
-!default.mode1v3
-!default.mode2v3
-!default.pbxuser
-!default.perspectivev3
->>>>>>> origin/develop
+# Android Studio will place build artifacts here
+/android/app/debug
+/android/app/profile
+/android/app/release

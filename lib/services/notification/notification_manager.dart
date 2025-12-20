@@ -66,13 +66,9 @@ class NotificationManager {
   Future<void> initialize() async {
     await _requestRequiredPermissions();
 
-<<<<<<< HEAD
-    await Alarm.init();
-=======
     if (Platform.isAndroid) {
       await Alarm.init();
     }
->>>>>>> origin/develop
 
     const AndroidInitializationSettings initializationSettingsAndroid =
         AndroidInitializationSettings('@mipmap/ic_launcher');
@@ -179,10 +175,7 @@ class NotificationManager {
     required String assetAudioPath,
     required String title,
     required String body,
-<<<<<<< HEAD
-=======
     required bool isSilent,
->>>>>>> origin/develop
     String stopButtonText = 'Stop Alarm',
     int maxDurationSeconds = 5,
   }) async {
@@ -193,38 +186,13 @@ class NotificationManager {
     );
 
     var volumeSettings = VolumeSettings.fade(
-<<<<<<< HEAD
-      volume: 1.0,
-=======
       volume: isSilent ? 0.0 : 0.3,
->>>>>>> origin/develop
       fadeDuration: const Duration(seconds: 3),
       volumeEnforced: true,
     );
 
     final alarmSettings = AlarmSettings(
       id: id,
-<<<<<<< HEAD
-
-      dateTime: dateTime,
-
-      assetAudioPath: assetAudioPath,
-
-      // Loop is true, the timer below handles the automatic stop.
-
-      loopAudio: false,
-
-      vibrate: true,
-
-      notificationSettings: notificationSettings,
-
-      volumeSettings: volumeSettings,
-
-      androidFullScreenIntent: true, // Triggers a full-screen alert
-
-      warningNotificationOnKill:
-          true, // Helps prevent the OS from killing the background service
-=======
       dateTime: dateTime,
       assetAudioPath: assetAudioPath,
       loopAudio: false,
@@ -233,7 +201,6 @@ class NotificationManager {
       volumeSettings: volumeSettings,
       androidFullScreenIntent: false,
       warningNotificationOnKill: false,
->>>>>>> origin/develop
     );
 
     try {
@@ -249,11 +216,6 @@ class NotificationManager {
     }
   }
 
-<<<<<<< HEAD
-  /// Stops a scheduled or currently ringing alarm by its ID.
-
-=======
->>>>>>> origin/develop
   Future<bool> stopAlarm(int id) async {
     final success = await Alarm.stop(id);
 

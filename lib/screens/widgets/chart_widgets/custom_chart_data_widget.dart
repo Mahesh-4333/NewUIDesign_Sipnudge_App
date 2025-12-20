@@ -236,24 +236,18 @@ class _CustomChartDataWidgetState extends State<CustomChartDataWidget> {
                         );
                       }
 
-                      return Visibility(
-                        visible: _isColumnChartSelected,
-<<<<<<< HEAD
-                        replacement: FlAreaChartWidget(
-=======
-                        replacement: SyncfusionAreaChartWidget(
->>>>>>> origin/develop
-                          interval: filterState.currentInterval,
-                          currentDate: filterState.currentDate,
-                          bottleData: snapshot.data ?? [],
-                        ),
-                        child: FlColumnChartWidget(
-                          interval: filterState.currentInterval,
-                          currentDate: filterState.currentDate,
-                          bottleData: snapshot.data ?? [],
-                        ),
-                      );
-                    },
+                  return Visibility(
+                    visible: _isColumnChartSelected,
+                    replacement: FlAreaChartWidget(
+                      interval: filterState.currentInterval,
+                      currentDate: filterState.currentDate,
+                      bottleData: snapshot.data!,
+                    ),
+                    child: FlColumnChartWidget(
+                      interval: filterState.currentInterval,
+                      currentDate: filterState.currentDate,
+                      bottleData: snapshot.data!,
+                    ),
                   );
                 },
               );

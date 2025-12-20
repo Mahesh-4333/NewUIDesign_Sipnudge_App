@@ -56,15 +56,7 @@ import 'package:provider/provider.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-<<<<<<< HEAD
-  // 🔥 Load SharedPreferences before the app starts
-  await UserManager().init();
-
   await FlutterBluePlus.setLogLevel(LogLevel.verbose, color: true);
-=======
-  await FlutterBluePlus.setLogLevel(LogLevel.verbose,
-      color: true);
->>>>>>> origin/develop
 
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
@@ -161,35 +153,18 @@ class MyApp extends StatelessWidget {
             minTextAdapt: true,
             designSize: const Size(440, 956),
             builder: (_, child) {
-<<<<<<< HEAD
-              // return Padding(
-              //   padding: EdgeInsets.only(
-              //       bottom: MediaQuery.of(context).viewPadding.bottom),
               return MaterialApp(
                 debugShowCheckedModeBanner: false,
                 theme: ThemeData(
                   appBarTheme: const AppBarTheme(
                     centerTitle: true,
                     iconTheme: IconThemeData(),
-=======
-              return Padding(
-
-                padding: EdgeInsets.only(
-                    bottom: 0),
-                child: MaterialApp(
-                  debugShowCheckedModeBanner: false,
-                  theme: ThemeData(
-                    appBarTheme: const AppBarTheme(
-                      centerTitle: true,
-                      iconTheme: IconThemeData(),
-                    ),
-                    fontFamily:
-                        AppFontStyles.museoModernoFontFamily,
->>>>>>> origin/develop
                   ),
-                  home: child,
-                  routes: {
-                    //'/dailygoalpage': (context) => DailyGoalPage(),
+                  fontFamily: AppFontStyles.museoModernoFontFamily,
+                ),
+                home: child,
+                routes: {
+                  //'/dailygoalpage': (context) => DailyGoalPage(),
 
                     '/dailygoalpage': (context) =>
                         UserInfoDailyGoalScreen(waterGoal: 0),

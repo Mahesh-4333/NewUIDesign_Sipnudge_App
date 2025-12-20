@@ -164,35 +164,6 @@
 		97C146E51CF9000F007C117D = {
 			isa = PBXGroup;
 			children = (
-<<<<<<< HEAD
-				C20563D12EDC72A9001381D2 /* ringtone10.wav */,
-				C20563CF2EDC72A8001381D2 /* ringtone12.wav */,
-				C20563D02EDC72A9001381D2 /* ringtone13.wav */,
-				C20563CD2EDC70CB001381D2 /* ringtone1.wav */,
-				C20563CB2EDC705A001381D2 /* ringtone2.wav */,
-				C20563AD2EDC7025001381D2 /* ringtone3.wav */,
-				C20563AF2EDC7026001381D2 /* ringtone4.wav */,
-				C20563AB2EDC7024001381D2 /* ringtone5.wav */,
-				C20563A92EDC7024001381D2 /* ringtone6.wav */,
-				C20563AC2EDC7025001381D2 /* ringtone7.wav */,
-				C20563A72EDC7023001381D2 /* ringtone8.wav */,
-				C20563AA2EDC7024001381D2 /* ringtone9.wav */,
-				C20563AE2EDC7025001381D2 /* ringtone11.wav */,
-=======
-				82EA800E2EF1926400DFEF9C /* ringtone1.caf */,
-				82EA800F2EF1926400DFEF9C /* ringtone2.caf */,
-				82EA80102EF1926400DFEF9C /* ringtone3.caf */,
-				82EA80112EF1926400DFEF9C /* ringtone4.caf */,
-				82EA80122EF1926400DFEF9C /* ringtone5.caf */,
-				82EA80132EF1926400DFEF9C /* ringtone6.caf */,
-				82EA80142EF1926400DFEF9C /* ringtone7.caf */,
-				82EA80152EF1926400DFEF9C /* ringtone8.caf */,
-				82EA80162EF1926400DFEF9C /* ringtone9.caf */,
-				82EA80172EF1926400DFEF9C /* ringtone10.caf */,
-				82EA80182EF1926400DFEF9C /* ringtone11.caf */,
-				82EA80192EF1926400DFEF9C /* ringtone12.caf */,
-				82EA801A2EF1926400DFEF9C /* ringtone13.caf */,
->>>>>>> origin/develop
 				9740EEB11CF90186004384FC /* Flutter */,
 				97C146F01CF9000F007C117D /* Runner */,
 				97C146EF1CF9000F007C117D /* Products */,
@@ -346,35 +317,6 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-<<<<<<< HEAD
-				C20563D22EDC72A9001381D2 /* ringtone12.wav in Resources */,
-				C20563D32EDC72A9001381D2 /* ringtone13.wav in Resources */,
-				C20563D42EDC72A9001381D2 /* ringtone10.wav in Resources */,
-				C20563CE2EDC70CC001381D2 /* ringtone1.wav in Resources */,
-				C20563CC2EDC705A001381D2 /* ringtone2.wav in Resources */,
-				C20563B02EDC7026001381D2 /* ringtone8.wav in Resources */,
-				C20563B22EDC7026001381D2 /* ringtone6.wav in Resources */,
-				C20563B32EDC7026001381D2 /* ringtone9.wav in Resources */,
-				C20563B42EDC7026001381D2 /* ringtone5.wav in Resources */,
-				C20563B52EDC7026001381D2 /* ringtone7.wav in Resources */,
-				C20563B62EDC7026001381D2 /* ringtone3.wav in Resources */,
-				C20563B72EDC7026001381D2 /* ringtone11.wav in Resources */,
-				C20563B82EDC7026001381D2 /* ringtone4.wav in Resources */,
-=======
-				82EA801B2EF1926400DFEF9C /* ringtone3.caf in Resources */,
-				82EA801C2EF1926400DFEF9C /* ringtone5.caf in Resources */,
-				82EA801D2EF1926400DFEF9C /* ringtone2.caf in Resources */,
-				82EA801E2EF1926400DFEF9C /* ringtone10.caf in Resources */,
-				82EA801F2EF1926400DFEF9C /* ringtone8.caf in Resources */,
-				82EA80202EF1926400DFEF9C /* ringtone6.caf in Resources */,
-				82EA80212EF1926400DFEF9C /* ringtone9.caf in Resources */,
-				82EA80222EF1926400DFEF9C /* ringtone12.caf in Resources */,
-				82EA80232EF1926400DFEF9C /* ringtone1.caf in Resources */,
-				82EA80242EF1926400DFEF9C /* ringtone4.caf in Resources */,
-				82EA80252EF1926400DFEF9C /* ringtone7.caf in Resources */,
-				82EA80262EF1926400DFEF9C /* ringtone11.caf in Resources */,
-				82EA80272EF1926400DFEF9C /* ringtone13.caf in Resources */,
->>>>>>> origin/develop
 				97C147011CF9000F007C117D /* LaunchScreen.storyboard in Resources */,
 				3B3967161E833CAA004F5970 /* AppFrameworkInfo.plist in Resources */,
 				97C146FE1CF9000F007C117D /* Assets.xcassets in Resources */,

@@ -50,13 +50,6 @@ dependencies:
   share_plus: ^7.2.1 
   screenshot: ^3.0.0
   audioplayers: ^6.0.0
-  alarm: ^5.1.5
-<<<<<<< HEAD
-=======
-  googleapis: ^15.0.0
-  googleapis_auth: ^2.0.0
-  http: ^1.6.0
->>>>>>> origin/develop
 
 
 dev_dependencies:

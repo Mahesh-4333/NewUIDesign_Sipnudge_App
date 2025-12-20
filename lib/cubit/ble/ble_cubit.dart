@@ -379,59 +379,25 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
         return;
       }
 
-      if (_hydration30DaysChar != null) {
-        await _hydration30DaysChar!.setNotifyValue(true);
-        _hydration30DaysChar!.onValueReceived.listen((value) async {
-          try {
-            final data = String.fromCharCodes(value);
-            log("Hydration 30 days Raw: $data", name: "BLE_Cubit");
+      // 🩵 Main data (battery, volume, percent)
+      _dataChar!.onValueReceived.listen((value) {
+        final data = String.fromCharCodes(value);
+        log("Received data: $data", name: "BLE_Cubit");
+        _parseData(data);
+        _sendAck(device);
+      });
+      await _dataChar!.setNotifyValue(true);
 
-            final parsed = _parse30DaysHydration(data);
-            if (parsed.isNotEmpty) {
-              final List<HydrationDaySummary> list = parsed.map((m) {
-                // m['date'] is a DateTime from the parser — normalize to local midnight
-                final DateTime rawDate = m['date'] as DateTime;
-                final date = DateTime(rawDate.year, rawDate.month, rawDate.day);
-                // midnight
-                return HydrationDaySummary(
-                  date: date,
-                  dayIndex: m['dayIndex'] as int,
-                  target: (m['target'] as num).toDouble(),
-                  consumed: (m['consumed'] as num).toDouble(),
-                  deviceId: savedDeviceId,
-                );
-              }).toList();
+      // 💧 Hydration history data
+      _hydrationDataChar?.onValueReceived.listen((value) {
+        final data = String.fromCharCodes(value);
+        log("HydrationDataReceived: $data", name: "BLE_Cubit");
+        var slots = _parseHydrationData(data);
+        if (slots.isNotEmpty) _hydrationController.add(slots);
+        _sendAck(device, sendAckToHydrationSlotsCharacteristic: true);
+      });
+      await _hydrationDataChar?.setNotifyValue(true);
 
-              // Save to DB in bulk (fast)
-<<<<<<< HEAD
-              await dbHelper.bulkUpsert30Days(list);
-=======
-              if ((state.volume ?? 0) > 600) {
-                await dbHelper.bulkUpsert30Days(list);
-              }
-
->>>>>>> origin/develop
-              emit(state.copyWith(
-                  isHydration30DaysDataSync: true, historyData: data));
-              log("[BLE_Cubit] Saved ${list.length} day summaries to DB",
-                  name: "BLE_Cubit");
-
-              // Optionally emit to UI stream:
-              // _hydrationController.add(list.map((e) => convertToHydrationEntryIfNeeded(e)).toList());
-
-              for (final day in list) {
-                // Example debug print (you already log inside parser)
-                print("30d -> ${day.dayIndex} : ${day.date} "
-                    "target=${day.target} consumed=${day.consumed}  percentage ${(day.consumed / day.target) * 100}");
-              }
-            }
-
-            _sendAck(device);
-          } catch (e) {
-            print("========> erroe ${e.toString()}");
-          }
-        });
-      }
       // 🔹 NEW: Real-time hydration slot data (slotId/Target/Consumed)
       if (_hydrationChar != null) {
         await _hydrationChar!.setNotifyValue(true);
@@ -441,18 +407,10 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
           emit(state.copyWith(slotData: data));
           log("Hydration Slot Data: $data", name: "BLE_Cubit");
 
-          final updatedEntries = _parseHydrationSlotData(data);
-<<<<<<< HEAD
-          if (updatedEntries.isNotEmpty) {
-=======
-          if (updatedEntries.isNotEmpty && ((state.volume ?? 0) > 600)) {
-            await dbHelper.saveLastSyncDate(DateTime.now());
-
->>>>>>> origin/develop
-            _hydrationController.add(updatedEntries);
-            for (final updatedEntry in updatedEntries) {
-              await dbHelper.insertOrUpdateSlot(updatedEntry);
-            }
+          final updatedEntry = _parseHydrationSlotData(data);
+          if (updatedEntry != null) {
+            _hydrationController.add([updatedEntry]);
+            await dbHelper.insertOrUpdateSlot(updatedEntry);
           }
 
           _sendAck(device);

@@ -16,11 +16,7 @@ import 'package:hydrify/screens/bottom_nav_screen_new.dart';
 import 'package:hydrify/screens/widgets/auth_button_widget.dart';
 import 'package:hydrify/screens/widgets/user_info_input_widgets/custom_gradient_slider_widget.dart';
 import 'package:hydrify/screens/widgets/water_wave_widget.dart';
-import 'package:hydrify/services/notification/notification_service.dart';
-<<<<<<< HEAD
-=======
-import 'package:hydrify/services/ui_utils_service.dart';
->>>>>>> origin/develop
+import 'package:hydrify/services/notification_service.dart';
 import 'package:provider/provider.dart';
 
 import '../services/google_calendar_manager.dart';
@@ -296,11 +292,7 @@ class _UserInfoDailyGoalScreenState extends State<UserInfoDailyGoalScreen> {
       bottomNavigationBar: Container(
         height: AppDimensions.dim60,
         margin: EdgeInsets.only(
-<<<<<<< HEAD
-          bottom: AppDimensions.dim33.h,
-=======
-          bottom: 130.h,
->>>>>>> origin/develop
+          bottom: AppDimensions.padding33.h,
           left: AppDimensions.defaultPadding.w,
           right: AppDimensions.defaultPadding.w,
         ),

@@ -491,51 +491,15 @@ class _AchievementsBadgeScreenState extends State<AchievementsBadgeScreen> {
           Align(
             alignment: Alignment.topCenter,
             child: isUnlocked
-                ? Stack(
-                    alignment: Alignment.center,
-                    children: [
-                      Image.asset(
-                        "assets/images/goals_levels_img.png",
-                        width: AppDimensions.dim107.w,
-                        height: AppDimensions.dim111.h,
-                      ),
-                      ShaderMask(
-                        shaderCallback: (bounds) =>
-                            const LinearGradient(
-                          colors: [
-                            Color(0xFF16446F),
-                            Color(0xFF2569A9),
-                            Color(0xFF59ADFB),
-                          ],
-                        ).createShader(
-                          Rect.fromLTWH(
-                              0, 0, bounds.width, bounds.height),
-                        ),
-                        blendMode: BlendMode.srcIn,
-                        child: Text(
-                          level,
-                          style: TextStyle(
-                            color: AppColors.white,
-                            fontFamily:
-                                AppFontStyles.urbanistFontFamily,
-                            fontVariations: [
-                              AppFontStyles
-                                  .extraBoldFontVariation
-                            ],
-                            fontSize: AppFontStyles.fontSize_28,
-                          ),
-                        ),
-                      )
-                    ],
+                ? Image.asset(
+                    "assets/images/goals_levels_img.png",
+                    width: AppDimensions.dim107.w,
+                    height: AppDimensions.dim111.h,
                   )
-                : Padding(
-                    padding: EdgeInsets.only(
-                        top: AppDimensions.dim22.h), // 🔽 shift down
-                    child: Image.asset(
-                      "assets/images/level_lock_img1.png",
-                      width: AppDimensions.dim70.w,
-                      height: AppDimensions.dim70.h,
-                    ),
+                : Image.asset(
+                    "assets/images/lock_goals_levels_img.png",
+                    width: AppDimensions.dim107.w,
+                    height: AppDimensions.dim111.h,
                   ),
           ),
 
@@ -543,13 +507,7 @@ class _AchievementsBadgeScreenState extends State<AchievementsBadgeScreen> {
           if (isUnlocked)
             Positioned.fill(
               child: Align(
-<<<<<<< HEAD
-                alignment: Platform.isIOS
-                    ? const Alignment(0, -0.25)
-                    : const Alignment(0, -0.1),
-                alignment: Alignment(
-                    0, -.25.h), // slight upward adjustment
->>>>>>> origin/develop
+                alignment: Alignment(0, -0.1), // slight upward adjustment
                 child: ShaderMask(
                   shaderCallback: (bounds) =>
                       const LinearGradient(

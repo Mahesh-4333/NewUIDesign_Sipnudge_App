@@ -782,12 +782,7 @@ class _WaterIntakeTimelineState extends State<WaterIntakeTimelineScreen> {
                           ),
                         )
                       ],
-                    ),
-<<<<<<< HEAD
-                    // SizedBox(height: 100.h),
-=======
-                    SizedBox(height: 100.h),
->>>>>>> origin/develop
+                    )
                   ],
                 ),
               ),

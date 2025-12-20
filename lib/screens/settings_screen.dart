@@ -119,15 +119,7 @@ class _SettingScreenState extends State<SettingScreen> {
 
       switch (title) {
         case AppStrings.personalinfo:
-<<<<<<< HEAD
-          Navigator.of(context, rootNavigator: true).push(
-=======
-          navigator.push(
->>>>>>> origin/develop
-            MaterialPageRoute(
-              builder: (_) => UserInfoInputScreen(fromSettings: true),
-            ),
-          );
+          Navigator.pushNamed(context, '/personalinfo');
           break;
 
         case AppStrings.drinkreminder:

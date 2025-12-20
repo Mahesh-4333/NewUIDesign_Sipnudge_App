@@ -107,6 +107,27 @@ CREATE TABLE IF NOT EXISTS hydration_day_summaries (
   UNIQUE(date, device_id) ON CONFLICT REPLACE
 );
 ''');
+
+        await db.execute('''
+CREATE TABLE IF NOT EXISTS app_metadata (
+  key TEXT PRIMARY KEY,
+  value TEXT
+);
+''');
+
+        await db.execute('''
+CREATE TABLE IF NOT EXISTS hydration_day_summaries (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  date INTEGER NOT NULL,         -- epoch millis at local midnight (start of day)
+  day_index INTEGER NOT NULL,
+  target REAL NOT NULL,
+  consumed REAL NOT NULL,
+  device_id TEXT,
+  created_at INTEGER NOT NULL,
+  updated_at INTEGER,
+  UNIQUE(date, device_id) ON CONFLICT REPLACE
+);
+''');
 <<<<<<< HEAD
 =======
 
