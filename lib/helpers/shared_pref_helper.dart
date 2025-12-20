@@ -11,6 +11,7 @@ class SharedPrefsHelper {
 
   // NEW: Ringtone key
   static const String _keySelectedRingtone = 'selected_ringtone';
+  static const String _keyRingtoneFeedback = 'ringtone_feedback';
 
   // ----------------------------
   // RINGTONE METHODS (NEW)
@@ -23,6 +24,16 @@ class SharedPrefsHelper {
   static Future<int?> getSelectedRingtone() async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getInt(_keySelectedRingtone);
+  }
+
+  static Future<void> setRingtoneFeedBack(bool feedback) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_keyRingtoneFeedback, feedback);
+  }
+
+  static Future<bool> getRingtoneFeedBack() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool(_keyRingtoneFeedback) ?? true;
   }
 
   // ----------------------------

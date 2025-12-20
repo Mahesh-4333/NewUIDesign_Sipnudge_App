@@ -18,6 +18,7 @@ import 'package:hydrify/screens/user_info_daily_goal_screen.dart';
 // import 'package:hydrify/screens/widgets/navigation_helper.dart';
 import 'package:hydrify/screens/widgets/preferences_widgets/menu_item_tile.dart';
 import 'package:hydrify/screens/widgets/preferences_widgets/toggle_tile.dart';
+import 'package:hydrify/services/ui_utils_service.dart';
 
 class PreferencesPage extends StatelessWidget {
   const PreferencesPage({super.key});
@@ -227,8 +228,12 @@ class PreferencesPage extends StatelessWidget {
                                 title: AppStrings.ringtoneFeedback,
                                 value: state
                                     .ringtoneFeedback, // ✔ correct value from state
-                                onChanged: cubit
-                                    .toggleRingtoneFeedback, // ✔ direct method reference
+                                onChanged: (value) {
+                                  UiUtilsService.showToast(
+                                      context: context,
+                                      text: "Updating hydration reminders");
+                                  cubit.toggleRingtoneFeedback;
+                                }, // ✔ direct method reference
                               ),
                               SizedBox(height: AppDimensions.dim7.h),
                               MenuItemTile(
