@@ -123,4 +123,13 @@ class AppColors {
 
   // ignore: constant_identifier_names
   static const color_A084A5 = Color(0xFFA084A5);
+
+  static const LinearGradient guestButtonColor = LinearGradient(
+    begin: Alignment.centerLeft,
+    end: Alignment.centerRight,
+    colors: [
+      Color(0xFF9FFFFA), // Start → Teal
+      Color(0xFFD1FFC4), // End → Light Green
+    ],
+  );
 }

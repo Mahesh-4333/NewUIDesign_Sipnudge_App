@@ -1,15 +1,16 @@
 import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:gradient_borders/box_borders/gradient_box_border.dart';
-import 'package:hydrify/cubit/bottle/bottle_data_cubit.dart';
-import 'package:hydrify/helpers/water_consumption_data_helper.dart';
-import 'package:intl/intl.dart';
 import 'package:hydrify/constants/app_colors.dart';
 import 'package:hydrify/constants/app_dimensions.dart';
 import 'package:hydrify/constants/app_font_styles.dart';
+import 'package:hydrify/cubit/bottle/bottle_data_cubit.dart';
+import 'package:hydrify/helpers/water_consumption_data_helper.dart';
+import 'package:intl/intl.dart';
 
 class CurrentSlotStatsWidget extends StatelessWidget {
   final String slotName;

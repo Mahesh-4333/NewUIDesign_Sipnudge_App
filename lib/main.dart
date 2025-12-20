@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:http/http.dart' as http;
 import 'package:hydrify/constants/app_font_styles.dart';
 import 'package:hydrify/cubit/Preferences/preferences_cubit.dart';
 import 'package:hydrify/cubit/account&security/account&security_cubit.dart';
@@ -32,20 +33,15 @@ import 'package:hydrify/screens/about_us.dart';
 import 'package:hydrify/screens/account&security_page.dart';
 import 'package:hydrify/screens/achevements_badge_screen.dart';
 import 'package:hydrify/screens/analysis_screen.dart';
-
 import 'package:hydrify/screens/contact_support_page.dart';
 import 'package:hydrify/screens/data_and_analytics_screen.dart';
 import 'package:hydrify/screens/drink_reminder_page.dart';
 import 'package:hydrify/screens/faq_page.dart';
 import 'package:hydrify/screens/help&support_page.dart';
 import 'package:hydrify/screens/home_screen.dart';
-import 'package:hydrify/screens/lifestyleinfoscreen.dart';
 import 'package:hydrify/screens/link_accounts_page.dart';
-import 'package:hydrify/screens/notification.dart';
 import 'package:hydrify/screens/personal_info_in_setting.dart';
-import 'package:hydrify/screens/personalinfo.dart';
 import 'package:hydrify/screens/preferences_page.dart';
-import 'package:hydrify/screens/ringtone_screen.dart';
 import 'package:hydrify/screens/settings_screen.dart';
 import 'package:hydrify/screens/splash_screen.dart';
 import 'package:hydrify/screens/user_info_daily_goal_screen.dart';
@@ -57,12 +53,13 @@ import 'package:hydrify/services/notification/notification_service.dart';
 import 'package:hydrify/services/user_manager.dart';
 import 'package:hydrify/services/weather_service.dart';
 import 'package:provider/provider.dart';
-import 'package:http/http.dart' as http;
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await FlutterBluePlus.setLogLevel(LogLevel.verbose,
-      color: true);
+  // 🔥 Load SharedPreferences before the app starts
+  await UserManager().init();
+
+  await FlutterBluePlus.setLogLevel(LogLevel.verbose, color: true);
 
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
@@ -70,8 +67,7 @@ Future<void> main() async {
 
   if (kDebugMode) {
     try {
-      FirebaseFunctions.instance
-          .useFunctionsEmulator('127.0.0.1', 5001);
+      FirebaseFunctions.instance.useFunctionsEmulator('127.0.0.1', 5001);
     } catch (e) {
       print('Error connecting to functions emulator: $e');
     }
@@ -126,25 +122,19 @@ class MyApp extends StatelessWidget {
         BlocProvider(create: (_) => UserInfoCubit(dbHelper)),
         BlocProvider(create: (_) => BottomNavCubit()),
         ChangeNotifierProvider(
-            lazy: false,
-            create: (_) => AuthenticationProvider()),
-        ChangeNotifierProvider(
-            lazy: false, create: (_) => UserInfoProvider()),
+            lazy: false, create: (_) => AuthenticationProvider()),
+        ChangeNotifierProvider(lazy: false, create: (_) => UserInfoProvider()),
         BlocProvider(create: (context) => FilterCubit()),
         ChangeNotifierProvider(
-            create: (_) => WeatherProvider(
-                weatherService, locationService)),
-        BlocProvider(
-            create: (context) => BottleDataCubit(bleCubit)),
+            create: (_) => WeatherProvider(weatherService, locationService)),
+        BlocProvider(create: (context) => BottleDataCubit(bleCubit)),
         BlocProvider(create: (context) => ReminderCubit()),
         BlocProvider(create: (context) => ReminderTimeCubit()),
-        BlocProvider(
-            create: (context) => ReminderIntervalCubit()),
+        BlocProvider(create: (context) => ReminderIntervalCubit()),
         BlocProvider(create: (context) => LevelCubit()),
         BlocProvider(create: (context) => ProfileCubit()),
         BlocProvider(create: (context) => LinkAccountsCubit()),
-        BlocProvider(
-            create: (context) => AccountSecurityCubit()),
+        BlocProvider(create: (context) => AccountSecurityCubit()),
         BlocProvider(create: (context) => HelpAndSupportCubit()),
         BlocProvider(create: (context) => PersonalInfoCubit()),
         BlocProvider(create: (context) => DrinkReminderCubit()),
@@ -158,6 +148,9 @@ class MyApp extends StatelessWidget {
             minTextAdapt: true,
             designSize: const Size(440, 956),
             builder: (_, child) {
+              // return Padding(
+              //   padding: EdgeInsets.only(
+              //       bottom: MediaQuery.of(context).viewPadding.bottom),
               return MaterialApp(
                 debugShowCheckedModeBanner: false,
                 theme: ThemeData(
@@ -165,8 +158,7 @@ class MyApp extends StatelessWidget {
                     centerTitle: true,
                     iconTheme: IconThemeData(),
                   ),
-                  fontFamily:
-                      AppFontStyles.museoModernoFontFamily,
+                  fontFamily: AppFontStyles.museoModernoFontFamily,
                 ),
                 home: child,
                 routes: {
@@ -181,8 +173,7 @@ class MyApp extends StatelessWidget {
 
                   // '/lifestyleinfo': (context) => LifeStyleInfoPage(),
 
-                  '/lifestyleinfo': (context) =>
-                      UserLifestyleInfoInputScreen(),
+                  '/lifestyleinfo': (context) => UserLifestyleInfoInputScreen(),
 
                   //'/profilescreen': (context) => ProfileScreenPage(),
 
@@ -193,22 +184,18 @@ class MyApp extends StatelessWidget {
 
                   //'/personalinfo': (context) => PersonalInfoPage(),
 
-                  '/achievement': (context) =>
-                      AchievementsBadgeScreen(),
+                  '/achievement': (context) => AchievementsBadgeScreen(),
 
                   '/personalinfoinsetting': (context) =>
                       PersonalInfoScreenInSetting(),
 
-                  '/drinkreminder': (context) =>
-                      DrinkReminderPage(),
+                  '/drinkreminder': (context) => DrinkReminderPage(),
 
                   '/preferences': (context) => PreferencesPage(),
 
-                  '/account_security': (context) =>
-                      AccountAndSecurityPage(),
+                  '/account_security': (context) => AccountAndSecurityPage(),
 
-                  '/linked_accounts': (context) =>
-                      LinkAccountsPage(),
+                  '/linked_accounts': (context) => LinkAccountsPage(),
 
                   '/support': (context) => HelpAndSupportPage(),
 
@@ -219,17 +206,16 @@ class MyApp extends StatelessWidget {
 
                   '/aboutus': (context) => AboutUs(),
 
-                  '/contact_support': (context) =>
-                      ContactSupportPage(),
+                  '/contact_support': (context) => ContactSupportPage(),
 
-                  '/data&analytics': (context) =>
-                      DataAndAnalyticsPage(),
+                  '/data&analytics': (context) => DataAndAnalyticsPage(),
 
                   // '/privacypolicy': (context) => PrivacyPolicy(),
 
                   // '/termsofservices': (context) => TermsOfServices(),
                 },
               );
+              // );
             },
             child: SplashScreen(),
           );

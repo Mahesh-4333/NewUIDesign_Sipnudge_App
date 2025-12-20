@@ -6,7 +6,9 @@ import 'package:equatable/equatable.dart';
 import 'package:hydrify/cubit/ble/ble_cubit.dart';
 import 'package:hydrify/helpers/database_helper.dart';
 import 'package:hydrify/models/bottle_data.dart';
+import 'package:hydrify/models/hydration_summary.dart';
 import 'package:sqflite/sqflite.dart';
+
 part 'bottle_data_state.dart';
 
 class BottleDataCubit extends Cubit<BottleDataState> {
@@ -49,6 +51,7 @@ class BottleDataCubit extends Cubit<BottleDataState> {
   }
 
   Future<void> _handleBleStateChange(BleState bleState) async {
+    print("30d -> connected");
     if (bleState.status != BleStatus.connected) {
       log("⚠️ Skipping DB insert — BLE not connected (state: ${bleState.status})");
       return;
@@ -117,6 +120,16 @@ class BottleDataCubit extends Cubit<BottleDataState> {
       await db.rawQuery('SELECT COUNT(*) FROM ${DatabaseHelper.tableName}'),
     );
     return count ?? 0;
+  }
+
+  Future<List<HydrationDaySummary>> getHydrationSummariesForRange(
+      DateTime startDate, DateTime endDate) async {
+    print(startDate);
+    print(endDate);
+    return await _dbHelper.getHydrationSummariesForRange(
+      startDate: startDate,
+      endDate: endDate,
+    );
   }
 
   Future<List<BottleData>> getHistoryForDateRange(

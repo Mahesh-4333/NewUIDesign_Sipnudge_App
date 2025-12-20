@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:flutter_svg/svg.dart';
-import 'package:hydrify/constants/app_colors.dart';
 import 'package:hydrify/constants/app_dimensions.dart';
 import 'package:hydrify/helpers/shared_pref_helper.dart';
 import 'package:hydrify/providers/authentication_provider.dart';
@@ -14,7 +12,8 @@ class LocalAuthScreen extends StatefulWidget {
   const LocalAuthScreen({super.key});
 
   @override
-  State<LocalAuthScreen> createState() => _LocalAuthScreenState();
+  State<LocalAuthScreen> createState() =>
+      _LocalAuthScreenState();
 }
 
 class _LocalAuthScreenState extends State<LocalAuthScreen> {
@@ -31,25 +30,42 @@ class _LocalAuthScreenState extends State<LocalAuthScreen> {
   }
 
   Future<void> _handleStartupAuth() async {
-    final authProvider =
-        Provider.of<AuthenticationProvider>(context, listen: false);
+    if (!mounted) return;
 
-    final success = await authProvider.authenticateWithBiometrics();
-    final loggedInUserEmail = await SharedPrefsHelper.getUserEmail() ?? "";
-    final hasUserFilledInPersonalInfo =
-        await SharedPrefsHelper.isPersonalInfoSubmitted();
-    final hasUserSelectedPersonalGoal = await SharedPrefsHelper.getUserGoal();
+    final authProvider = Provider.of<AuthenticationProvider>(
+        context,
+        listen: false);
+
+    bool success = false;
+
+    // Keep showing popup until user authenticates
+    while (mounted && !success) {
+      success = await authProvider.authenticateWithBiometrics();
+
+      if (!success) {
+        // Small delay to avoid spam feeling
+        await Future.delayed(const Duration(milliseconds: 300));
+      }
+    }
 
     if (!mounted) return;
 
-    if (success) {
-      Future.delayed(
-          Duration(
-            milliseconds: 800,
-          ), () {
+    final loggedInUserEmail =
+        await SharedPrefsHelper.getUserEmail() ?? "";
+    final hasUserFilledInPersonalInfo =
+        await SharedPrefsHelper.isPersonalInfoSubmitted();
+    final hasUserSelectedPersonalGoal =
+        await SharedPrefsHelper.getUserGoal();
+
+    Future.delayed(
+      const Duration(milliseconds: 800),
+      () {
+        if (!mounted) return;
+
         Navigator.of(context).pushReplacement(
           PageRouteBuilder(
-            pageBuilder: (context, animation, secondaryAnimation) {
+            pageBuilder:
+                (context, animation, secondaryAnimation) {
               if (loggedInUserEmail.isNotEmpty) {
                 if (hasUserFilledInPersonalInfo == true &&
                     hasUserSelectedPersonalGoal != null) {
@@ -70,8 +86,8 @@ class _LocalAuthScreenState extends State<LocalAuthScreen> {
             },
           ),
         );
-      });
-    }
+      },
+    );
   }
 
   @override
@@ -100,7 +116,8 @@ class _LocalAuthScreenState extends State<LocalAuthScreen> {
               height: AppDimensions.dim285.h,
             ),
             Transform.translate(
-              offset: Offset(10.w, 0), // move left by 20 logical pixels
+              offset: Offset(
+                  10.w, 0), // move left by 20 logical pixels
               child: Image.asset(
                 "assets/images/bottle_top_image1.png",
                 width: AppDimensions.dim346.w,

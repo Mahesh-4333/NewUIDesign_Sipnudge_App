@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools"
+    tools:keep="@drawable/*,
+                @raw/ringtone1,
+                @raw/ringtone2,
+                @raw/ringtone3,
+                @raw/ringtone4,
+                @raw/ringtone5,
+                @raw/ringtone6,
+                @raw/ringtone7,
+                @raw/ringtone8,
+                @raw/ringtone9,
+                @raw/ringtone10,
+                @raw/ringtone11,
+                @raw/ringtone12,
+                @raw/ringtone13" />

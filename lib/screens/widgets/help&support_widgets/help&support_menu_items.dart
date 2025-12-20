@@ -3,6 +3,8 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:hydrify/constants/app_colors.dart';
 import 'package:hydrify/constants/app_dimensions.dart';
 import 'package:hydrify/constants/app_font_styles.dart';
+import 'package:hydrify/screens/contact_support_page.dart';
+import 'package:hydrify/screens/faq_page.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class HelpMenuItem extends StatelessWidget {
@@ -36,8 +38,31 @@ class HelpMenuItem extends StatelessWidget {
             );
           }
         } else if (route != null) {
+          final navigator = Navigator.of(context);
+          switch (route) {
+            case 'faq':
+              navigator.push(
+                MaterialPageRoute(
+                  builder: (_) => FAQ_Page(),
+                ),
+              );
+
+              break;
+
+            case 'contact_support':
+              navigator.push(
+                MaterialPageRoute(
+                  builder: (_) => ContactSupportPage(),
+                ),
+              );
+
+              break;
+
+            default:
+          }
+
           // Navigate to internal route
-          Navigator.pushNamed(context, route!);
+          // Navigator.pushNamed(context, route!);
         } else {
           // No action defined
           ScaffoldMessenger.of(context).showSnackBar(

@@ -1,20 +1,49 @@
+import 'dart:async';
 import 'dart:developer';
 
 import 'package:flutter/material.dart';
 import 'package:hydrify/cubit/user_info/user_info_cubit.dart';
 import 'package:hydrify/models/bottle_data.dart';
 import 'package:hydrify/models/hydration_entry.dart';
-import 'package:sqflite/sqflite.dart';
+import 'package:hydrify/models/hydration_summary.dart';
 import 'package:path/path.dart' as path;
+import 'package:sqflite/sqflite.dart';
 
 class DatabaseHelper {
   static Database? _database;
+
+  // ADD THIS LINE
+  static Completer<Database>? _initCompleter;
+
   static const String tableName = 'bottle_history';
 
+  // REPLACE your old getter with this one:
   Future<Database> get database async {
+    // Already initialized?
     if (_database != null) return _database!;
-    _database = await _initDatabase();
-    return _database!;
+
+    // Already initializing? Await same future
+    if (_initCompleter != null) {
+      return _initCompleter!.future;
+    }
+
+    // Start initialization
+    _initCompleter = Completer<Database>();
+    try {
+      _database = await _initDatabase();
+
+      // Complete for other awaiters
+      _initCompleter!.complete(_database);
+      _initCompleter = null;
+
+      return _database!;
+    } catch (e, st) {
+      if (!(_initCompleter!.isCompleted)) {
+        _initCompleter!.completeError(e, st);
+      }
+      _initCompleter = null;
+      rethrow;
+    }
   }
 
   Future<Database> _initDatabase() async {
@@ -63,6 +92,20 @@ CREATE TABLE user (
   activityLevel TEXT,
   dietType TEXT
 )
+''');
+
+        await db.execute('''
+CREATE TABLE IF NOT EXISTS hydration_day_summaries (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  date INTEGER NOT NULL,         -- epoch millis at local midnight (start of day)
+  day_index INTEGER NOT NULL,
+  target REAL NOT NULL,
+  consumed REAL NOT NULL,
+  device_id TEXT,
+  created_at INTEGER NOT NULL,
+  updated_at INTEGER,
+  UNIQUE(date, device_id) ON CONFLICT REPLACE
+);
 ''');
       },
     );
@@ -234,5 +277,68 @@ CREATE TABLE user (
       whereArgs: [start.toIso8601String(), end.toIso8601String()],
     );
     return result.map((e) => BottleData.fromMap(e)).toList();
+  }
+
+// Bulk upsert list (fast)
+  Future<void> bulkUpsert30Days(List<HydrationDaySummary> list) async {
+    if (list.isEmpty) return;
+    final db = await database;
+    final batch = db.batch();
+    for (final s in list) {
+      batch.insert(
+        'hydration_day_summaries',
+        s.toMap(),
+        conflictAlgorithm: ConflictAlgorithm.replace,
+      );
+    }
+    await batch.commit(noResult: true);
+  }
+
+  Future<List<HydrationDaySummary>> getHydrationSummariesForRange({
+    DateTime? startDate,
+    DateTime? endDate,
+  }) async {
+    final db = await database;
+
+    // Build WHERE clause & args dynamically
+    String? whereClause;
+    List<dynamic>? whereArgs;
+
+    if (startDate != null && endDate != null) {
+      whereClause = 'date BETWEEN ? AND ?';
+      whereArgs = [
+        startDate.millisecondsSinceEpoch,
+        endDate.millisecondsSinceEpoch,
+      ];
+    } else if (startDate != null) {
+      whereClause = 'date >= ?';
+      whereArgs = [startDate.millisecondsSinceEpoch];
+    } else if (endDate != null) {
+      whereClause = 'date <= ?';
+      whereArgs = [endDate.millisecondsSinceEpoch];
+    }
+
+    final result = await db.query(
+      'hydration_day_summaries',
+      where: whereClause,
+      whereArgs: whereArgs,
+      orderBy: 'date ASC',
+    );
+
+    return result.map((r) {
+      print(r);
+      return HydrationDaySummary.fromMap(r);
+    }).toList();
+  }
+
+  Future<void> clearHydrationDaySummaries() async {
+    final db = await database;
+
+    try {
+      final deletedRows = await db.delete('hydration_day_summaries');
+      log("[DB] Cleared hydration_day_summaries table. Rows deleted: $deletedRows");
+    } catch (e) {
+      log("[DB] Error clearing hydration_day_summaries table: $e");
+    }
   }
 }

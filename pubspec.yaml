@@ -31,7 +31,7 @@ dependencies:
   path_provider: ^2.0.15
   shared_preferences: ^2.5.2
   local_auth: ^2.3.0
-  dio: ^5.8.0+1
+  # dio: ^5.8.0+1
   pretty_dio_logger: ^1.4.0
   flutter_bloc: ^9.1.1
   encrypt: ^5.0.3
@@ -67,6 +67,8 @@ flutter:
     - assets/images/
     - assets/weather/
     - assets/ringtones/
+    - assets/ringtones/ringtone1.mp3
+    - assets/ringtones/ringtone2.mp3
     - assets/
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images

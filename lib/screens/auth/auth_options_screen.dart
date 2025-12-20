@@ -130,6 +130,36 @@ class _AuthOptionsScreenState extends State<AuthOptionsScreen> {
                   }
                 },
               ),
+
+              SizedBox(
+                height: AppDimensions.dim20.h,
+              ),
+
+              // Continue as Guest button for ANDROID (below Google)
+              if (!Platform.isIOS)
+                AuthButton(
+                  text: "Continue as Guest",
+                  gradient: AppColors.guestButtonColor,
+                  textColor: AppColors.buttonTextPurpleColor,
+                  areTwoItems: false,
+                  borderColor: AppColors.bluegray,
+                  onTap: () {
+                    SharedPrefsHelper.setUserEmail("guest_user");
+
+                    UiUtilsService.showToast(
+                      context: context,
+                      text: "Continuing as Guest",
+                    );
+
+                    Navigator.pushAndRemoveUntil(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => UserInfoInputScreen(),
+                      ),
+                      (route) => false,
+                    );
+                  },
+                ),
               // Divider for Android only
               if (!Platform.isIOS)
                 Padding(

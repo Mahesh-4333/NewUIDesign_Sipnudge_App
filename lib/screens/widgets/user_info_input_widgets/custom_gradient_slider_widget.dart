@@ -1,15 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:hydrify/constants/app_colors.dart';
 import 'package:hydrify/constants/app_dimensions.dart';
 import 'package:hydrify/constants/app_font_styles.dart';
 
-import 'package:flutter/services.dart';
-
 class CustomGradientSlider extends StatefulWidget {
   final List<double> tickValues;
-  final double initialValue;
-  final ValueChanged<double>? onChanged;
+  final double initialValue; // e.g. 1.6
+  final ValueChanged<double>?
+      onChanged; // callback gets the tick value (1.1, 1.3, ...)
 
   const CustomGradientSlider({
     super.key,
@@ -23,31 +23,52 @@ class CustomGradientSlider extends StatefulWidget {
 }
 
 class _CustomGradientSliderState extends State<CustomGradientSlider> {
-  late double _value;
+  late int _currentIndex; // index into tickValues
 
   @override
   void initState() {
     super.initState();
-    _value = widget.initialValue;
-    // _value = widget.tickValues.contains(widget.initialValue)
-    //     ? widget.initialValue
-    //     : widget.tickValues.first;
+    _currentIndex = _findClosestIndex(widget.initialValue);
   }
 
-  void _snapToClosest(double val) {
-    final closest = widget.tickValues.reduce(
-      (a, b) => (val - a).abs() < (val - b).abs() ? a : b,
-    );
-    setState(() => _value = closest);
-    widget.onChanged?.call(closest);
-    HapticFeedback.mediumImpact(); // vibrate on snap
+  @override
+  void didUpdateWidget(covariant CustomGradientSlider oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.initialValue != widget.initialValue ||
+        oldWidget.tickValues != widget.tickValues) {
+      _currentIndex = _findClosestIndex(widget.initialValue);
+    }
+  }
+
+  int _findClosestIndex(double value) {
+    final ticks = widget.tickValues;
+    int bestIndex = 0;
+    double bestDiff = (ticks[0] - value).abs();
+
+    for (int i = 1; i < ticks.length; i++) {
+      final diff = (ticks[i] - value).abs();
+      if (diff < bestDiff) {
+        bestDiff = diff;
+        bestIndex = i;
+      }
+    }
+    return bestIndex;
+  }
+
+  void _onChangedIndex(double raw) {
+    final index = raw.round().clamp(0, widget.tickValues.length - 1); // 0..N-1
+
+    if (index == _currentIndex) return;
+
+    setState(() => _currentIndex = index);
+
+    final value = widget.tickValues[index]; // map index -> liters
+    HapticFeedback.selectionClick();
+    widget.onChanged?.call(value);
   }
 
   @override
   Widget build(BuildContext context) {
-    final min = widget.tickValues.first;
-    final max = widget.tickValues.last;
-
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -63,15 +84,12 @@ class _CustomGradientSliderState extends State<CustomGradientSlider> {
             inactiveTrackColor: Colors.transparent,
           ),
           child: Slider(
-            value: _value,
-            label: "",
-            min: min,
-            max: max,
+            min: 0,
+            max: (widget.tickValues.length - 1).toDouble(),
             divisions: widget.tickValues.length - 1,
-            onChanged: (newValue) {
-              setState(() => _value = newValue);
-            },
-            onChangeEnd: _snapToClosest,
+            value: _currentIndex.toDouble(),
+            label: "",
+            onChanged: _onChangedIndex,
           ),
         ),
         SizedBox(height: AppDimensions.dim12.h),
@@ -84,17 +102,10 @@ class _CustomGradientSliderState extends State<CustomGradientSlider> {
                 color: AppColors.black40,
                 fontSize: AppFontStyles.fontSize_14,
                 fontVariations: [AppFontStyles.semiBoldFontVariation],
-                // shadows: [
-                //   Shadow(
-                //     blurRadius: AppDimensions.dim5,
-                //     color: AppColors.black.withOpacity(.25),
-                //     offset: Offset(0, AppDimensions.dim4),
-                //   )
-                // ],
               ),
             );
           }).toList(),
-        )
+        ),
       ],
     );
   }

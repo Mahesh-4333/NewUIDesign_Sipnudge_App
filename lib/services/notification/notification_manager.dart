@@ -1,4 +1,5 @@
 import 'dart:developer';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 
@@ -11,8 +12,7 @@ import 'package:permission_handler/permission_handler.dart';
 
 // --- Global Setup ---
 
-final FlutterLocalNotificationsPlugin
-    _flutterLocalNotificationsPlugin =
+final FlutterLocalNotificationsPlugin _flutterLocalNotificationsPlugin =
     FlutterLocalNotificationsPlugin();
 
 // --- Notification Response Handler (Handles button taps/notification taps) ---
@@ -59,8 +59,7 @@ class NotificationManager {
 
   NotificationManager._();
 
-  static final NotificationManager instance =
-      NotificationManager._();
+  static final NotificationManager instance = NotificationManager._();
 
   /// Initializes both the Alarm and Local Notification packages, and requests permissions.
 
@@ -69,12 +68,10 @@ class NotificationManager {
 
     await Alarm.init();
 
-    const AndroidInitializationSettings
-        initializationSettingsAndroid =
+    const AndroidInitializationSettings initializationSettingsAndroid =
         AndroidInitializationSettings('@mipmap/ic_launcher');
 
-    const DarwinInitializationSettings
-        initializationSettingsDarwin =
+    const DarwinInitializationSettings initializationSettingsDarwin =
         DarwinInitializationSettings();
 
     const InitializationSettings initializationSettings =
@@ -85,8 +82,7 @@ class NotificationManager {
 
     await _flutterLocalNotificationsPlugin.initialize(
       initializationSettings,
-      onDidReceiveNotificationResponse:
-          onDidReceiveNotificationResponse,
+      onDidReceiveNotificationResponse: onDidReceiveNotificationResponse,
       onDidReceiveBackgroundNotificationResponse:
           onDidReceiveNotificationResponse,
     );
@@ -99,24 +95,24 @@ class NotificationManager {
   Future<void> _requestRequiredPermissions() async {
     // Request general notification permission (Android 13+)
 
-    await Permission.notification.request();
+    if (Platform.isAndroid) {
+      await Permission.notification.request();
 
-    // Request SCHEDULE_EXACT_ALARM (CRITICAL for accurate alarms on Android 12+)
+      // Request SCHEDULE_EXACT_ALARM (CRITICAL for accurate alarms on Android 12+)
 
-    var exactAlarmStatus =
-        await Permission.scheduleExactAlarm.status;
+      var exactAlarmStatus = await Permission.scheduleExactAlarm.status;
 
-    if (!exactAlarmStatus.isGranted) {
-      debugPrint(
-          'Exact Alarm permission not granted. Requesting...');
+      if (!exactAlarmStatus.isGranted) {
+        debugPrint('Exact Alarm permission not granted. Requesting...');
 
-      var result = await Permission.scheduleExactAlarm.request();
+        var result = await Permission.scheduleExactAlarm.request();
 
-      if (!result.isGranted && result.isPermanentlyDenied) {
-        debugPrint(
-            'Exact Alarm permission permanently denied. Opening settings.');
+        if (!result.isGranted && result.isPermanentlyDenied) {
+          debugPrint(
+              'Exact Alarm permission permanently denied. Opening settings.');
 
-        openAppSettings();
+          openAppSettings();
+        }
       }
     }
   }
@@ -137,10 +133,8 @@ class NotificationManager {
   }) async {
     final actions = customActions ??
         <AndroidNotificationAction>[
-          const AndroidNotificationAction(
-              'DISMISS_ACTION', 'Dismiss'),
-          const AndroidNotificationAction(
-              'SNOOZE_ACTION', 'Snooze'),
+          const AndroidNotificationAction('DISMISS_ACTION', 'Dismiss'),
+          const AndroidNotificationAction('SNOOZE_ACTION', 'Snooze'),
         ];
 
     const String channelId = 'simple_action_channel';
@@ -151,8 +145,7 @@ class NotificationManager {
         AndroidNotificationDetails(
       channelId,
       channelName,
-      channelDescription:
-          'Channel for notifications with interactive buttons.',
+      channelDescription: 'Channel for notifications with interactive buttons.',
       importance: Importance.max,
       priority: Priority.high,
       actions: actions,
@@ -178,12 +171,14 @@ class NotificationManager {
     required int id,
     required DateTime dateTime,
     required String assetAudioPath,
+    required String title,
+    required String body,
     String stopButtonText = 'Stop Alarm',
     int maxDurationSeconds = 5,
   }) async {
     final notificationSettings = NotificationSettings(
-      title: '⏰ ALARM RINGING ⏰',
-      body: 'Tap the button to stop the sound.',
+      title: title,
+      body: body,
       stopButton: stopButtonText,
     );
 
@@ -210,39 +205,16 @@ class NotificationManager {
 
       volumeSettings: volumeSettings,
 
-      androidFullScreenIntent:
-          true, // Triggers a full-screen alert
+      androidFullScreenIntent: true, // Triggers a full-screen alert
 
       warningNotificationOnKill:
           true, // Helps prevent the OS from killing the background service
     );
 
     try {
-      final result =
-          await Alarm.set(alarmSettings: alarmSettings);
+      final result = await Alarm.set(alarmSettings: alarmSettings);
 
       log('Alarm ID $id set for $dateTime. Success: $result');
-
-      // if (result) {
-      //   // This timer runs even if the app is killed (due to the alarm package's background services)
-
-      //   Future.delayed(Duration(seconds: maxDurationSeconds),
-      //       () async {
-      //     // Before stopping, check if the alarm is still active/ringing.
-
-      //     // This prevents stopping an alarm that the user already manually dismissed.
-
-      //     final alarms = await Alarm.getAlarms();
-
-      //     if (alarms.any((a) => a.id == id)) {
-      //       final stopped = await stopAlarm(id);
-
-      //       if (stopped) {
-      //         log('Alarm ID $id automatically stopped after $maxDurationSeconds seconds.');
-      //       }
-      //     }
-      //   });
-      // }
 
       return result;
     } catch (e) {

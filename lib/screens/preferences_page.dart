@@ -11,11 +11,9 @@ import 'package:hydrify/constants/app_strings.dart';
 import 'package:hydrify/cubit/Preferences/preferences_cubit.dart';
 import 'package:hydrify/cubit/ble/ble_cubit.dart';
 import 'package:hydrify/cubit/bottle/bottle_data_cubit.dart';
-import 'package:hydrify/helpers/database_helper.dart';
 import 'package:hydrify/helpers/shared_pref_helper.dart';
 import 'package:hydrify/screens/ringtone_screen.dart';
 import 'package:hydrify/screens/user_info_daily_goal_screen.dart';
-import 'package:hydrify/screens/widgets/animated_bottom_navbar_widget.dart';
 // import 'package:hydrify/screens/widgets/FaQ_Widgets/faq_widgets.dart';
 // import 'package:hydrify/screens/widgets/navigation_helper.dart';
 import 'package:hydrify/screens/widgets/preferences_widgets/menu_item_tile.dart';
@@ -214,8 +212,8 @@ class PreferencesPage extends StatelessWidget {
                                 info: formattedGoal,
                                 iconpatharrow: "assets/arrow.png",
                                 onTap: () {
-                                  Navigator.push(
-                                    context,
+                                  Navigator.of(context, rootNavigator: true)
+                                      .push(
                                     MaterialPageRoute(
                                       builder: (_) => UserInfoDailyGoalScreen(
                                         waterGoal: goal.toDouble(),
@@ -495,13 +493,13 @@ class PreferencesPage extends StatelessWidget {
 
                     const Spacer(),
 
-                    Padding(
-                        padding: EdgeInsets.only(
-                          bottom: AppDimensions.dim5.h,
-                          right: AppDimensions.dim15.w,
-                          left: AppDimensions.dim15.w,
-                        ),
-                        child: AnimatedBottomNavBar()),
+                    // Padding(
+                    //     padding: EdgeInsets.only(
+                    //       bottom: AppDimensions.dim5.h,
+                    //       right: AppDimensions.dim15.w,
+                    //       left: AppDimensions.dim15.w,
+                    //     ),
+                    //     child: AnimatedBottomNavBar()),
                   ],
                 ),
               ),

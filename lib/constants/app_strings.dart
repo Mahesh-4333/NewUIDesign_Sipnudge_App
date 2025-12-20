@@ -137,7 +137,13 @@ class AppStrings {
   static const accountremove =
       "Permanently remove your account and data. Proceed with caution.";
   static const deleteaccount = "Delete Account";
-  static const congratulations =
+  static String congratulations(int waterGoalMl) {
+    final waterInLitres = (waterGoalMl / 1000).toStringAsFixed(1);
+
+    return "Congratulations! You've reached your goal of $waterInLitres L water intake. Keep up the incredible effort!";
+  }
+
+  static const congratulation =
       "Congratulations! You've reached goal of 350 water intake. Keep up the incredible effort!";
   static const levelreach = "You've Reached Level";
   static const customersupport = "Customer Support";

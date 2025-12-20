@@ -115,17 +115,6 @@ class ContactSupportPage extends StatelessWidget {
                   ],
                 ),
               ),
-
-              const Spacer(),
-
-              /// 🔹 Bottom Navigation
-              Padding(
-                  padding: EdgeInsets.only(
-                    bottom: AppDimensions.dim5.h,
-                    right: AppDimensions.dim15.w,
-                    left: AppDimensions.dim15.w,
-                  ),
-                  child: AnimatedBottomNavBar()),
             ],
           ),
         ),

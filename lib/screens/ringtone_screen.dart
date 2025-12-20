@@ -1,8 +1,8 @@
+import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter_svg/svg.dart';
 import 'package:hydrify/constants/app_colors.dart';
 import 'package:hydrify/constants/app_dimensions.dart';
@@ -11,7 +11,6 @@ import 'package:hydrify/constants/app_strings.dart';
 import 'package:hydrify/cubit/Preferences/preferences_cubit.dart';
 import 'package:hydrify/helpers/shared_pref_helper.dart'; // Make sure this points to SharedPrefsHelper file
 import 'package:hydrify/screens/widgets/ringtone_screen_widget/menuItemTileWidget.dart';
-import 'package:hydrify/screens/widgets/animated_bottom_navbar_widget.dart';
 
 class RingtoneScreen extends StatefulWidget {
   const RingtoneScreen({super.key});
@@ -175,14 +174,14 @@ class _RingtoneScreenState extends State<RingtoneScreen> {
                   const Spacer(),
 
                   /// Bottom Navbar
-                  Padding(
-                    padding: EdgeInsets.only(
-                      bottom: AppDimensions.dim5.h,
-                      right: AppDimensions.dim15.w,
-                      left: AppDimensions.dim15.w,
-                    ),
-                    child: const AnimatedBottomNavBar(),
-                  ),
+                  // Padding(
+                  //   padding: EdgeInsets.only(
+                  //     bottom: AppDimensions.dim5.h,
+                  //     right: AppDimensions.dim15.w,
+                  //     left: AppDimensions.dim15.w,
+                  //   ),
+                  //   child: const AnimatedBottomNavBar(),
+                  // ),
                 ],
               ),
             ),

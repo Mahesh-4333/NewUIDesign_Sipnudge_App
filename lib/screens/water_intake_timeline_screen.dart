@@ -1,5 +1,6 @@
 import 'dart:math';
 import 'dart:ui' as ui;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -8,7 +9,6 @@ import 'package:hydrify/constants/app_colors.dart';
 import 'package:hydrify/constants/app_dimensions.dart';
 import 'package:hydrify/constants/app_font_styles.dart';
 import 'package:hydrify/constants/app_strings.dart';
-import 'package:hydrify/cubit/ble/ble_cubit.dart';
 import 'package:hydrify/cubit/bottle/bottle_data_cubit.dart';
 import 'package:hydrify/cubit/hydration/hydration_cubit.dart';
 import 'package:hydrify/cubit/hydration/hydration_state.dart';
@@ -16,7 +16,6 @@ import 'package:hydrify/helpers/shared_pref_helper.dart';
 import 'package:hydrify/helpers/water_consumption_data_helper.dart';
 import 'package:hydrify/models/bottle_data.dart';
 import 'package:hydrify/models/hydration_entry.dart';
-import 'package:hydrify/screens/widgets/animated_bottom_navbar_widget.dart';
 import 'package:hydrify/services/ui_utils_service.dart';
 import 'package:intl/intl.dart';
 
@@ -98,7 +97,7 @@ class _WaterIntakeTimelineState extends State<WaterIntakeTimelineScreen> {
                 SizedBox(height: AppDimensions.dim20.h),
                 buildHydrationTable(context, state),
                 SizedBox(height: AppDimensions.dim20.h),
-                const AnimatedBottomNavBar(),
+                // const AnimatedBottomNavBar(),
               ],
             ),
           ),
@@ -191,7 +190,7 @@ class _WaterIntakeTimelineState extends State<WaterIntakeTimelineScreen> {
               ),
               child: ListView.separated(
                 padding: EdgeInsets.zero,
-                physics: const NeverScrollableScrollPhysics(),
+                // physics: const NeverScrollableScrollPhysics(),
                 shrinkWrap: false,
                 itemCount: state.entries.length,
                 separatorBuilder: (_, __) => Divider(
@@ -306,18 +305,18 @@ class _WaterIntakeTimelineState extends State<WaterIntakeTimelineScreen> {
                               mainAxisAlignment: MainAxisAlignment.end,
                               children: [
                                 Icon(
-                                  item.status == HydrationStatus.completed
+                                  item.waterDrank.toInt() >= item.amount.toInt()
                                       ? Icons.check
                                       : Icons.radio_button_unchecked,
                                   size: 16.sp,
-                                  color:
-                                      item.status == HydrationStatus.completed
-                                          ? Color(0xFF0CAE00)
-                                          : Color(0xFFC1B50F),
+                                  color: item.waterDrank.toInt() >=
+                                          item.amount.toInt()
+                                      ? Color(0xFF0CAE00)
+                                      : Color(0xFFC1B50F),
                                 ),
                                 SizedBox(width: 4.w),
                                 Text(
-                                  item.status == HydrationStatus.completed
+                                  item.waterDrank.toInt() >= item.amount.toInt()
                                       ? "Completed"
                                       : "Pending",
                                   textAlign: TextAlign.left,
@@ -328,10 +327,10 @@ class _WaterIntakeTimelineState extends State<WaterIntakeTimelineScreen> {
                                     fontVariations: [
                                       AppFontStyles.semiBoldFontVariation
                                     ],
-                                    color:
-                                        item.status == HydrationStatus.completed
-                                            ? Color(0xFF0CAE00)
-                                            : Color(0xFFC1B50F),
+                                    color: item.waterDrank.toInt() >=
+                                            item.amount.toInt()
+                                        ? Color(0xFF0CAE00)
+                                        : Color(0xFFC1B50F),
                                   ),
                                 ),
                               ],
@@ -517,7 +516,7 @@ class _WaterIntakeTimelineState extends State<WaterIntakeTimelineScreen> {
         .firstWhere((e) => e.slot == slot);
 
     showModalBottomSheet(
-      context: context,
+      context: Navigator.of(context, rootNavigator: true).context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (context) {
@@ -603,7 +602,9 @@ class _WaterIntakeTimelineState extends State<WaterIntakeTimelineScreen> {
                           ),
                         ),
                         GestureDetector(
-                          onTap: () => Navigator.pop(context),
+                          onTap: () =>
+                              Navigator.of(context, rootNavigator: true)
+                                  .pop(context),
                           child: Icon(
                             Icons.close,
                             color: AppColors.black,
@@ -682,7 +683,7 @@ class _WaterIntakeTimelineState extends State<WaterIntakeTimelineScreen> {
                               onTap: () => pickTime(false),
                               child: Container(
                                 padding: EdgeInsets.symmetric(
-                                    horizontal: 16.w, vertical: 14.h),
+                                    horizontal: 16.w, vertical: 10.h),
                                 decoration: BoxDecoration(
                                   color: const Color(0x90000000),
                                   borderRadius: BorderRadius.circular(50.r),
@@ -780,7 +781,8 @@ class _WaterIntakeTimelineState extends State<WaterIntakeTimelineScreen> {
                           ),
                         )
                       ],
-                    )
+                    ),
+                    // SizedBox(height: 100.h),
                   ],
                 ),
               ),
