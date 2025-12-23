@@ -119,7 +119,11 @@ class _SettingScreenState extends State<SettingScreen> {
 
       switch (title) {
         case AppStrings.personalinfo:
-          Navigator.pushNamed(context, '/personalinfo');
+          Navigator.of(context, rootNavigator: true).push(
+            MaterialPageRoute(
+              builder: (_) => UserInfoInputScreen(fromSettings: true),
+            ),
+          );
           break;
 
         case AppStrings.drinkreminder:
@@ -225,7 +229,6 @@ class _SettingScreenState extends State<SettingScreen> {
     showModalBottomSheet(
       context: Navigator.of(context, rootNavigator: true).context,
       isScrollControlled: true,
-      useRootNavigator: true,
       backgroundColor: Colors.transparent,
       barrierColor: AppColors.black.withOpacity(0),
       builder: (_) {

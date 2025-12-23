@@ -1,7 +1,7 @@
 #!/bin/sh
 # This is a generated file; do not edit or check into version control.
-export "FLUTTER_ROOT=/Users/amangairola/Downloads/flutter"
-export "FLUTTER_APPLICATION_PATH=/Users/amangairola/Desktop/Projects/flutterapps/NewUIDesign_Sipnudge_App"
+export "FLUTTER_ROOT=/Users/newtonsingh/development/flutter"
+export "FLUTTER_APPLICATION_PATH=/Users/newtonsingh/Desktop/Latest_SipnudgeApp/NewUIDesign_Sipnudge_App"
 export "COCOAPODS_PARALLEL_CODE_SIGN=true"
 export "FLUTTER_BUILD_DIR=build"
 export "FLUTTER_BUILD_NAME=0.0.1"
