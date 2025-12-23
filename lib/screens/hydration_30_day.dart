@@ -66,143 +66,150 @@ class _Hydration30DayPageState extends State<Hydration30DayPage> {
 
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<BleCubit, BleState>(
-      builder: (context, state) {
-        return Scaffold(
-          appBar: AppBar(
-            title: const Text('30-Day Hydration History'),
-            actions: [
-              IconButton(
-                icon: const Icon(Icons.refresh),
-                onPressed: _onRefresh,
-                tooltip: 'Refresh',
-              ),
-            ],
-          ),
-          body: _loading
-              ? const Center(child: CircularProgressIndicator())
-              : RefreshIndicator(
-                  onRefresh: _onRefresh,
-                  child: SingleChildScrollView(
-                    physics: const AlwaysScrollableScrollPhysics(),
-                    padding: const EdgeInsets.all(12),
-                    child: Card(
-                      elevation: 2,
-                      child: Padding(
-                        padding: const EdgeInsets.all(12),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Bottle data: ${state.bottleData}',
-                              style: TextStyle(fontWeight: FontWeight.w600),
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              'Slot data: ${state.slotData}',
-                              style: TextStyle(fontWeight: FontWeight.w600),
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              'Hydration data: ${state.historyData}',
-                              style: TextStyle(fontWeight: FontWeight.w600),
-                            ),
-                            const SizedBox(height: 8),
-                            const Text(
-                              'Date | Target (ml) | Consumed (ml) | %',
-                              style: TextStyle(fontWeight: FontWeight.w600),
-                            ),
-                            const SizedBox(height: 8),
-                            Table(
-                              columnWidths: const {
-                                0: FlexColumnWidth(2),
-                                1: FlexColumnWidth(1),
-                                2: FlexColumnWidth(1),
-                                3: FlexColumnWidth(1),
-                              },
-                              border: TableBorder.symmetric(
-                                inside: const BorderSide(
-                                    width: 0.5, color: Colors.grey),
-                                outside: const BorderSide(
-                                    width: 0.5, color: Colors.grey),
+    return BlocListener<BleCubit, BleState>(
+      listenWhen: (previous, current) =>
+          previous.historyData != current.historyData,
+      listener: (context, state) {
+        _onRefresh();
+      },
+      child: BlocBuilder<BleCubit, BleState>(
+        builder: (context, state) {
+          return Scaffold(
+            appBar: AppBar(
+              title: const Text('30-Day Hydration History'),
+              actions: [
+                IconButton(
+                  icon: const Icon(Icons.refresh),
+                  onPressed: _onRefresh,
+                  tooltip: 'Refresh',
+                ),
+              ],
+            ),
+            body: _loading
+                ? const Center(child: CircularProgressIndicator())
+                : RefreshIndicator(
+                    onRefresh: _onRefresh,
+                    child: SingleChildScrollView(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      padding: const EdgeInsets.all(12),
+                      child: Card(
+                        elevation: 2,
+                        child: Padding(
+                          padding: const EdgeInsets.all(12),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Bottle data: ${state.bottleData}',
+                                style: TextStyle(fontWeight: FontWeight.w600),
                               ),
-                              children: [
-                                // header row
-                                TableRow(
-                                  decoration: BoxDecoration(
-                                      color: Theme.of(context)
-                                          .dividerColor
-                                          .withOpacity(0.02)),
-                                  children: const [
-                                    Padding(
-                                      padding: EdgeInsets.all(8.0),
-                                      child: Text('Date',
-                                          style: TextStyle(
-                                              fontWeight: FontWeight.bold)),
-                                    ),
-                                    Padding(
-                                      padding: EdgeInsets.all(8.0),
-                                      child: Text('Target',
-                                          style: TextStyle(
-                                              fontWeight: FontWeight.bold)),
-                                    ),
-                                    Padding(
-                                      padding: EdgeInsets.all(8.0),
-                                      child: Text('Consumed',
-                                          style: TextStyle(
-                                              fontWeight: FontWeight.bold)),
-                                    ),
-                                    Padding(
-                                      padding: EdgeInsets.all(8.0),
-                                      child: Text('%',
-                                          style: TextStyle(
-                                              fontWeight: FontWeight.bold)),
-                                    ),
-                                  ],
+                              const SizedBox(height: 8),
+                              Text(
+                                'Slot data: ${state.slotData}',
+                                style: TextStyle(fontWeight: FontWeight.w600),
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                'Hydration data: ${state.historyData}',
+                                style: TextStyle(fontWeight: FontWeight.w600),
+                              ),
+                              const SizedBox(height: 8),
+                              const Text(
+                                'Date | Target (ml) | Consumed (ml) | %',
+                                style: TextStyle(fontWeight: FontWeight.w600),
+                              ),
+                              const SizedBox(height: 8),
+                              Table(
+                                columnWidths: const {
+                                  0: FlexColumnWidth(2),
+                                  1: FlexColumnWidth(1),
+                                  2: FlexColumnWidth(1),
+                                  3: FlexColumnWidth(1),
+                                },
+                                border: TableBorder.symmetric(
+                                  inside: const BorderSide(
+                                      width: 0.5, color: Colors.grey),
+                                  outside: const BorderSide(
+                                      width: 0.5, color: Colors.grey),
                                 ),
-                                // data rows
-                                ..._rows.map((r) {
-                                  final pct = r.target > 0
-                                      ? ((r.consumed / r.target) * 100)
-                                          .clamp(0, 999)
-                                          .toDouble()
-                                      : 0.0;
-                                  return TableRow(
-                                    children: [
+                                children: [
+                                  // header row
+                                  TableRow(
+                                    decoration: BoxDecoration(
+                                        color: Theme.of(context)
+                                            .dividerColor
+                                            .withOpacity(0.02)),
+                                    children: const [
                                       Padding(
-                                        padding: const EdgeInsets.all(8.0),
-                                        child: Text(_dateFmt.format(r.date)),
+                                        padding: EdgeInsets.all(8.0),
+                                        child: Text('Date',
+                                            style: TextStyle(
+                                                fontWeight: FontWeight.bold)),
                                       ),
                                       Padding(
-                                        padding: const EdgeInsets.all(8.0),
-                                        child:
-                                            Text(r.target.toStringAsFixed(0)),
+                                        padding: EdgeInsets.all(8.0),
+                                        child: Text('Target',
+                                            style: TextStyle(
+                                                fontWeight: FontWeight.bold)),
                                       ),
                                       Padding(
-                                        padding: const EdgeInsets.all(8.0),
-                                        child:
-                                            Text(r.consumed.toStringAsFixed(0)),
+                                        padding: EdgeInsets.all(8.0),
+                                        child: Text('Consumed',
+                                            style: TextStyle(
+                                                fontWeight: FontWeight.bold)),
                                       ),
                                       Padding(
-                                        padding: const EdgeInsets.all(8.0),
-                                        child: Text(r.target > 0
-                                            ? '${pct.toStringAsFixed(0)}%'
-                                            : '-'),
+                                        padding: EdgeInsets.all(8.0),
+                                        child: Text('%',
+                                            style: TextStyle(
+                                                fontWeight: FontWeight.bold)),
                                       ),
                                     ],
-                                  );
-                                }),
-                              ],
-                            ),
-                            const SizedBox(height: 12),
-                          ],
+                                  ),
+                                  // data rows
+                                  ..._rows.map((r) {
+                                    final pct = r.target > 0
+                                        ? ((r.consumed / r.target) * 100)
+                                            .clamp(0, 999)
+                                            .toDouble()
+                                        : 0.0;
+                                    return TableRow(
+                                      children: [
+                                        Padding(
+                                          padding: const EdgeInsets.all(8.0),
+                                          child: Text(_dateFmt.format(r.date)),
+                                        ),
+                                        Padding(
+                                          padding: const EdgeInsets.all(8.0),
+                                          child:
+                                              Text(r.target.toStringAsFixed(0)),
+                                        ),
+                                        Padding(
+                                          padding: const EdgeInsets.all(8.0),
+                                          child: Text(
+                                              r.consumed.toStringAsFixed(0)),
+                                        ),
+                                        Padding(
+                                          padding: const EdgeInsets.all(8.0),
+                                          child: Text(r.target > 0
+                                              ? '${pct.toStringAsFixed(0)}%'
+                                              : '-'),
+                                        ),
+                                      ],
+                                    );
+                                  }),
+                                ],
+                              ),
+                              const SizedBox(height: 12),
+                            ],
+                          ),
                         ),
                       ),
                     ),
                   ),
-                ),
-        );
-      },
+          );
+        },
+      ),
     );
   }
 

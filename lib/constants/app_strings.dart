@@ -184,7 +184,7 @@ class AppStrings {
   static const yes = "Yes";
   static const no = "No";
   static const loggedOutSuccessfully = "Logged out successfully";
-  static const newtonsingh = "Newton Singh";
+  static const newtonsingh = "User";
   static const searchquestions = "Search questions...";
   static const question = "question";
   static const answer = "answer";

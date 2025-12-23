@@ -4,7 +4,8 @@ import 'package:equatable/equatable.dart';
 part 'bottom_nav_state.dart';
 
 class BottomNavCubit extends Cubit<BottomNavState> {
-  BottomNavCubit() : super(const BottomNavState());
+  BottomNavCubit()
+      : super(const BottomNavState(selectedTab: BottomNavTab.home));
 
   void selectTab(BottomNavTab tab) {
     if (state.selectedTab != tab && !state.isLoading) {
@@ -13,6 +14,11 @@ class BottomNavCubit extends Cubit<BottomNavState> {
         previousTab: state.selectedTab,
       ));
     }
+  }
+
+  /// 🔥 ADD THIS
+  void reset() {
+    emit(const BottomNavState(selectedTab: BottomNavTab.home));
   }
 
   void selectTabByIndex(int index) {

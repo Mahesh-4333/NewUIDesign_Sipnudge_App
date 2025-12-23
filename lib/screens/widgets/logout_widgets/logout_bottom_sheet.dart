@@ -2,11 +2,13 @@ import 'dart:ui';
 
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:hydrify/constants/app_colors.dart';
 import 'package:hydrify/constants/app_dimensions.dart';
 import 'package:hydrify/constants/app_font_styles.dart';
 import 'package:hydrify/constants/app_strings.dart';
+import 'package:hydrify/cubit/bottom_nav/bottom_nav_cubit.dart';
 import 'package:hydrify/screens/auth/local_auth_screen.dart';
 import 'package:hydrify/services/user_manager.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -156,7 +158,7 @@ class LogoutBottomSheet extends StatelessWidget {
                               await prefs.clear();
 
                               if (!context.mounted) return;
-
+                              context.read<BottomNavCubit>().reset();
                               // Close the bottom sheet (optional but nice)
                               Navigator.of(context, rootNavigator: true).pop();
 

@@ -1,3 +1,4 @@
+
 import 'dart:developer';
 import 'dart:ui';
 
@@ -87,16 +88,18 @@ class _HomeScreenState extends State<HomeScreen> {
       // 🔹 read current bottle volume from cubit
       final bottleState = context.read<BottleDataCubit>().state;
       final double currentVolume = bottleState.volume;
-      if (hasConnectedBefore) {
-        context.read<BleCubit>().start();
-      } else {
-        if (currentVolume < 600) {
-          tryShowStartJourneyDialog(context);
-        } else {
-          context.read<BleCubit>().start();
-          await prefs.setBool('ble_connected_once', true);
-        }
-      }
+      await context.read<BleCubit>().start();
+
+      // if (hasConnectedBefore) {
+      //   context.read<BleCubit>().start();
+      // } else {
+      //   if (currentVolume < 600) {
+      //     // tryShowStartJourneyDialog(context);
+      //   } else {
+      //     context.read<BleCubit>().start();
+      //     await prefs.setBool('ble_connected_once', true);
+      //   }
+      // }
     });
   }
 
@@ -274,6 +277,13 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     return BlocListener<BleCubit, BleState>(
       listener: (context, state) async {
+        print("=========");
+        print(state.status == BleStatus.scanning);
+        print(state.scannedDevices.isNotEmpty);
+        print(!_isPickerShown);
+        print(state.isFirstConnection);
+        print("=========");
+
         if (state.status == BleStatus.scanning &&
             state.scannedDevices.isNotEmpty &&
             !_isPickerShown &&
@@ -282,6 +292,7 @@ class _HomeScreenState extends State<HomeScreen> {
           log("✅ Showing picker...");
 
           WidgetsBinding.instance.addPostFrameCallback((_) {
+            print("Started 12");
             showDialog(
               context: context,
               barrierDismissible: false,
@@ -315,10 +326,10 @@ class _HomeScreenState extends State<HomeScreen> {
           });
         }
 
-        if (state.status == BleStatus.connected &&
-            ((state.volume ?? 0) < 600)) {
-          tryShowStartJourneyDialog(context);
-        }
+        // if (state.status == BleStatus.connected &&
+        //     ((state.volume ?? 0) < 600)) {
+        //   tryShowStartJourneyDialog(context);
+        // }
       },
       child: Scaffold(
         body: Container(
@@ -387,6 +398,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     return context
                         .read<BottleDataCubit>()
                         .getHistoryForDateRange(startDate, endDate);
+                        
                   }(), builder: (context, snapshot) {
                     double completionPercent = 0;
                     double waterVolumeConsumed = 0;
@@ -399,6 +411,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       completionPercent = WaterConsumptionCalculator
                           .calculateCompletionPercentage(
                               waterVolumeConsumed, userGoalLiters * 1000);
+
                     }
                     return _buildGoalText(completionPercent);
                   });

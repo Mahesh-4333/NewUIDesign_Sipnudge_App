@@ -61,33 +61,33 @@ class BottleDataCubit extends Cubit<BottleDataState> {
     final newPercent = bleState.percent ?? 0;
     final newBattery = bleState.battery ?? 0;
 
-    if ((bleState.volume ?? 0.0) > 600) {
-      final newData = BottleData(
-        liquidVolume: newVolume,
-        liquidPercent: newPercent,
-        battery: newBattery,
-        timestamp: DateTime.now(),
-      );
+    // if ((bleState.volume ?? 0.0) > 600) {
+    final newData = BottleData(
+      liquidVolume: newVolume,
+      liquidPercent: newPercent,
+      battery: newBattery,
+      timestamp: DateTime.now(),
+    );
 
-      final db = await _dbHelper.database;
-      await db.insert(
-        DatabaseHelper.tableName,
-        newData.toMap(),
-        conflictAlgorithm: ConflictAlgorithm.replace,
-      );
+    final db = await _dbHelper.database;
+    await db.insert(
+      DatabaseHelper.tableName,
+      newData.toMap(),
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
 
-      List<BottleData> pageData = state.currentPage == 0
-          ? await fetchPageInternal(0)
-          : state.currentPageData;
+    List<BottleData> pageData = state.currentPage == 0
+        ? await fetchPageInternal(0)
+        : state.currentPageData;
 
-      emit(state.copyWith(
-        volume: newVolume,
-        volumePercent: newPercent,
-        battery: newBattery,
-        currentPage: state.currentPage,
-        currentPageData: pageData,
-      ));
-    }
+    emit(state.copyWith(
+      volume: newVolume,
+      volumePercent: newPercent,
+      battery: newBattery,
+      currentPage: state.currentPage,
+      currentPageData: pageData,
+    ));
+    // }
   }
 
   Future<List<BottleData>> fetchPage(int page) async {

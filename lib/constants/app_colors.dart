@@ -57,6 +57,8 @@ class AppColors {
   static const raisinblack = Color(0xFF212121);
   static const mangoorange = Color(0xFFFC813A);
   static const lightSalmon = Color(0xFFFFA876);
+  static const colorfb8e00 = Color(0xFFFB8E00);
+
   static const stopButtonColor = Color(0xFFFFA54B);
   static const salmonwithopacity22 = Color(0x22EA966F);
   static const blackwithopacity25 = Color(0x25000000);
