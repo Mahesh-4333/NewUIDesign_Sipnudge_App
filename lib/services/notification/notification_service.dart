@@ -140,7 +140,7 @@ class NotificationService {
           sound: fileName,
           presentAlert: true,
           presentSound: !isSilent,
-          subtitle: "Swipe up to stop the reminder",
+          // subtitle: "Swipe up to stop the reminder",
           interruptionLevel: isSilent
               ? InterruptionLevel.passive
               : InterruptionLevel.timeSensitive,

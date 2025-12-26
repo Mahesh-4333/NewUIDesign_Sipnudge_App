@@ -42,7 +42,6 @@ class _UserInfoDailyGoalScreenState extends State<UserInfoDailyGoalScreen> {
   List<double> tickValues = [];
   double widgetMaxGoal = 0;
 
-
   bool isButtonClicked = false;
 
   @override
@@ -285,38 +284,24 @@ class _UserInfoDailyGoalScreenState extends State<UserInfoDailyGoalScreen> {
                 ),
               ),
             ),
-  
-
           ],
         ),
       ),
       bottomNavigationBar: Container(
         height: AppDimensions.dim60,
-        margin: EdgeInsets.only(
-          bottom: 130.h,
-          left: AppDimensions.defaultPadding.w,
-          right: AppDimensions.defaultPadding.w,
-        ),
         child: Column(
+          mainAxisAlignment: MainAxisAlignment.start,
           children: [
-                      Text(
-                  "Google Calendar signin might be required \nFor smart snooze and calendar sync ",
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    
-                    color: AppColors.blueGradient,
-                    fontSize: AppFontStyles.fontSize_16,
-                    fontFamily: AppFontStyles.urbanistFontFamily,
-                    fontVariations: [AppFontStyles.semiBoldFontVariation],
-                  ),
-                ),
             AuthButton(
                 text: AppStrings.letsHitHydrationGoals,
                 color: AppColors.blueGradient,
                 areTwoItems: false,
                 onTap: () async {
-                  if(isButtonClicked == true)
-                  {
+                  var response = await showGoogleCalendarDialog();
+                  if (response == false) {
+                    return;
+                  }
+                  if (isButtonClicked == true) {
                     return;
                   }
                   setState(() {
@@ -327,13 +312,14 @@ class _UserInfoDailyGoalScreenState extends State<UserInfoDailyGoalScreen> {
                       .read<UserInfoCubit>()
                       .saveUser(context.read<UserInfoCubit>().state);
                   await SharedPrefsHelper.setPersonalInfoSubmitted(true);
-                  await SharedPrefsHelper.setWaterGoal(convertedWaterGoal.toInt());
-            
+                  await SharedPrefsHelper.setWaterGoal(
+                      convertedWaterGoal.toInt());
+
                   final slots = generateHydrationSlots(convertedWaterGoal);
                   for (var slot in slots) {
                     log("Slot: ${slot.slot.label}, Water to drink: ${slot.amount} mL");
                   }
-            
+
                   final dbHelper = DatabaseHelper();
                   await dbHelper.clearHydrationSlots();
                   for (var slot in slots) {
@@ -343,9 +329,11 @@ class _UserInfoDailyGoalScreenState extends State<UserInfoDailyGoalScreen> {
                   }
                   await context.read<BleCubit>().queueHydrationSlots(slots);
                   await NotificationService().resetAllHydrationReminders(slots);
-                  UiUtilsService.dismissLoading(context,);
+                  UiUtilsService.dismissLoading(
+                    context,
+                  );
                   setState(() {
-                    isButtonClicked= false;
+                    isButtonClicked = false;
                   });
                   Navigator.pushAndRemoveUntil(
                       context,
@@ -411,5 +399,50 @@ class _UserInfoDailyGoalScreenState extends State<UserInfoDailyGoalScreen> {
     });
 
     return slots;
+  }
+
+  Future<bool?> showGoogleCalendarDialog() async {
+    return await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                "Action Required",
+                textAlign: TextAlign.left,
+                style: TextStyle(
+                  color: AppColors.black,
+                  fontSize: AppFontStyles.fontSize_16,
+                  fontFamily: AppFontStyles.urbanistFontFamily,
+                  fontVariations: [AppFontStyles.boldFontVariation],
+                ),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                "Google Calendar sign-in might be required for smart snooze and calendar sync",
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: AppColors.blueGradient,
+                  fontSize: AppFontStyles.fontSize_16,
+                  fontFamily: AppFontStyles.urbanistFontFamily,
+                  fontVariations: [AppFontStyles.semiBoldFontVariation],
+                ),
+              ),
+              const SizedBox(height: 24),
+              AuthButton(
+                text: "I give my consent",
+                color: AppColors.blueGradient,
+                areTwoItems: false,
+                onTap: () => Navigator.pop(context, true),
+              )
+            ],
+          ),
+        );
+      },
+    );
   }
 }
