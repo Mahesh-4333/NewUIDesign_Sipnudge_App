@@ -22,12 +22,10 @@
     "LD_RUNPATH_SEARCH_PATHS": "/usr/lib/swift"
   },
   "dependencies": {
-    "Flutter": [
-
-    ]
+    "Flutter": []
   },
   "platforms": {
-    "ios": "13.0"
+    "ios": "12.0"
   },
   "pod_target_xcconfig": {
     "DEFINES_MODULE": "YES"

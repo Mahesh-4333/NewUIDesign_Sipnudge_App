@@ -18,21 +18,17 @@
   "source_files": "local_auth_darwin/Sources/local_auth_darwin/**/*.swift",
   "ios": {
     "dependencies": {
-      "Flutter": [
-
-      ]
+      "Flutter": []
     }
   },
   "osx": {
     "dependencies": {
-      "FlutterMacOS": [
-
-      ]
+      "FlutterMacOS": []
     }
   },
   "platforms": {
-    "ios": "13.0",
-    "osx": "10.15"
+    "ios": "12.0",
+    "osx": "10.14"
   },
   "pod_target_xcconfig": {
     "DEFINES_MODULE": "YES"

@@ -17,9 +17,7 @@
   "source_files": "flutter_local_notifications/Sources/flutter_local_notifications/**/*.{h,m}",
   "public_header_files": "flutter_local_notifications/Sources/flutter_local_notifications/include/**/*.h",
   "dependencies": {
-    "Flutter": [
-
-    ]
+    "Flutter": []
   },
   "resource_bundles": {
     "flutter_local_notifications_privacy": [

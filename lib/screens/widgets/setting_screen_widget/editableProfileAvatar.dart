@@ -52,7 +52,7 @@ class _EditableProfileAvatarState extends State<EditableProfileAvatar> {
 
   Future<void> _pickImage() async {
     showModalBottomSheet(
-      context: context,
+      context: Navigator.of(context, rootNavigator: true).context,
       backgroundColor: Colors.transparent,
       builder: (_) {
         return Container(
@@ -122,7 +122,7 @@ class _EditableProfileAvatarState extends State<EditableProfileAvatar> {
                     if (pickedFile != null) {
                       await _saveImageLocally(File(pickedFile.path));
                     }
-                    Navigator.pop(context);
+                    //Navigator.pop(context);
                   },
                 ),
               ],

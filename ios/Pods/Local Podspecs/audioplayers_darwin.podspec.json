@@ -18,16 +18,12 @@
   "source_files": "audioplayers_darwin/Sources/audioplayers_darwin/**/*.swift",
   "ios": {
     "dependencies": {
-      "Flutter": [
-
-      ]
+      "Flutter": []
     }
   },
   "osx": {
     "dependencies": {
-      "FlutterMacOS": [
-
-      ]
+      "FlutterMacOS": []
     }
   },
   "platforms": {

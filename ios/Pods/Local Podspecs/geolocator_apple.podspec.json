@@ -19,16 +19,12 @@
   "module_map": "geolocator_apple/Sources/geolocator_apple/include/GeolocatorPlugin.modulemap",
   "ios": {
     "dependencies": {
-      "Flutter": [
-
-      ]
+      "Flutter": []
     }
   },
   "osx": {
     "dependencies": {
-      "FlutterMacOS": [
-
-      ]
+      "FlutterMacOS": []
     }
   },
   "platforms": {

@@ -254,7 +254,8 @@ class _AchievementsBadgeScreenState extends State<AchievementsBadgeScreen> {
 
   Widget getCurrentLevelBadge(String level) {
     final int currentLevelNum = int.tryParse(level) ?? 0;
-    final bool isCurrentLevelUnlocked = currentLevelNum <= _currentLevel;
+    final bool isCurrentLevelUnlocked =
+        currentLevelNum > 0 && currentLevelNum <= _currentLevel;
 
     return SizedBox(
       width: AppDimensions.dim330.w,
@@ -271,8 +272,12 @@ class _AchievementsBadgeScreenState extends State<AchievementsBadgeScreen> {
                   isCurrentLevelUnlocked
                       ? "assets/images/goals_new_img.png" // Unlocked - colored badge
                       : "assets/images/level_lock_img1.png", // Locked - grey badge
-                  width: AppDimensions.dim330.w,
-                  height: AppDimensions.dim320.h,
+                  width: isCurrentLevelUnlocked
+                      ? AppDimensions.dim330.w
+                      : AppDimensions.dim280.w,
+                  height: isCurrentLevelUnlocked
+                      ? AppDimensions.dim320.h
+                      : AppDimensions.dim280.h,
                   fit: BoxFit.contain,
                 ),
               ),

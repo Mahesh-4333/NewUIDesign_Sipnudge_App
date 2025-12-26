@@ -11,36 +11,10 @@
 		331C808B294A63AB00263BE5 /* RunnerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 331C807B294A618700263BE5 /* RunnerTests.swift */; };
 		3B3967161E833CAA004F5970 /* AppFrameworkInfo.plist in Resources */ = {isa = PBXBuildFile; fileRef = 3B3967151E833CAA004F5970 /* AppFrameworkInfo.plist */; };
 		74858FAF1ED2DC5600515810 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 74858FAE1ED2DC5600515810 /* AppDelegate.swift */; };
-		82EA801B2EF1926400DFEF9C /* ringtone3.caf in Resources */ = {isa = PBXBuildFile; fileRef = 82EA80102EF1926400DFEF9C /* ringtone3.caf */; };
-		82EA801C2EF1926400DFEF9C /* ringtone5.caf in Resources */ = {isa = PBXBuildFile; fileRef = 82EA80122EF1926400DFEF9C /* ringtone5.caf */; };
-		82EA801D2EF1926400DFEF9C /* ringtone2.caf in Resources */ = {isa = PBXBuildFile; fileRef = 82EA800F2EF1926400DFEF9C /* ringtone2.caf */; };
-		82EA801E2EF1926400DFEF9C /* ringtone10.caf in Resources */ = {isa = PBXBuildFile; fileRef = 82EA80172EF1926400DFEF9C /* ringtone10.caf */; };
-		82EA801F2EF1926400DFEF9C /* ringtone8.caf in Resources */ = {isa = PBXBuildFile; fileRef = 82EA80152EF1926400DFEF9C /* ringtone8.caf */; };
-		82EA80202EF1926400DFEF9C /* ringtone6.caf in Resources */ = {isa = PBXBuildFile; fileRef = 82EA80132EF1926400DFEF9C /* ringtone6.caf */; };
-		82EA80212EF1926400DFEF9C /* ringtone9.caf in Resources */ = {isa = PBXBuildFile; fileRef = 82EA80162EF1926400DFEF9C /* ringtone9.caf */; };
-		82EA80222EF1926400DFEF9C /* ringtone12.caf in Resources */ = {isa = PBXBuildFile; fileRef = 82EA80192EF1926400DFEF9C /* ringtone12.caf */; };
-		82EA80232EF1926400DFEF9C /* ringtone1.caf in Resources */ = {isa = PBXBuildFile; fileRef = 82EA800E2EF1926400DFEF9C /* ringtone1.caf */; };
-		82EA80242EF1926400DFEF9C /* ringtone4.caf in Resources */ = {isa = PBXBuildFile; fileRef = 82EA80112EF1926400DFEF9C /* ringtone4.caf */; };
-		82EA80252EF1926400DFEF9C /* ringtone7.caf in Resources */ = {isa = PBXBuildFile; fileRef = 82EA80142EF1926400DFEF9C /* ringtone7.caf */; };
-		82EA80262EF1926400DFEF9C /* ringtone11.caf in Resources */ = {isa = PBXBuildFile; fileRef = 82EA80182EF1926400DFEF9C /* ringtone11.caf */; };
-		82EA80272EF1926400DFEF9C /* ringtone13.caf in Resources */ = {isa = PBXBuildFile; fileRef = 82EA801A2EF1926400DFEF9C /* ringtone13.caf */; };
 		97C146FC1CF9000F007C117D /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 97C146FA1CF9000F007C117D /* Main.storyboard */; };
 		97C146FE1CF9000F007C117D /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 97C146FD1CF9000F007C117D /* Assets.xcassets */; };
 		97C147011CF9000F007C117D /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 97C146FF1CF9000F007C117D /* LaunchScreen.storyboard */; };
 		A3F1CBDC8D1E0EDB5879EB69 /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = AC186EB2AF8A84EB514AFA7C /* GoogleService-Info.plist */; };
-		C20563B02EDC7026001381D2 /* ringtone8.wav in Resources */ = {isa = PBXBuildFile; fileRef = C20563A72EDC7023001381D2 /* ringtone8.wav */; };
-		C20563B22EDC7026001381D2 /* ringtone6.wav in Resources */ = {isa = PBXBuildFile; fileRef = C20563A92EDC7024001381D2 /* ringtone6.wav */; };
-		C20563B32EDC7026001381D2 /* ringtone9.wav in Resources */ = {isa = PBXBuildFile; fileRef = C20563AA2EDC7024001381D2 /* ringtone9.wav */; };
-		C20563B42EDC7026001381D2 /* ringtone5.wav in Resources */ = {isa = PBXBuildFile; fileRef = C20563AB2EDC7024001381D2 /* ringtone5.wav */; };
-		C20563B52EDC7026001381D2 /* ringtone7.wav in Resources */ = {isa = PBXBuildFile; fileRef = C20563AC2EDC7025001381D2 /* ringtone7.wav */; };
-		C20563B62EDC7026001381D2 /* ringtone3.wav in Resources */ = {isa = PBXBuildFile; fileRef = C20563AD2EDC7025001381D2 /* ringtone3.wav */; };
-		C20563B72EDC7026001381D2 /* ringtone11.wav in Resources */ = {isa = PBXBuildFile; fileRef = C20563AE2EDC7025001381D2 /* ringtone11.wav */; };
-		C20563B82EDC7026001381D2 /* ringtone4.wav in Resources */ = {isa = PBXBuildFile; fileRef = C20563AF2EDC7026001381D2 /* ringtone4.wav */; };
-		C20563CC2EDC705A001381D2 /* ringtone2.wav in Resources */ = {isa = PBXBuildFile; fileRef = C20563CB2EDC705A001381D2 /* ringtone2.wav */; };
-		C20563CE2EDC70CC001381D2 /* ringtone1.wav in Resources */ = {isa = PBXBuildFile; fileRef = C20563CD2EDC70CB001381D2 /* ringtone1.wav */; };
-		C20563D22EDC72A9001381D2 /* ringtone12.wav in Resources */ = {isa = PBXBuildFile; fileRef = C20563CF2EDC72A8001381D2 /* ringtone12.wav */; };
-		C20563D32EDC72A9001381D2 /* ringtone13.wav in Resources */ = {isa = PBXBuildFile; fileRef = C20563D02EDC72A9001381D2 /* ringtone13.wav */; };
-		C20563D42EDC72A9001381D2 /* ringtone10.wav in Resources */ = {isa = PBXBuildFile; fileRef = C20563D12EDC72A9001381D2 /* ringtone10.wav */; };
 		E9979AB75F53A3BC0F568B5B /* Pods_RunnerTests.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = B9FC546BD4669EE8A51DA1E9 /* Pods_RunnerTests.framework */; };
 		EF2F8A4E58F46B40A832433B /* Pods_Runner.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A3043CF162EE0DC42906ADD3 /* Pods_Runner.framework */; };
 /* End PBXBuildFile section */
@@ -81,19 +55,6 @@
 		7775490908B5F89ACA606F0D /* Pods-RunnerTests.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-RunnerTests.release.xcconfig"; path = "Target Support Files/Pods-RunnerTests/Pods-RunnerTests.release.xcconfig"; sourceTree = "<group>"; };
 		7AFA3C8E1D35360C0083082E /* Release.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; name = Release.xcconfig; path = Flutter/Release.xcconfig; sourceTree = "<group>"; };
 		82B6972DF58A6A2E981E6ED1 /* Pods-Runner.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Runner.debug.xcconfig"; path = "Target Support Files/Pods-Runner/Pods-Runner.debug.xcconfig"; sourceTree = "<group>"; };
-		82EA800E2EF1926400DFEF9C /* ringtone1.caf */ = {isa = PBXFileReference; lastKnownFileType = file; path = ringtone1.caf; sourceTree = "<group>"; };
-		82EA800F2EF1926400DFEF9C /* ringtone2.caf */ = {isa = PBXFileReference; lastKnownFileType = file; path = ringtone2.caf; sourceTree = "<group>"; };
-		82EA80102EF1926400DFEF9C /* ringtone3.caf */ = {isa = PBXFileReference; lastKnownFileType = file; path = ringtone3.caf; sourceTree = "<group>"; };
-		82EA80112EF1926400DFEF9C /* ringtone4.caf */ = {isa = PBXFileReference; lastKnownFileType = file; path = ringtone4.caf; sourceTree = "<group>"; };
-		82EA80122EF1926400DFEF9C /* ringtone5.caf */ = {isa = PBXFileReference; lastKnownFileType = file; path = ringtone5.caf; sourceTree = "<group>"; };
-		82EA80132EF1926400DFEF9C /* ringtone6.caf */ = {isa = PBXFileReference; lastKnownFileType = file; path = ringtone6.caf; sourceTree = "<group>"; };
-		82EA80142EF1926400DFEF9C /* ringtone7.caf */ = {isa = PBXFileReference; lastKnownFileType = file; path = ringtone7.caf; sourceTree = "<group>"; };
-		82EA80152EF1926400DFEF9C /* ringtone8.caf */ = {isa = PBXFileReference; lastKnownFileType = file; path = ringtone8.caf; sourceTree = "<group>"; };
-		82EA80162EF1926400DFEF9C /* ringtone9.caf */ = {isa = PBXFileReference; lastKnownFileType = file; path = ringtone9.caf; sourceTree = "<group>"; };
-		82EA80172EF1926400DFEF9C /* ringtone10.caf */ = {isa = PBXFileReference; lastKnownFileType = file; path = ringtone10.caf; sourceTree = "<group>"; };
-		82EA80182EF1926400DFEF9C /* ringtone11.caf */ = {isa = PBXFileReference; lastKnownFileType = file; path = ringtone11.caf; sourceTree = "<group>"; };
-		82EA80192EF1926400DFEF9C /* ringtone12.caf */ = {isa = PBXFileReference; lastKnownFileType = file; path = ringtone12.caf; sourceTree = "<group>"; };
-		82EA801A2EF1926400DFEF9C /* ringtone13.caf */ = {isa = PBXFileReference; lastKnownFileType = file; path = ringtone13.caf; sourceTree = "<group>"; };
 		83D12FBE2D57E82E004D7BAE /* Runner.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Runner.entitlements; sourceTree = "<group>"; };
 		9740EEB21CF90195004384FC /* Debug.xcconfig */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xcconfig; name = Debug.xcconfig; path = Flutter/Debug.xcconfig; sourceTree = "<group>"; };
 		9740EEB31CF90195004384FC /* Generated.xcconfig */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xcconfig; name = Generated.xcconfig; path = Flutter/Generated.xcconfig; sourceTree = "<group>"; };
@@ -107,19 +68,6 @@
 		AC186EB2AF8A84EB514AFA7C /* GoogleService-Info.plist */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.xml; name = "GoogleService-Info.plist"; path = "Runner/GoogleService-Info.plist"; sourceTree = "<group>"; };
 		AC33B00A221732A1F0F676B7 /* Pods-Runner.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Runner.release.xcconfig"; path = "Target Support Files/Pods-Runner/Pods-Runner.release.xcconfig"; sourceTree = "<group>"; };
 		B9FC546BD4669EE8A51DA1E9 /* Pods_RunnerTests.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_RunnerTests.framework; sourceTree = BUILT_PRODUCTS_DIR; };
-		C20563A72EDC7023001381D2 /* ringtone8.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = ringtone8.wav; sourceTree = "<group>"; };
-		C20563A92EDC7024001381D2 /* ringtone6.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = ringtone6.wav; sourceTree = "<group>"; };
-		C20563AA2EDC7024001381D2 /* ringtone9.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = ringtone9.wav; sourceTree = "<group>"; };
-		C20563AB2EDC7024001381D2 /* ringtone5.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = ringtone5.wav; sourceTree = "<group>"; };
-		C20563AC2EDC7025001381D2 /* ringtone7.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = ringtone7.wav; sourceTree = "<group>"; };
-		C20563AD2EDC7025001381D2 /* ringtone3.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = ringtone3.wav; sourceTree = "<group>"; };
-		C20563AE2EDC7025001381D2 /* ringtone11.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = ringtone11.wav; sourceTree = "<group>"; };
-		C20563AF2EDC7026001381D2 /* ringtone4.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = ringtone4.wav; sourceTree = "<group>"; };
-		C20563CB2EDC705A001381D2 /* ringtone2.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = ringtone2.wav; sourceTree = "<group>"; };
-		C20563CD2EDC70CB001381D2 /* ringtone1.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = ringtone1.wav; sourceTree = "<group>"; };
-		C20563CF2EDC72A8001381D2 /* ringtone12.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = ringtone12.wav; sourceTree = "<group>"; };
-		C20563D02EDC72A9001381D2 /* ringtone13.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = ringtone13.wav; sourceTree = "<group>"; };
-		C20563D12EDC72A9001381D2 /* ringtone10.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = ringtone10.wav; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -374,13 +322,9 @@
 			inputFileListPaths = (
 				"${PODS_ROOT}/Target Support Files/Pods-Runner/Pods-Runner-resources-${CONFIGURATION}-input-files.xcfilelist",
 			);
-			inputPaths = (
-			);
 			name = "[CP] Copy Pods Resources";
 			outputFileListPaths = (
 				"${PODS_ROOT}/Target Support Files/Pods-Runner/Pods-Runner-resources-${CONFIGURATION}-output-files.xcfilelist",
-			);
-			outputPaths = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
@@ -417,13 +361,9 @@
 			inputFileListPaths = (
 				"${PODS_ROOT}/Target Support Files/Pods-Runner/Pods-Runner-frameworks-${CONFIGURATION}-input-files.xcfilelist",
 			);
-			inputPaths = (
-			);
 			name = "[CP] Embed Pods Frameworks";
 			outputFileListPaths = (
 				"${PODS_ROOT}/Target Support Files/Pods-Runner/Pods-Runner-frameworks-${CONFIGURATION}-output-files.xcfilelist",
-			);
-			outputPaths = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
@@ -557,7 +497,7 @@
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 6;
-				DEVELOPMENT_TEAM = 44GUMW823C;
+				DEVELOPMENT_TEAM = GY75D7JV5W;
 				ENABLE_BITCODE = NO;
 				INFOPLIST_FILE = Runner/Info.plist;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
@@ -566,7 +506,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = v2x2.4;
-				PRODUCT_BUNDLE_IDENTIFIER = com.sipnudge.test;
+				PRODUCT_BUNDLE_IDENTIFIER = com.sipnudge.sipnudgeV2x10;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
@@ -751,7 +691,7 @@
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 6;
-				DEVELOPMENT_TEAM = 44GUMW823C;
+				DEVELOPMENT_TEAM = GY75D7JV5W;
 				ENABLE_BITCODE = NO;
 				INFOPLIST_FILE = Runner/Info.plist;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
@@ -760,7 +700,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = v2x2.4;
-				PRODUCT_BUNDLE_IDENTIFIER = com.sipnudge.test;
+				PRODUCT_BUNDLE_IDENTIFIER = com.sipnudge.sipnudgeV2x10;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
@@ -785,7 +725,7 @@
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 6;
-				DEVELOPMENT_TEAM = 44GUMW823C;
+				DEVELOPMENT_TEAM = GY75D7JV5W;
 				ENABLE_BITCODE = NO;
 				INFOPLIST_FILE = Runner/Info.plist;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
@@ -794,7 +734,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = v2x2.4;
-				PRODUCT_BUNDLE_IDENTIFIER = com.sipnudge.test;
+				PRODUCT_BUNDLE_IDENTIFIER = com.sipnudge.sipnudgeV2x10;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
