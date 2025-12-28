@@ -8,6 +8,7 @@ import 'package:hydrify/constants/app_dimensions.dart';
 import 'package:hydrify/constants/app_font_styles.dart';
 import 'package:hydrify/constants/app_strings.dart';
 import 'package:hydrify/cubit/ble/ble_cubit.dart';
+import 'package:hydrify/cubit/bottom_nav/bottom_nav_cubit.dart';
 import 'package:hydrify/cubit/user_info/user_info_cubit.dart';
 import 'package:hydrify/helpers/database_helper.dart';
 import 'package:hydrify/helpers/shared_pref_helper.dart';
@@ -26,9 +27,11 @@ class UserInfoDailyGoalScreen extends StatefulWidget {
   const UserInfoDailyGoalScreen({
     super.key,
     required this.waterGoal,
+    required this.isViaSettingsScreen,
   });
 
   final double waterGoal;
+  final bool isViaSettingsScreen;
   @override
   State<UserInfoDailyGoalScreen> createState() =>
       _UserInfoDailyGoalScreenState();
@@ -297,13 +300,16 @@ class _UserInfoDailyGoalScreenState extends State<UserInfoDailyGoalScreen> {
                 color: AppColors.blueGradient,
                 areTwoItems: false,
                 onTap: () async {
-                  var response = await showGoogleCalendarDialog();
-                  if (response == false) {
-                    return;
+                  if (widget.isViaSettingsScreen == false) {
+                    var response = await showGoogleCalendarDialog();
+                    if (response == false) {
+                      return;
+                    }
+                    if (isButtonClicked == true) {
+                      return;
+                    }
                   }
-                  if (isButtonClicked == true) {
-                    return;
-                  }
+
                   setState(() {
                     isButtonClicked = true;
                   });
@@ -335,12 +341,20 @@ class _UserInfoDailyGoalScreenState extends State<UserInfoDailyGoalScreen> {
                   setState(() {
                     isButtonClicked = false;
                   });
-                  Navigator.pushAndRemoveUntil(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => BottomNavScreenNew(),
-                      ),
-                      (route) => false);
+
+                  if (widget.isViaSettingsScreen == false) {
+                    Navigator.pushAndRemoveUntil(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => BottomNavScreenNew(),
+                        ),
+                        (route) => false);
+                  } else {
+                    UiUtilsService.showToast(
+                        context: context,
+                        text: "Personal Info Updated Successfully");
+                    context.read<BottomNavCubit>().resetToHome();
+                  }
                 }),
           ],
         ),
@@ -437,7 +451,7 @@ class _UserInfoDailyGoalScreenState extends State<UserInfoDailyGoalScreen> {
                 text: "I give my consent",
                 color: AppColors.blueGradient,
                 areTwoItems: false,
-                onTap: () => Navigator.pop(context, true),
+                onTap: () => Navigator.of(context).pop(true),
               )
             ],
           ),

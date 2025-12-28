@@ -286,26 +286,22 @@ class _UserInfoInputScreenState extends State<UserInfoInputScreen> {
                 child: BlocBuilder<UserInfoCubit, UserInfoState>(
                   builder: (context, state) {
                     return CustomNextButton(
-                      text: AppStrings.next,
-                      onNextPressed: () {
-                        final height = state.height;
-                        final weight = state.weight;
-                        final age = state.age;
+                        text: AppStrings.next,
+                        onNextPressed: () {
+                          final height = state.height;
+                          final weight = state.weight;
+                          final age = state.age;
 
-                        if (height == null || weight == null || age == null) {
-                          UiUtilsService.showToast(
-                            context: context,
-                            text:
-                                "Please fill in height, weight, and age before continuing.",
-                            textColor: Colors.red,
-                          );
-                          return;
-                        }
+                          if (height == null || weight == null || age == null) {
+                            UiUtilsService.showToast(
+                              context: context,
+                              text:
+                                  "Please fill in height, weight, and age before continuing.",
+                              textColor: Colors.red,
+                            );
+                            return;
+                          }
 
-                        if (widget.fromSettings) {
-                          // From settings → save & return to settings
-                          Navigator.pop(context);
-                        } else {
                           // From onboarding → continue next flow
                           Navigator.push(
                             context,
@@ -314,9 +310,7 @@ class _UserInfoInputScreenState extends State<UserInfoInputScreen> {
                                   UserLifestyleInfoInputScreen(),
                             ),
                           );
-                        }
-                      },
-                    );
+                        });
                   },
                 ),
               ),

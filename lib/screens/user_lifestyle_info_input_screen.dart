@@ -224,6 +224,7 @@ class _UserLifestyleInfoInputScreenState
                   MaterialPageRoute(
                     builder: (context) => UserInfoAnalyzingScreen(
                       goal: waterIntakeGoalInt.toDouble(),
+                      
                     ),
                   ),
                 );

@@ -218,6 +218,7 @@ class PreferencesPage extends StatelessWidget {
                                     MaterialPageRoute(
                                       builder: (_) => UserInfoDailyGoalScreen(
                                         waterGoal: goal.toDouble(),
+                                        isViaSettingsScreen: false,
                                       ),
                                     ),
                                   );
