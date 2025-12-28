@@ -18,12 +18,8 @@
     "ios": "13.0"
   },
   "dependencies": {
-    "Flutter": [
-
-    ],
-    "firebase_core": [
-
-    ],
+    "Flutter": [],
+    "firebase_core": [],
     "Firebase/Auth": [
       "11.15.0"
     ]

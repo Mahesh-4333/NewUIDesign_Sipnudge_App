@@ -17,12 +17,8 @@
   },
   "swift_versions": "5.0",
   "dependencies": {
-    "Flutter": [
-
-    ],
-    "firebase_core": [
-
-    ],
+    "Flutter": [],
+    "firebase_core": [],
     "Firebase/Functions": [
       "11.15.0"
     ]

@@ -31,16 +31,12 @@
   "static_framework": true,
   "ios": {
     "dependencies": {
-      "Flutter": [
-
-      ]
+      "Flutter": []
     }
   },
   "osx": {
     "dependencies": {
-      "FlutterMacOS": [
-
-      ]
+      "FlutterMacOS": []
     }
   },
   "platforms": {
