@@ -32,7 +32,7 @@ class PreferencesCubit extends Cubit<PreferencesState> {
     NotificationService().resetAllHydrationReminders(allSlots);
     SharedPrefsHelper.setRingtoneFeedBack(value);
     emit(state.copyWith(ringtoneFeedback: value));
-  } // 🔔 NEW METHOD
+  }
 
   void updateActiveTab(String label) => emit(state.copyWith(activeTab: label));
 }

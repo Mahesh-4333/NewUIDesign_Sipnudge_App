@@ -307,7 +307,9 @@ class _UserInfoInputScreenState extends State<UserInfoInputScreen> {
                             context,
                             MaterialPageRoute(
                               builder: (context) =>
-                                  UserLifestyleInfoInputScreen(),
+                                  UserLifestyleInfoInputScreen(
+                                isViaSettingsScreen: widget.fromSettings,
+                              ),
                             ),
                           );
                         });

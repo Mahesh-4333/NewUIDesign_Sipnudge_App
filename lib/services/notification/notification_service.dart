@@ -27,7 +27,7 @@ class NotificationService {
   final FlutterLocalNotificationsPlugin _plugin =
       FlutterLocalNotificationsPlugin();
 
-  static const int _scheduleDaysAhead = 7;
+  static const int _scheduleDaysAhead = 10;
   NotificationTapCallback? onNotificationTap;
 
   Future<void> init({NotificationTapCallback? onTap}) async {
@@ -45,8 +45,8 @@ class NotificationService {
           'hydration_category',
           actions: <DarwinNotificationAction>[
             DarwinNotificationAction.plain(
-              'STOP_ACTION', // iOS action ID
-              'Stop', // Button title
+              'STOP_ACTION',
+              'Stop',
               options: {},
             ),
           ],
@@ -211,6 +211,11 @@ class NotificationService {
 
     bool isRingtoneFeedbackEnabled =
         await SharedPrefsHelper.getRingtoneFeedBack();
+
+    if (shouldSilence == false) {
+      // Google says not to silence , then use the value of isRingtoneFeedbackEnabled
+      shouldSilence = !isRingtoneFeedbackEnabled;
+    }
 
     if (isRingtoneFeedbackEnabled) {
       shouldSilence = false;

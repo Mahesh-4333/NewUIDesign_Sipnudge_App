@@ -15,8 +15,10 @@ import 'package:hydrify/screens/widgets/user_info_input_widgets/next_button_widg
 import 'package:hydrify/services/ui_utils_service.dart';
 
 class UserLifestyleInfoInputScreen extends StatefulWidget {
-  const UserLifestyleInfoInputScreen({super.key});
+  const UserLifestyleInfoInputScreen(
+      {super.key, required this.isViaSettingsScreen});
 
+  final bool isViaSettingsScreen;
   @override
   State<UserLifestyleInfoInputScreen> createState() =>
       _UserLifestyleInfoInputScreenState();
@@ -224,7 +226,7 @@ class _UserLifestyleInfoInputScreenState
                   MaterialPageRoute(
                     builder: (context) => UserInfoAnalyzingScreen(
                       goal: waterIntakeGoalInt.toDouble(),
-                      
+                      isViaSettingsScreen: widget.isViaSettingsScreen,
                     ),
                   ),
                 );

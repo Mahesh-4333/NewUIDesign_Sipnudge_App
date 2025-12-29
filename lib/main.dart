@@ -161,8 +161,10 @@ class MyApp extends StatelessWidget {
                   routes: {
                     //'/dailygoalpage': (context) => DailyGoalPage(),
 
-                    '/dailygoalpage': (context) =>
-                        UserInfoDailyGoalScreen(waterGoal: 0),
+                    '/dailygoalpage': (context) => UserInfoDailyGoalScreen(
+                          waterGoal: 0,
+                          isViaSettingsScreen: false,
+                        ),
 
                     '/homepage': (context) => HomeScreen(),
 
@@ -170,8 +172,9 @@ class MyApp extends StatelessWidget {
 
                     // '/lifestyleinfo': (context) => LifeStyleInfoPage(),
 
-                    '/lifestyleinfo': (context) =>
-                        UserLifestyleInfoInputScreen(),
+                    '/lifestyleinfo': (context) => UserLifestyleInfoInputScreen(
+                          isViaSettingsScreen: false,
+                        ),
 
                     //'/profilescreen': (context) => ProfileScreenPage(),
 

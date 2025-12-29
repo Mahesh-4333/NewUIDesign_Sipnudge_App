@@ -123,7 +123,9 @@ class _AuthOptionsScreenState extends State<AuthOptionsScreen> {
                     Navigator.pushAndRemoveUntil(
                       context,
                       MaterialPageRoute(
-                        builder: (context) => UserInfoInputScreen(),
+                        builder: (context) => UserInfoInputScreen(
+                          fromSettings: false,
+                        ),
                       ),
                       (route) => false,
                     );

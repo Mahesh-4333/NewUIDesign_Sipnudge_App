@@ -300,6 +300,7 @@ class _UserInfoDailyGoalScreenState extends State<UserInfoDailyGoalScreen> {
                 color: AppColors.blueGradient,
                 areTwoItems: false,
                 onTap: () async {
+                  log("isViaSettingsScreen ${widget.isViaSettingsScreen}");
                   if (widget.isViaSettingsScreen == false) {
                     var response = await showGoogleCalendarDialog();
                     if (response == false) {
@@ -353,7 +354,14 @@ class _UserInfoDailyGoalScreenState extends State<UserInfoDailyGoalScreen> {
                     UiUtilsService.showToast(
                         context: context,
                         text: "Personal Info Updated Successfully");
+                    context.read<BottomNavCubit>().showBar();
                     context.read<BottomNavCubit>().resetToHome();
+                    Navigator.pushAndRemoveUntil(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => BottomNavScreenNew(),
+                        ),
+                        (route) => false);
                   }
                 }),
           ],
