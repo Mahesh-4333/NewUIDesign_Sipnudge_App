@@ -5,8 +5,12 @@ import 'package:hydrify/constants/app_colors.dart';
 import 'package:hydrify/constants/app_dimensions.dart';
 import 'package:hydrify/constants/app_font_styles.dart';
 import 'package:hydrify/constants/app_strings.dart';
+import 'package:hydrify/cubit/bottle/bottle_data_cubit.dart';
 import 'package:hydrify/cubit/profile_screen_in_setting/profile_cubit.dart';
 import 'package:hydrify/cubit/profile_screen_in_setting/profile_state.dart';
+import 'package:hydrify/helpers/shared_pref_helper.dart';
+import 'package:hydrify/models/bottle_info.dart';
+import 'package:hydrify/screens/bottle_info_page.dart';
 import 'package:hydrify/screens/contact_support_page.dart';
 import 'package:hydrify/screens/drink_reminder_page.dart';
 import 'package:hydrify/screens/faq_page.dart';
@@ -198,6 +202,12 @@ class _SettingScreenState extends State<SettingScreen> {
         //   );
         //   break;
 
+        // 🔥 NEW: Bottle Info Navigation
+        case 'Bottle Info':
+          _navigateToBottleInfo(context);
+
+          break;
+
         case AppStrings.logout:
           _showLogoutConfirmation(context);
           break;
@@ -221,6 +231,36 @@ class _SettingScreenState extends State<SettingScreen> {
       debugPrint("Navigation error for '$title': $e\n$s");
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Page Coming Soon...')),
+      );
+    }
+  }
+
+  // 🔥 NEW: Navigate to Bottle Info Screen
+  Future<void> _navigateToBottleInfo(BuildContext context) async {
+    try {
+      // Get selected bottle color
+      final selectedBottle = await SharedPrefsHelper.getBottle() ?? 'black';
+
+      // Get current bottle data from cubit
+      final bottleState = context.read<BottleDataCubit>().state;
+
+      // Create BottleInfo instance with current data
+      final bottleInfo = BottleInfo.getByColor(
+        selectedBottle,
+        currentWater: bottleState.volume,
+        waterPercentage: bottleState.volumePercent,
+      );
+
+      // Navigate to Bottle Info Screen
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => BottleInfoScreen(bottleInfo: bottleInfo),
+        ),
+      );
+    } catch (e) {
+      debugPrint("Error navigating to Bottle Info: $e");
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Unable to load bottle information')),
       );
     }
   }
@@ -386,6 +426,30 @@ class _SettingScreenState extends State<SettingScreen> {
                       ),
                     ),
                     SizedBox(height: AppDimensions.dim34.h),
+
+                    // 🔥 NEW: Bottle Info Menu Item
+                    Padding(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: AppDimensions.dim24.w,
+                      ),
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: AppColors.white1A,
+                          border: Border.all(color: Color(0xCCC6C6C6)),
+                          borderRadius:
+                              BorderRadius.circular(AppDimensions.radius_16.r),
+                        ),
+                        child: ProfileMenuItemWidget(
+                          iconPath:
+                              "assets/images/bottle_icon.png", // 🔥 Add your bottle icon
+                          title: "Bottle Info",
+                          isRed: false,
+                          iconPathArrow: "assets/arrow.png",
+                          onTap: () =>
+                              _handleNavigation(context, 'Bottle Info'),
+                        ),
+                      ),
+                    ),
 
                     // Menu group 2
                     Padding(

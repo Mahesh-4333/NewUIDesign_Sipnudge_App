@@ -15,10 +15,12 @@ import 'package:hydrify/cubit/hydration/hydration_cubit.dart';
 import 'package:hydrify/cubit/hydration/hydration_state.dart';
 import 'package:hydrify/helpers/shared_pref_helper.dart';
 import 'package:hydrify/helpers/water_consumption_data_helper.dart';
+import 'package:hydrify/models/bottle_info.dart';
 import 'package:hydrify/models/hydration_entry.dart';
 import 'package:hydrify/providers/weather_provider.dart';
 import 'package:hydrify/screens/hydration_30_day.dart';
 import 'package:hydrify/screens/notification.dart';
+import 'package:hydrify/screens/qr_scanning.dart';
 import 'package:hydrify/screens/widgets/ble_device_selection_sheet.dart';
 import 'package:hydrify/screens/widgets/custom_circular_loader/custom_circular_progress_indicator.dart';
 import 'package:hydrify/screens/widgets/custom_circular_loader/custom_circular_water_progress_indicator.dart';
@@ -43,6 +45,8 @@ class _HomeScreenState extends State<HomeScreen> {
   bool hasConnectedBefore = false;
   bool isGuest = false;
   double userGoalLiters = 0;
+  String selectedBottle = 'purple';
+  BottleInfo? bottleInfo;
 
   void _checkGuestStatus() async {
     final email = await SharedPrefsHelper.getUserEmail();
@@ -105,6 +109,21 @@ class _HomeScreenState extends State<HomeScreen> {
           await prefs.setBool('ble_connected_once', true);
         }
       }
+    });
+  }
+
+  Future<void> _loadBottle() async {
+    final bottle = await SharedPrefsHelper.getBottle();
+    if (!mounted) return;
+
+    setState(() {
+      selectedBottle = bottle ?? 'purple';
+      bottleInfo = BottleInfo.getByColor(selectedBottle,
+          currentWater:
+              context.read<BottleDataCubit>().state.volume, // dynamic value
+          waterPercentage:
+              context.read<BottleDataCubit>().state.volumePercent // dynamic
+          );
     });
   }
 
@@ -511,62 +530,119 @@ class _HomeScreenState extends State<HomeScreen> {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           GreetingWidget(),
-          Column(
-            children: [
-              CustomBeatingBleStatusIndicator(),
-              SizedBox(
-                height: AppDimensions.dim5.h,
-              ),
-              BlocBuilder<BottleDataCubit, BottleDataState>(
-                buildWhen: (previous, current) =>
-                    previous.battery != current.battery,
-                builder: (context, state) {
-                  return GestureDetector(
-                    onTap: () {
-                      // this widget is dummy widget we will remove it in prod
+          // Column(
+          //   children: [
+          //     CustomBeatingBleStatusIndicator(),
+          //     SizedBox(
+          //       height: AppDimensions.dim5.h,
+          //     ),
+          //     BlocBuilder<BottleDataCubit, BottleDataState>(
+          //       buildWhen: (previous, current) =>
+          //           previous.battery != current.battery,
+          //       builder: (context, state) {
+          //         return GestureDetector(
+          //           onTap: () {
+          //             // this widget is dummy widget we will remove it in prod
 
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => Hydration30DayPage(),
-                        ),
-                      );
-                    },
-                    child: CustomCircularProgressIndicator(
+          //             Navigator.push(
+          //               context,
+          //               MaterialPageRoute(
+          //                 builder: (_) => Hydration30DayPage(),
+          //               ),
+          //             );
+          //           },
+          //           child: CustomCircularProgressIndicator(
+          //               height: AppDimensions.dim60.w,
+          //               width: AppDimensions.dim60.w,
+          //               backgroundColor: AppColors.bluegray,
+          //               progressBackgroundColor: Color(0XFFDDECDC),
+          //               progressColor: state.battery <= 20
+          //                   ? const Color(0xFFFF0000) // red
+          //                   : const Color(0XFF43E73E), // green
+          //               // progressColor: Color(0XFF43E73E),
+          //               percentageValue: state.battery.toDouble(),
+          //               center: TweenAnimationBuilder<int>(
+          //                 tween: IntTween(
+          //                   begin: 0,
+          //                   end: state.battery,
+          //                 ),
+          //                 duration: const Duration(milliseconds: 500),
+          //                 curve: Curves.fastEaseInToSlowEaseOut,
+          //                 builder: (context, value, child) {
+          //                   return Text(
+          //                     "$value%",
+          //                     style: TextStyle(
+          //                       color: AppColors.white,
+          //                       fontFamily:
+          //                           AppFontStyles.museoModernoFontFamily,
+          //                       fontSize: AppFontStyles.fontSize_12,
+          //                       fontVariations: [
+          //                         AppFontStyles.fontWeightVariation600,
+          //                       ],
+          //                     ),
+          //                   );
+          //                 },
+          //               )),
+          //         );
+          //       },
+          //     )
+          //   ],
+          // )
+          Row(
+            children: [
+              /// 📷 QR Scanner Button
+              IconButton(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const QrScanner(),
+                    ),
+                  );
+                },
+                icon: Icon(
+                  Icons.qr_code_scanner,
+                  color: AppColors.white,
+                  size: AppDimensions.dim28.sp,
+                ),
+                tooltip: "Rescan Bottle",
+              ),
+
+              SizedBox(width: AppDimensions.dim8.w),
+
+              /// Existing BLE + Battery widgets
+              Column(
+                children: [
+                  CustomBeatingBleStatusIndicator(),
+                  SizedBox(height: AppDimensions.dim5.h),
+                  BlocBuilder<BottleDataCubit, BottleDataState>(
+                    buildWhen: (previous, current) =>
+                        previous.battery != current.battery,
+                    builder: (context, state) {
+                      return CustomCircularProgressIndicator(
                         height: AppDimensions.dim60.w,
                         width: AppDimensions.dim60.w,
                         backgroundColor: AppColors.bluegray,
-                        progressBackgroundColor: Color(0XFFDDECDC),
+                        progressBackgroundColor: const Color(0XFFDDECDC),
                         progressColor: state.battery <= 20
-                            ? const Color(0xFFFF0000) // red
-                            : const Color(0XFF43E73E), // green
-                        // progressColor: Color(0XFF43E73E),
+                            ? const Color(0xFFFF0000)
+                            : const Color(0XFF43E73E),
                         percentageValue: state.battery.toDouble(),
-                        center: TweenAnimationBuilder<int>(
-                          tween: IntTween(
-                            begin: 0,
-                            end: state.battery,
+                        center: Text(
+                          "${state.battery}%",
+                          style: TextStyle(
+                            color: AppColors.white,
+                            fontSize: AppFontStyles.fontSize_12,
+                            fontVariations: [
+                              AppFontStyles.fontWeightVariation600,
+                            ],
                           ),
-                          duration: const Duration(milliseconds: 500),
-                          curve: Curves.fastEaseInToSlowEaseOut,
-                          builder: (context, value, child) {
-                            return Text(
-                              "$value%",
-                              style: TextStyle(
-                                color: AppColors.white,
-                                fontFamily:
-                                    AppFontStyles.museoModernoFontFamily,
-                                fontSize: AppFontStyles.fontSize_12,
-                                fontVariations: [
-                                  AppFontStyles.fontWeightVariation600,
-                                ],
-                              ),
-                            );
-                          },
-                        )),
-                  );
-                },
-              )
+                        ),
+                      );
+                    },
+                  ),
+                ],
+              ),
             ],
           )
         ],
@@ -738,7 +814,8 @@ class _HomeScreenState extends State<HomeScreen> {
                 // await context.read<BleCubit>().forceFlushSlots();
               },
               child: Image.asset(
-                'assets/images/bottle_image1.png',
+                //'assets/images/bottle_image1.png',
+                bottleInfo!.imagePath,
                 fit: BoxFit.scaleDown,
               ),
             ),

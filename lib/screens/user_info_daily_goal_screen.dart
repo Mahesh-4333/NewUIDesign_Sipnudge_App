@@ -13,6 +13,7 @@ import 'package:hydrify/helpers/database_helper.dart';
 import 'package:hydrify/helpers/shared_pref_helper.dart';
 import 'package:hydrify/models/hydration_entry.dart';
 import 'package:hydrify/screens/bottom_nav_screen_new.dart';
+import 'package:hydrify/screens/qr_scanning.dart';
 import 'package:hydrify/screens/widgets/auth_button_widget.dart';
 import 'package:hydrify/screens/widgets/user_info_input_widgets/custom_gradient_slider_widget.dart';
 import 'package:hydrify/screens/widgets/water_wave_widget.dart';
@@ -315,10 +316,16 @@ class _UserInfoDailyGoalScreenState extends State<UserInfoDailyGoalScreen> {
               context.read<BleCubit>().queueHydrationSlots(slots);
               NotificationService().scheduleHydrationReminders(slots);
 
+              // Navigator.pushAndRemoveUntil(
+              //     context,
+              //     MaterialPageRoute(
+              //       builder: (context) => BottomNavScreenNew(),
+              //     ),
+              //     (route) => false);
               Navigator.pushAndRemoveUntil(
                   context,
                   MaterialPageRoute(
-                    builder: (context) => BottomNavScreenNew(),
+                    builder: (context) => QrScanner(),
                   ),
                   (route) => false);
             }),
