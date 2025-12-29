@@ -86,10 +86,12 @@ class _QrScannerState extends State<QrScanner>
     //   MaterialPageRoute(builder: (_) => const HomeScreen()),
     // );
 
-    await Navigator.pushAndRemoveUntil(
+    await Navigator.push(
       context,
-      MaterialPageRoute(builder: (_) => BottomNavScreenNew()),
-      (_) => false,
+      MaterialPageRoute(
+        builder: (context) => BottomNavScreenNew(),
+      ),
+      //(route) => false
     );
 
     // Reset flag when user returns from HomeScreen
