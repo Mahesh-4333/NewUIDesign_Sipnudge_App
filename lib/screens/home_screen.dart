@@ -73,6 +73,7 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
+    _loadBottle();
     _checkGuestStatus();
     // New Code to initialize NotificationService
     NotificationService().init(
@@ -116,14 +117,16 @@ class _HomeScreenState extends State<HomeScreen> {
     final bottle = await SharedPrefsHelper.getBottle();
     if (!mounted) return;
 
+    // Get current water data from BottleDataCubit
+    final bottleState = context.read<BottleDataCubit>().state;
+
     setState(() {
-      selectedBottle = bottle ?? 'purple';
-      bottleInfo = BottleInfo.getByColor(selectedBottle,
-          currentWater:
-              context.read<BottleDataCubit>().state.volume, // dynamic value
-          waterPercentage:
-              context.read<BottleDataCubit>().state.volumePercent // dynamic
-          );
+      selectedBottle = bottle ?? 'black';
+      bottleInfo = BottleInfo.getByColor(
+        selectedBottle,
+        currentWater: bottleState.volume,
+        waterPercentage: bottleState.volumePercent,
+      );
     });
   }
 
@@ -602,7 +605,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 },
                 icon: Icon(
                   Icons.qr_code_scanner,
-                  color: AppColors.white,
+                  color: AppColors.black,
                   size: AppDimensions.dim28.sp,
                 ),
                 tooltip: "Rescan Bottle",
