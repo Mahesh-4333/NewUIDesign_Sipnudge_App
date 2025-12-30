@@ -298,7 +298,7 @@ class _SyncfusionAreaChartWidgetState extends State<SyncfusionAreaChartWidget> {
                         ? _scrollController.offset
                         : 0) +
                     15,
-                top: 5.h,
+                top: _touchPosition!.dy,
                 child: _buildManualTooltip(),
               ),
           ],
@@ -358,26 +358,63 @@ class _SyncfusionAreaChartWidgetState extends State<SyncfusionAreaChartWidget> {
               _seriesController!.pixelToPoint(tapArgs.position);
 
           setState(() {
-            _touchPosition = tapArgs.position;
-
             final dynamic xValue = chartPoint.x;
+            int? targetIndex;
 
             if (xValue is String) {
-              _selectedPointIndex =
-                  chartData.indexWhere((data) => data.x == xValue);
+              targetIndex = chartData.indexWhere((data) => data.x == xValue);
             } else if (xValue is num) {
               int idx = xValue.round();
-              if (idx >= 0 && idx < chartData.length) {
-                _selectedPointIndex = idx;
-              }
+              if (idx >= 0 && idx < chartData.length) targetIndex = idx;
             }
 
-            if (_selectedPointIndex == -1) {
+            if (targetIndex != null && targetIndex != -1) {
+              _selectedPointIndex = targetIndex;
+
+              // FIX: Match the types <String, double> (or num) to avoid the Subtype error
+              final Offset pointInPixels = _seriesController!.pointToPixel(
+                CartesianChartPoint<String>(
+                  x: chartData[targetIndex].x,
+                  y: chartData[targetIndex].completionPercent,
+                ),
+              );
+
+              // We use the calculated pointInPixels.dy for vertical positioning
+              // We use tapArgs.position.dx for horizontal so it follows the finger/tap
+              _touchPosition = Offset(tapArgs.position.dx, pointInPixels.dy);
+            } else {
               _selectedPointIndex = null;
+              _touchPosition = null;
             }
           });
         }
       },
+      // onChartTouchInteractionDown: (tapArgs) {
+      //   if (_seriesController != null) {
+      //     final CartesianChartPoint<dynamic> chartPoint =
+      //         _seriesController!.pixelToPoint(tapArgs.position);
+
+      //     setState(() {
+      //       _touchPosition = tapArgs.position;
+
+      //       final dynamic xValue = chartPoint.x;
+
+      //       if (xValue is String) {
+      //         _selectedPointIndex =
+      //             chartData.indexWhere((data) => data.x == xValue);
+      //       } else if (xValue is num) {
+      //         int idx = xValue.round();
+      //         if (idx >= 0 && idx < chartData.length) {
+      //           _selectedPointIndex = idx;
+      //         }
+      //       }
+
+      //       if (_selectedPointIndex == -1) {
+      //         _selectedPointIndex = null;
+      //       }
+      //     });
+      //   }
+      // },
       series: <CartesianSeries<ChartData, String>>[
         AreaSeries<ChartData, String>(
           dataSource: chartData,

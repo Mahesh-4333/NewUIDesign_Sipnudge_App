@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:hydrify/constants/app_colors.dart';
 import 'package:hydrify/constants/app_dimensions.dart';
 import 'package:hydrify/constants/app_font_styles.dart';
+import 'package:hydrify/helpers/vibration_helper.dart';
 
 class CustomGradientSlider extends StatefulWidget {
   final List<double> tickValues;
@@ -62,8 +63,8 @@ class _CustomGradientSliderState extends State<CustomGradientSlider> {
 
     setState(() => _currentIndex = index);
 
-    final value = widget.tickValues[index]; // map index -> liters
-    HapticFeedback.selectionClick();
+    final value = widget.tickValues[index];
+    VibrationHelper.vibrate(duration: 15, amplitude: 100);
     widget.onChanged?.call(value);
   }
 
