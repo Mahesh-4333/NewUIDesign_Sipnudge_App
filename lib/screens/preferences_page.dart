@@ -11,6 +11,7 @@ import 'package:hydrify/constants/app_strings.dart';
 import 'package:hydrify/cubit/Preferences/preferences_cubit.dart';
 import 'package:hydrify/cubit/ble/ble_cubit.dart';
 import 'package:hydrify/cubit/bottle/bottle_data_cubit.dart';
+import 'package:hydrify/cubit/bottom_nav/bottom_nav_cubit.dart';
 import 'package:hydrify/helpers/shared_pref_helper.dart';
 import 'package:hydrify/screens/ringtone_screen.dart';
 import 'package:hydrify/screens/user_info_daily_goal_screen.dart';
@@ -93,15 +94,18 @@ class PreferencesPage extends StatelessWidget {
                                 info: formattedGoal,
                                 iconpatharrow: "assets/arrow.png",
                                 onTap: () {
+                                  context.read<BottomNavCubit>().hideBar();
                                   Navigator.push(
                                     context,
                                     MaterialPageRoute(
                                       builder: (_) => UserInfoDailyGoalScreen(
                                         waterGoal: goal.toDouble(),
-                                        isViaSettingsScreen: false,
+                                        isViaSettingsScreen: true,
                                       ),
                                     ),
-                                  );
+                                  ).then((_) {
+                                    context.read<BottomNavCubit>().showBar();
+                                  });
                                 },
                               ),
                               SizedBox(height: AppDimensions.dim7.h),

@@ -12,6 +12,7 @@ import 'package:hydrify/screens/info/terms_of_service.dart';
 import 'package:hydrify/screens/user_personal_info_input_screen..dart';
 import 'package:hydrify/screens/widgets/auth_button_widget.dart';
 import 'package:hydrify/services/firebase_functions_service.dart';
+import 'package:hydrify/services/google_calendar_manager.dart';
 import 'package:hydrify/services/ui_utils_service.dart';
 
 class AuthOptionsScreen extends StatefulWidget {
@@ -22,6 +23,14 @@ class AuthOptionsScreen extends StatefulWidget {
 }
 
 class _AuthOptionsScreenState extends State<AuthOptionsScreen> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      await GoogleCalendarManager().signOut();
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(

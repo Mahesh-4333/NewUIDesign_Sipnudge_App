@@ -80,6 +80,8 @@ Future<void> main() async {
   final notificationService = NotificationService();
   await notificationService.init();
 
+  FlutterBluePlus.setLogLevel(LogLevel.none);
+
   // Initialize UserManager
   await UserManager().init();
 

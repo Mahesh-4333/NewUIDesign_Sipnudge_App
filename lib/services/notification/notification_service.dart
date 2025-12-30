@@ -166,10 +166,14 @@ class NotificationService {
   }
 
   Future<void> scheduleHydrationRemindersForFuture(
-    List<HydrationEntry> entries,
-  ) async {
+      List<HydrationEntry> entries) async {
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
+    final tenDaysOut = today.add(Duration(days: _scheduleDaysAhead));
+
+    final calendarManager = GoogleCalendarManager();
+    final allEvents =
+        await calendarManager.fetchEventsForRange(now, tenDaysOut);
 
     for (int dayOffset = 0; dayOffset < _scheduleDaysAhead; dayOffset++) {
       final baseDay = today.add(Duration(days: dayOffset));
@@ -181,11 +185,11 @@ class NotificationService {
         ));
 
         final notifyAt = endDateTime.subtract(const Duration(minutes: 10));
-
         if (notifyAt.isBefore(now)) continue;
 
-        final shouldSilence = false;
-        // await _shouldSilenceHydrationReminder(notifyAt);
+        // 2. Local check (Instant)
+        final shouldSilence = calendarManager.checkOverlapLocally(
+            notifyAt, notifyAt.add(const Duration(minutes: 5)), allEvents);
 
         await _scheduleSingleReminder(
           entry: entry,
@@ -196,6 +200,37 @@ class NotificationService {
       }
     }
   }
+
+  // Future<void> scheduleHydrationRemindersForFuture(
+  //   List<HydrationEntry> entries,
+  // ) async {
+  //   final now = DateTime.now();
+  //   final today = DateTime(now.year, now.month, now.day);
+
+  //   for (int dayOffset = 0; dayOffset < _scheduleDaysAhead; dayOffset++) {
+  //     final baseDay = today.add(Duration(days: dayOffset));
+
+  //     for (final entry in entries) {
+  //       final endDateTime = baseDay.add(Duration(
+  //         hours: entry.endTime.hour,
+  //         minutes: entry.endTime.minute,
+  //       ));
+
+  //       final notifyAt = endDateTime.subtract(const Duration(minutes: 10));
+
+  //       if (notifyAt.isBefore(now)) continue;
+
+  //       final shouldSilence = await _shouldSilenceHydrationReminder(notifyAt);
+
+  //       await _scheduleSingleReminder(
+  //         entry: entry,
+  //         notifyAt: notifyAt,
+  //         shouldSilence: shouldSilence,
+  //         dayOffset: dayOffset,
+  //       );
+  //     }
+  //   }
+  // }
 
   Future<void> _scheduleSingleReminder({
     required HydrationEntry entry,
@@ -215,10 +250,6 @@ class NotificationService {
     if (shouldSilence == false) {
       // Google says not to silence , then use the value of isRingtoneFeedbackEnabled
       shouldSilence = !isRingtoneFeedbackEnabled;
-    }
-
-    if (isRingtoneFeedbackEnabled) {
-      shouldSilence = false;
     }
     if (Platform.isIOS) {
       await _scheduleIOSHydrationNotification(
