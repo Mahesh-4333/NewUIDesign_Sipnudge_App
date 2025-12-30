@@ -6,6 +6,9 @@ import 'package:hydrify/constants/app_font_styles.dart';
 import 'package:hydrify/helpers/shared_pref_helper.dart';
 import 'package:hydrify/screens/bottom_nav_screen_new.dart';
 import 'package:hydrify/screens/home_screen.dart';
+import 'package:hydrify/screens/widgets/auth_button_widget.dart';
+import 'package:hydrify/services/qr_generator.dart';
+import 'package:hydrify/services/ui_utils_service.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 
 class QrScanner extends StatefulWidget {
@@ -70,6 +73,14 @@ class _QrScannerState extends State<QrScanner>
     final nextBottle = await SharedPrefsHelper.rotateBottle();
     debugPrint('Bottle changed to: $nextBottle');
 
+    /// 🔥 Generate COLORED QR IMAGE
+    final qrFile = await generateQrImage(
+      data: value, // scanned QR value
+      color: _getQrColor(nextBottle), // bottle-based color
+      fileName: "qr_${nextBottle}", // unique name
+    );
+    debugPrint("QR image saved at: ${qrFile.path}");
+
     // ScaffoldMessenger.of(context).showSnackBar(
     //   SnackBar(
     //     content: Text('QR Code Scanned: $value'),
@@ -86,8 +97,8 @@ class _QrScannerState extends State<QrScanner>
     //   MaterialPageRoute(builder: (_) => const HomeScreen()),
     // );
 
-    await Navigator.push(
-      context,
+    await Navigator.of(context, rootNavigator: true).pushReplacement(
+      //context,
       MaterialPageRoute(
         builder: (context) => BottomNavScreenNew(),
       ),
@@ -99,6 +110,24 @@ class _QrScannerState extends State<QrScanner>
       setState(() {
         _isProcessing = false;
       });
+    }
+  }
+
+  /// ✅ ADD THIS HERE
+  Color _getQrColor(String bottleColor) {
+    switch (bottleColor.toLowerCase()) {
+      case 'black':
+        return Colors.black;
+      case 'red':
+        return Colors.red;
+      case 'purple':
+        return Colors.purple;
+      case 'green':
+        return Colors.green;
+      case 'gray':
+        return Colors.grey;
+      default:
+        return Colors.black;
     }
   }
 
@@ -269,39 +298,63 @@ class _QrScannerState extends State<QrScanner>
                               border: Border.all(color: AppColors.bluegray),
                               borderRadius: BorderRadius.circular(30),
                             ),
-                            child: ElevatedButton(
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.transparent,
-                                shadowColor: Colors.transparent,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(30.r),
-                                ),
-                              ),
-                              onPressed: () {
-                                Navigator.push(
+                            // child: ElevatedButton(
+                            //   style: ElevatedButton.styleFrom(
+                            //     backgroundColor: Colors.transparent,
+                            //     shadowColor: Colors.transparent,
+                            //     shape: RoundedRectangleBorder(
+                            //       borderRadius: BorderRadius.circular(30.r),
+                            //     ),
+                            //   ),
+                            //   onPressed: () {
+                            //     Navigator.of(context, rootNavigator: true)
+                            //         .pushReplacement(
+                            //       //context,
+                            //       MaterialPageRoute(
+                            //         builder: (_) => const BottomNavScreenNew(),
+                            //       ),
+                            //     );
+                            //   },
+                            //   child: Text(
+                            //     "Continue as Guest",
+                            //     //   style: TextStyle(
+                            //     //     color: Colors.black,
+                            //     //     fontSize: 16.sp,
+                            //     //     fontWeight: FontWeight.bold,
+                            //     //   ),
+                            //     // ),
+                            //     style: TextStyle(
+                            //       color: AppColors.bluegray,
+                            //       fontSize: AppFontStyles.fontSize_16.sp,
+                            //       fontFamily: AppFontStyles.urbanistFontFamily,
+                            //       fontVariations: [
+                            //         AppFontStyles.boldFontVariation,
+                            //       ],
+                            //     ),
+                            //   ),
+                            // ),
+                            child: AuthButton(
+                              text: "Continue as Guest",
+                              gradient: AppColors.guestButtonColor,
+                              textColor: AppColors.buttonTextPurpleColor,
+                              areTwoItems: false,
+                              borderColor: AppColors.bluegray,
+                              onTap: () {
+                                SharedPrefsHelper.setUserEmail("guest_user");
+
+                                UiUtilsService.showToast(
+                                  context: context,
+                                  text: "Continuing as Guest",
+                                );
+
+                                Navigator.pushAndRemoveUntil(
                                   context,
                                   MaterialPageRoute(
-                                    builder: (_) => const HomeScreen(),
+                                    builder: (context) => BottomNavScreenNew(),
                                   ),
+                                  (route) => false,
                                 );
                               },
-                              child: Text(
-                                "Continue as Guest",
-                                //   style: TextStyle(
-                                //     color: Colors.black,
-                                //     fontSize: 16.sp,
-                                //     fontWeight: FontWeight.bold,
-                                //   ),
-                                // ),
-                                style: TextStyle(
-                                  color: AppColors.bluegray,
-                                  fontSize: AppFontStyles.fontSize_16.sp,
-                                  fontFamily: AppFontStyles.urbanistFontFamily,
-                                  fontVariations: [
-                                    AppFontStyles.boldFontVariation,
-                                  ],
-                                ),
-                              ),
                             ),
                           ),
                         ),

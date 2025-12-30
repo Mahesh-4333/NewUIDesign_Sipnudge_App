@@ -1,3 +1,5 @@
+import 'dart:developer';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:hydrify/constants/app_colors.dart';
@@ -33,6 +35,11 @@ class _SyncfusionAreaChartWidgetState extends State<SyncfusionAreaChartWidget> {
   late SelectionBehavior _selectionBehavior;
   late TooltipBehavior _tooltipBehavior;
   int? _selectedPointIndex;
+  Offset? _touchPosition;
+
+  // Inside _SyncfusionAreaChartWidgetState
+
+  ChartSeriesController? _seriesController;
 
   final List<String> weekLabels = const [
     'Mon',
@@ -285,9 +292,32 @@ class _SyncfusionAreaChartWidgetState extends State<SyncfusionAreaChartWidget> {
                 ),
               ),
             ),
+            if (_touchPosition != null && _selectedPointIndex != null)
+              Positioned(
+                left: (_touchPosition?.dx ?? 0) -
+                    (_scrollController.hasClients
+                        ? _scrollController.offset
+                        : 0) +
+                    15,
+                top: 5.h,
+                child: _buildManualTooltip(),
+              ),
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildManualTooltip() {
+    log("=-=-=-= building manual tool tip =-=-=-=-=-=- ");
+
+    final data = chartData[_selectedPointIndex!];
+
+    final liters = (data.completionVolume ?? 0) / 1000;
+
+    return CustomChartToolTip(
+      isPercent: false,
+      percent: num.parse(liters.toStringAsFixed(2)),
     );
   }
 
@@ -304,19 +334,19 @@ class _SyncfusionAreaChartWidgetState extends State<SyncfusionAreaChartWidget> {
       tooltipBehavior: _tooltipBehavior,
 
       // Selection callback
-      onSelectionChanged: (SelectionArgs args) {
-        if (args.selectedColor != null) {
-          setState(() {
-            _selectedPointIndex = args.pointIndex;
-          });
-          print("Point selected: ${args.pointIndex}");
-        } else {
-          setState(() {
-            _selectedPointIndex = null;
-          });
-          print("Selection cleared");
-        }
-      },
+      // onSelectionChanged: (SelectionArgs args) {
+      //   if (args.selectedColor != null) {
+      //     setState(() {
+      //       _selectedPointIndex = args.pointIndex;
+      //     });
+      //     print("Point selected: ${args.pointIndex}");
+      //   } else {
+      //     setState(() {
+      //       _selectedPointIndex = null;
+      //     });
+      //     print("Selection cleared");
+      //   }
+      // },
 
       // Also handle point tap for direct interaction
 
@@ -345,11 +375,56 @@ class _SyncfusionAreaChartWidgetState extends State<SyncfusionAreaChartWidget> {
       plotAreaBorderWidth: 0,
       margin: EdgeInsets.zero,
 
+      onChartTouchInteractionUp: (tapArgs) {
+        setState(() {
+          _selectedPointIndex = null;
+
+          _touchPosition = null;
+        });
+      },
+
+      onChartTouchInteractionDown: (tapArgs) {
+        if (_seriesController != null) {
+          final CartesianChartPoint<dynamic> chartPoint =
+              _seriesController!.pixelToPoint(tapArgs.position);
+
+          setState(() {
+            _touchPosition = tapArgs.position;
+
+            final dynamic xValue = chartPoint.x;
+
+            if (xValue is String) {
+              _selectedPointIndex =
+                  chartData.indexWhere((data) => data.x == xValue);
+            } else if (xValue is num) {
+              int idx = xValue.round();
+
+              if (idx >= 0 && idx < chartData.length) {
+                _selectedPointIndex = idx;
+              }
+            }
+
+            if (_selectedPointIndex == -1) {
+              _selectedPointIndex = null;
+            }
+          });
+        }
+      },
+
       series: <CartesianSeries<ChartData, String>>[
         AreaSeries<ChartData, String>(
           dataSource: chartData,
+          onRendererCreated: (ChartSeriesController controller) {
+            _seriesController = controller;
+          },
           xValueMapper: (ChartData d, _) => d.x,
           yValueMapper: (ChartData d, _) => d.completionPercent,
+
+          onPointTap: (ChartPointDetails details) {
+            setState(() {
+              _selectedPointIndex = details.pointIndex;
+            });
+          },
 
           // Border styling
           borderColor: const Color(0xFF42A5FF),
@@ -367,10 +442,10 @@ class _SyncfusionAreaChartWidgetState extends State<SyncfusionAreaChartWidget> {
           ),
 
           // Selection behavior
-          selectionBehavior: _selectionBehavior,
+          // selectionBehavior: _selectionBehavior,
 
           // Trackball (alternative to selection)
-          enableTooltip: true,
+          // enableTooltip: true,
 
           // Gradient
           gradient: LinearGradient(
@@ -383,22 +458,22 @@ class _SyncfusionAreaChartWidgetState extends State<SyncfusionAreaChartWidget> {
           ),
 
           // Data label for selected point
-          dataLabelSettings: DataLabelSettings(
-            isVisible: false, // Set to true if you want labels on all points
-            builder: (dynamic data, dynamic point, dynamic series,
-                int pointIndex, int seriesIndex) {
-              // Show custom tooltip only for selected point
-              if (_selectedPointIndex == pointIndex) {
-                final ChartData chartDataPoint = data as ChartData;
-                final liters = (chartDataPoint.completionVolume ?? 0) / 1000;
-                return CustomChartToolTip(
-                  isPercent: false,
-                  percent: num.parse(liters.toStringAsFixed(2)),
-                );
-              }
-              return const SizedBox.shrink();
-            },
-          ),
+          // dataLabelSettings: DataLabelSettings(
+          //   isVisible: false, // Set to true if you want labels on all points
+          //   builder: (dynamic data, dynamic point, dynamic series,
+          //       int pointIndex, int seriesIndex) {
+          //     // Show custom tooltip only for selected point
+          //     if (_selectedPointIndex == pointIndex) {
+          //       final ChartData chartDataPoint = data as ChartData;
+          //       final liters = (chartDataPoint.completionVolume ?? 0) / 1000;
+          //       return CustomChartToolTip(
+          //         isPercent: false,
+          //         percent: num.parse(liters.toStringAsFixed(2)),
+          //       );
+          //     }
+          //     return const SizedBox.shrink();
+          //   },
+          // ),
         ),
       ],
     );

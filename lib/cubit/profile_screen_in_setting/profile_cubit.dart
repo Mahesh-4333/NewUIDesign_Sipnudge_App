@@ -15,18 +15,17 @@ class ProfileCubit extends Cubit<ProfileState> {
                 iconPath: "assets/drink_rem.png",
                 title: "Drink Reminder",
               ),
-              // ProfileMenuItem(
-              //   iconPath: "assets/bottle.png",
-              //   title: "Sipnudge Bottle",
-              // ),
               ProfileMenuItem(
                 iconPath: "assets/performance.png",
                 title: "Preferences",
               ),
-
               ProfileMenuItem(
                 iconPath: "assets/help_support.png",
                 title: "Help & Support",
+              ),
+              ProfileMenuItem(
+                iconPath: "assets/sipnudge_bottle_icon1.png",
+                title: "Sipnudge Bottle",
               ),
               ProfileMenuItem(
                 iconPath: "assets/logout.png",

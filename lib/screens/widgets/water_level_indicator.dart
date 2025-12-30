@@ -9,7 +9,8 @@ class WaterLevelIndicator extends StatefulWidget {
   final double height;
   final Duration duration;
 
-  const WaterLevelIndicator({super.key, 
+  const WaterLevelIndicator({
+    super.key,
     required this.percentage,
     this.width = 100,
     this.height = 200,
