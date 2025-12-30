@@ -822,7 +822,7 @@ class _HomeScreenState extends State<HomeScreen> {
               },
               child: Image.asset(
                 //'assets/images/bottle_image1.png',
-                bottleInfo!.imagePath,
+                bottleInfo?.imagePath ?? "assets/images/bottle_image1.png",
                 fit: BoxFit.scaleDown,
               ),
             ),
