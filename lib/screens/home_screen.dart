@@ -78,17 +78,17 @@ class _HomeScreenState extends State<HomeScreen> {
     // New Code to initialize NotificationService
     NotificationService().init(
       onTap: (slot) {
-        final entries = context.read<HydrationCubit>().state.entries;
+        // final entries = context.read<HydrationCubit>().state.entries;
 
-        final entry = entries.firstWhere((e) => e.slot == slot,
-            orElse: () => HydrationEntry(
-                  slot: slot,
-                  amount: 0,
-                  startTime: TimeOfDay.now(),
-                  endTime: TimeOfDay.now(),
-                ));
+        // final entry = entries.firstWhere((e) => e.slot == slot,
+        //     orElse: () => HydrationEntry(
+        //           slot: slot,
+        //           amount: 0,
+        //           startTime: TimeOfDay.now(),
+        //           endTime: TimeOfDay.now(),
+        //         ));
 
-        showHydrationPopup(context, slot, entry.amount as int);
+        // showHydrationPopup(context, slot, entry.amount.toInt());
       },
     );
     //==================================================================

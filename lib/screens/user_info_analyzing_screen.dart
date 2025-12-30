@@ -10,9 +10,11 @@ import 'package:hydrify/screens/user_info_daily_goal_screen.dart';
 import 'package:hydrify/screens/widgets/custom_circular_loader/segmented_progress_indicator.dart';
 
 class UserInfoAnalyzingScreen extends StatefulWidget {
-  const UserInfoAnalyzingScreen({super.key, required this.goal});
+  const UserInfoAnalyzingScreen(
+      {super.key, required this.goal, this.isViaSettingsScreen = false});
 
   final double goal;
+  final isViaSettingsScreen;
   @override
   State<UserInfoAnalyzingScreen> createState() =>
       _UserInfoAnalyzingScreenState();
@@ -45,8 +47,8 @@ class _UserInfoAnalyzingScreenState extends State<UserInfoAnalyzingScreen>
             context,
             MaterialPageRoute(
               builder: (_) => UserInfoDailyGoalScreen(
-                waterGoal: widget.goal,
-              ),
+                  waterGoal: widget.goal,
+                  isViaSettingsScreen: widget.isViaSettingsScreen),
             ),
           );
         });

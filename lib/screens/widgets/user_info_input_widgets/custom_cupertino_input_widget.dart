@@ -201,7 +201,7 @@ class _CustomCupertinoInputWidgetState
                 onChanged: (value) {
                   setState(() {
                     selectedUnit = value;
-                    // Clear local preview so Bloc value (if present) is used immediately.
+
                     selectedValueText = null;
                   });
                   widget.onUnitChanged(value);
