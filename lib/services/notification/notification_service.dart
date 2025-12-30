@@ -12,6 +12,13 @@ import 'notification_manager.dart';
 
 typedef NotificationTapCallback = void Function(HydrationSlot slot);
 
+@pragma('vm:entry-point')
+void notificationTapBackground(NotificationResponse details) {
+  if (details.id != null) {
+    log("Notification tapped in background/killed state: ${details.id}");
+  }
+}
+
 class NotificationService {
   static final NotificationService _instance = NotificationService._internal();
   factory NotificationService() => _instance;
@@ -59,112 +66,57 @@ class NotificationService {
       onDidReceiveNotificationResponse: (details) async {
         final payload = details.payload;
         final actionId = details.actionId;
-        if (actionId == 'STOP_ACTION') {
-          if (details.id != null) {
-            await NotificationManager.instance.stopAlarm(details.id!);
-            await _plugin.cancel(details.id!);
-          }
+        final notificationId = details.id;
+
+        if (notificationId != null) {
+          await NotificationManager.instance.stopAlarm(notificationId);
+
+          await _plugin.cancel(notificationId);
+        }
+        if (actionId == 'STOP_ACTION' ||
+            (actionId != null && actionId.startsWith("STOP"))) {
           return;
         }
 
-        if (actionId != null && actionId.startsWith("STOP")) {
-          if (details.id != null) {
-            await NotificationManager.instance.stopAlarm(details.id!);
-            if (details.id != null) {
-              await NotificationManager.instance.stopAlarm(details.id!);
-              await _plugin.cancel(details.id!);
-            }
-          }
-
-          return;
-        }
         if (payload != null) {
-          final slotIndex = int.parse(payload);
-          if (payload != null) {
-            final slotIndex = int.parse(payload);
-            if (slotIndex >= 0 && slotIndex < HydrationSlot.values.length) {
-              onNotificationTap?.call(HydrationSlot.values[slotIndex]);
-            }
+          final slotIndex = int.tryParse(payload);
+          if (slotIndex != null &&
+              slotIndex >= 0 &&
+              slotIndex < HydrationSlot.values.length) {
+            onNotificationTap?.call(HydrationSlot.values[slotIndex]);
           }
         }
       },
+      onDidReceiveBackgroundNotificationResponse: notificationTapBackground,
     );
+
+    final NotificationAppLaunchDetails? launchDetails =
+        await _plugin.getNotificationAppLaunchDetails();
+
+    if (launchDetails?.didNotificationLaunchApp ?? false) {
+      _handleTapLogic(launchDetails!.notificationResponse!);
+    }
+  }
+
+  void _handleTapLogic(NotificationResponse details) async {
+    if (details.id != null) {
+      await NotificationManager.instance.stopAlarm(details.id!);
+      await _plugin.cancel(details.id!);
+    }
+
+    final payload = details.payload;
+    if (payload != null && onNotificationTap != null) {
+      final slotIndex = int.tryParse(payload);
+      if (slotIndex != null && slotIndex < HydrationSlot.values.length) {
+        onNotificationTap!(HydrationSlot.values[slotIndex]);
+      }
+    }
   }
 
   Future<String> _getSelectedRingtoneAssetPath() async {
     final selected = await SharedPrefsHelper.getSelectedRingtone() ?? 0;
     final fileName = "ringtone${selected + 1}";
     return "assets/ringtones/$fileName.mp3";
-  }
-
-  Future<void> scheduleHydrationReminders(List<HydrationEntry> entries) async {
-    final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
-
-    final assetPath = await _getSelectedRingtoneAssetPath();
-
-    for (final entry in entries) {
-      final endDateTime = today.add(Duration(
-        hours: entry.endTime.hour,
-        minutes: entry.endTime.minute,
-      ));
-
-      final notifyAt = endDateTime.subtract(const Duration(minutes: 10));
-
-      if (notifyAt.isBefore(now)) {
-        log(
-          "[NotificationService] Skipping reminder for ${entry.slot.label} "
-          "because notifyAt=$notifyAt < now=$now",
-        );
-        continue;
-      }
-
-      final shouldSilence = await _shouldSilenceHydrationReminder(notifyAt);
-
-      log(
-        "[NotificationService] Scheduling ${shouldSilence ? 'SILENT' : 'NORMAL'} "
-        "reminder for ${entry.slot.label} at $notifyAt",
-      );
-
-      final title = "Hydration Reminder";
-      final body =
-          "Only 10 minutes left for ${entry.slot.label} – Drink ${entry.amount} ml";
-
-      if (Platform.isIOS) {
-        await _scheduleIOSHydrationNotification(
-          id: entry.slot.index,
-          notifyAt: notifyAt,
-          title: title,
-          body: body,
-          payload: entry.slot.index.toString(),
-          isSilent: shouldSilence,
-        );
-
-        log('[iOS] Notification scheduled (${shouldSilence ? "silent" : "normal"})');
-      } else {
-        /// 🔔 NORMAL ALARM
-        final alarmSet = await NotificationManager.instance.setReliableAlarm(
-          id: entry.slot.index,
-          dateTime: notifyAt,
-          assetAudioPath: assetPath,
-          title: title,
-          body: body,
-          stopButtonText: 'Drink Water & Stop',
-          maxDurationSeconds: 5,
-          isSilent: shouldSilence,
-        );
-
-        if (!alarmSet) {
-          log('Failed to set Android alarm for ${entry.slot.label}');
-          continue;
-        }
-      }
-
-      log(
-        "[NotificationService] Successfully scheduled for ${entry.slot.label} "
-        "at $notifyAt",
-      );
-    }
   }
 
   Future<void> _scheduleIOSHydrationNotification(
@@ -177,6 +129,7 @@ class NotificationService {
     final selected = await SharedPrefsHelper.getSelectedRingtone() ?? 0;
     final fileName = "ringtone${selected + 1}.caf";
     log("=-=-=-=- IOS Reminder set ${fileName}");
+
     await _plugin.zonedSchedule(
       id,
       title,
@@ -187,6 +140,7 @@ class NotificationService {
           sound: fileName,
           presentAlert: true,
           presentSound: !isSilent,
+          subtitle: "Swipe up to stop the reminder",
           interruptionLevel: isSilent
               ? InterruptionLevel.passive
               : InterruptionLevel.timeSensitive,
@@ -230,7 +184,8 @@ class NotificationService {
 
         if (notifyAt.isBefore(now)) continue;
 
-        final shouldSilence = await _shouldSilenceHydrationReminder(notifyAt);
+        final shouldSilence = false;
+        // await _shouldSilenceHydrationReminder(notifyAt);
 
         await _scheduleSingleReminder(
           entry: entry,
@@ -254,6 +209,12 @@ class NotificationService {
     final body =
         "Only 10 minutes left for ${entry.slot.label} – Drink ${entry.amount} ml";
 
+    bool isRingtoneFeedbackEnabled =
+        await SharedPrefsHelper.getRingtoneFeedBack();
+
+    if (isRingtoneFeedbackEnabled) {
+      shouldSilence = false;
+    }
     if (Platform.isIOS) {
       await _scheduleIOSHydrationNotification(
         id: id,
@@ -300,20 +261,6 @@ class NotificationService {
   ) {
     return (dayOffset * 100) + slot.index;
   }
-
-  // Future<void> cancelReminder(HydrationSlot slot) async {
-  //   await _plugin.cancel(slot.index);
-
-  //   if (Platform.isAndroid) {
-  //     await NotificationManager.instance.stopAlarm(slot.index);
-  //   }
-  // }
-
-  // Future<void> cancelAll() async {
-  //   await _plugin.cancelAll();
-
-  //   await NotificationManager.instance.stopAlarm(0);
-  // }
 
   Future<void> resetAllHydrationReminders(
     List<HydrationEntry> newEntries,

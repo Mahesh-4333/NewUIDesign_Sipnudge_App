@@ -432,6 +432,10 @@ class _HomeScreenState extends State<HomeScreen> {
             });
           });
         }
+        if (state.status == BleStatus.connected &&
+            ((state.volume ?? 0) < 600)) {
+          _showStartJourneyDialog(context);
+        }
       },
       child: Scaffold(
         body: Container(
@@ -596,8 +600,8 @@ class _HomeScreenState extends State<HomeScreen> {
               /// 📷 QR Scanner Button
               IconButton(
                 onPressed: () {
-                  Navigator.push(
-                    context,
+                  Navigator.of(context, rootNavigator: true).pushReplacement(
+                    //context,
                     MaterialPageRoute(
                       builder: (_) => const QrScanner(),
                     ),

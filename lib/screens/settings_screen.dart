@@ -20,6 +20,7 @@ import 'package:hydrify/screens/user_personal_info_input_screen..dart';
 import 'package:hydrify/screens/widgets/logout_widgets/logout_bottom_sheet.dart';
 import 'package:hydrify/screens/widgets/setting_screen_widget/editableProfileAvatar.dart';
 import 'package:hydrify/screens/widgets/setting_screen_widget/profile_menu_item.dart';
+import 'package:hydrify/screens/widgets/setting_screen_widget/sipnudgeshopwidget.dart';
 import 'package:hydrify/services/user_manager.dart';
 
 class SettingScreen extends StatefulWidget {
@@ -194,16 +195,9 @@ class _SettingScreenState extends State<SettingScreen> {
           );
 
           break;
-        // case AppStrings.accountandsecurity:
-        //   navigator.push(
-        //     MaterialPageRoute(
-        //       builder: (_) => const AccountSecurityScreen(),
-        //     ),
-        //   );
-        //   break;
 
-        // 🔥 NEW: Bottle Info Navigation
-        case 'Bottle Info':
+        // 🔥 NEW: Sipnudge Bottle Navigation
+        case 'Sipnudge Bottle':
           _navigateToBottleInfo(context);
 
           break;
@@ -252,7 +246,7 @@ class _SettingScreenState extends State<SettingScreen> {
       );
 
       // Navigate to Bottle Info Screen
-      Navigator.of(context).push(
+      Navigator.of(context, rootNavigator: true).push(
         MaterialPageRoute(
           builder: (_) => BottleInfoScreen(bottleInfo: bottleInfo),
         ),
@@ -425,75 +419,35 @@ class _SettingScreenState extends State<SettingScreen> {
                         ),
                       ),
                     ),
-                    SizedBox(height: AppDimensions.dim34.h),
+                    //SizedBox(height: AppDimensions.dim34.h),
 
                     // 🔥 NEW: Bottle Info Menu Item
-                    Padding(
-                      padding: EdgeInsets.symmetric(
-                        horizontal: AppDimensions.dim24.w,
-                      ),
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: AppColors.white1A,
-                          border: Border.all(color: Color(0xCCC6C6C6)),
-                          borderRadius:
-                              BorderRadius.circular(AppDimensions.radius_16.r),
-                        ),
-                        child: ProfileMenuItemWidget(
-                          iconPath:
-                              "assets/images/bottle_icon.png", // 🔥 Add your bottle icon
-                          title: "Bottle Info",
-                          isRed: false,
-                          iconPathArrow: "assets/arrow.png",
-                          onTap: () =>
-                              _handleNavigation(context, 'Bottle Info'),
-                        ),
-                      ),
-                    ),
+                    // Padding(
+                    //   padding: EdgeInsets.symmetric(
+                    //     horizontal: AppDimensions.dim24.w,
+                    //   ),
+                    //   child: Container(
+                    //     decoration: BoxDecoration(
+                    //       color: AppColors.white1A,
+                    //       border: Border.all(color: Color(0xCCC6C6C6)),
+                    //       borderRadius:
+                    //           BorderRadius.circular(AppDimensions.radius_16.r),
+                    //     ),
+                    //     child: ProfileMenuItemWidget(
+                    //       iconPath:
+                    //           "assets/images/bottle_icon.png", // 🔥 Add your bottle icon
+                    //       title: "Sipnudge Bottle",
+                    //       isRed: false,
+                    //       iconPathArrow: "assets/arrow.png",
+                    //       onTap: () =>
+                    //           _handleNavigation(context, 'Sipnudge Bottle'),
+                    //     ),
+                    //   ),
+                    // ),
 
                     // Menu group 2
-                    Padding(
-                      padding: EdgeInsets.symmetric(
-                        horizontal: AppDimensions.dim24.w,
-                      ),
-                      // child: Container(
-                      //   decoration: BoxDecoration(
-                      //     borderRadius:
-                      //         BorderRadius.circular(AppDimensions.radius_16.r),
-                      //     boxShadow: [
-                      //       BoxShadow(
-                      //         color: Colors.black.withOpacity(0.10),
-                      //         blurRadius: 2.r,
-                      //         spreadRadius: 3.r,
-                      //         offset: Offset(3.5.r, 3.5.r),
-                      //       ),
-                      //     ],
-                      //   ),
-                      //   // child: Container(
-                      //   //   decoration: BoxDecoration(
-                      //   //     color: AppColors.white1A,
-                      //   //     borderRadius: BorderRadius.circular(
-                      //   //         AppDimensions.radius_16.r),
-                      //   //   ),
-                      //   //   child: Column(
-                      //   //     children: state.secondaryMenuItems
-                      //   //         .map(
-                      //   //           (item) => ProfileMenuItemWidget(
-                      //   //             iconPath: item.iconPath,
-                      //   //             title: item.title,
-                      //   //             isRed: item.isRed,
-                      //   //             iconPathArrow: "assets/arrow.png",
-                      //   //             onTap: () => _handleNavigation(
-                      //   //               context,
-                      //   //               item.title,
-                      //   //             ),
-                      //   //           ),
-                      //   //         )
-                      //   //         .toList(),
-                      //   //   ),
-                      //   // ),
-                      // ),
-                    ),
+                    SizedBox(height: AppDimensions.dim34.h),
+                    const SipnudgeShopWidget(),
                     SizedBox(height: AppDimensions.dim165.h),
                   ],
                 ),
