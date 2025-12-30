@@ -7,6 +7,7 @@ import 'package:hydrify/constants/app_colors.dart';
 import 'package:hydrify/constants/app_dimensions.dart';
 import 'package:hydrify/constants/app_font_styles.dart';
 import 'package:hydrify/constants/app_strings.dart';
+import 'package:hydrify/helpers/vibration_helper.dart';
 
 /// Returns `null` if user dismisses the sheet without pressing Done.
 Future<Map<String, dynamic>?> showCupertinoPickerBottomSheet({
@@ -44,20 +45,11 @@ Future<Map<String, dynamic>?> showCupertinoPickerBottomSheet({
                 topRight: Radius.circular(AppDimensions.dim32),
               ),
               color: AppColors.white,
-              // gradient: LinearGradient(
-              //   begin: Alignment.topCenter,
-              //   end: Alignment.bottomCenter,
-              //   colors: [
-              //     AppColors.bottomSheetGradientStart,
-              //     AppColors.bottomSheetGradientEnd
-              //   ],
-              // ),
             ),
             padding: EdgeInsets.all(AppDimensions.defaultPadding),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                // Top Row: Title / Done / Cancel (Cancel is implicit by swipe/outer tap)
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -106,6 +98,8 @@ Future<Map<String, dynamic>?> showCupertinoPickerBottomSheet({
                         child: CupertinoPicker(
                           itemExtent: 40,
                           onSelectedItemChanged: (int index) {
+                            VibrationHelper.vibrate(
+                                duration: 15, amplitude: 100);
                             setState(() {
                               selectedValue = index + minValue; // HOURS
                             });
@@ -129,7 +123,6 @@ Future<Map<String, dynamic>?> showCupertinoPickerBottomSheet({
                         ),
                       ),
 
-                      // MINUTE PICKER (Right)
                       if (hasSecondaryValue &&
                           secondaryMinValue != null &&
                           secondaryMaxValue != null)
@@ -137,9 +130,11 @@ Future<Map<String, dynamic>?> showCupertinoPickerBottomSheet({
                           child: CupertinoPicker(
                             itemExtent: 40,
                             onSelectedItemChanged: (int index) {
+                              VibrationHelper.vibrate(
+                                  duration: 15, amplitude: 100);
                               setState(() {
                                 selectedSecondaryValue =
-                                    index + secondaryMinValue; // MINUTES
+                                    index + secondaryMinValue;
                               });
                             },
                             scrollController: FixedExtentScrollController(
@@ -175,7 +170,6 @@ Future<Map<String, dynamic>?> showCupertinoPickerBottomSheet({
     },
   );
 
-  // If user dismissed without pressing Done, return null.
   if (!completer.isCompleted) {
     completer.complete(null);
   }

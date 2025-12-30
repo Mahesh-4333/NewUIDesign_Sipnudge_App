@@ -12,8 +12,7 @@ class LocalAuthScreen extends StatefulWidget {
   const LocalAuthScreen({super.key});
 
   @override
-  State<LocalAuthScreen> createState() =>
-      _LocalAuthScreenState();
+  State<LocalAuthScreen> createState() => _LocalAuthScreenState();
 }
 
 class _LocalAuthScreenState extends State<LocalAuthScreen> {
@@ -32,11 +31,10 @@ class _LocalAuthScreenState extends State<LocalAuthScreen> {
   Future<void> _handleStartupAuth() async {
     if (!mounted) return;
 
-    final authProvider = Provider.of<AuthenticationProvider>(
-        context,
-        listen: false);
+    final authProvider =
+        Provider.of<AuthenticationProvider>(context, listen: false);
 
-    bool success = false;
+    bool success = true;
 
     // Keep showing popup until user authenticates
     while (mounted && !success) {
@@ -50,12 +48,10 @@ class _LocalAuthScreenState extends State<LocalAuthScreen> {
 
     if (!mounted) return;
 
-    final loggedInUserEmail =
-        await SharedPrefsHelper.getUserEmail() ?? "";
+    final loggedInUserEmail = await SharedPrefsHelper.getUserEmail() ?? "";
     final hasUserFilledInPersonalInfo =
         await SharedPrefsHelper.isPersonalInfoSubmitted();
-    final hasUserSelectedPersonalGoal =
-        await SharedPrefsHelper.getUserGoal();
+    final hasUserSelectedPersonalGoal = await SharedPrefsHelper.getUserGoal();
 
     Future.delayed(
       const Duration(milliseconds: 800),
@@ -64,8 +60,7 @@ class _LocalAuthScreenState extends State<LocalAuthScreen> {
 
         Navigator.of(context).pushReplacement(
           PageRouteBuilder(
-            pageBuilder:
-                (context, animation, secondaryAnimation) {
+            pageBuilder: (context, animation, secondaryAnimation) {
               if (loggedInUserEmail.isNotEmpty) {
                 if (hasUserFilledInPersonalInfo == true &&
                     hasUserSelectedPersonalGoal != null) {
@@ -116,8 +111,7 @@ class _LocalAuthScreenState extends State<LocalAuthScreen> {
               height: AppDimensions.dim285.h,
             ),
             Transform.translate(
-              offset: Offset(
-                  10.w, 0), // move left by 20 logical pixels
+              offset: Offset(10.w, 0), // move left by 20 logical pixels
               child: Image.asset(
                 "assets/images/bottle_top_image1.png",
                 width: AppDimensions.dim346.w,

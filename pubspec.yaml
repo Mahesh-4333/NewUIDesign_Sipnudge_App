@@ -54,6 +54,7 @@ dependencies:
   googleapis: ^15.0.0
   googleapis_auth: ^2.0.0
   http: ^1.6.0
+  vibration: ^3.1.5
 
 
 dev_dependencies:
