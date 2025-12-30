@@ -342,6 +342,7 @@ class _SyncfusionAreaChartWidgetState extends State<SyncfusionAreaChartWidget> {
           color: AppColors.black,
           fontFamily: AppFontStyles.urbanistFontFamily,
           fontSize: AppFontStyles.fontSize_14,
+          fontVariations: [AppFontStyles.boldFontVariation],
         ),
       ),
       plotAreaBorderWidth: 0,
@@ -389,32 +390,6 @@ class _SyncfusionAreaChartWidgetState extends State<SyncfusionAreaChartWidget> {
           });
         }
       },
-      // onChartTouchInteractionDown: (tapArgs) {
-      //   if (_seriesController != null) {
-      //     final CartesianChartPoint<dynamic> chartPoint =
-      //         _seriesController!.pixelToPoint(tapArgs.position);
-
-      //     setState(() {
-      //       _touchPosition = tapArgs.position;
-
-      //       final dynamic xValue = chartPoint.x;
-
-      //       if (xValue is String) {
-      //         _selectedPointIndex =
-      //             chartData.indexWhere((data) => data.x == xValue);
-      //       } else if (xValue is num) {
-      //         int idx = xValue.round();
-      //         if (idx >= 0 && idx < chartData.length) {
-      //           _selectedPointIndex = idx;
-      //         }
-      //       }
-
-      //       if (_selectedPointIndex == -1) {
-      //         _selectedPointIndex = null;
-      //       }
-      //     });
-      //   }
-      // },
       series: <CartesianSeries<ChartData, String>>[
         AreaSeries<ChartData, String>(
           dataSource: chartData,
