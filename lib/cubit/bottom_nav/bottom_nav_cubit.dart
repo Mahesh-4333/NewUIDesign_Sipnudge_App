@@ -51,6 +51,13 @@ class BottomNavCubit extends Cubit<BottomNavState> {
     return state.selectedIndex == index;
   }
 
+  void _setBarVisibility(bool visible) {
+    emit(state.copyWith(isVisible: visible));
+  }
+
+  void hideBar() => _setBarVisibility(false);
+  void showBar() => _setBarVisibility(true);
+
   List<BottomNavTab> get availableTabs => BottomNavTab.values;
 
   BottomNavTab get currentTab => state.selectedTab;

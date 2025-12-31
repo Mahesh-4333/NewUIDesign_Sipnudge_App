@@ -2,6 +2,7 @@ import 'dart:developer';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:fluttertoast/fluttertoast.dart';
 import 'package:hydrify/constants/app_colors.dart';
 import 'package:hydrify/constants/app_dimensions.dart';
 import 'package:hydrify/constants/app_font_styles.dart';
@@ -36,9 +37,7 @@ class _SyncfusionAreaChartWidgetState extends State<SyncfusionAreaChartWidget> {
   late TooltipBehavior _tooltipBehavior;
   int? _selectedPointIndex;
   Offset? _touchPosition;
-
   // Inside _SyncfusionAreaChartWidgetState
-
   ChartSeriesController? _seriesController;
 
   final List<String> weekLabels = const [
@@ -299,7 +298,7 @@ class _SyncfusionAreaChartWidgetState extends State<SyncfusionAreaChartWidget> {
                         ? _scrollController.offset
                         : 0) +
                     15,
-                top: 5.h,
+                top: _touchPosition!.dy,
                 child: _buildManualTooltip(),
               ),
           ],
@@ -310,9 +309,7 @@ class _SyncfusionAreaChartWidgetState extends State<SyncfusionAreaChartWidget> {
 
   Widget _buildManualTooltip() {
     log("=-=-=-= building manual tool tip =-=-=-=-=-=- ");
-
     final data = chartData[_selectedPointIndex!];
-
     final liters = (data.completionVolume ?? 0) / 1000;
 
     return CustomChartToolTip(
@@ -324,33 +321,10 @@ class _SyncfusionAreaChartWidgetState extends State<SyncfusionAreaChartWidget> {
   Widget _buildSyncfusionChart(double chartWidth, bool isWeekly) {
     return SfCartesianChart(
       backgroundColor: Colors.transparent,
-
-      // Enable selection gesture
       selectionGesture: ActivationMode.singleTap,
       selectionType: SelectionType.point,
       enableMultiSelection: false,
-
-      // Tooltip behavior
       tooltipBehavior: _tooltipBehavior,
-
-      // Selection callback
-      // onSelectionChanged: (SelectionArgs args) {
-      //   if (args.selectedColor != null) {
-      //     setState(() {
-      //       _selectedPointIndex = args.pointIndex;
-      //     });
-      //     print("Point selected: ${args.pointIndex}");
-      //   } else {
-      //     setState(() {
-      //       _selectedPointIndex = null;
-      //     });
-      //     print("Selection cleared");
-      //   }
-      // },
-
-      // Also handle point tap for direct interaction
-
-      // Hide Syncfusion's Y axis
       primaryYAxis: NumericAxis(
         isVisible: false,
         minimum: 0,
@@ -359,7 +333,6 @@ class _SyncfusionAreaChartWidgetState extends State<SyncfusionAreaChartWidget> {
         axisLine: const AxisLine(width: 0),
         majorTickLines: const MajorTickLines(size: 0),
       ),
-
       primaryXAxis: CategoryAxis(
         majorGridLines: const MajorGridLines(width: 0),
         majorTickLines: MajorTickLines(width: 0),
@@ -369,48 +342,54 @@ class _SyncfusionAreaChartWidgetState extends State<SyncfusionAreaChartWidget> {
           color: AppColors.black,
           fontFamily: AppFontStyles.urbanistFontFamily,
           fontSize: AppFontStyles.fontSize_14,
+          fontVariations: [AppFontStyles.boldFontVariation],
         ),
       ),
-
       plotAreaBorderWidth: 0,
       margin: EdgeInsets.zero,
-
       onChartTouchInteractionUp: (tapArgs) {
         setState(() {
           _selectedPointIndex = null;
-
           _touchPosition = null;
         });
       },
-
       onChartTouchInteractionDown: (tapArgs) {
         if (_seriesController != null) {
           final CartesianChartPoint<dynamic> chartPoint =
               _seriesController!.pixelToPoint(tapArgs.position);
 
           setState(() {
-            _touchPosition = tapArgs.position;
-
             final dynamic xValue = chartPoint.x;
+            int? targetIndex;
 
             if (xValue is String) {
-              _selectedPointIndex =
-                  chartData.indexWhere((data) => data.x == xValue);
+              targetIndex = chartData.indexWhere((data) => data.x == xValue);
             } else if (xValue is num) {
               int idx = xValue.round();
-
-              if (idx >= 0 && idx < chartData.length) {
-                _selectedPointIndex = idx;
-              }
+              if (idx >= 0 && idx < chartData.length) targetIndex = idx;
             }
 
-            if (_selectedPointIndex == -1) {
+            if (targetIndex != null && targetIndex != -1) {
+              _selectedPointIndex = targetIndex;
+
+              // FIX: Match the types <String, double> (or num) to avoid the Subtype error
+              final Offset pointInPixels = _seriesController!.pointToPixel(
+                CartesianChartPoint<String>(
+                  x: chartData[targetIndex].x,
+                  y: chartData[targetIndex].completionPercent,
+                ),
+              );
+
+              // We use the calculated pointInPixels.dy for vertical positioning
+              // We use tapArgs.position.dx for horizontal so it follows the finger/tap
+              _touchPosition = Offset(tapArgs.position.dx, pointInPixels.dy);
+            } else {
               _selectedPointIndex = null;
+              _touchPosition = null;
             }
           });
         }
       },
-
       series: <CartesianSeries<ChartData, String>>[
         AreaSeries<ChartData, String>(
           dataSource: chartData,
@@ -419,13 +398,11 @@ class _SyncfusionAreaChartWidgetState extends State<SyncfusionAreaChartWidget> {
           },
           xValueMapper: (ChartData d, _) => d.x,
           yValueMapper: (ChartData d, _) => d.completionPercent,
-
           onPointTap: (ChartPointDetails details) {
             setState(() {
               _selectedPointIndex = details.pointIndex;
             });
           },
-
           // Border styling
           borderColor: const Color(0xFF42A5FF),
           borderWidth: AppDimensions.dim3.w,
@@ -441,13 +418,6 @@ class _SyncfusionAreaChartWidgetState extends State<SyncfusionAreaChartWidget> {
             shape: DataMarkerType.circle,
           ),
 
-          // Selection behavior
-          // selectionBehavior: _selectionBehavior,
-
-          // Trackball (alternative to selection)
-          // enableTooltip: true,
-
-          // Gradient
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
@@ -456,24 +426,6 @@ class _SyncfusionAreaChartWidgetState extends State<SyncfusionAreaChartWidget> {
               AppColors.blueGradient.withOpacity(0.1),
             ],
           ),
-
-          // Data label for selected point
-          // dataLabelSettings: DataLabelSettings(
-          //   isVisible: false, // Set to true if you want labels on all points
-          //   builder: (dynamic data, dynamic point, dynamic series,
-          //       int pointIndex, int seriesIndex) {
-          //     // Show custom tooltip only for selected point
-          //     if (_selectedPointIndex == pointIndex) {
-          //       final ChartData chartDataPoint = data as ChartData;
-          //       final liters = (chartDataPoint.completionVolume ?? 0) / 1000;
-          //       return CustomChartToolTip(
-          //         isPercent: false,
-          //         percent: num.parse(liters.toStringAsFixed(2)),
-          //       );
-          //     }
-          //     return const SizedBox.shrink();
-          //   },
-          // ),
         ),
       ],
     );

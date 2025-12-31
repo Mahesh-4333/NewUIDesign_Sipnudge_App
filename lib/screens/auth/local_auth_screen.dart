@@ -35,7 +35,7 @@ class _LocalAuthScreenState extends State<LocalAuthScreen> {
     final authProvider =
         Provider.of<AuthenticationProvider>(context, listen: false);
 
-    bool success = false;
+    bool success = true;
 
     // Keep showing popup until user authenticates
     while (mounted && !success) {

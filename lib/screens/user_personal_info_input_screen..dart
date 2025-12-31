@@ -276,50 +276,47 @@ class _UserInfoInputScreenState extends State<UserInfoInputScreen> {
                   );
                 },
               ),
+              Container(
+                height: AppDimensions.dim60,
+                margin: EdgeInsets.only(
+                  top: AppDimensions.dim170.h,
+                  // left: AppDimensions.defaultPadding.w,
+                  // right: AppDimensions.defaultPadding.w,
+                ),
+                child: BlocBuilder<UserInfoCubit, UserInfoState>(
+                  builder: (context, state) {
+                    return CustomNextButton(
+                        text: AppStrings.next,
+                        onNextPressed: () {
+                          final height = state.height;
+                          final weight = state.weight;
+                          final age = state.age;
+
+                          if (height == null || weight == null || age == null) {
+                            UiUtilsService.showToast(
+                              context: context,
+                              text:
+                                  "Please fill in height, weight, and age before continuing.",
+                              textColor: Colors.red,
+                            );
+                            return;
+                          }
+
+                          // From onboarding → continue next flow
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) =>
+                                  UserLifestyleInfoInputScreen(
+                                isViaSettingsScreen: widget.fromSettings,
+                              ),
+                            ),
+                          );
+                        });
+                  },
+                ),
+              ),
             ],
-          ),
-        ),
-        bottomNavigationBar: Container(
-          height: AppDimensions.dim60,
-          margin: EdgeInsets.only(
-            bottom: AppDimensions.padding33.h,
-            left: AppDimensions.defaultPadding.w,
-            right: AppDimensions.defaultPadding.w,
-          ),
-          child: BlocBuilder<UserInfoCubit, UserInfoState>(
-            builder: (context, state) {
-              return CustomNextButton(
-                text: AppStrings.next,
-                onNextPressed: () {
-                  final height = state.height;
-                  final weight = state.weight;
-                  final age = state.age;
-
-                  if (height == null || weight == null || age == null) {
-                    UiUtilsService.showToast(
-                      context: context,
-                      text:
-                          "Please fill in height, weight, and age before continuing.",
-                      textColor: Colors.red,
-                    );
-                    return;
-                  }
-
-                  if (widget.fromSettings) {
-                    // From settings → save & return to settings
-                    Navigator.pop(context);
-                  } else {
-                    // From onboarding → continue next flow
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => UserLifestyleInfoInputScreen(),
-                      ),
-                    );
-                  }
-                },
-              );
-            },
           ),
         ),
       ),

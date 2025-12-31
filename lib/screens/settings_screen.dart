@@ -6,6 +6,7 @@ import 'package:hydrify/constants/app_dimensions.dart';
 import 'package:hydrify/constants/app_font_styles.dart';
 import 'package:hydrify/constants/app_strings.dart';
 import 'package:hydrify/cubit/bottle/bottle_data_cubit.dart';
+import 'package:hydrify/cubit/bottom_nav/bottom_nav_cubit.dart';
 import 'package:hydrify/cubit/profile_screen_in_setting/profile_cubit.dart';
 import 'package:hydrify/cubit/profile_screen_in_setting/profile_state.dart';
 import 'package:hydrify/helpers/shared_pref_helper.dart';
@@ -67,69 +68,25 @@ class _SettingScreenState extends State<SettingScreen> {
     super.dispose();
   }
 
-  // void _handleNavigation(BuildContext context, String title) {
-  //   try {
-  //     switch (title) {
-  //       case AppStrings.personalinfo:
-  //         Navigator.pushNamed(context, '/personalinfo');
-  //         break;
-  //       case AppStrings.drinkreminder:
-  //         Navigator.pushNamed(context, '/drinkreminder');
-  //         break;
-  //       case AppStrings.sipnudgebottle:
-  //         Navigator.pushNamed(context, '/sipnudge_bottle');
-  //         break;
-  //       case AppStrings.preferences:
-  //         Navigator.pushNamed(context, '/preferences');
-  //         break;
-  //       case AppStrings.dataAnalytics:
-  //         Navigator.pushNamed(context, '/data&analytics');
-  //         break;
-  //       case AppStrings.linkaccounts:
-  //         Navigator.pushNamed(context, '/linked_accounts');
-  //         break;
-  //       case AppStrings.helpandsupport:
-  //         Navigator.pushNamed(context, '/support');
-  //         break;
-  //       case AppStrings.accountandsecurity:
-  //         Navigator.pushNamed(context, '/account_security');
-  //         break;
-  //       case AppStrings.logout:
-  //         _showLogoutConfirmation(context);
-  //         break;
-  //       default:
-  //         ScaffoldMessenger.of(context).showSnackBar(
-  //           SnackBar(
-  //             content: Text('$title screen coming soon!',
-  //                 style: TextStyle(
-  //                   color: AppColors.white,
-  //                   fontSize: AppFontStyles.fontSize_20.sp,
-  //                   fontFamily: AppFontStyles.urbanistFontFamily,
-  //                   fontVariations: [AppFontStyles.boldFontVariation],
-  //                 )),
-  //           ),
-  //         );
-  //     }
-  //   } catch (e, s) {
-  //     debugPrint("Navigation error for '$title': $e\n$s");
-  //     ScaffoldMessenger.of(context).showSnackBar(
-  //       const SnackBar(content: Text('Page Coming Soon...')),
-  //     );
-  //   }
-  // }
-
   void _handleNavigation(BuildContext context, String title) {
     try {
       final navigator = Navigator.of(context); // this is the tab's Navigator
 
       switch (title) {
         case AppStrings.personalinfo:
-          Navigator.of(context, rootNavigator: true).push(
-            MaterialPageRoute(
-              builder: (_) => UserInfoInputScreen(fromSettings: true),
-            ),
-          );
-          break;
+          {
+            context.read<BottomNavCubit>().hideBar();
+            navigator
+                .push(
+              MaterialPageRoute(
+                builder: (_) => UserInfoInputScreen(fromSettings: true),
+              ),
+            )
+                .then((value) {
+              context.read<BottomNavCubit>().showBar();
+            });
+            break;
+          }
 
         case AppStrings.drinkreminder:
           navigator.push(

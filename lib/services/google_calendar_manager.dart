@@ -105,11 +105,8 @@ class GoogleCalendarManager {
       for (final event in events) {
         final title = event['summary'] ?? '(No title)';
         final startTime =
-            event['start']?['dateTime'] ??
-            event['start']?['date'];
-        final endTime =
-            event['end']?['dateTime'] ??
-            event['end']?['date'];
+            event['start']?['dateTime'] ?? event['start']?['date'];
+        final endTime = event['end']?['dateTime'] ?? event['end']?['date'];
 
         debugPrint(
           '$_logTag • $title | $startTime → $endTime',
@@ -209,10 +206,67 @@ class GoogleCalendarManager {
     return false;
   }
 
-  /// Optional: Explicit sign out
+  // Inside GoogleCalendarManager class
+
+  Future<List<Map<String, dynamic>>> fetchEventsForRange(
+      DateTime start, DateTime end) async {
+    final signedIn = await ensureSignedIn();
+    if (!signedIn) return [];
+
+    final authHeaders = await _currentUser!.authHeaders;
+    final uri = Uri.parse(
+      'https://www.googleapis.com/calendar/v3/calendars/primary/events'
+      '?timeMin=${start.toUtc().toIso8601String()}'
+      '&timeMax=${end.toUtc().toIso8601String()}'
+      '&singleEvents=true'
+      '&orderBy=startTime',
+    );
+
+    final response = await http.get(uri, headers: authHeaders);
+    if (response.statusCode != 200) return [];
+
+    final data = json.decode(response.body);
+    return List<Map<String, dynamic>>.from(data['items'] ?? []);
+  }
+
+  bool checkOverlapLocally(
+      DateTime slotStart, DateTime slotEnd, List<Map<String, dynamic>> events) {
+    for (final event in events) {
+      final startRaw = event['start'];
+      final endRaw = event['end'];
+
+      DateTime eventStart;
+      DateTime eventEnd;
+
+      if (startRaw['dateTime'] != null) {
+        eventStart = DateTime.parse(startRaw['dateTime']).toLocal();
+        eventEnd = DateTime.parse(endRaw['dateTime']).toLocal();
+      } else if (startRaw['date'] != null) {
+        eventStart = DateTime.parse(startRaw['date']).toLocal();
+
+        eventEnd = DateTime.parse(endRaw['date']).toLocal();
+      } else {
+        continue;
+      }
+
+      final overlaps =
+          eventStart.isBefore(slotEnd) && eventEnd.isAfter(slotStart);
+
+      if (overlaps) {
+        log("⚠️ Local Conflict: '${event['summary']}' overlaps with slot.");
+        return true;
+      }
+    }
+    return false;
+  }
+
   Future<void> signOut() async {
-    debugPrint('$_logTag Signing out');
-    _currentUser = null;
-    await _googleSignIn.signOut();
+    try {
+      debugPrint('$_logTag Signing out');
+      _currentUser = null;
+      await _googleSignIn.signOut();
+    } catch (e) {
+      log("Exception occurred in signOut ${e.toString()}");
+    }
   }
 }

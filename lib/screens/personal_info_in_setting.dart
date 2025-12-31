@@ -214,7 +214,7 @@ class _PersonalInfoScreenInSettingstate
                 _buildInfoCard(),
                 const Spacer(),
                 //_buildBottomNav(size),
-                AnimatedBottomNavBar()
+                // AnimatedBottomNavBar()
               ],
             ),
           ),

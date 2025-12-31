@@ -24,11 +24,13 @@ class BottomNavState extends Equatable {
     this.selectedTab = BottomNavTab.home,
     this.isLoading = false,
     this.previousTab,
+    this.isVisible = true,
   });
 
   final BottomNavTab selectedTab;
   final bool isLoading;
   final BottomNavTab? previousTab;
+  final bool isVisible;
   int get selectedIndex => selectedTab.index;
   String get selectedLabel => selectedTab.label;
   bool get hasPreviousTab => previousTab != null;
@@ -37,16 +39,18 @@ class BottomNavState extends Equatable {
     BottomNavTab? selectedTab,
     bool? isLoading,
     BottomNavTab? previousTab,
+    bool? isVisible, // Add to copyWith
   }) {
     return BottomNavState(
       selectedTab: selectedTab ?? this.selectedTab,
       isLoading: isLoading ?? this.isLoading,
       previousTab: previousTab ?? this.previousTab,
+      isVisible: isVisible ?? this.isVisible,
     );
   }
 
   @override
-  List<Object?> get props => [selectedTab, isLoading, previousTab];
+  List<Object?> get props => [selectedTab, isLoading, previousTab, isVisible];
 
   @override
   String toString() {

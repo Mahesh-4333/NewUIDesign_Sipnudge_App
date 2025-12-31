@@ -8,6 +8,7 @@ import 'package:hydrify/constants/app_dimensions.dart';
 import 'package:hydrify/constants/app_font_styles.dart';
 import 'package:hydrify/constants/app_strings.dart';
 import 'package:hydrify/cubit/ble/ble_cubit.dart';
+import 'package:hydrify/cubit/bottom_nav/bottom_nav_cubit.dart';
 import 'package:hydrify/cubit/user_info/user_info_cubit.dart';
 import 'package:hydrify/helpers/database_helper.dart';
 import 'package:hydrify/helpers/shared_pref_helper.dart';
@@ -27,9 +28,11 @@ class UserInfoDailyGoalScreen extends StatefulWidget {
   const UserInfoDailyGoalScreen({
     super.key,
     required this.waterGoal,
+    required this.isViaSettingsScreen,
   });
 
   final double waterGoal;
+  final bool isViaSettingsScreen;
   @override
   State<UserInfoDailyGoalScreen> createState() =>
       _UserInfoDailyGoalScreenState();
@@ -288,78 +291,62 @@ class _UserInfoDailyGoalScreenState extends State<UserInfoDailyGoalScreen> {
           ],
         ),
       ),
-      bottomNavigationBar: SafeArea(
-        child: Container(
-          margin: EdgeInsets.only(
-            bottom: AppDimensions.dim10.h,
-            left: AppDimensions.defaultPadding.w,
-            right: AppDimensions.defaultPadding.w,
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Padding(
-                padding: EdgeInsets.only(bottom: AppDimensions.dim12.h),
-                child: Text(
-                  "Google Calendar signin might be required\nFor smart snooze and calendar sync",
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: AppColors.blueGradient,
-                    fontSize: AppFontStyles.fontSize_16,
-                    fontFamily: AppFontStyles.urbanistFontFamily,
-                    fontVariations: [AppFontStyles.semiBoldFontVariation],
-                  ),
-                ),
-              ),
-              SizedBox(
-                //height: AppDimensions.dim60.h,
-                child: AuthButton(
-                  text: AppStrings.letsHitHydrationGoals,
-                  color: AppColors.blueGradient,
-                  areTwoItems: false,
-                  onTap: () async {
-                    if (isButtonClicked == true) {
-                      return;
-                    }
-                    setState(() {
-                      isButtonClicked = true;
-                    });
-                    UiUtilsService.showLoading(context, "Please wait");
-                    await context
-                        .read<UserInfoCubit>()
-                        .saveUser(context.read<UserInfoCubit>().state);
-                    await SharedPrefsHelper.setPersonalInfoSubmitted(true);
-                    await SharedPrefsHelper.setWaterGoal(
-                        convertedWaterGoal.toInt());
+      bottomNavigationBar: Container(
+        height: AppDimensions.dim85.h,
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.start,
+          children: [
+            AuthButton(
+              text: AppStrings.letsHitHydrationGoals,
+              color: AppColors.blueGradient,
+              areTwoItems: false,
+              onTap: () async {
+                log("isViaSettingsScreen ${widget.isViaSettingsScreen}");
+                if (widget.isViaSettingsScreen == false) {
+                  var response = await showGoogleCalendarDialog();
+                  if (response == false) {
+                    return;
+                  }
+                  if (isButtonClicked == true) {
+                    return;
+                  }
+                }
 
-                    final slots = generateHydrationSlots(convertedWaterGoal);
-                    for (var slot in slots) {
-                      log("Slot: ${slot.slot.label}, Water to drink: ${slot.amount} mL");
-                    }
+                setState(() {
+                  isButtonClicked = true;
+                });
+                UiUtilsService.showLoading(context, "Please wait");
+                await context
+                    .read<UserInfoCubit>()
+                    .saveUser(context.read<UserInfoCubit>().state);
+                await SharedPrefsHelper.setPersonalInfoSubmitted(true);
+                await SharedPrefsHelper.setWaterGoal(
+                    convertedWaterGoal.toInt());
 
-                    final dbHelper = DatabaseHelper();
-                    await dbHelper.clearHydrationSlots();
-                    for (var slot in slots) {
-                      await dbHelper.insertOrUpdateSlot(slot);
-                    }
-                    await context.read<BleCubit>().queueHydrationSlots(slots);
-                    await NotificationService()
-                        .resetAllHydrationReminders(slots);
-                    UiUtilsService.dismissLoading(context);
-                    setState(() {
-                      isButtonClicked = false;
-                    });
-                    Navigator.of(context, rootNavigator: true)
-                        .pushAndRemoveUntil(
-                            MaterialPageRoute(
-                              builder: (context) => BottomNavScreenNew(),
-                            ),
-                            (route) => false);
-                  },
-                ),
-              ),
-            ],
-          ),
+                final slots = generateHydrationSlots(convertedWaterGoal);
+                for (var slot in slots) {
+                  log("Slot: ${slot.slot.label}, Water to drink: ${slot.amount} mL");
+                }
+
+                final dbHelper = DatabaseHelper();
+                await dbHelper.clearHydrationSlots();
+                for (var slot in slots) {
+                  await dbHelper.insertOrUpdateSlot(slot);
+                }
+                await context.read<BleCubit>().queueHydrationSlots(slots);
+                await NotificationService().resetAllHydrationReminders(slots);
+                UiUtilsService.dismissLoading(context);
+                setState(() {
+                  isButtonClicked = false;
+                });
+                Navigator.of(context, rootNavigator: true).pushAndRemoveUntil(
+                    MaterialPageRoute(
+                      builder: (context) => BottomNavScreenNew(),
+                    ),
+                    (route) => false);
+              },
+            ),
+          ],
         ),
       ),
     );
@@ -416,5 +403,50 @@ class _UserInfoDailyGoalScreenState extends State<UserInfoDailyGoalScreen> {
     });
 
     return slots;
+  }
+
+  Future<bool?> showGoogleCalendarDialog() async {
+    return await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                "Action Required",
+                textAlign: TextAlign.left,
+                style: TextStyle(
+                  color: AppColors.black,
+                  fontSize: AppFontStyles.fontSize_16,
+                  fontFamily: AppFontStyles.urbanistFontFamily,
+                  fontVariations: [AppFontStyles.boldFontVariation],
+                ),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                "Google Calendar sign-in might be required for smart snooze and calendar sync",
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: AppColors.blueGradient,
+                  fontSize: AppFontStyles.fontSize_16,
+                  fontFamily: AppFontStyles.urbanistFontFamily,
+                  fontVariations: [AppFontStyles.semiBoldFontVariation],
+                ),
+              ),
+              const SizedBox(height: 24),
+              AuthButton(
+                text: "I give my consent",
+                color: AppColors.blueGradient,
+                areTwoItems: false,
+                onTap: () => Navigator.of(context).pop(true),
+              )
+            ],
+          ),
+        );
+      },
+    );
   }
 }

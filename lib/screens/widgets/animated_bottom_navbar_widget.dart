@@ -153,67 +153,70 @@ class _AnimatedBottomNavBarState extends State<AnimatedBottomNavBar>
         final cubit = context.read<BottomNavCubit>();
         final currentIndex = state.selectedIndex;
 
-        return Container(
-          width: AppDimensions.dim408.w,
-          height: AppDimensions.dim88.h,
-          padding: EdgeInsets.symmetric(
-            vertical: AppDimensions.dim14.h,
-            horizontal: AppDimensions.dim20.w,
-          ),
-          decoration: BoxDecoration(
-            //color: const Color(0xffffffff),
-            gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [AppColors.white, AppColors.bottomnavbar]),
-            boxShadow: [
-              BoxShadow(
-                blurRadius: AppDimensions.dim30.r,
-                spreadRadius: AppDimensions.dim2.r,
-                color: Colors.white.withOpacity(.09),
-                offset: Offset(AppDimensions.dim4.w, AppDimensions.dim4.h),
-              )
-            ],
-            border: GradientBoxBorder(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [AppColors.greywith80, Color(0xFF3F3F3F)],
-              ),
-              width: AppDimensions.dim1.w,
-            ),
-            borderRadius: BorderRadius.circular(AppDimensions.dim90.r),
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: List.generate(
-              _icons.length,
-              (index) {
-                final isSelected = currentIndex == index;
-                return GestureDetector(
-                  onTapDown: (_) => _onTapDown(index),
-                  onTapUp: (_) => _onTapUp(index),
-                  onTapCancel: _onTapCancel,
-                  onTap: () => _onTap(index, cubit, currentIndex),
-                  child: AnimatedBuilder(
-                    animation: Listenable.merge([
-                      _pressControllers[index],
-                      if (isSelected) _selectionController,
-                    ]),
-                    builder: (context, child) {
-                      return Transform.scale(
-                        scale: _scaleAnimations[index].value,
-                        child: isSelected
-                            ? _buildSelectedContainer(index)
-                            : _buildUnselectedItem(index),
+        return !state.isVisible
+            ? SizedBox.shrink()
+            : Container(
+                width: AppDimensions.dim408.w,
+                height: AppDimensions.dim88.h,
+                padding: EdgeInsets.symmetric(
+                  vertical: AppDimensions.dim14.h,
+                  horizontal: AppDimensions.dim20.w,
+                ),
+                decoration: BoxDecoration(
+                  //color: const Color(0xffffffff),
+                  gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [AppColors.white, AppColors.bottomnavbar]),
+                  boxShadow: [
+                    BoxShadow(
+                      blurRadius: AppDimensions.dim30.r,
+                      spreadRadius: AppDimensions.dim2.r,
+                      color: Colors.white.withOpacity(.09),
+                      offset:
+                          Offset(AppDimensions.dim4.w, AppDimensions.dim4.h),
+                    )
+                  ],
+                  border: GradientBoxBorder(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [AppColors.greywith80, Color(0xFF3F3F3F)],
+                    ),
+                    width: AppDimensions.dim1.w,
+                  ),
+                  borderRadius: BorderRadius.circular(AppDimensions.dim90.r),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: List.generate(
+                    _icons.length,
+                    (index) {
+                      final isSelected = currentIndex == index;
+                      return GestureDetector(
+                        onTapDown: (_) => _onTapDown(index),
+                        onTapUp: (_) => _onTapUp(index),
+                        onTapCancel: _onTapCancel,
+                        onTap: () => _onTap(index, cubit, currentIndex),
+                        child: AnimatedBuilder(
+                          animation: Listenable.merge([
+                            _pressControllers[index],
+                            if (isSelected) _selectionController,
+                          ]),
+                          builder: (context, child) {
+                            return Transform.scale(
+                              scale: _scaleAnimations[index].value,
+                              child: isSelected
+                                  ? _buildSelectedContainer(index)
+                                  : _buildUnselectedItem(index),
+                            );
+                          },
+                        ),
                       );
                     },
                   ),
-                );
-              },
-            ),
-          ),
-        );
+                ),
+              );
       },
     );
   }

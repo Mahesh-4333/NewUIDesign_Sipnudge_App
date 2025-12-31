@@ -27,7 +27,7 @@ class NotificationService {
   final FlutterLocalNotificationsPlugin _plugin =
       FlutterLocalNotificationsPlugin();
 
-  static const int _scheduleDaysAhead = 7;
+  static const int _scheduleDaysAhead = 10;
   NotificationTapCallback? onNotificationTap;
 
   Future<void> init({NotificationTapCallback? onTap}) async {
@@ -45,8 +45,8 @@ class NotificationService {
           'hydration_category',
           actions: <DarwinNotificationAction>[
             DarwinNotificationAction.plain(
-              'STOP_ACTION', // iOS action ID
-              'Stop', // Button title
+              'STOP_ACTION',
+              'Stop',
               options: {},
             ),
           ],
@@ -140,7 +140,7 @@ class NotificationService {
           sound: fileName,
           presentAlert: true,
           presentSound: !isSilent,
-          subtitle: "Swipe up to stop the reminder",
+          subtitle: "Swipe to stop the reminder",
           interruptionLevel: isSilent
               ? InterruptionLevel.passive
               : InterruptionLevel.timeSensitive,
@@ -166,10 +166,14 @@ class NotificationService {
   }
 
   Future<void> scheduleHydrationRemindersForFuture(
-    List<HydrationEntry> entries,
-  ) async {
+      List<HydrationEntry> entries) async {
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
+    final tenDaysOut = today.add(Duration(days: _scheduleDaysAhead));
+
+    final calendarManager = GoogleCalendarManager();
+    final allEvents =
+        await calendarManager.fetchEventsForRange(now, tenDaysOut);
 
     for (int dayOffset = 0; dayOffset < _scheduleDaysAhead; dayOffset++) {
       final baseDay = today.add(Duration(days: dayOffset));
@@ -181,11 +185,11 @@ class NotificationService {
         ));
 
         final notifyAt = endDateTime.subtract(const Duration(minutes: 10));
-
         if (notifyAt.isBefore(now)) continue;
 
-        final shouldSilence = false;
-        // await _shouldSilenceHydrationReminder(notifyAt);
+        // 2. Local check (Instant)
+        final shouldSilence = calendarManager.checkOverlapLocally(
+            notifyAt, notifyAt.add(const Duration(minutes: 5)), allEvents);
 
         await _scheduleSingleReminder(
           entry: entry,
@@ -196,6 +200,37 @@ class NotificationService {
       }
     }
   }
+
+  // Future<void> scheduleHydrationRemindersForFuture(
+  //   List<HydrationEntry> entries,
+  // ) async {
+  //   final now = DateTime.now();
+  //   final today = DateTime(now.year, now.month, now.day);
+
+  //   for (int dayOffset = 0; dayOffset < _scheduleDaysAhead; dayOffset++) {
+  //     final baseDay = today.add(Duration(days: dayOffset));
+
+  //     for (final entry in entries) {
+  //       final endDateTime = baseDay.add(Duration(
+  //         hours: entry.endTime.hour,
+  //         minutes: entry.endTime.minute,
+  //       ));
+
+  //       final notifyAt = endDateTime.subtract(const Duration(minutes: 10));
+
+  //       if (notifyAt.isBefore(now)) continue;
+
+  //       final shouldSilence = await _shouldSilenceHydrationReminder(notifyAt);
+
+  //       await _scheduleSingleReminder(
+  //         entry: entry,
+  //         notifyAt: notifyAt,
+  //         shouldSilence: shouldSilence,
+  //         dayOffset: dayOffset,
+  //       );
+  //     }
+  //   }
+  // }
 
   Future<void> _scheduleSingleReminder({
     required HydrationEntry entry,
@@ -212,8 +247,9 @@ class NotificationService {
     bool isRingtoneFeedbackEnabled =
         await SharedPrefsHelper.getRingtoneFeedBack();
 
-    if (isRingtoneFeedbackEnabled) {
-      shouldSilence = false;
+    if (shouldSilence == false) {
+      // Google says not to silence , then use the value of isRingtoneFeedbackEnabled
+      shouldSilence = !isRingtoneFeedbackEnabled;
     }
     if (Platform.isIOS) {
       await _scheduleIOSHydrationNotification(
