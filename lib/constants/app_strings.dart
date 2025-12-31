@@ -222,6 +222,7 @@ class AppStrings {
   static const touchTheCapToSyncNow = "Touch the cap to sync now";
   static const gotohomepage = "Go to Homepage";
   static const ringtoneFeedback = "Ringtone Feedback";
+  static const username = "Username";
   static const ringtone = "Ringtone";
   static const ringtone1 = "Ringtone 1";
   static const ringtone2 = "Ringtone 2";

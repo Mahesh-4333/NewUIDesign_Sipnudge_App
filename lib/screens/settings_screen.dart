@@ -53,7 +53,7 @@ class _SettingScreenState extends State<SettingScreen> {
 
   Future<void> _loadSavedName() async {
     final name = UserManager().userName;
-    _nameController.text = name.isNotEmpty ? name : AppStrings.newtonsingh;
+    _nameController.text = name.isNotEmpty ? name : AppStrings.username;
   }
 
   void _saveNameLocally(String name) async {
