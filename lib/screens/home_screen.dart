@@ -243,7 +243,9 @@ class _HomeScreenState extends State<HomeScreen> {
                                 //   ),
                                 // ),
                                 child: RichText(
-                                  textAlign: TextAlign.center,
+                                  textAlign: isGuest
+                                      ? TextAlign.start
+                                      : TextAlign.center,
                                   text: TextSpan(
                                     style: TextStyle(
                                       color: AppColors.bluegray,
@@ -255,7 +257,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                       fontSize: isGuest
                                           ? AppFontStyles.fontSize_13.sp
                                           : AppFontStyles.fontSize_13.sp,
-                                      height: 1.4.sp,
+                                      height: isGuest ? 1.4.sp : 1.5.sp,
                                     ),
                                     children: isGuest
                                         ? [

@@ -69,7 +69,7 @@ class BottleInfo {
         return BottleInfo(
           color: 'red',
           name: 'Royal Red',
-          imagePath: 'assets/images/red_bottle_image1.png',
+          imagePath: 'assets/images/red_bottle_image2.png',
           material: 'B-Free Plastic',
           description: 'Vibrant red bottle for daily hydration',
           currentWater: currentWater,
