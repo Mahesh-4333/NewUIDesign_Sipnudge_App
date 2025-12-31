@@ -352,7 +352,7 @@ class _UserInfoDailyGoalScreenState extends State<UserInfoDailyGoalScreen> {
                     Navigator.of(context, rootNavigator: true)
                         .pushAndRemoveUntil(
                             MaterialPageRoute(
-                              builder: (context) => QrScanner(),
+                              builder: (context) => BottomNavScreenNew(),
                             ),
                             (route) => false);
                   },

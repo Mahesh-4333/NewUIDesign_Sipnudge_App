@@ -1,11 +1,16 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:hydrify/constants/app_colors.dart';
 import 'package:hydrify/constants/app_dimensions.dart';
 import 'package:hydrify/constants/app_font_styles.dart';
 import 'package:hydrify/helpers/shared_pref_helper.dart';
+import 'package:hydrify/screens/auth/auth_options_screen.dart';
 import 'package:hydrify/screens/bottom_nav_screen_new.dart';
 import 'package:hydrify/screens/home_screen.dart';
+import 'package:hydrify/screens/personalinfo.dart';
+import 'package:hydrify/screens/user_personal_info_input_screen..dart';
 import 'package:hydrify/screens/widgets/auth_button_widget.dart';
 import 'package:hydrify/services/qr_generator.dart';
 import 'package:hydrify/services/ui_utils_service.dart';
@@ -59,75 +64,70 @@ class _QrScannerState extends State<QrScanner>
     super.dispose();
   }
 
+  static const List<String> _validColors = [
+    'black',
+    'green',
+    'purple',
+    'gray',
+    'red',
+  ];
+
   Future<void> _handleQR(String value) async {
     if (_isProcessing) return;
 
     setState(() {
       _isProcessing = true;
+      _errorText = null;
     });
 
-    debugPrint("QR SCANNED: $value");
+    try {
+      final decoded = jsonDecode(value);
 
-    /// 🔁 AUTO-ROTATE BOTTLE (NO HARDCODE)
-    //final nextBottle = await AppPreferences.rotateBottle();
-    final nextBottle = await SharedPrefsHelper.rotateBottle();
-    debugPrint('Bottle changed to: $nextBottle');
+      if (decoded is! Map<String, dynamic>) {
+        throw Exception("Not object");
+      }
 
-    /// 🔥 Generate COLORED QR IMAGE
-    final qrFile = await generateQrImage(
-      data: value, // scanned QR value
-      color: _getQrColor(nextBottle), // bottle-based color
-      fileName: "qr_${nextBottle}", // unique name
-    );
-    debugPrint("QR image saved at: ${qrFile.path}");
+      if (!decoded.containsKey('color')) {
+        throw Exception("Missing color");
+      }
 
-    // ScaffoldMessenger.of(context).showSnackBar(
-    //   SnackBar(
-    //     content: Text('QR Code Scanned: $value'),
-    //     duration: const Duration(milliseconds: 500),
-    //     backgroundColor: Colors.green,
-    //   ),
-    // );
+      final String qrColor = decoded['color'].toString().trim().toLowerCase();
 
-    /// ✅ NAVIGATE IMMEDIATELY
-    if (!mounted) return;
+      const validColors = [
+        'purple',
+        'black',
+        'gray',
+        'green',
+        'red',
+      ];
 
-    // await Navigator.push(
-    //   context,
-    //   MaterialPageRoute(builder: (_) => const HomeScreen()),
-    // );
+      if (!validColors.contains(qrColor)) {
+        throw Exception("Unsupported color");
+      }
 
-    await Navigator.of(context, rootNavigator: true).pushReplacement(
-      //context,
-      MaterialPageRoute(
-        builder: (context) => BottomNavScreenNew(),
-      ),
-      //(route) => false
-    );
+      await SharedPrefsHelper.setBottleColor(qrColor);
 
-    // Reset flag when user returns from HomeScreen
-    if (mounted) {
+      if (!mounted) return;
+
+      // await Navigator.pushReplacement(
+      //   context,
+      //   MaterialPageRoute(
+      //     builder: (_) => const BottomNavScreenNew(),
+      //   ),
+      // );
+      await Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (_) => const AuthOptionsScreen(),
+        ),
+      );
+    } catch (e) {
+      debugPrint("QR ERROR: $e");
+
       setState(() {
+        _errorText = "Invalid QR Code";
         _isProcessing = false;
       });
-    }
-  }
-
-  /// ✅ ADD THIS HERE
-  Color _getQrColor(String bottleColor) {
-    switch (bottleColor.toLowerCase()) {
-      case 'black':
-        return Colors.black;
-      case 'red':
-        return Colors.red;
-      case 'purple':
-        return Colors.purple;
-      case 'green':
-        return Colors.green;
-      case 'gray':
-        return Colors.grey;
-      default:
-        return Colors.black;
     }
   }
 
@@ -350,7 +350,7 @@ class _QrScannerState extends State<QrScanner>
                                 Navigator.pushAndRemoveUntil(
                                   context,
                                   MaterialPageRoute(
-                                    builder: (context) => BottomNavScreenNew(),
+                                    builder: (context) => UserInfoInputScreen(),
                                   ),
                                   (route) => false,
                                 );

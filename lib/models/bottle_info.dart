@@ -27,7 +27,7 @@ class BottleInfo {
     switch (color.toLowerCase()) {
       case 'black':
         return BottleInfo(
-          color: 'Black',
+          color: 'black',
           name: 'Midnight Edition',
           imagePath: 'assets/images/black_bottle_image.png',
           material: 'Stainless Steel',
@@ -37,7 +37,7 @@ class BottleInfo {
         );
       case 'gray':
         return BottleInfo(
-          color: 'Gray',
+          color: 'gray',
           name: 'Classic Gray',
           imagePath: 'assets/images/gray_bottle_image.png',
           material: 'Aluminum',
@@ -47,7 +47,7 @@ class BottleInfo {
         );
       case 'green':
         return BottleInfo(
-          color: 'Green',
+          color: 'green',
           name: 'Eco Green',
           imagePath: 'assets/images/green_bottle_image.png',
           material: 'Recycled Plastic',
@@ -56,13 +56,33 @@ class BottleInfo {
           waterPercentage: waterPercentage,
         );
       case 'purple':
-      default:
         return BottleInfo(
-          color: 'Purple',
+          color: 'purple',
           name: 'Royal Purple',
           imagePath: 'assets/images/purple_bottle_image.png',
           material: 'BPA-Free Plastic',
           description: 'Vibrant purple bottle for daily hydration',
+          currentWater: currentWater,
+          waterPercentage: waterPercentage,
+        );
+      case 'red':
+        return BottleInfo(
+          color: 'red',
+          name: 'Royal Red',
+          imagePath: 'assets/images/red_bottle_image1.png',
+          material: 'B-Free Plastic',
+          description: 'Vibrant red bottle for daily hydration',
+          currentWater: currentWater,
+          waterPercentage: waterPercentage,
+        );
+      default:
+        // fallback
+        return BottleInfo(
+          color: 'Black',
+          name: 'Midnight Edition',
+          imagePath: 'assets/images/black_bottle_image.png',
+          material: 'Stainless Steel',
+          description: 'Default bottle',
           currentWater: currentWater,
           waterPercentage: waterPercentage,
         );

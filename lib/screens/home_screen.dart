@@ -114,16 +114,18 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _loadBottle() async {
-    final bottle = await SharedPrefsHelper.getBottle();
+    //final bottle = await SharedPrefsHelper.getBottle();
+    final color = await SharedPrefsHelper.getBottleColor();
+
     if (!mounted) return;
 
     // Get current water data from BottleDataCubit
     final bottleState = context.read<BottleDataCubit>().state;
 
     setState(() {
-      selectedBottle = bottle ?? 'black';
+      //selectedBottle = color ?? 'black';
       bottleInfo = BottleInfo.getByColor(
-        selectedBottle,
+        color,
         currentWater: bottleState.volume,
         waterPercentage: bottleState.volumePercent,
       );
