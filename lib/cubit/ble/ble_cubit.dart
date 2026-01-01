@@ -183,42 +183,6 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
     });
   }
 
-  // void _scanForLastDevice() {
-  //   if (savedDeviceId == null && savedDeviceName == null) return;
-
-  //   emit(state.copyWith(
-  //     status: BleStatus.scanning,
-  //     message: "Scanning for last device...",
-  //   ));
-
-  //   _scanSub?.cancel();
-  //   FlutterBluePlus.startScan(
-  //     timeout: const Duration(seconds: 20),
-  //     withServices: [serviceUUID],
-  //   );
-
-  //   _scanSub = FlutterBluePlus.scanResults.listen((results) {
-  //     for (var r in results) {
-  //       if (r.device.id.id == savedDeviceId ||
-  //           r.device.name == savedDeviceName) {
-  //         _scanSub?.cancel();
-  //         FlutterBluePlus.stopScan();
-  //         _connectToDevice(r.device);
-  //         return;
-  //       }
-  //     }
-  //   }, onError: (e) {
-  //     emit(state.copyWith(status: BleStatus.error, message: "Scan error: $e"));
-  //     _rescan(lastDeviceOnly: true);
-  //   });
-
-  //   Future.delayed(const Duration(seconds: 20), () {
-  //     if (state.status == BleStatus.scanning) {
-  //       FlutterBluePlus.stopScan().then((_) => _scanForLastDevice());
-  //     }
-  //   });
-  // }
-
   void _scanForAllDevices() {
     emit(state.copyWith(
       status: BleStatus.scanning,
@@ -251,35 +215,6 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
       }
     });
   }
-
-  // void _scanForAllDevices() {
-  //   emit(state.copyWith(
-  //     status: BleStatus.scanning,
-  //     message: "Scanning for BLE devices...",
-  //   ));
-
-  //   _scanSub?.cancel();
-  //   FlutterBluePlus.startScan(timeout: const Duration(seconds: 20));
-
-  //   _scanSub = FlutterBluePlus.scanResults.listen((results) {
-  //     if (results.isNotEmpty) {
-  //       var filtered = results
-  //           .where(
-  //               (it) => it.advertisementData.serviceUuids.contains(serviceUUID))
-  //           .toList();
-  //       emit(state.copyWith(scannedDevices: filtered));
-  //     }
-  //   }, onError: (e) {
-  //     emit(state.copyWith(status: BleStatus.error, message: "Scan error: $e"));
-  //     _rescan();
-  //   });
-
-  //   Future.delayed(const Duration(seconds: 20), () async {
-  //     if (state.status == BleStatus.scanning) {
-  //       FlutterBluePlus.stopScan().then((_) => _scanForAllDevices());
-  //     }
-  //   });
-  // }
 
   Future<void> _rescan({
     bool lastDeviceOnly = false,
