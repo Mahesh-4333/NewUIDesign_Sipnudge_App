@@ -56,21 +56,6 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   @override
-  // void initState() {
-  //   super.initState();
-  //   context.read<BleCubit>().start();
-  // }
-
-  // void initState() {
-  //   super.initState();
-
-  //   // Show popup before BLE starts
-  //   WidgetsBinding.instance.addPostFrameCallback((_) {
-  //     _showStartJourneyDialog(context);
-  //   });
-  // }
-
-  @override
   void initState() {
     super.initState();
     _loadBottle();
@@ -217,29 +202,6 @@ class _HomeScreenState extends State<HomeScreen> {
                               Padding(
                                 padding: EdgeInsets.symmetric(
                                     horizontal: AppDimensions.dim10.w),
-                                // child: Text(
-                                //   isGuest
-                                //       ? "If you have purchased the bottle and accidentally entered the guest page, "
-                                //           "you can log out from the settings page and log in normally.\n"
-                                //           "If you don't have the bottle and want to use the basic water-reminder feature, "
-                                //           "you can schedule reminders from the settings page > Drink Reminder > Water Intake\n"
-                                //           "Timeline.\n"
-                                //           "You can also place your bottle order directly from the settings page."
-                                //       : "Start your journey right fill your bottle till 600ml to ensure accurate data.",
-                                //   textAlign: TextAlign.center,
-                                //   style: TextStyle(
-                                //     color: AppColors.bluegray,
-                                //     fontFamily:
-                                //         AppFontStyles.museoModernoFontFamily,
-                                //     fontVariations: [
-                                //       AppFontStyles.boldFontVariation,
-                                //     ],
-                                //     fontSize: isGuest
-                                //         ? AppFontStyles.fontSize_13.sp
-                                //         : AppFontStyles.fontSize_13.sp,
-                                //     height: 1.3.sp,
-                                //   ),
-                                // ),
                                 child: RichText(
                                   textAlign: TextAlign.center,
                                   text: TextSpan(
@@ -267,11 +229,6 @@ class _HomeScreenState extends State<HomeScreen> {
                                                 ],
                                               ),
                                             ),
-
-                                            /// 🔹 Space after paragraph
-                                            // WidgetSpan(
-                                            //   child: SizedBox(height: 15.h),
-                                            // ),
                                             TextSpan(
                                               text:
                                                   "If you don't have the bottle and want to use the basic water-reminder feature, you can schedule reminders from the settings page",
@@ -301,11 +258,6 @@ class _HomeScreenState extends State<HomeScreen> {
                                                 ],
                                               ),
                                             ),
-
-                                            /// 🔹 Space after paragraph
-                                            // WidgetSpan(
-                                            //   child: SizedBox(height: 15.h),
-                                            // ),
                                             TextSpan(
                                               text:
                                                   "You can also place your bottle order directly from the settings page.",
@@ -445,11 +397,6 @@ class _HomeScreenState extends State<HomeScreen> {
                   "assets/images/app_background.png"), // your image path
               fit: BoxFit.cover,
             ),
-            // gradient: LinearGradient(
-            //   begin: Alignment.topCenter,
-            //   end: Alignment.bottomCenter,
-            //   colors: [AppColors.gradientStart, AppColors.gradientEnd],
-            // ),
           ),
           child: Column(
             children: [
@@ -537,64 +484,6 @@ class _HomeScreenState extends State<HomeScreen> {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           GreetingWidget(),
-          // Column(
-          //   children: [
-          //     CustomBeatingBleStatusIndicator(),
-          //     SizedBox(
-          //       height: AppDimensions.dim5.h,
-          //     ),
-          //     BlocBuilder<BottleDataCubit, BottleDataState>(
-          //       buildWhen: (previous, current) =>
-          //           previous.battery != current.battery,
-          //       builder: (context, state) {
-          //         return GestureDetector(
-          //           onTap: () {
-          //             // this widget is dummy widget we will remove it in prod
-
-          //             Navigator.push(
-          //               context,
-          //               MaterialPageRoute(
-          //                 builder: (_) => Hydration30DayPage(),
-          //               ),
-          //             );
-          //           },
-          //           child: CustomCircularProgressIndicator(
-          //               height: AppDimensions.dim60.w,
-          //               width: AppDimensions.dim60.w,
-          //               backgroundColor: AppColors.bluegray,
-          //               progressBackgroundColor: Color(0XFFDDECDC),
-          //               progressColor: state.battery <= 20
-          //                   ? const Color(0xFFFF0000) // red
-          //                   : const Color(0XFF43E73E), // green
-          //               // progressColor: Color(0XFF43E73E),
-          //               percentageValue: state.battery.toDouble(),
-          //               center: TweenAnimationBuilder<int>(
-          //                 tween: IntTween(
-          //                   begin: 0,
-          //                   end: state.battery,
-          //                 ),
-          //                 duration: const Duration(milliseconds: 500),
-          //                 curve: Curves.fastEaseInToSlowEaseOut,
-          //                 builder: (context, value, child) {
-          //                   return Text(
-          //                     "$value%",
-          //                     style: TextStyle(
-          //                       color: AppColors.white,
-          //                       fontFamily:
-          //                           AppFontStyles.museoModernoFontFamily,
-          //                       fontSize: AppFontStyles.fontSize_12,
-          //                       fontVariations: [
-          //                         AppFontStyles.fontWeightVariation600,
-          //                       ],
-          //                     ),
-          //                   );
-          //                 },
-          //               )),
-          //         );
-          //       },
-          //     )
-          //   ],
-          // )
           Row(
             children: [
               /// 📷 QR Scanner Button
