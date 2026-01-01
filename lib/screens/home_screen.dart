@@ -99,16 +99,18 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _loadBottle() async {
-    final bottle = await SharedPrefsHelper.getBottle();
+    //final bottle = await SharedPrefsHelper.getBottle();
+    final color = await SharedPrefsHelper.getBottleColor();
+
     if (!mounted) return;
 
     // Get current water data from BottleDataCubit
     final bottleState = context.read<BottleDataCubit>().state;
 
     setState(() {
-      selectedBottle = bottle ?? 'black';
+      //selectedBottle = color ?? 'black';
       bottleInfo = BottleInfo.getByColor(
-        selectedBottle,
+        color,
         currentWater: bottleState.volume,
         waterPercentage: bottleState.volumePercent,
       );
@@ -203,7 +205,9 @@ class _HomeScreenState extends State<HomeScreen> {
                                 padding: EdgeInsets.symmetric(
                                     horizontal: AppDimensions.dim10.w),
                                 child: RichText(
-                                  textAlign: TextAlign.center,
+                                  textAlign: isGuest
+                                      ? TextAlign.start
+                                      : TextAlign.center,
                                   text: TextSpan(
                                     style: TextStyle(
                                       color: AppColors.bluegray,
@@ -215,7 +219,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                       fontSize: isGuest
                                           ? AppFontStyles.fontSize_13.sp
                                           : AppFontStyles.fontSize_13.sp,
-                                      height: 1.4.sp,
+                                      height: isGuest ? 1.4.sp : 1.5.sp,
                                     ),
                                     children: isGuest
                                         ? [

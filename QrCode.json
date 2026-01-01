@@ -1,0 +1,22 @@
+[
+  {
+    "color": "black",
+    "code": "#000000"
+  },
+  {
+    "color": "green",
+    "code": "#4CAF50"
+  },
+  {
+    "color": "purple",
+    "code": "#9C27B0"
+  },
+  {
+    "color": "gray",
+    "code": "#9E9E9E"
+  },
+  {
+    "color": "red",
+    "code": "#F44336"
+  }
+]

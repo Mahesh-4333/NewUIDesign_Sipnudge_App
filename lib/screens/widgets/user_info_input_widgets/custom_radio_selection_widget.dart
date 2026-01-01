@@ -33,112 +33,6 @@ class CustomRadioSelectionWidget extends StatelessWidget {
     );
   }
 
-  // List<Widget> getRadioOptionsBasedOnType(
-  //     BuildContext context, UserInfoState state, double tileWidth) {
-  //   final cubit = context.read<UserInfoCubit>();
-
-  //   if (type == 1) {
-  //     // 🔹 Gender selection
-  //     return [
-  //       buildTile(
-  //         name: AppStrings.male,
-  //         icon: "assets/images/male_ic_11_selected.svg",
-  //         isSelected: state.gender == Gender.male,
-  //         onTap: () => cubit.setGender(Gender.male),
-  //         width: tileWidth,
-  //       ),
-  //       buildTile(
-  //         name: AppStrings.female,
-  //         icon: "assets/images/female_unselected.svg",
-  //         isSelected: state.gender == Gender.female,
-  //         onTap: () => cubit.setGender(Gender.female),
-  //         width: tileWidth,
-  //       ),
-  //       buildTile(
-  //         name: AppStrings.preferNotToSay,
-  //         icon: "",
-  //         isSelected: state.gender == Gender.preferNotToSay,
-  //         onTap: () => cubit.setGender(Gender.preferNotToSay),
-  //         width: tileWidth,
-  //       ),
-  //     ];
-  //   } else if (type == 2) {
-  //     // 🔹 Activity Level
-  //     return [
-  //       buildTile(
-  //         name: AppStrings.sedentary,
-  //         icon: "assets/images/sedentary_selected.svg",
-  //         description: AppStrings.sedentaryDes,
-  //         subDescription: "less than 5000 steps",
-  //         isSelected: state.activityLevel == ActivityLevel.sedentary,
-  //         onTap: () => cubit.setActivityLevel(ActivityLevel.sedentary),
-  //         width: tileWidth,
-  //       ),
-  //       buildTile(
-  //         name: AppStrings.lightlyActive,
-  //         icon: "assets/images/lightly_active_selected.svg",
-  //         description: AppStrings.lightActivityDes,
-  //         subDescription: "5,000 - 7,500 steps",
-  //         isSelected: state.activityLevel == ActivityLevel.lightActivity,
-  //         onTap: () => cubit.setActivityLevel(ActivityLevel.lightActivity),
-  //         width: tileWidth,
-  //       ),
-  //       buildTile(
-  //         name: AppStrings.moderatelyActive,
-  //         icon: "assets/images/moderately_active_selected.svg",
-  //         description: AppStrings.midActivityDes,
-  //         subDescription: "7,500 - 10,000 steps",
-  //         isSelected: state.activityLevel == ActivityLevel.midActive,
-  //         onTap: () => cubit.setActivityLevel(ActivityLevel.midActive),
-  //         width: tileWidth,
-  //       ),
-  //       buildTile(
-  //         name: AppStrings.veryActive,
-  //         icon: "assets/images/very_active1_selected.svg",
-  //         description: AppStrings.veryActivityDes,
-  //         subDescription: "More than 10,000 steps",
-  //         isSelected: state.activityLevel == ActivityLevel.veryActive,
-  //         onTap: () => cubit.setActivityLevel(ActivityLevel.veryActive),
-  //         width: tileWidth,
-  //       ),
-  //     ];
-  //   } else if (type == 3) {
-  //     // 🔹 Diet Type
-  //     return [
-  //       buildTile(
-  //         name: AppStrings.balanced,
-  //         icon: "assets/images/standard_balanced_diet_selected.svg",
-  //         isSelected: state.dietType == DietType.balanced,
-  //         onTap: () => cubit.setDietType(DietType.balanced),
-  //         width: tileWidth,
-  //       ),
-  //       buildTile(
-  //         name: AppStrings.veg,
-  //         icon: "assets/images/veg_diet_selected.svg",
-  //         isSelected: state.dietType == DietType.vegetarian,
-  //         onTap: () => cubit.setDietType(DietType.vegetarian),
-  //         width: tileWidth,
-  //       ),
-  //       buildTile(
-  //         name: AppStrings.processedDiet,
-  //         icon: "assets/images/processed_diet_selected.svg",
-  //         isSelected: state.dietType == DietType.processed,
-  //         onTap: () => cubit.setDietType(DietType.processed),
-  //         width: tileWidth,
-  //       ),
-  //       buildTile(
-  //         name: AppStrings.highProtein,
-  //         icon: "assets/images/high_protein_diet_selected.svg",
-  //         isSelected: state.dietType == DietType.highProtein,
-  //         onTap: () => cubit.setDietType(DietType.highProtein),
-  //         width: tileWidth,
-  //       ),
-  //     ];
-  //   }
-
-  //   return [];
-  // }
-
   List<Widget> getRadioOptionsBasedOnType(
       BuildContext context, UserInfoState state, double tileWidth) {
     final cubit = context.read<UserInfoCubit>();
@@ -261,7 +155,202 @@ class CustomRadioSelectionWidget extends StatelessWidget {
     return [];
   }
 
-  //
+  Widget buildTile({
+    required String name,
+    String? description,
+    String? subDescription,
+    required String icon,
+    required bool isSelected,
+    required Function() onTap,
+    required double width,
+  }) {
+    String displayIcon = isSelected
+        ? icon
+        : icon.replaceFirst('_selected.svg', '_unselected.svg');
+
+    return InkWell(
+      onTap: onTap,
+      splashColor: AppColors.selectedPurpleToggle,
+      child: Container(
+        width: width,
+        height: type == 1 ? AppDimensions.dim82.h : AppDimensions.dim85.h,
+        decoration: BoxDecoration(
+          color: isSelected ? AppColors.offwhiteblue : AppColors.white,
+          border: Border.all(
+            color: isSelected ? AppColors.bluegray : AppColors.greywith80,
+            width: isSelected ? AppDimensions.dim3.w : AppDimensions.dim1.w,
+          ),
+          borderRadius: BorderRadius.circular(AppDimensions.radius_15.w),
+          boxShadow: [
+            BoxShadow(
+              blurRadius: AppDimensions.dim4,
+              color: Colors.black.withOpacity(.4),
+              offset: Offset(AppDimensions.dim2.w, AppDimensions.dim2.h),
+            ),
+          ],
+        ),
+        padding: EdgeInsets.only(
+          left: AppDimensions.dim12.w,
+          top: AppDimensions.dim12.w,
+          bottom: AppDimensions.dim6.h,
+          right: AppDimensions.dim10.w,
+        ),
+        child: Stack(
+          children: [
+            // ▣ TEXT CONTENT
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  name,
+                  style: TextStyle(
+                    fontFamily: AppFontStyles.urbanistFontFamily,
+                    fontSize: AppFontStyles.fontSize_16,
+                    color:
+                        isSelected ? AppColors.bluegray : AppColors.lightgray,
+                    fontVariations: [AppFontStyles.boldFontVariation],
+                  ),
+                ),
+                if (description != null) ...[
+                  SizedBox(height: AppDimensions.dim10.h),
+                  Text(
+                    description,
+                    style: TextStyle(
+                      fontFamily: AppFontStyles.urbanistFontFamily,
+                      fontSize: AppFontStyles.fontSize_14,
+                      color:
+                          isSelected ? AppColors.bluegray : AppColors.lightgray,
+                      fontVariations: [AppFontStyles.semiBoldFontVariation],
+                    ),
+                  ),
+                ],
+              ],
+            ),
+
+            // ▣ ICON WITH CONDITIONAL ALIGNMENT
+            if (icon.isNotEmpty)
+              Align(
+                alignment:
+                    type == 1 ? Alignment.bottomRight : Alignment.topRight,
+                child: SvgPicture.asset(displayIcon),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+
+  //=======================================================================
+
+  // List<Widget> getRadioOptionsBasedOnType(
+  //     BuildContext context, UserInfoState state, double tileWidth) {
+  //   final cubit = context.read<UserInfoCubit>();
+
+  //   if (type == 1) {
+  //     // 🔹 Gender selection
+  //     return [
+  //       buildTile(
+  //         name: AppStrings.male,
+  //         icon: "assets/images/male_ic_11_selected.svg",
+  //         isSelected: state.gender == Gender.male,
+  //         onTap: () => cubit.setGender(Gender.male),
+  //         width: tileWidth,
+  //       ),
+  //       buildTile(
+  //         name: AppStrings.female,
+  //         icon: "assets/images/female_unselected.svg",
+  //         isSelected: state.gender == Gender.female,
+  //         onTap: () => cubit.setGender(Gender.female),
+  //         width: tileWidth,
+  //       ),
+  //       buildTile(
+  //         name: AppStrings.preferNotToSay,
+  //         icon: "",
+  //         isSelected: state.gender == Gender.preferNotToSay,
+  //         onTap: () => cubit.setGender(Gender.preferNotToSay),
+  //         width: tileWidth,
+  //       ),
+  //     ];
+  //   } else if (type == 2) {
+  //     // 🔹 Activity Level
+  //     return [
+  //       buildTile(
+  //         name: AppStrings.sedentary,
+  //         icon: "assets/images/sedentary_selected.svg",
+  //         description: AppStrings.sedentaryDes,
+  //         subDescription: "less than 5000 steps",
+  //         isSelected: state.activityLevel == ActivityLevel.sedentary,
+  //         onTap: () => cubit.setActivityLevel(ActivityLevel.sedentary),
+  //         width: tileWidth,
+  //       ),
+  //       buildTile(
+  //         name: AppStrings.lightlyActive,
+  //         icon: "assets/images/lightly_active_selected.svg",
+  //         description: AppStrings.lightActivityDes,
+  //         subDescription: "5,000 - 7,500 steps",
+  //         isSelected: state.activityLevel == ActivityLevel.lightActivity,
+  //         onTap: () => cubit.setActivityLevel(ActivityLevel.lightActivity),
+  //         width: tileWidth,
+  //       ),
+  //       buildTile(
+  //         name: AppStrings.moderatelyActive,
+  //         icon: "assets/images/moderately_active_selected.svg",
+  //         description: AppStrings.midActivityDes,
+  //         subDescription: "7,500 - 10,000 steps",
+  //         isSelected: state.activityLevel == ActivityLevel.midActive,
+  //         onTap: () => cubit.setActivityLevel(ActivityLevel.midActive),
+  //         width: tileWidth,
+  //       ),
+  //       buildTile(
+  //         name: AppStrings.veryActive,
+  //         icon: "assets/images/very_active1_selected.svg",
+  //         description: AppStrings.veryActivityDes,
+  //         subDescription: "More than 10,000 steps",
+  //         isSelected: state.activityLevel == ActivityLevel.veryActive,
+  //         onTap: () => cubit.setActivityLevel(ActivityLevel.veryActive),
+  //         width: tileWidth,
+  //       ),
+  //     ];
+  //   } else if (type == 3) {
+  //     // 🔹 Diet Type
+  //     return [
+  //       buildTile(
+  //         name: AppStrings.balanced,
+  //         icon: "assets/images/standard_balanced_diet_selected.svg",
+  //         isSelected: state.dietType == DietType.balanced,
+  //         onTap: () => cubit.setDietType(DietType.balanced),
+  //         width: tileWidth,
+  //       ),
+  //       buildTile(
+  //         name: AppStrings.veg,
+  //         icon: "assets/images/veg_diet_selected.svg",
+  //         isSelected: state.dietType == DietType.vegetarian,
+  //         onTap: () => cubit.setDietType(DietType.vegetarian),
+  //         width: tileWidth,
+  //       ),
+  //       buildTile(
+  //         name: AppStrings.processedDiet,
+  //         icon: "assets/images/processed_diet_selected.svg",
+  //         isSelected: state.dietType == DietType.processed,
+  //         onTap: () => cubit.setDietType(DietType.processed),
+  //         width: tileWidth,
+  //       ),
+  //       buildTile(
+  //         name: AppStrings.highProtein,
+  //         icon: "assets/images/high_protein_diet_selected.svg",
+  //         isSelected: state.dietType == DietType.highProtein,
+  //         onTap: () => cubit.setDietType(DietType.highProtein),
+  //         width: tileWidth,
+  //       ),
+  //     ];
+  //   }
+
+  //   return [];
+  // }
+
+  //=======================================================================
 
   // Widget buildTile({
   //   required String name,
@@ -368,88 +457,3 @@ class CustomRadioSelectionWidget extends StatelessWidget {
   //     ),
   //   );
   // }
-
-  Widget buildTile({
-    required String name,
-    String? description,
-    String? subDescription,
-    required String icon,
-    required bool isSelected,
-    required Function() onTap,
-    required double width,
-  }) {
-    String displayIcon = isSelected
-        ? icon
-        : icon.replaceFirst('_selected.svg', '_unselected.svg');
-
-    return InkWell(
-      onTap: onTap,
-      splashColor: AppColors.selectedPurpleToggle,
-      child: Container(
-        width: width,
-        height: type == 1 ? AppDimensions.dim82.h : AppDimensions.dim85.h,
-        decoration: BoxDecoration(
-          color: isSelected ? AppColors.offwhiteblue : AppColors.white,
-          border: Border.all(
-            color: isSelected ? AppColors.bluegray : AppColors.greywith80,
-            width: isSelected ? AppDimensions.dim3.w : AppDimensions.dim1.w,
-          ),
-          borderRadius: BorderRadius.circular(AppDimensions.radius_15.w),
-          boxShadow: [
-            BoxShadow(
-              blurRadius: AppDimensions.dim4,
-              color: Colors.black.withOpacity(.4),
-              offset: Offset(AppDimensions.dim2.w, AppDimensions.dim2.h),
-            ),
-          ],
-        ),
-        padding: EdgeInsets.only(
-          left: AppDimensions.dim12.w,
-          top: AppDimensions.dim12.w,
-          bottom: AppDimensions.dim6.h,
-          right: AppDimensions.dim10.w,
-        ),
-        child: Stack(
-          children: [
-            // ▣ TEXT CONTENT
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  name,
-                  style: TextStyle(
-                    fontFamily: AppFontStyles.urbanistFontFamily,
-                    fontSize: AppFontStyles.fontSize_16,
-                    color:
-                        isSelected ? AppColors.bluegray : AppColors.lightgray,
-                    fontVariations: [AppFontStyles.boldFontVariation],
-                  ),
-                ),
-                if (description != null) ...[
-                  SizedBox(height: AppDimensions.dim10.h),
-                  Text(
-                    description,
-                    style: TextStyle(
-                      fontFamily: AppFontStyles.urbanistFontFamily,
-                      fontSize: AppFontStyles.fontSize_14,
-                      color: AppColors.bluegray,
-                      fontVariations: [AppFontStyles.semiBoldFontVariation],
-                    ),
-                  ),
-                ],
-              ],
-            ),
-
-            // ▣ ICON WITH CONDITIONAL ALIGNMENT
-            if (icon.isNotEmpty)
-              Align(
-                alignment:
-                    type == 1 ? Alignment.bottomRight : Alignment.topRight,
-                child: SvgPicture.asset(displayIcon),
-              ),
-          ],
-        ),
-      ),
-    );
-  }
-}

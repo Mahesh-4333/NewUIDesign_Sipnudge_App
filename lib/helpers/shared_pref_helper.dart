@@ -11,7 +11,13 @@ class SharedPrefsHelper {
 
   static const String _bottleKey = 'selected_bottle';
 
-  static const List<String> _bottles = ['purple', 'black', 'gray', 'green'];
+  static const List<String> _bottles = [
+    'purple',
+    'black',
+    'gray',
+    'green',
+    'red'
+  ];
 
   // NEW: Ringtone key
   static const String _keySelectedRingtone = 'selected_ringtone';
@@ -132,16 +138,32 @@ class SharedPrefsHelper {
   }
 
   /// Move to next bottle automatically (QR scan)
-  static Future<String> rotateBottle() async {
+  // static Future<String> rotateBottle() async {
+  //   final prefs = await SharedPreferences.getInstance();
+  //   final current = prefs.getString(_bottleKey) ?? 'purple';
+
+  //   final index = _bottles.indexOf(current);
+  //   final nextIndex = (index + 1) % _bottles.length;
+  //   final nextBottle = _bottles[nextIndex];
+
+  //   await prefs.setString(_bottleKey, nextBottle);
+  //   return nextBottle;
+  // }
+
+  /// 🔥 SET bottle color from QR
+  static Future<void> setBottleColor(String color) async {
     final prefs = await SharedPreferences.getInstance();
-    final current = prefs.getString(_bottleKey) ?? 'purple';
 
-    final index = _bottles.indexOf(current);
-    final nextIndex = (index + 1) % _bottles.length;
-    final nextBottle = _bottles[nextIndex];
+    // safety: allow only supported bottles
+    if (_bottles.contains(color.toLowerCase())) {
+      await prefs.setString(_bottleKey, color.toLowerCase());
+    }
+  }
 
-    await prefs.setString(_bottleKey, nextBottle);
-    return nextBottle;
+  /// 🔥 GET bottle color (QR / saved)
+  static Future<String> getBottleColor() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_bottleKey) ?? 'purple';
   }
 
   /// Reset bottle

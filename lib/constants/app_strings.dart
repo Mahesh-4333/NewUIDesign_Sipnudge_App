@@ -101,7 +101,7 @@ class AppStrings {
   static const standardBalancedDiet = "Standard\nBalanced Diet";
   static const veg = "Vegetarian";
   static const vegan = "Vegan Diet";
-  static const highProtein = "High Protein Diet";
+  static const highProtein = "High Protein Diet/Creatine Intake";
   static const processedDiet = "High Sodium Processed Diet";
   static const highSodiumDiet = "High Sodium\nProcessed Diet";
   static const male = "Male";
@@ -222,6 +222,7 @@ class AppStrings {
   static const touchTheCapToSyncNow = "Touch the cap to sync now";
   static const gotohomepage = "Go to Homepage";
   static const ringtoneFeedback = "Ringtone Feedback";
+  static const username = "Username";
   static const ringtone = "Ringtone";
   static const ringtone1 = "Ringtone 1";
   static const ringtone2 = "Ringtone 2";
