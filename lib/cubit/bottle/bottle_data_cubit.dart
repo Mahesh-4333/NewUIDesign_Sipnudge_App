@@ -40,7 +40,7 @@ class BottleDataCubit extends Cubit<BottleDataState> {
           "battery=${lastData.battery}, "
           "timestamp=${lastData.timestamp}");
 
-      emit(state.copyWith(
+      emit(state.copyWith(  
         volume: lastData.liquidVolume,
         volumePercent: lastData.liquidPercent,
         battery: lastData.battery,

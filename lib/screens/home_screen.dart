@@ -77,7 +77,7 @@ class _HomeScreenState extends State<HomeScreen> {
         context.read<BleCubit>().start();
       } else {
         // if (currentVolume < 600) {
-        //   _showStartJourneyDialog(context);
+        _showStartJourneyDialog(context);
         // } else {
 
         // Removing dialog as it causes bottle data to not come
