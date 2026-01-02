@@ -6,6 +6,7 @@ import 'package:hydrify/constants/app_colors.dart';
 import 'package:hydrify/constants/app_dimensions.dart';
 import 'package:hydrify/constants/app_font_styles.dart';
 import 'package:hydrify/constants/app_strings.dart';
+import 'package:hydrify/helpers/vibration_helper.dart';
 import 'package:hydrify/screens/user_info_daily_goal_screen.dart';
 import 'package:hydrify/screens/widgets/custom_circular_loader/segmented_progress_indicator.dart';
 
@@ -24,6 +25,7 @@ class _UserInfoAnalyzingScreenState extends State<UserInfoAnalyzingScreen>
     with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _animation;
+  int _lastVibratedValue = 0;
 
   @override
   void initState() {
@@ -38,6 +40,13 @@ class _UserInfoAnalyzingScreenState extends State<UserInfoAnalyzingScreen>
       CurvedAnimation(
           parent: _controller, curve: Curves.fastEaseInToSlowEaseOut),
     );
+    _controller.addListener(() async {
+      int currentValue = _animation.value.toInt();
+      if (currentValue > _lastVibratedValue) {
+        _lastVibratedValue = currentValue;
+        await VibrationHelper.vibrate(duration: 20, amplitude: 120);
+      }
+    });
 
     _controller.forward();
     _controller.addStatusListener((status) {
@@ -71,15 +80,9 @@ class _UserInfoAnalyzingScreenState extends State<UserInfoAnalyzingScreen>
         width: double.maxFinite,
         decoration: BoxDecoration(
           image: DecorationImage(
-            image: AssetImage(
-                "assets/images/app_background.png"), // your image path
+            image: AssetImage("assets/images/app_background.png"),
             fit: BoxFit.cover,
           ),
-          // gradient: LinearGradient(
-          //   begin: Alignment.topCenter,
-          //   end: Alignment.bottomCenter,
-          //   colors: [AppColors.gradientStart, AppColors.gradientEnd],
-          // ),
         ),
         padding: EdgeInsets.only(
           top: AppDimensions.dim120.h,
@@ -126,7 +129,7 @@ class _UserInfoAnalyzingScreenState extends State<UserInfoAnalyzingScreen>
               gapSize: 2,
               gradient: const SweepGradient(
                 colors: [
-                  Color(0Xff00000000),
+                  Color(0XFF000000),
                   Color(0xFF55BEDA),
                 ],
                 startAngle: 0,

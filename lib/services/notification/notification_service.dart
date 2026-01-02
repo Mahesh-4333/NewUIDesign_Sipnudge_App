@@ -128,7 +128,7 @@ class NotificationService {
       required bool isSilent}) async {
     final selected = await SharedPrefsHelper.getSelectedRingtone() ?? 0;
     final fileName = "ringtone${selected + 1}.caf";
-    log("=-=-=-=- IOS Reminder set ${fileName}");
+    log("=-=-=-=- IOS Reminder set ${fileName} isSilent ${isSilent}");
 
     await _plugin.zonedSchedule(
       id,

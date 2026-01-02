@@ -58,23 +58,11 @@ class _UserInfoDailyGoalScreenState extends State<UserInfoDailyGoalScreen> {
 
   void updateDisplayWaterGoal() {
     if (unit == "L") {
-      // convertedWaterGoal is currently in Liters
       displayWaterGoal = convertedWaterGoal.toStringAsFixed(1);
     } else {
-      // convertedWaterGoal is currently in mL
       displayWaterGoal = convertedWaterGoal.toInt().toString();
     }
   }
-
-  // void updateDisplayWaterGoal() {
-  //   if (unit.toLowerCase() == 'l' ||
-  //       unit.toLowerCase() == 'litres' ||
-  //       unit.toLowerCase() == 'liters') {
-  //     displayWaterGoal = (convertedWaterGoal / 1000).toStringAsFixed(1);
-  //   } else {
-  //     displayWaterGoal = convertedWaterGoal.toInt().toString();
-  //   }
-  // }
 
   void _setupDynamicSlider() {
     double goalInLiters = widget.waterGoal / 1000;
@@ -120,11 +108,6 @@ class _UserInfoDailyGoalScreenState extends State<UserInfoDailyGoalScreen> {
                 "assets/images/app_background.png"), // your image path
             fit: BoxFit.cover,
           ),
-          // gradient: LinearGradient(
-          //   begin: Alignment.topCenter,
-          //   end: Alignment.bottomCenter,
-          //   colors: [AppColors.gradientStart, AppColors.gradientEnd],
-          // ),
         ),
         padding: EdgeInsets.only(
           top: AppDimensions.dim110.h,
@@ -339,6 +322,7 @@ class _UserInfoDailyGoalScreenState extends State<UserInfoDailyGoalScreen> {
                 setState(() {
                   isButtonClicked = false;
                 });
+                context.read<BottomNavCubit>().showBar();
                 Navigator.of(context, rootNavigator: true).pushAndRemoveUntil(
                     MaterialPageRoute(
                       builder: (context) => BottomNavScreenNew(),
