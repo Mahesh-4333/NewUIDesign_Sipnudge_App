@@ -16,7 +16,15 @@ class PreferencesCubit extends Cubit<PreferencesState> {
             ringtoneFeedback: true,
             activeTab: 'Home',
           ),
-        );
+        ) {
+    _loadPreferences();
+  }
+
+  Future<void> _loadPreferences() async {
+    final bool ringtoneStatus = await SharedPrefsHelper.getRingtoneFeedBack();
+
+    emit(state.copyWith(ringtoneFeedback: ringtoneStatus));
+  }
 
   void toggleHapticFeedback(bool value) =>
       emit(state.copyWith(hapticFeedback: value));

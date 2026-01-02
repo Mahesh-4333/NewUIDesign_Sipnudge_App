@@ -5,7 +5,6 @@ class PreferencesState {
   final bool wakeUpAlarm;
   final bool ledFeedback;
   final String activeTab;
-  // 🔥 Add this
   final bool ringtoneFeedback;
 
   PreferencesState({
@@ -13,7 +12,7 @@ class PreferencesState {
     required this.wakeUpAlarm,
     required this.ledFeedback,
     required this.activeTab,
-    this.ringtoneFeedback = true, // 🔥 Default value
+    this.ringtoneFeedback = true,
   });
 
   PreferencesState copyWith({
@@ -21,49 +20,14 @@ class PreferencesState {
     bool? wakeUpAlarm,
     bool? ledFeedback,
     String? activeTab,
-    bool? ringtoneFeedback, // 🔥 NEW PARAMETER
+    bool? ringtoneFeedback,
   }) {
     return PreferencesState(
       hapticFeedback: hapticFeedback ?? this.hapticFeedback,
       wakeUpAlarm: wakeUpAlarm ?? this.wakeUpAlarm,
       ledFeedback: ledFeedback ?? this.ledFeedback,
       activeTab: activeTab ?? this.activeTab,
-      ringtoneFeedback:
-          ringtoneFeedback ?? this.ringtoneFeedback, // 🔥 NEW LINE
+      ringtoneFeedback: ringtoneFeedback ?? this.ringtoneFeedback,
     );
   }
 }
-
-// =======================================================================
-
-// part of 'preferences_cubit.dart';
-
-// class PreferencesState {
-//   final bool hapticFeedback;
-//   final bool wakeUpAlarm;
-//   final bool ledFeedback;
-//   final String activeTab;
-
-//   PreferencesState({
-//     required this.hapticFeedback,
-//     required this.wakeUpAlarm,
-//     required this.ledFeedback,
-//     required this.activeTab,
-//   });
-
-//   PreferencesState copyWith({
-//     bool? hapticFeedback,
-//     bool? wakeUpAlarm,
-//     bool? ledFeedback,
-//     String? activeTab,
-//   }) {
-//     return PreferencesState(
-//       hapticFeedback: hapticFeedback ?? this.hapticFeedback,
-//       wakeUpAlarm: wakeUpAlarm ?? this.wakeUpAlarm,
-//       ledFeedback: ledFeedback ?? this.ledFeedback,
-//       activeTab: activeTab ?? this.activeTab,
-//     );
-//   }
-// }
-
-// =======================================================================

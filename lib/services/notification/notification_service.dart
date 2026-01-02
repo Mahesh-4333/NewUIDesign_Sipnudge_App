@@ -252,6 +252,7 @@ class NotificationService {
       shouldSilence = !isRingtoneFeedbackEnabled;
     }
     if (Platform.isIOS) {
+      log("Should Silence ${shouldSilence}");
       await _scheduleIOSHydrationNotification(
         id: id,
         notifyAt: notifyAt,
