@@ -1,3 +1,5 @@
+import 'dart:developer';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -7,6 +9,7 @@ import 'package:hydrify/constants/app_dimensions.dart';
 import 'package:hydrify/constants/app_font_styles.dart';
 import 'package:hydrify/constants/app_strings.dart';
 import 'package:hydrify/cubit/user_info/user_info_cubit.dart';
+import 'package:hydrify/helpers/vibration_helper.dart';
 
 class CustomRadioSelectionWidget extends StatelessWidget {
   const CustomRadioSelectionWidget({super.key, required this.type});
@@ -169,7 +172,10 @@ class CustomRadioSelectionWidget extends StatelessWidget {
         : icon.replaceFirst('_selected.svg', '_unselected.svg');
 
     return InkWell(
-      onTap: onTap,
+      onTap: () async {
+        await VibrationHelper.vibrate();
+        onTap();
+      },
       splashColor: AppColors.selectedPurpleToggle,
       child: Container(
         width: width,
