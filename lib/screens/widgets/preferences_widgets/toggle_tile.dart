@@ -21,7 +21,7 @@ class ToggleTile extends StatelessWidget {
     return Container(
       height: AppDimensions.dim55.h,
       padding: EdgeInsets.symmetric(
-          horizontal: AppDimensions.dim20.w, vertical: AppDimensions.dim8.h),
+          horizontal: AppDimensions.dim20.w, vertical: AppDimensions.dim6.h),
       margin: EdgeInsets.only(bottom: AppDimensions.dim10.h),
       decoration: BoxDecoration(
         color: AppColors.white,

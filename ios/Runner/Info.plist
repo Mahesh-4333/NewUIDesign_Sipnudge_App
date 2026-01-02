@@ -47,6 +47,8 @@
 	<string>This app uses bluetooth to connect to smart devices</string>
 	<key>NSCalendarsUsageDescription</key>
 	<string>Calendar access is required to schedule hydration reminders.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>This app needs camera access to take profile pictures.</string>
 	<key>NSFaceIDUsageDescription</key>
 	<string>This app uses face id to authenticate the user</string>
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>

@@ -149,76 +149,79 @@ class MyApp extends StatelessWidget {
             designSize: const Size(440, 956),
             builder: (_, child) {
               return Padding(
-                padding: EdgeInsets.only(bottom: 0),
-                child: MaterialApp(
-                  debugShowCheckedModeBanner: false,
-                  theme: ThemeData(
-                    appBarTheme: const AppBarTheme(
-                      centerTitle: true,
-                      iconTheme: IconThemeData(),
+                  padding: EdgeInsets.only(bottom: 0),
+                  child: MaterialApp(
+                    debugShowCheckedModeBanner: false,
+                    theme: ThemeData(
+                      appBarTheme: const AppBarTheme(
+                        centerTitle: true,
+                        iconTheme: IconThemeData(),
+                      ),
+                      fontFamily: AppFontStyles.museoModernoFontFamily,
                     ),
-                    fontFamily: AppFontStyles.museoModernoFontFamily,
-                  ),
-                  home: child,
-                  routes: {
-                    //'/dailygoalpage': (context) => DailyGoalPage(),
+                    home: child,
+                    routes: {
+                      //'/dailygoalpage': (context) => DailyGoalPage(),
 
-                    '/dailygoalpage': (context) => UserInfoDailyGoalScreen(
-                          waterGoal: 0,
-                          isViaSettingsScreen: false,
-                        ),
+                      '/dailygoalpage': (context) => UserInfoDailyGoalScreen(
+                            waterGoal: 0,
+                            isViaSettingsScreen: false,
+                          ),
 
-                    '/homepage': (context) => HomeScreen(),
+                      '/homepage': (context) => HomeScreen(),
 
-                    '/analysis': (context) => AnalysisScreen(),
+                      '/analysis': (context) => AnalysisScreen(),
 
-                    // '/lifestyleinfo': (context) => LifeStyleInfoPage(),
+                      // '/lifestyleinfo': (context) => LifeStyleInfoPage(),
 
-                    '/lifestyleinfo': (context) => UserLifestyleInfoInputScreen(
-                          isViaSettingsScreen: false,
-                        ),
+                      '/lifestyleinfo': (context) =>
+                          UserLifestyleInfoInputScreen(
+                            isViaSettingsScreen: false,
+                          ),
 
-                    //'/profilescreen': (context) => ProfileScreenPage(),
+                      //'/profilescreen': (context) => ProfileScreenPage(),
 
-                    '/settingscreen': (context) => SettingScreen(),
+                      '/settingscreen': (context) => SettingScreen(),
 
-                    '/personalinfo': (context) =>
-                        UserInfoInputScreen(fromSettings: true),
+                      '/personalinfo': (context) =>
+                          UserInfoInputScreen(fromSettings: true),
 
-                    //'/personalinfo': (context) => PersonalInfoPage(),
+                      //'/personalinfo': (context) => PersonalInfoPage(),
 
-                    '/achievement': (context) => AchievementsBadgeScreen(),
+                      '/achievement': (context) => AchievementsBadgeScreen(),
 
-                    '/personalinfoinsetting': (context) =>
-                        PersonalInfoScreenInSetting(),
+                      '/personalinfoinsetting': (context) =>
+                          PersonalInfoScreenInSetting(),
 
-                    '/drinkreminder': (context) => DrinkReminderPage(),
+                      '/drinkreminder': (context) => DrinkReminderPage(),
 
-                    '/preferences': (context) => PreferencesPage(),
+                      '/preferences': (context) => PreferencesPage(),
 
-                    '/account_security': (context) => AccountAndSecurityPage(),
+                      '/account_security': (context) =>
+                          AccountAndSecurityPage(),
 
-                    '/linked_accounts': (context) => LinkAccountsPage(),
+                      '/linked_accounts': (context) => LinkAccountsPage(),
 
-                    '/support': (context) => HelpAndSupportPage(),
+                      '/support': (context) => HelpAndSupportPage(),
 
-                    '/waterintaketimeline': (context) =>
-                        WaterIntakeTimelineScreen(),
+                      '/waterintaketimeline': (context) =>
+                          WaterIntakeTimelineScreen(),
 
-                    '/faq': (context) => FAQ_Page(),
+                      '/faq': (context) => FAQ_Page(),
 
-                    '/aboutus': (context) => AboutUs(),
+                      '/aboutus': (context) => AboutUs(),
 
-                    '/contact_support': (context) => ContactSupportPage(),
+                      '/contact_support': (context) => ContactSupportPage(),
 
-                    '/data&analytics': (context) => DataAndAnalyticsPage(),
+                      '/data&analytics': (context) => DataAndAnalyticsPage(),
 
-                    // '/privacypolicy': (context) => PrivacyPolicy(),
+                      // '/privacypolicy': (context) => PrivacyPolicy(),
 
-                    // '/termsofservices': (context) => TermsOfServices(),
-                  },
-                ),
-              );
+                      // '/termsofservices': (context) => TermsOfServices(),
+                    },
+                  ));
+              //);
+              // );
             },
             child: SplashScreen(),
           );

@@ -9,6 +9,16 @@ class SharedPrefsHelper {
   static const String _keyLastConnectedBleName = 'last_connected_ble_name';
   static const String _keyLastConnectedBleId = 'last_connected_ble_id';
 
+  static const String _bottleKey = 'selected_bottle';
+
+  static const List<String> _bottles = [
+    'purple',
+    'black',
+    'gray',
+    'green',
+    'red'
+  ];
+
   // NEW: Ringtone key
   static const String _keySelectedRingtone = 'selected_ringtone';
   static const String _keyRingtoneFeedback = 'ringtone_feedback';
@@ -119,6 +129,47 @@ class SharedPrefsHelper {
 
     await prefs.remove(_keyLastConnectedBleName);
     await prefs.remove(_keyLastConnectedBleId);
+  }
+
+  /// Get current bottle
+  static Future<String> getBottle() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_bottleKey) ?? 'purple';
+  }
+
+  /// Move to next bottle automatically (QR scan)
+  // static Future<String> rotateBottle() async {
+  //   final prefs = await SharedPreferences.getInstance();
+  //   final current = prefs.getString(_bottleKey) ?? 'purple';
+
+  //   final index = _bottles.indexOf(current);
+  //   final nextIndex = (index + 1) % _bottles.length;
+  //   final nextBottle = _bottles[nextIndex];
+
+  //   await prefs.setString(_bottleKey, nextBottle);
+  //   return nextBottle;
+  // }
+
+  /// 🔥 SET bottle color from QR
+  static Future<void> setBottleColor(String color) async {
+    final prefs = await SharedPreferences.getInstance();
+
+    // safety: allow only supported bottles
+    if (_bottles.contains(color.toLowerCase())) {
+      await prefs.setString(_bottleKey, color.toLowerCase());
+    }
+  }
+
+  /// 🔥 GET bottle color (QR / saved)
+  static Future<String> getBottleColor() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_bottleKey) ?? 'purple';
+  }
+
+  /// Reset bottle
+  static Future<void> resetBottle() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_bottleKey);
   }
 }
 

@@ -179,7 +179,7 @@ class _UserLifestyleInfoInputScreenState
       bottomNavigationBar: Container(
         height: AppDimensions.dim60,
         margin: EdgeInsets.only(
-          bottom: AppDimensions.padding33.h,
+          bottom: AppDimensions.dim30.h,
           left: AppDimensions.defaultPadding.w,
           right: AppDimensions.defaultPadding.w,
         ),

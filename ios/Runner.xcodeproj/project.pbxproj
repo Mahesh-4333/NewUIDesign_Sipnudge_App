@@ -11,19 +11,6 @@
 		331C808B294A63AB00263BE5 /* RunnerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 331C807B294A618700263BE5 /* RunnerTests.swift */; };
 		3B3967161E833CAA004F5970 /* AppFrameworkInfo.plist in Resources */ = {isa = PBXBuildFile; fileRef = 3B3967151E833CAA004F5970 /* AppFrameworkInfo.plist */; };
 		74858FAF1ED2DC5600515810 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 74858FAE1ED2DC5600515810 /* AppDelegate.swift */; };
-		82EA801B2EF1926400DFEF9C /* ringtone3.caf in Resources */ = {isa = PBXBuildFile; fileRef = 82EA80102EF1926400DFEF9C /* ringtone3.caf */; };
-		82EA801C2EF1926400DFEF9C /* ringtone5.caf in Resources */ = {isa = PBXBuildFile; fileRef = 82EA80122EF1926400DFEF9C /* ringtone5.caf */; };
-		82EA801D2EF1926400DFEF9C /* ringtone2.caf in Resources */ = {isa = PBXBuildFile; fileRef = 82EA800F2EF1926400DFEF9C /* ringtone2.caf */; };
-		82EA801E2EF1926400DFEF9C /* ringtone10.caf in Resources */ = {isa = PBXBuildFile; fileRef = 82EA80172EF1926400DFEF9C /* ringtone10.caf */; };
-		82EA801F2EF1926400DFEF9C /* ringtone8.caf in Resources */ = {isa = PBXBuildFile; fileRef = 82EA80152EF1926400DFEF9C /* ringtone8.caf */; };
-		82EA80202EF1926400DFEF9C /* ringtone6.caf in Resources */ = {isa = PBXBuildFile; fileRef = 82EA80132EF1926400DFEF9C /* ringtone6.caf */; };
-		82EA80212EF1926400DFEF9C /* ringtone9.caf in Resources */ = {isa = PBXBuildFile; fileRef = 82EA80162EF1926400DFEF9C /* ringtone9.caf */; };
-		82EA80222EF1926400DFEF9C /* ringtone12.caf in Resources */ = {isa = PBXBuildFile; fileRef = 82EA80192EF1926400DFEF9C /* ringtone12.caf */; };
-		82EA80232EF1926400DFEF9C /* ringtone1.caf in Resources */ = {isa = PBXBuildFile; fileRef = 82EA800E2EF1926400DFEF9C /* ringtone1.caf */; };
-		82EA80242EF1926400DFEF9C /* ringtone4.caf in Resources */ = {isa = PBXBuildFile; fileRef = 82EA80112EF1926400DFEF9C /* ringtone4.caf */; };
-		82EA80252EF1926400DFEF9C /* ringtone7.caf in Resources */ = {isa = PBXBuildFile; fileRef = 82EA80142EF1926400DFEF9C /* ringtone7.caf */; };
-		82EA80262EF1926400DFEF9C /* ringtone11.caf in Resources */ = {isa = PBXBuildFile; fileRef = 82EA80182EF1926400DFEF9C /* ringtone11.caf */; };
-		82EA80272EF1926400DFEF9C /* ringtone13.caf in Resources */ = {isa = PBXBuildFile; fileRef = 82EA801A2EF1926400DFEF9C /* ringtone13.caf */; };
 		97C146FC1CF9000F007C117D /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 97C146FA1CF9000F007C117D /* Main.storyboard */; };
 		97C146FE1CF9000F007C117D /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 97C146FD1CF9000F007C117D /* Assets.xcassets */; };
 		97C147011CF9000F007C117D /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 97C146FF1CF9000F007C117D /* LaunchScreen.storyboard */; };
@@ -68,19 +55,6 @@
 		7775490908B5F89ACA606F0D /* Pods-RunnerTests.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-RunnerTests.release.xcconfig"; path = "Target Support Files/Pods-RunnerTests/Pods-RunnerTests.release.xcconfig"; sourceTree = "<group>"; };
 		7AFA3C8E1D35360C0083082E /* Release.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; name = Release.xcconfig; path = Flutter/Release.xcconfig; sourceTree = "<group>"; };
 		82B6972DF58A6A2E981E6ED1 /* Pods-Runner.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Runner.debug.xcconfig"; path = "Target Support Files/Pods-Runner/Pods-Runner.debug.xcconfig"; sourceTree = "<group>"; };
-		82EA800E2EF1926400DFEF9C /* ringtone1.caf */ = {isa = PBXFileReference; lastKnownFileType = file; path = ringtone1.caf; sourceTree = "<group>"; };
-		82EA800F2EF1926400DFEF9C /* ringtone2.caf */ = {isa = PBXFileReference; lastKnownFileType = file; path = ringtone2.caf; sourceTree = "<group>"; };
-		82EA80102EF1926400DFEF9C /* ringtone3.caf */ = {isa = PBXFileReference; lastKnownFileType = file; path = ringtone3.caf; sourceTree = "<group>"; };
-		82EA80112EF1926400DFEF9C /* ringtone4.caf */ = {isa = PBXFileReference; lastKnownFileType = file; path = ringtone4.caf; sourceTree = "<group>"; };
-		82EA80122EF1926400DFEF9C /* ringtone5.caf */ = {isa = PBXFileReference; lastKnownFileType = file; path = ringtone5.caf; sourceTree = "<group>"; };
-		82EA80132EF1926400DFEF9C /* ringtone6.caf */ = {isa = PBXFileReference; lastKnownFileType = file; path = ringtone6.caf; sourceTree = "<group>"; };
-		82EA80142EF1926400DFEF9C /* ringtone7.caf */ = {isa = PBXFileReference; lastKnownFileType = file; path = ringtone7.caf; sourceTree = "<group>"; };
-		82EA80152EF1926400DFEF9C /* ringtone8.caf */ = {isa = PBXFileReference; lastKnownFileType = file; path = ringtone8.caf; sourceTree = "<group>"; };
-		82EA80162EF1926400DFEF9C /* ringtone9.caf */ = {isa = PBXFileReference; lastKnownFileType = file; path = ringtone9.caf; sourceTree = "<group>"; };
-		82EA80172EF1926400DFEF9C /* ringtone10.caf */ = {isa = PBXFileReference; lastKnownFileType = file; path = ringtone10.caf; sourceTree = "<group>"; };
-		82EA80182EF1926400DFEF9C /* ringtone11.caf */ = {isa = PBXFileReference; lastKnownFileType = file; path = ringtone11.caf; sourceTree = "<group>"; };
-		82EA80192EF1926400DFEF9C /* ringtone12.caf */ = {isa = PBXFileReference; lastKnownFileType = file; path = ringtone12.caf; sourceTree = "<group>"; };
-		82EA801A2EF1926400DFEF9C /* ringtone13.caf */ = {isa = PBXFileReference; lastKnownFileType = file; path = ringtone13.caf; sourceTree = "<group>"; };
 		83D12FBE2D57E82E004D7BAE /* Runner.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Runner.entitlements; sourceTree = "<group>"; };
 		9740EEB21CF90195004384FC /* Debug.xcconfig */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xcconfig; name = Debug.xcconfig; path = Flutter/Debug.xcconfig; sourceTree = "<group>"; };
 		9740EEB31CF90195004384FC /* Generated.xcconfig */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xcconfig; name = Generated.xcconfig; path = Flutter/Generated.xcconfig; sourceTree = "<group>"; };
@@ -138,19 +112,6 @@
 		97C146E51CF9000F007C117D = {
 			isa = PBXGroup;
 			children = (
-				82EA800E2EF1926400DFEF9C /* ringtone1.caf */,
-				82EA800F2EF1926400DFEF9C /* ringtone2.caf */,
-				82EA80102EF1926400DFEF9C /* ringtone3.caf */,
-				82EA80112EF1926400DFEF9C /* ringtone4.caf */,
-				82EA80122EF1926400DFEF9C /* ringtone5.caf */,
-				82EA80132EF1926400DFEF9C /* ringtone6.caf */,
-				82EA80142EF1926400DFEF9C /* ringtone7.caf */,
-				82EA80152EF1926400DFEF9C /* ringtone8.caf */,
-				82EA80162EF1926400DFEF9C /* ringtone9.caf */,
-				82EA80172EF1926400DFEF9C /* ringtone10.caf */,
-				82EA80182EF1926400DFEF9C /* ringtone11.caf */,
-				82EA80192EF1926400DFEF9C /* ringtone12.caf */,
-				82EA801A2EF1926400DFEF9C /* ringtone13.caf */,
 				9740EEB11CF90186004384FC /* Flutter */,
 				97C146F01CF9000F007C117D /* Runner */,
 				97C146EF1CF9000F007C117D /* Products */,
@@ -304,19 +265,6 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				82EA801B2EF1926400DFEF9C /* ringtone3.caf in Resources */,
-				82EA801C2EF1926400DFEF9C /* ringtone5.caf in Resources */,
-				82EA801D2EF1926400DFEF9C /* ringtone2.caf in Resources */,
-				82EA801E2EF1926400DFEF9C /* ringtone10.caf in Resources */,
-				82EA801F2EF1926400DFEF9C /* ringtone8.caf in Resources */,
-				82EA80202EF1926400DFEF9C /* ringtone6.caf in Resources */,
-				82EA80212EF1926400DFEF9C /* ringtone9.caf in Resources */,
-				82EA80222EF1926400DFEF9C /* ringtone12.caf in Resources */,
-				82EA80232EF1926400DFEF9C /* ringtone1.caf in Resources */,
-				82EA80242EF1926400DFEF9C /* ringtone4.caf in Resources */,
-				82EA80252EF1926400DFEF9C /* ringtone7.caf in Resources */,
-				82EA80262EF1926400DFEF9C /* ringtone11.caf in Resources */,
-				82EA80272EF1926400DFEF9C /* ringtone13.caf in Resources */,
 				97C147011CF9000F007C117D /* LaunchScreen.storyboard in Resources */,
 				3B3967161E833CAA004F5970 /* AppFrameworkInfo.plist in Resources */,
 				97C146FE1CF9000F007C117D /* Assets.xcassets in Resources */,

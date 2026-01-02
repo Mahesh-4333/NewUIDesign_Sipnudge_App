@@ -10,6 +10,7 @@ import 'package:hydrify/constants/app_font_styles.dart';
 import 'package:hydrify/constants/app_strings.dart';
 import 'package:hydrify/cubit/Preferences/preferences_cubit.dart';
 import 'package:hydrify/helpers/shared_pref_helper.dart'; // Make sure this points to SharedPrefsHelper file
+import 'package:hydrify/helpers/vibration_helper.dart';
 import 'package:hydrify/screens/widgets/ringtone_screen_widget/menuItemTileWidget.dart';
 
 class RingtoneScreen extends StatefulWidget {
@@ -27,8 +28,6 @@ class _RingtoneScreenState extends State<RingtoneScreen> {
     10,
     (i) => "assets/ringtones/ringtone${i + 1}.mp3",
   );
-
-  //static const String _kSelectedRingtoneKey = "selected_ringtone";
 
   @override
   void initState() {
@@ -55,35 +54,27 @@ class _RingtoneScreenState extends State<RingtoneScreen> {
     }
   }
 
-  /// Handle ringtone selection
-  Future<void> _onRingtoneTap(
-      BuildContext context, int index) async {
+  Future<void> _onRingtoneTap(BuildContext context, int index) async {
     setState(() => selectedIndex = index);
 
     await SharedPrefsHelper.setSelectedRingtone(index);
 
-    final prefs = context.read<PreferencesCubit>().state;
+    final state = context.read<PreferencesCubit>().state;
 
-    // 🔔 If ringtone feedback is ON → play ringtone
-    if (prefs.ringtoneFeedback) {
+    if (state.ringtoneFeedback) {
       await _audioPlayer.stop();
       await _audioPlayer.setReleaseMode(ReleaseMode.stop);
       await _audioPlayer.setVolume(1.0);
 
-      final assetPath =
-          ringtones[index].replaceFirst("assets/", "");
+      final assetPath = ringtones[index].replaceFirst("assets/", "");
       await _audioPlayer.play(AssetSource(assetPath));
-    }
-    // 📳 If OFF → vibration only
-    else {
-      HapticFeedback.mediumImpact();
+    } else {
+      await VibrationHelper.vibrate();
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    // return BlocProvider(
-    //   create: (_) => PreferencesCubit(),
     return BlocBuilder<PreferencesCubit, PreferencesState>(
       builder: (context, state) {
         return Scaffold(
@@ -116,77 +107,30 @@ class _RingtoneScreenState extends State<RingtoneScreen> {
           body: Container(
             decoration: const BoxDecoration(
               image: DecorationImage(
-                image: AssetImage(
-                    "assets/images/app_background.png"),
+                image: AssetImage("assets/images/app_background.png"),
                 fit: BoxFit.cover,
               ),
             ),
             child: SafeArea(
               child: Column(
                 children: [
-                  /// Header
-                  // Padding(
-                  //   padding: EdgeInsets.only(
-                  //     top: AppDimensions.dim40.h,
-                  //     left: AppDimensions.dim20.w,
-                  //     right: AppDimensions.dim20.w,
-                  //   ),
-                  //   child: Row(
-                  //     children: [
-                  //       IconButton(
-                  //         onPressed: () => Navigator.pop(context),
-                  //         icon: Icon(
-                  //           Icons.arrow_back,
-                  //           color: AppColors.black,
-                  //           size: AppFontStyles.fontSize_30.sp,
-                  //         ),
-                  //       ),
-                  //       SizedBox(width: AppDimensions.dim100.w),
-                  //       Text(
-                  //         AppStrings.preferences,
-                  //         style: TextStyle(
-                  //           color: AppColors.bluegray,
-                  //           fontSize: AppFontStyles.fontSize_24.sp,
-                  //           fontFamily: AppFontStyles.urbanistFontFamily,
-                  //           fontVariations: [AppFontStyles.boldFontVariation],
-                  //         ),
-                  //       ),
-                  //     ],
-                  //   ),
-                  // ),
-
                   SizedBox(height: AppDimensions.dim20.h),
-
-                  /// Ringtone List
                   Padding(
                     padding: EdgeInsets.symmetric(
                       horizontal: AppDimensions.dim28.w,
                     ),
                     child: Column(
-                      children: List.generate(ringtones.length,
-                          (index) {
+                      children: List.generate(ringtones.length, (index) {
                         return MenuItemTileWidget(
                           title: "Ringtone",
                           number: "${index + 1}",
                           isSelected: selectedIndex == index,
-                          onTap: () =>
-                              _onRingtoneTap(context, index),
+                          onTap: () => _onRingtoneTap(context, index),
                         );
                       }),
                     ),
                   ),
-
                   const Spacer(),
-
-                  /// Bottom Navbar
-                  // Padding(
-                  //   padding: EdgeInsets.only(
-                  //     bottom: AppDimensions.dim5.h,
-                  //     right: AppDimensions.dim15.w,
-                  //     left: AppDimensions.dim15.w,
-                  //   ),
-                  //   child: const AnimatedBottomNavBar(),
-                  // ),
                 ],
               ),
             ),

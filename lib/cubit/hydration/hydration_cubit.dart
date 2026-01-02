@@ -36,8 +36,7 @@ class HydrationCubit extends Cubit<HydrationState> {
         // await updateSlotCompletionStatus();
       });
 
-      final dailyGoal =
-          await SharedPrefsHelper.getUserGoal() ?? 0;
+      final dailyGoal = await SharedPrefsHelper.getUserGoal() ?? 0;
       log("[Cubit] Daily goal: $dailyGoal");
 
       final slotsFromDb = await _dbHelper.getAllSlots();
@@ -56,8 +55,7 @@ class HydrationCubit extends Cubit<HydrationState> {
       _calculateCurrentSlotStatus();
     } catch (e) {
       log("[Cubit] Failed to load hydration data: $e");
-      emit(state.copyWith(
-          errorMessage: "Failed to load hydration data."));
+      emit(state.copyWith(errorMessage: "Failed to load hydration data."));
     }
   }
 
@@ -70,8 +68,7 @@ class HydrationCubit extends Cubit<HydrationState> {
       await _dbHelper.insertOrUpdateSlot(entry);
     }
 
-    emit(state.copyWith(
-        goal: newGoal.round(), entries: updatedSlots));
+    emit(state.copyWith(goal: newGoal.round(), entries: updatedSlots));
     _calculateCurrentSlotStatus();
   }
 
@@ -129,13 +126,11 @@ class HydrationCubit extends Cubit<HydrationState> {
             .where((e) => e.status == HydrationStatus.completed)
             .fold(0.0, (sum, e) => sum + e.amount);
 
-        emit(state.copyWith(
-            entries: slotsFromDb, totalDrank: total.round()));
+        emit(state.copyWith(entries: slotsFromDb, totalDrank: total.round()));
       }
     } catch (e) {
       log("[Cubit] Failed to load slots from DB: $e");
-      emit(state.copyWith(
-          errorMessage: "Failed to load slots from DB."));
+      emit(state.copyWith(errorMessage: "Failed to load slots from DB."));
     }
   }
 
@@ -154,8 +149,7 @@ class HydrationCubit extends Cubit<HydrationState> {
         .where((e) => e.status == HydrationStatus.completed)
         .fold(0.0, (sum, e) => sum + e.amount);
 
-    emit(state.copyWith(
-        entries: updated, totalDrank: total.round()));
+    emit(state.copyWith(entries: updated, totalDrank: total.round()));
   }
 
   // -------------------- DATE UPDATE --------------------
@@ -166,11 +160,9 @@ class HydrationCubit extends Cubit<HydrationState> {
   }
 
   void updateSlot(HydrationEntry updatedEntry) {
-    final index = state.entries
-        .indexWhere((e) => e.slot == updatedEntry.slot);
+    final index = state.entries.indexWhere((e) => e.slot == updatedEntry.slot);
     if (index != -1) {
-      final updatedList =
-          List<HydrationEntry>.from(state.entries);
+      final updatedList = List<HydrationEntry>.from(state.entries);
       updatedList[index] = updatedEntry.copyWith(
           amount: updatedEntry.amount,
           waterDrank: updatedEntry.waterDrank,
@@ -208,11 +200,9 @@ class HydrationCubit extends Cubit<HydrationState> {
         _timeOfDayToMinutes(entry.endTime),
       );
 
-      if (_intervalsOverlapAny(
-          newIntervals, existingIntervals)) {
+      if (_intervalsOverlapAny(newIntervals, existingIntervals)) {
         emit(state.copyWith(
-          errorMessage:
-              "Time range overlaps with ${entry.slot.label}.",
+          errorMessage: "Time range overlaps with ${entry.slot.label}.",
           successMessage: null,
         ));
         return;
@@ -221,8 +211,7 @@ class HydrationCubit extends Cubit<HydrationState> {
 
     final updated = state.entries.map((entry) {
       if (entry.slot == slot) {
-        return entry.copyWith(
-            startTime: newStart, endTime: newEnd);
+        return entry.copyWith(startTime: newStart, endTime: newEnd);
       }
       return entry;
     }).toList();
@@ -230,26 +219,21 @@ class HydrationCubit extends Cubit<HydrationState> {
     emit(state.copyWith(entries: updated));
     _calculateCurrentSlotStatus();
 
-    final updatedEntry =
-        updated.firstWhere((e) => e.slot == slot);
+    final updatedEntry = updated.firstWhere((e) => e.slot == slot);
     final notificationService = NotificationService();
 
-    await notificationService
-        .rescheduleSlotForFuture(updatedEntry);
+    await notificationService.rescheduleSlotForFuture(updatedEntry);
 
     await _dbHelper.insertOrUpdateSlot(updatedEntry);
     ble.queueHydrationSlots(updated);
   }
 
   // -------------------- BLE ENTRIES UPDATE --------------------
-  Future<void> markCompletedByEntries(
-      List<HydrationEntry> newEntries) async {
-    final currentEntries =
-        List<HydrationEntry>.from(state.entries);
+  Future<void> markCompletedByEntries(List<HydrationEntry> newEntries) async {
+    final currentEntries = List<HydrationEntry>.from(state.entries);
 
     for (final incoming in newEntries) {
-      final index = currentEntries
-          .indexWhere((e) => e.slot == incoming.slot);
+      final index = currentEntries.indexWhere((e) => e.slot == incoming.slot);
 
       if (index >= 0) {
         final updatedEntry = currentEntries[index].copyWith(
@@ -259,8 +243,7 @@ class HydrationCubit extends Cubit<HydrationState> {
         currentEntries[index] = updatedEntry;
         await _dbHelper.insertOrUpdateSlot(updatedEntry);
       } else {
-        final newEntry =
-            incoming.copyWith(status: HydrationStatus.completed);
+        final newEntry = incoming.copyWith(status: HydrationStatus.completed);
         currentEntries.add(newEntry);
         await _dbHelper.insertOrUpdateSlot(newEntry);
       }
@@ -270,8 +253,7 @@ class HydrationCubit extends Cubit<HydrationState> {
         .where((e) => e.status == HydrationStatus.completed)
         .fold(0.0, (sum, e) => sum + e.waterDrank);
 
-    emit(state.copyWith(
-        entries: currentEntries, totalDrank: total.round()));
+    emit(state.copyWith(entries: currentEntries, totalDrank: total.round()));
     _calculateCurrentSlotStatus();
   }
 
@@ -285,8 +267,7 @@ class HydrationCubit extends Cubit<HydrationState> {
 
   // -------------------- HELPERS --------------------
   void clearMessages() {
-    emit(state.copyWith(
-        errorMessage: null, successMessage: null));
+    emit(state.copyWith(errorMessage: null, successMessage: null));
   }
 
   int _timeOfDayToMinutes(TimeOfDay t) => t.hour * 60 + t.minute;
@@ -299,8 +280,7 @@ class HydrationCubit extends Cubit<HydrationState> {
     }
   }
 
-  List<HydrationEntry> generateDefaultHydrationSlots(
-      double dailyGoalMl) {
+  List<HydrationEntry> generateDefaultHydrationSlots(double dailyGoalMl) {
     return [
       HydrationEntry(
         slot: HydrationSlot.wakeup,
@@ -347,12 +327,10 @@ class HydrationCubit extends Cubit<HydrationState> {
     ];
   }
 
-  bool _intervalsOverlapAny(
-      List<_Interval> aList, List<_Interval> bList) {
+  bool _intervalsOverlapAny(List<_Interval> aList, List<_Interval> bList) {
     for (final a in aList) {
       for (final b in bList) {
-        if (_intervalsOverlap(a.start, a.end, b.start, b.end))
-          return true;
+        if (_intervalsOverlap(a.start, a.end, b.start, b.end)) return true;
       }
     }
     return false;

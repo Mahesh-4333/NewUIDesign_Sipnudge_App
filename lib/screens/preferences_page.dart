@@ -12,6 +12,7 @@ import 'package:hydrify/cubit/Preferences/preferences_cubit.dart';
 import 'package:hydrify/cubit/ble/ble_cubit.dart';
 import 'package:hydrify/cubit/bottle/bottle_data_cubit.dart';
 import 'package:hydrify/cubit/bottom_nav/bottom_nav_cubit.dart';
+import 'package:hydrify/helpers/database_helper.dart';
 import 'package:hydrify/helpers/shared_pref_helper.dart';
 import 'package:hydrify/screens/ringtone_screen.dart';
 import 'package:hydrify/screens/user_info_daily_goal_screen.dart';
@@ -19,6 +20,7 @@ import 'package:hydrify/screens/user_info_daily_goal_screen.dart';
 // import 'package:hydrify/screens/widgets/navigation_helper.dart';
 import 'package:hydrify/screens/widgets/preferences_widgets/menu_item_tile.dart';
 import 'package:hydrify/screens/widgets/preferences_widgets/toggle_tile.dart';
+import 'package:hydrify/services/notification/notification_service.dart';
 import 'package:hydrify/services/ui_utils_service.dart';
 
 class PreferencesPage extends StatelessWidget {
@@ -111,14 +113,13 @@ class PreferencesPage extends StatelessWidget {
                               SizedBox(height: AppDimensions.dim7.h),
                               ToggleTile(
                                 title: AppStrings.ringtoneFeedback,
-                                value: state
-                                    .ringtoneFeedback, // ✔ correct value from state
+                                value: state.ringtoneFeedback,
                                 onChanged: (value) {
                                   UiUtilsService.showToast(
                                       context: context,
                                       text: "Updating hydration reminders");
                                   cubit.toggleRingtoneFeedback(value);
-                                }, // ✔ direct method reference
+                                },
                               ),
                               SizedBox(height: AppDimensions.dim7.h),
                               MenuItemTile(
@@ -129,9 +130,13 @@ class PreferencesPage extends StatelessWidget {
                                   Navigator.push(
                                     context,
                                     MaterialPageRoute(
-                                      builder: (_) => RingtoneScreen(),
-                                    ),
-                                  );
+                                        builder: (_) => RingtoneScreen()),
+                                  ).then((value) async {
+                                    var allSlots =
+                                        await DatabaseHelper().getAllSlots();
+                                    NotificationService()
+                                        .resetAllHydrationReminders(allSlots);
+                                  });
                                 },
                               ),
                             ],

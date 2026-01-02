@@ -14,6 +14,7 @@ import 'package:hydrify/helpers/database_helper.dart';
 import 'package:hydrify/helpers/shared_pref_helper.dart';
 import 'package:hydrify/models/hydration_entry.dart';
 import 'package:hydrify/screens/bottom_nav_screen_new.dart';
+import 'package:hydrify/screens/qr_scanning.dart';
 import 'package:hydrify/screens/widgets/auth_button_widget.dart';
 import 'package:hydrify/screens/widgets/user_info_input_widgets/custom_gradient_slider_widget.dart';
 import 'package:hydrify/screens/widgets/water_wave_widget.dart';
@@ -291,79 +292,60 @@ class _UserInfoDailyGoalScreenState extends State<UserInfoDailyGoalScreen> {
         ),
       ),
       bottomNavigationBar: Container(
-        height: AppDimensions.dim60,
+        height: AppDimensions.dim85.h,
         child: Column(
           mainAxisAlignment: MainAxisAlignment.start,
           children: [
             AuthButton(
-                text: AppStrings.letsHitHydrationGoals,
-                color: AppColors.blueGradient,
-                areTwoItems: false,
-                onTap: () async {
-                  log("isViaSettingsScreen ${widget.isViaSettingsScreen}");
-                  if (widget.isViaSettingsScreen == false) {
-                    var response = await showGoogleCalendarDialog();
-                    if (response == false) {
-                      return;
-                    }
-                    if (isButtonClicked == true) {
-                      return;
-                    }
+              text: AppStrings.letsHitHydrationGoals,
+              color: AppColors.blueGradient,
+              areTwoItems: false,
+              onTap: () async {
+                log("isViaSettingsScreen ${widget.isViaSettingsScreen}");
+                if (widget.isViaSettingsScreen == false) {
+                  var response = await showGoogleCalendarDialog();
+                  if (response == false) {
+                    return;
                   }
-
-                  setState(() {
-                    isButtonClicked = true;
-                  });
-                  UiUtilsService.showLoading(context, "Please wait");
-                  await context
-                      .read<UserInfoCubit>()
-                      .saveUser(context.read<UserInfoCubit>().state);
-                  await SharedPrefsHelper.setPersonalInfoSubmitted(true);
-                  await SharedPrefsHelper.setWaterGoal(
-                      convertedWaterGoal.toInt());
-
-                  final slots = generateHydrationSlots(convertedWaterGoal);
-                  for (var slot in slots) {
-                    log("Slot: ${slot.slot.label}, Water to drink: ${slot.amount} mL");
+                  if (isButtonClicked == true) {
+                    return;
                   }
+                }
 
-                  final dbHelper = DatabaseHelper();
-                  await dbHelper.clearHydrationSlots();
-                  for (var slot in slots) {
-                    await dbHelper.insertOrUpdateSlot(
-                      slot,
-                    );
-                  }
-                  await context.read<BleCubit>().queueHydrationSlots(slots);
-                  await NotificationService().resetAllHydrationReminders(slots);
-                  UiUtilsService.dismissLoading(
-                    context,
-                  );
-                  setState(() {
-                    isButtonClicked = false;
-                  });
+                setState(() {
+                  isButtonClicked = true;
+                });
+                UiUtilsService.showLoading(context, "Please wait");
+                await context
+                    .read<UserInfoCubit>()
+                    .saveUser(context.read<UserInfoCubit>().state);
+                await SharedPrefsHelper.setPersonalInfoSubmitted(true);
+                await SharedPrefsHelper.setWaterGoal(
+                    convertedWaterGoal.toInt());
 
-                  if (widget.isViaSettingsScreen == false) {
-                    Navigator.pushAndRemoveUntil(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => BottomNavScreenNew(),
-                        ),
-                        (route) => false);
-                  } else {
-                    UiUtilsService.showToast(
-                        context: context,
-                        text: "Personal Info Updated Successfully");
-                    context.read<BottomNavCubit>().showBar();
-                    context.read<BottomNavCubit>().resetToHome();
-                    Navigator.pushAndRemoveUntil(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => BottomNavScreenNew(),
-                        ),
-                        (route) => false);
-                  }
-                }),
+                final slots = generateHydrationSlots(convertedWaterGoal);
+                for (var slot in slots) {
+                  log("Slot: ${slot.slot.label}, Water to drink: ${slot.amount} mL");
+                }
+
+                final dbHelper = DatabaseHelper();
+                await dbHelper.clearHydrationSlots();
+                for (var slot in slots) {
+                  await dbHelper.insertOrUpdateSlot(slot);
+                }
+                await context.read<BleCubit>().queueHydrationSlots(slots);
+                await NotificationService().resetAllHydrationReminders(slots);
+                UiUtilsService.dismissLoading(context);
+                setState(() {
+                  isButtonClicked = false;
+                });
+                Navigator.of(context, rootNavigator: true).pushAndRemoveUntil(
+                    MaterialPageRoute(
+                      builder: (context) => BottomNavScreenNew(),
+                    ),
+                    (route) => false);
+              },
+            ),
           ],
         ),
       ),

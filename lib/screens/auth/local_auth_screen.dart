@@ -5,6 +5,7 @@ import 'package:hydrify/helpers/shared_pref_helper.dart';
 import 'package:hydrify/providers/authentication_provider.dart';
 import 'package:hydrify/screens/auth/auth_options_screen.dart';
 import 'package:hydrify/screens/bottom_nav_screen_new.dart';
+import 'package:hydrify/screens/qr_scanning.dart';
 import 'package:hydrify/screens/user_personal_info_input_screen..dart';
 import 'package:provider/provider.dart';
 
@@ -69,7 +70,8 @@ class _LocalAuthScreenState extends State<LocalAuthScreen> {
                   return UserInfoInputScreen();
                 }
               } else {
-                return AuthOptionsScreen();
+                //return AuthOptionsScreen();
+                return QrScanner();
               }
             },
             transitionsBuilder:

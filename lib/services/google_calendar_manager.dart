@@ -210,23 +210,28 @@ class GoogleCalendarManager {
 
   Future<List<Map<String, dynamic>>> fetchEventsForRange(
       DateTime start, DateTime end) async {
-    final signedIn = await ensureSignedIn();
-    if (!signedIn) return [];
+    try {
+      final signedIn = await ensureSignedIn();
+      if (!signedIn) return [];
 
-    final authHeaders = await _currentUser!.authHeaders;
-    final uri = Uri.parse(
-      'https://www.googleapis.com/calendar/v3/calendars/primary/events'
-      '?timeMin=${start.toUtc().toIso8601String()}'
-      '&timeMax=${end.toUtc().toIso8601String()}'
-      '&singleEvents=true'
-      '&orderBy=startTime',
-    );
+      final authHeaders = await _currentUser!.authHeaders;
+      final uri = Uri.parse(
+        'https://www.googleapis.com/calendar/v3/calendars/primary/events'
+        '?timeMin=${start.toUtc().toIso8601String()}'
+        '&timeMax=${end.toUtc().toIso8601String()}'
+        '&singleEvents=true'
+        '&orderBy=startTime',
+      );
 
-    final response = await http.get(uri, headers: authHeaders);
-    if (response.statusCode != 200) return [];
+      final response = await http.get(uri, headers: authHeaders);
+      if (response.statusCode != 200) return [];
 
-    final data = json.decode(response.body);
-    return List<Map<String, dynamic>>.from(data['items'] ?? []);
+      final data = json.decode(response.body);
+      return List<Map<String, dynamic>>.from(data['items'] ?? []);
+    } catch (e) {
+      log("Exception occurred in fetchingEventsForRange ${e.toString()}");
+      return [];
+    }
   }
 
   bool checkOverlapLocally(

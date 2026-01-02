@@ -101,7 +101,7 @@ class AppStrings {
   static const standardBalancedDiet = "Standard\nBalanced Diet";
   static const veg = "Vegetarian";
   static const vegan = "Vegan Diet";
-  static const highProtein = "High Protein Diet";
+  static const highProtein = "High Protein Diet/Creatine Intake";
   static const processedDiet = "High Sodium Processed Diet";
   static const highSodiumDiet = "High Sodium\nProcessed Diet";
   static const male = "Male";
@@ -137,7 +137,13 @@ class AppStrings {
   static const accountremove =
       "Permanently remove your account and data. Proceed with caution.";
   static const deleteaccount = "Delete Account";
-  static const congratulations =
+  static String congratulations(int waterGoalMl) {
+    final waterInLitres = (waterGoalMl / 1000).toStringAsFixed(1);
+
+    return "Congratulations! You've reached your goal of $waterInLitres L water intake. Keep up the incredible effort!";
+  }
+
+  static const congratulation =
       "Congratulations! You've reached goal of 350 water intake. Keep up the incredible effort!";
   static const levelreach = "You've Reached Level";
   static const customersupport = "Customer Support";
@@ -216,6 +222,7 @@ class AppStrings {
   static const touchTheCapToSyncNow = "Touch the cap to sync now";
   static const gotohomepage = "Go to Homepage";
   static const ringtoneFeedback = "Ringtone Feedback";
+  static const username = "Username";
   static const ringtone = "Ringtone";
   static const ringtone1 = "Ringtone 1";
   static const ringtone2 = "Ringtone 2";

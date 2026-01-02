@@ -5,9 +5,13 @@ import 'package:hydrify/constants/app_colors.dart';
 import 'package:hydrify/constants/app_dimensions.dart';
 import 'package:hydrify/constants/app_font_styles.dart';
 import 'package:hydrify/constants/app_strings.dart';
+import 'package:hydrify/cubit/bottle/bottle_data_cubit.dart';
 import 'package:hydrify/cubit/bottom_nav/bottom_nav_cubit.dart';
 import 'package:hydrify/cubit/profile_screen_in_setting/profile_cubit.dart';
 import 'package:hydrify/cubit/profile_screen_in_setting/profile_state.dart';
+import 'package:hydrify/helpers/shared_pref_helper.dart';
+import 'package:hydrify/models/bottle_info.dart';
+import 'package:hydrify/screens/bottle_info_page.dart';
 import 'package:hydrify/screens/contact_support_page.dart';
 import 'package:hydrify/screens/drink_reminder_page.dart';
 import 'package:hydrify/screens/faq_page.dart';
@@ -17,6 +21,7 @@ import 'package:hydrify/screens/user_personal_info_input_screen..dart';
 import 'package:hydrify/screens/widgets/logout_widgets/logout_bottom_sheet.dart';
 import 'package:hydrify/screens/widgets/setting_screen_widget/editableProfileAvatar.dart';
 import 'package:hydrify/screens/widgets/setting_screen_widget/profile_menu_item.dart';
+import 'package:hydrify/screens/widgets/setting_screen_widget/sipnudgeshopwidget.dart';
 import 'package:hydrify/services/user_manager.dart';
 
 class SettingScreen extends StatefulWidget {
@@ -35,12 +40,20 @@ class _SettingScreenState extends State<SettingScreen> {
   @override
   void initState() {
     super.initState();
+    // Listen for changes
+    UserManager().addListener(_onNameChanged);
     _loadSavedName();
+  }
+
+  void _onNameChanged(String newName) {
+    setState(() {
+      _nameController.text = newName;
+    });
   }
 
   Future<void> _loadSavedName() async {
     final name = UserManager().userName;
-    _nameController.text = name.isNotEmpty ? name : AppStrings.newtonsingh;
+    _nameController.text = name.isNotEmpty ? name : AppStrings.username;
   }
 
   void _saveNameLocally(String name) async {
@@ -49,6 +62,7 @@ class _SettingScreenState extends State<SettingScreen> {
 
   @override
   void dispose() {
+    UserManager().removeListener(_onNameChanged);
     _nameController.dispose();
     _nameFocusNode.dispose();
     super.dispose();
@@ -138,13 +152,12 @@ class _SettingScreenState extends State<SettingScreen> {
           );
 
           break;
-        // case AppStrings.accountandsecurity:
-        //   navigator.push(
-        //     MaterialPageRoute(
-        //       builder: (_) => const AccountSecurityScreen(),
-        //     ),
-        //   );
-        //   break;
+
+        // 🔥 NEW: Sipnudge Bottle Navigation
+        case 'Sipnudge Bottle':
+          _navigateToBottleInfo(context);
+
+          break;
 
         case AppStrings.logout:
           _showLogoutConfirmation(context);
@@ -173,11 +186,40 @@ class _SettingScreenState extends State<SettingScreen> {
     }
   }
 
+  // 🔥 NEW: Navigate to Bottle Info Screen
+  Future<void> _navigateToBottleInfo(BuildContext context) async {
+    try {
+      // Get selected bottle color
+      final selectedBottle = await SharedPrefsHelper.getBottle() ?? 'black';
+
+      // Get current bottle data from cubit
+      final bottleState = context.read<BottleDataCubit>().state;
+
+      // Create BottleInfo instance with current data
+      final bottleInfo = BottleInfo.getByColor(
+        selectedBottle,
+        currentWater: bottleState.volume,
+        waterPercentage: bottleState.volumePercent,
+      );
+
+      // Navigate to Bottle Info Screen
+      Navigator.of(context, rootNavigator: true).push(
+        MaterialPageRoute(
+          builder: (_) => BottleInfoScreen(bottleInfo: bottleInfo),
+        ),
+      );
+    } catch (e) {
+      debugPrint("Error navigating to Bottle Info: $e");
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Unable to load bottle information')),
+      );
+    }
+  }
+
   void _showLogoutConfirmation(BuildContext context) {
     showModalBottomSheet(
-      context: context,
+      context: Navigator.of(context, rootNavigator: true).context,
       isScrollControlled: true,
-      useRootNavigator: true,
       backgroundColor: Colors.transparent,
       barrierColor: AppColors.black.withOpacity(0),
       builder: (_) {
@@ -334,51 +376,35 @@ class _SettingScreenState extends State<SettingScreen> {
                         ),
                       ),
                     ),
-                    SizedBox(height: AppDimensions.dim34.h),
+                    //SizedBox(height: AppDimensions.dim34.h),
+
+                    // 🔥 NEW: Bottle Info Menu Item
+                    // Padding(
+                    //   padding: EdgeInsets.symmetric(
+                    //     horizontal: AppDimensions.dim24.w,
+                    //   ),
+                    //   child: Container(
+                    //     decoration: BoxDecoration(
+                    //       color: AppColors.white1A,
+                    //       border: Border.all(color: Color(0xCCC6C6C6)),
+                    //       borderRadius:
+                    //           BorderRadius.circular(AppDimensions.radius_16.r),
+                    //     ),
+                    //     child: ProfileMenuItemWidget(
+                    //       iconPath:
+                    //           "assets/images/bottle_icon.png", // 🔥 Add your bottle icon
+                    //       title: "Sipnudge Bottle",
+                    //       isRed: false,
+                    //       iconPathArrow: "assets/arrow.png",
+                    //       onTap: () =>
+                    //           _handleNavigation(context, 'Sipnudge Bottle'),
+                    //     ),
+                    //   ),
+                    // ),
 
                     // Menu group 2
-                    Padding(
-                      padding: EdgeInsets.symmetric(
-                        horizontal: AppDimensions.dim24.w,
-                      ),
-                      // child: Container(
-                      //   decoration: BoxDecoration(
-                      //     borderRadius:
-                      //         BorderRadius.circular(AppDimensions.radius_16.r),
-                      //     boxShadow: [
-                      //       BoxShadow(
-                      //         color: Colors.black.withOpacity(0.10),
-                      //         blurRadius: 2.r,
-                      //         spreadRadius: 3.r,
-                      //         offset: Offset(3.5.r, 3.5.r),
-                      //       ),
-                      //     ],
-                      //   ),
-                      //   // child: Container(
-                      //   //   decoration: BoxDecoration(
-                      //   //     color: AppColors.white1A,
-                      //   //     borderRadius: BorderRadius.circular(
-                      //   //         AppDimensions.radius_16.r),
-                      //   //   ),
-                      //   //   child: Column(
-                      //   //     children: state.secondaryMenuItems
-                      //   //         .map(
-                      //   //           (item) => ProfileMenuItemWidget(
-                      //   //             iconPath: item.iconPath,
-                      //   //             title: item.title,
-                      //   //             isRed: item.isRed,
-                      //   //             iconPathArrow: "assets/arrow.png",
-                      //   //             onTap: () => _handleNavigation(
-                      //   //               context,
-                      //   //               item.title,
-                      //   //             ),
-                      //   //           ),
-                      //   //         )
-                      //   //         .toList(),
-                      //   //   ),
-                      //   // ),
-                      // ),
-                    ),
+                    SizedBox(height: AppDimensions.dim34.h),
+                    const SipnudgeShopWidget(),
                     SizedBox(height: AppDimensions.dim165.h),
                   ],
                 ),

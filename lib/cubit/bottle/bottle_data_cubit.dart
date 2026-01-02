@@ -40,7 +40,7 @@ class BottleDataCubit extends Cubit<BottleDataState> {
           "battery=${lastData.battery}, "
           "timestamp=${lastData.timestamp}");
 
-      emit(state.copyWith(
+      emit(state.copyWith(  
         volume: lastData.liquidVolume,
         volumePercent: lastData.liquidPercent,
         battery: lastData.battery,
@@ -61,33 +61,33 @@ class BottleDataCubit extends Cubit<BottleDataState> {
     final newPercent = bleState.percent ?? 0;
     final newBattery = bleState.battery ?? 0;
 
-    if ((bleState.volume ?? 0.0) > 600) {
-      final newData = BottleData(
-        liquidVolume: newVolume,
-        liquidPercent: newPercent,
-        battery: newBattery,
-        timestamp: DateTime.now(),
-      );
+    // if ((bleState.volume ?? 0.0) > 600) {
+    final newData = BottleData(
+      liquidVolume: newVolume,
+      liquidPercent: newPercent,
+      battery: newBattery,
+      timestamp: DateTime.now(),
+    );
 
-      final db = await _dbHelper.database;
-      await db.insert(
-        DatabaseHelper.tableName,
-        newData.toMap(),
-        conflictAlgorithm: ConflictAlgorithm.replace,
-      );
+    final db = await _dbHelper.database;
+    await db.insert(
+      DatabaseHelper.tableName,
+      newData.toMap(),
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
 
-      List<BottleData> pageData = state.currentPage == 0
-          ? await fetchPageInternal(0)
-          : state.currentPageData;
+    List<BottleData> pageData = state.currentPage == 0
+        ? await fetchPageInternal(0)
+        : state.currentPageData;
 
-      emit(state.copyWith(
-        volume: newVolume,
-        volumePercent: newPercent,
-        battery: newBattery,
-        currentPage: state.currentPage,
-        currentPageData: pageData,
-      ));
-    }
+    emit(state.copyWith(
+      volume: newVolume,
+      volumePercent: newPercent,
+      battery: newBattery,
+      currentPage: state.currentPage,
+      currentPageData: pageData,
+    ));
+    // }
   }
 
   Future<List<BottleData>> fetchPage(int page) async {
@@ -168,9 +168,9 @@ class BottleDataCubit extends Cubit<BottleDataState> {
   Future<void> clearAllBottleData() async {
     try {
       final db = await _dbHelper.database;
-      await db.delete(DatabaseHelper.tableName); // clear all records
+      await db.delete(DatabaseHelper.tableName);
 
-      emit(BottleDataState.initial()); // reset Cubit state to initial
+      emit(BottleDataState.initial());
       print("✅ All bottle tracking data cleared.");
     } catch (e) {
       print("❌ Error clearing bottle tracking data: $e");

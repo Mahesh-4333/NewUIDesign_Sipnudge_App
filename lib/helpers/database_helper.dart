@@ -114,6 +114,27 @@ CREATE TABLE IF NOT EXISTS app_metadata (
   value TEXT
 );
 ''');
+
+        await db.execute('''
+CREATE TABLE IF NOT EXISTS hydration_day_summaries (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  date INTEGER NOT NULL,         -- epoch millis at local midnight (start of day)
+  day_index INTEGER NOT NULL,
+  target REAL NOT NULL,
+  consumed REAL NOT NULL,
+  device_id TEXT,
+  created_at INTEGER NOT NULL,
+  updated_at INTEGER,
+  UNIQUE(date, device_id) ON CONFLICT REPLACE
+);
+''');
+
+        await db.execute('''
+CREATE TABLE IF NOT EXISTS app_metadata (
+  key TEXT PRIMARY KEY,
+  value TEXT
+);
+''');
       },
     );
   }
@@ -132,7 +153,6 @@ CREATE TABLE IF NOT EXISTS app_metadata (
 
     log('[DB] Last hydration sync saved: ${date.toIso8601String()}');
   }
-
 
   Future<DateTime?> getLastSyncDate() async {
     final db = await database;
@@ -191,8 +211,6 @@ CREATE TABLE IF NOT EXISTS app_metadata (
       log("[DB] Error clearing hydration_slots table: $e");
     }
   }
-
-
 
   Future<List<HydrationEntry>> getAllSlots() async {
     final db = await database;
