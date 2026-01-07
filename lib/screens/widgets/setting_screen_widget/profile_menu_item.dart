@@ -24,12 +24,13 @@ class ProfileMenuItemWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isLogout = title == AppStrings.logout;
+    final isSipnudgeBottle = title == "Sipnudge Bottle";
 
     return InkWell(
       onTap: onTap,
       child: Padding(
         padding: EdgeInsets.symmetric(
-          horizontal: AppDimensions.dim16.w,
+          horizontal: isLogout ? AppDimensions.dim20.w : AppDimensions.dim16.w,
           vertical: AppDimensions.dim12.h,
         ),
         child: Row(
@@ -37,7 +38,9 @@ class ProfileMenuItemWidget extends StatelessWidget {
             Image.asset(
               iconPath,
               width: AppDimensions.dim24.w,
-              height: AppDimensions.dim24.h,
+              height: isSipnudgeBottle
+                  ? AppDimensions.dim29.h
+                  : AppDimensions.dim24.h,
               fit: BoxFit.contain,
               color: isLogout ? AppColors.redAccent : AppColors.bluegray,
               errorBuilder: (_, __, ___) => Icon(

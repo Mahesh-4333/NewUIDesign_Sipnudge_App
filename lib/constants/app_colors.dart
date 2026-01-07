@@ -107,6 +107,7 @@ class AppColors {
   static const logoutbuttongradientend = Color(0xFF1A121B);
   static const blackforconnect = Color(0xFF0A0A0A);
   static const bluegray = Color(0xFF4D758B);
+  static const touchToBottle = Color(0xFFC1B50E);
   static const silvergray = Color(0x69AFAFAF);
   static const lightgray = Color(0xFFCFCFCF);
   static const steelblue = Color(0xFF4D758B);
