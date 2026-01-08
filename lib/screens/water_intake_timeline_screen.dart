@@ -462,7 +462,7 @@ class _WaterIntakeTimelineState extends State<WaterIntakeTimelineScreen> {
                 ),
               ),
               SizedBox(
-                height: AppDimensions.dim5,
+                height: AppDimensions.dim6.h,
               ),
               Text("Touch your Bottle to sync data",
                   style: TextStyle(

@@ -31,7 +31,7 @@ class ProfileMenuItemWidget extends StatelessWidget {
       child: Padding(
         padding: EdgeInsets.symmetric(
           horizontal: isLogout ? AppDimensions.dim20.w : AppDimensions.dim16.w,
-          vertical: AppDimensions.dim12.h,
+          vertical: AppDimensions.dim11.h,
         ),
         child: Row(
           children: [
@@ -39,7 +39,7 @@ class ProfileMenuItemWidget extends StatelessWidget {
               iconPath,
               width: AppDimensions.dim24.w,
               height: isSipnudgeBottle
-                  ? AppDimensions.dim29.h
+                  ? AppDimensions.dim31.h
                   : AppDimensions.dim24.h,
               fit: BoxFit.contain,
               color: isLogout ? AppColors.redAccent : AppColors.bluegray,
@@ -49,7 +49,10 @@ class ProfileMenuItemWidget extends StatelessWidget {
                 size: AppFontStyles.fontSize_22.sp,
               ),
             ),
-            SizedBox(width: AppDimensions.dim16.w),
+            SizedBox(
+                width: isSipnudgeBottle
+                    ? AppDimensions.dim15.w
+                    : AppDimensions.dim16.w),
             Text(
               title,
               style: TextStyle(
