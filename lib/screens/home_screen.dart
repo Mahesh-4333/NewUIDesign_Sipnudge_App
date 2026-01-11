@@ -21,6 +21,7 @@ import 'package:hydrify/providers/weather_provider.dart';
 import 'package:hydrify/screens/hydration_30_day.dart';
 import 'package:hydrify/screens/notification.dart';
 import 'package:hydrify/screens/qr_scanning.dart';
+import 'package:hydrify/screens/widgets/autoScroll_GoalText.dart';
 import 'package:hydrify/screens/widgets/ble_device_selection_sheet.dart';
 import 'package:hydrify/screens/widgets/custom_circular_loader/custom_circular_progress_indicator.dart';
 import 'package:hydrify/screens/widgets/custom_circular_loader/custom_circular_water_progress_indicator.dart';
@@ -28,6 +29,7 @@ import 'package:hydrify/screens/widgets/greeting_widget.dart';
 import 'package:hydrify/screens/widgets/user_info_input_widgets/custom_beating_ble_status_indicator.dart';
 import 'package:hydrify/screens/widgets/water_wave_widget.dart';
 import 'package:hydrify/services/notification/notification_service.dart';
+import 'package:marquee/marquee.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -1250,43 +1252,74 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // Widget _buildGoalText(double todayConsumptionPercentage) {
+  // Widget _buildGoalText(double todayConsumptionPercentage, bool isGuest) {
+  //   final goalText = isGuest
+  //       ? "If you have purchased the bottle and accidentally entered the guest page, you can log out from the settings page and log in normally.\n"
+  //           "If you don’t have the bottle and want to use the basic water-reminder feature, you can schedule reminders from the settings page > Drink Reminder > Water Intake Timeline.\n"
+  //           "You can also place your bottle order directly from the settings page."
+  //       : AppStrings.getGoalString(todayConsumptionPercentage);
+
+  //   final textStyle = TextStyle(
+  //     fontSize: AppFontStyles.fontSize_16,
+  //     color: AppColors.bluegray,
+  //     height: AppFontStyles.getLineHeight(
+  //       AppFontStyles.fontSize_16,
+  //       120,
+  //     ),
+  //     fontVariations: [
+  //       AppFontStyles.semiBoldFontVariation,
+  //     ],
+  //   );
+
   //   return SizedBox(
-  //       width: AppDimensions.dim350.w,
-  //       child: Text(
-  //         AppStrings.getGoalString(todayConsumptionPercentage),
-  //         style: TextStyle(
-  //           fontSize: AppFontStyles.fontSize_16,
-  //           color: AppColors.bluegray,
-  //           height: AppFontStyles.getLineHeight(AppFontStyles.fontSize_16, 120),
-  //           fontVariations: [
-  //             AppFontStyles.semiBoldFontVariation,
-  //           ],
-  //         ),
-  //         textAlign: TextAlign.center,
-  //       ));
+  //     width: AppDimensions.dim350.w,
+  //     height: isGuest ? 70.h : null, // enough space to center vertically
+  //     child: isGuest
+  //         ? Align(
+  //             alignment: Alignment.center,
+  //             child: Marquee(
+  //               text: goalText,
+  //               style: textStyle,
+  //               scrollAxis: Axis.vertical,
+
+  //               // 🔥 Smooth, readable scroll
+  //               velocity: 8.0,
+  //               blankSpace: 40.0,
+  //               startPadding: 30.0,
+  //               pauseAfterRound: const Duration(seconds: 3),
+  //               accelerationDuration: const Duration(seconds: 1),
+  //               decelerationDuration: const Duration(seconds: 1),
+  //             ),
+  //           )
+  //         : Text(
+  //             goalText,
+  //             style: textStyle,
+  //             textAlign: TextAlign.center,
+  //           ),
+  //   );
   // }
 
   Widget _buildGoalText(double todayConsumptionPercentage, bool isGuest) {
     final goalText = isGuest
-        ? "To get access to all the features, please connect to the Sipnudge bottle."
+        ? "If you have purchased the bottle and accidentally entered the guest page, you can log out from the settings page and log in normally.\n"
+            "If you don’t have the bottle and want to use the basic water-reminder feature, you can schedule reminders from the settings page > Drink Reminder > Water Intake Timeline.\n"
+            "You can also place your bottle order directly from the settings page."
         : AppStrings.getGoalString(todayConsumptionPercentage);
 
-    return SizedBox(
-      width: AppDimensions.dim350.w,
-      child: Text(
-        goalText,
-        style: TextStyle(
-          fontSize: AppFontStyles.fontSize_16,
-          color: AppColors.bluegray,
-          height: AppFontStyles.getLineHeight(AppFontStyles.fontSize_16, 120),
-          fontVariations: [
-            AppFontStyles.semiBoldFontVariation,
-          ],
-        ),
-        textAlign: TextAlign.center,
-      ),
-    );
+    return isGuest
+        ? AutoScrollGoalText(text: goalText) // ✅ image-style scroll
+        : SizedBox(
+            width: AppDimensions.dim350.w,
+            child: Text(
+              goalText,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                  fontSize: AppFontStyles.fontSize_16,
+                  color: AppColors.bluegray,
+                  fontFamily: AppFontStyles.museoModernoFontFamily,
+                  fontVariations: [AppFontStyles.semiBoldFontVariation]),
+            ),
+          );
   }
 
   Widget _buildWeatherIconWidget(String iconPath) {

@@ -147,30 +147,30 @@ class _AuthOptionsScreenState extends State<AuthOptionsScreen> {
               ),
 
               // Continue as Guest button for ANDROID (below Google)
-              if (!Platform.isIOS)
-                AuthButton(
-                  text: "Continue as Guest",
-                  gradient: AppColors.guestButtonColor,
-                  textColor: AppColors.buttonTextPurpleColor,
-                  areTwoItems: false,
-                  borderColor: AppColors.bluegray,
-                  onTap: () {
-                    SharedPrefsHelper.setUserEmail("guest_user");
+              // if (!Platform.isIOS)
+              //   AuthButton(
+              //     text: "Continue as Guest",
+              //     gradient: AppColors.guestButtonColor,
+              //     textColor: AppColors.buttonTextPurpleColor,
+              //     areTwoItems: false,
+              //     borderColor: AppColors.bluegray,
+              //     onTap: () {
+              //       SharedPrefsHelper.setUserEmail("guest_user");
 
-                    UiUtilsService.showToast(
-                      context: context,
-                      text: "Continuing as Guest",
-                    );
+              //       UiUtilsService.showToast(
+              //         context: context,
+              //         text: "Continuing as Guest",
+              //       );
 
-                    Navigator.pushAndRemoveUntil(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => UserInfoInputScreen(),
-                      ),
-                      (route) => false,
-                    );
-                  },
-                ),
+              //       Navigator.pushAndRemoveUntil(
+              //         context,
+              //         MaterialPageRoute(
+              //           builder: (context) => UserInfoInputScreen(),
+              //         ),
+              //         (route) => false,
+              //       );
+              //     },
+              //   ),
               // Divider for Android only
               if (!Platform.isIOS)
                 Padding(
@@ -245,31 +245,31 @@ class _AuthOptionsScreenState extends State<AuthOptionsScreen> {
                       },
                     ),
                     SizedBox(height: AppDimensions.dim20.h),
-                    // Continue as Guest button for iOS (after Apple button)
-                    AuthButton(
-                      text: "Continue as Guest",
-                      gradient: AppColors.guestButtonColor,
-                      textColor: AppColors.buttonTextPurpleColor,
-                      areTwoItems: false,
-                      borderColor: AppColors.bluegray,
-                      onTap: () {
-                        SharedPrefsHelper.setUserEmail("guest_user");
+                    // // Continue as Guest button for iOS (after Apple button)
+                    // AuthButton(
+                    //   text: "Continue as Guest",
+                    //   gradient: AppColors.guestButtonColor,
+                    //   textColor: AppColors.buttonTextPurpleColor,
+                    //   areTwoItems: false,
+                    //   borderColor: AppColors.bluegray,
+                    //   onTap: () {
+                    //     SharedPrefsHelper.setUserEmail("guest_user");
 
-                        UiUtilsService.showToast(
-                          context: context,
-                          text: "Continuing as Guest",
-                        );
+                    //     UiUtilsService.showToast(
+                    //       context: context,
+                    //       text: "Continuing as Guest",
+                    //     );
 
-                        Navigator.pushAndRemoveUntil(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => UserInfoInputScreen(),
-                          ),
-                          (route) => false,
-                        );
-                      },
-                    ),
-                    // Divider for iOS only
+                    //     Navigator.pushAndRemoveUntil(
+                    //       context,
+                    //       MaterialPageRoute(
+                    //         builder: (context) => UserInfoInputScreen(),
+                    //       ),
+                    //       (route) => false,
+                    //     );
+                    //   },
+                    // ),
+                    // // Divider for iOS only
                     Padding(
                       padding: EdgeInsets.symmetric(
                         vertical: AppDimensions.dim20.h,

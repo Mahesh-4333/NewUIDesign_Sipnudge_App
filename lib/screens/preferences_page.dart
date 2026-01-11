@@ -167,12 +167,7 @@ class PreferencesPage extends StatelessWidget {
                         ],
                         child: ElevatedButton(
                           onPressed: () async {
-                            // 1️⃣ Clear local database
                             try {
-                              // final dbHelper = DatabaseHelper();
-                              // await dbHelper
-                              //     .clearAllSlots(); // make sure you have this method
-                              // 1️⃣ Clear local bottle data via Cubit
                               final bottleDataCubit =
                                   context.read<BottleDataCubit>();
                               await bottleDataCubit.clearAllBottleData();
