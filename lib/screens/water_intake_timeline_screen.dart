@@ -461,45 +461,16 @@ class _WaterIntakeTimelineState extends State<WaterIntakeTimelineScreen> {
                   ],
                 ),
               ),
-              // GestureDetector(
-              //   onTap: () => _selectDate(context, state),
-              //   child: Column(
-              //     crossAxisAlignment: CrossAxisAlignment.center,
-              //     mainAxisAlignment: MainAxisAlignment.start,
-              //     children: [
-              //       Row(
-              //         crossAxisAlignment: CrossAxisAlignment.center,
-              //         children: [
-              //           Text(
-              //             "Change date",
-              //             style: TextStyle(
-              //               fontFamily: AppFontStyles.urbanistFontFamily,
-              //               fontSize: AppFontStyles.fontSize_16,
-              //               color: Colors.white,
-              //               fontVariations: [
-              //                 AppFontStyles.semiBoldFontVariation
-              //               ],
-              //               shadows: [
-              //                 Shadow(
-              //                   blurRadius: AppDimensions.dim5,
-              //                   color: Colors.black.withOpacity(.2),
-              //                   offset: Offset(0, AppDimensions.dim3),
-              //                 )
-              //               ],
-              //             ),
-              //           ),
-              //           SizedBox(width: 4.w),
-              //           Image.asset(
-              //             "assets/downarrow.png",
-              //             width: 14.w,
-              //             height: 14.h,
-              //             fit: BoxFit.contain,
-              //           ),
-              //         ],
-              //       ),
-              //     ],
-              //   ),
-              // ),
+              SizedBox(
+                height: AppDimensions.dim6.h,
+              ),
+              Text("Touch your Bottle to sync data",
+                  style: TextStyle(
+                    fontFamily: AppFontStyles.urbanistFontFamily,
+                    fontSize: AppFontStyles.fontSize_14,
+                    color: AppColors.touchToBottle,
+                    fontVariations: [AppFontStyles.semiBoldFontVariation],
+                  )),
             ],
           ),
         ),

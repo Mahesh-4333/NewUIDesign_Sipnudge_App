@@ -42,7 +42,6 @@ class _LocalAuthScreenState extends State<LocalAuthScreen> {
       success = await authProvider.authenticateWithBiometrics();
 
       if (!success) {
-        // Small delay to avoid spam feeling
         await Future.delayed(const Duration(milliseconds: 300));
       }
     }
