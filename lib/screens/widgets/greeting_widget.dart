@@ -41,33 +41,29 @@ class _GreetingWidgetState extends State<GreetingWidget> {
   }
 
   Future<void> _loadUserName() async {
-    final name = UserManager().userName;
+    final userManager = UserManager();
+    final name = userManager.userName;
 
-    // If no name in UserManager, try to get from email
     if (name.isEmpty) {
       final userEmail = await SharedPrefsHelper.getUserEmail() ?? "";
+      String finalName = "";
 
-      if (Platform.isIOS) {
-        final String userName = "Username";
-        await UserManager().setUserName(userName);
-        setState(() {
-          _userName = userName;
-        });
+      if (userEmail.toLowerCase().endsWith('@privaterelay.appleid.com')) {
+        finalName = "Username";
       } else {
-        final extractedName = userEmail.isEmpty
-            ? ""
-            : DataVerifcationHelper.extractNameFromEmail(userEmail);
-
-        if (extractedName.isNotEmpty) {
-          await UserManager().setUserName(extractedName);
-        }
-
-        setState(() {
-          _userName = extractedName;
-        });
+        finalName = userEmail.isNotEmpty
+            ? DataVerifcationHelper.extractNameFromEmail(userEmail)
+            : "Username";
       }
+
+      if (finalName.isNotEmpty) {
+        await userManager.setUserName(finalName);
+      }
+
+      setState(() {
+        _userName = finalName;
+      });
     } else {
-      log("userName is ${name}");
       setState(() {
         _userName = name;
       });

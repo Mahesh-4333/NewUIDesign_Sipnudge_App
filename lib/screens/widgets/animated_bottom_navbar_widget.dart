@@ -1,3 +1,5 @@
+import 'dart:developer';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -152,6 +154,8 @@ class _AnimatedBottomNavBarState extends State<AnimatedBottomNavBar>
       builder: (context, state) {
         final cubit = context.read<BottomNavCubit>();
         final currentIndex = state.selectedIndex;
+
+        log("Current Index is ${currentIndex}");
 
         return !state.isVisible
             ? SizedBox.shrink()

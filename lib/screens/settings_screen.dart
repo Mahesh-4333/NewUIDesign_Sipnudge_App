@@ -230,7 +230,6 @@ class _SettingScreenState extends State<SettingScreen> {
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(content: Text(AppStrings.loggedOutSuccessfully)),
             );
-            // TODO: Handle logout logic
           },
         );
       },

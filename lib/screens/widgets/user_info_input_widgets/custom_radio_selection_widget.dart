@@ -173,7 +173,7 @@ class CustomRadioSelectionWidget extends StatelessWidget {
 
     return InkWell(
       onTap: () async {
-        await VibrationHelper.vibrate();
+        VibrationHelper.vibrate(duration: 15, amplitude: 100);
         onTap();
       },
       splashColor: AppColors.selectedPurpleToggle,

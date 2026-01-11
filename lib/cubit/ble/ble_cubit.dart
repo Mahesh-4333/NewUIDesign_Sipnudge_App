@@ -108,10 +108,10 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
       await dbHelper.insertOrUpdateSlot(updatedEntry);
     } // 2️⃣ Clear in-memory streams
     _hydrationController.add([]);
-    if ((state.volume ?? 0) > 600) {
-      // 3️⃣ Update last hydration date
-      await dbHelper.saveLastSyncDate(today);
-    }
+    // if ((state.volume ?? 0) > 600) {
+    // 3️⃣ Update last hydration date
+    await dbHelper.saveLastSyncDate(today);
+    // }
 
     // 4️⃣ Update UI state (optional but recommended)
     emit(state.copyWith(
@@ -338,9 +338,9 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
               }).toList();
 
               // Save to DB in bulk (fast)
-              if ((state.volume ?? 0) > 600) {
-                await dbHelper.bulkUpsert30Days(list);
-              }
+              // if ((state.volume ?? 0) > 600) {
+              await dbHelper.bulkUpsert30Days(list);
+              // }
 
               emit(state.copyWith(
                   isHydration30DaysDataSync: true, historyData: data));
@@ -373,7 +373,7 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
           log("Hydration Slot Data: $data", name: "BLE_Cubit");
 
           final updatedEntries = _parseHydrationSlotData(data);
-          if (updatedEntries.isNotEmpty && ((state.volume ?? 0) > 600)) {
+          if (updatedEntries.isNotEmpty) {
             await dbHelper.saveLastSyncDate(DateTime.now());
 
             _hydrationController.add(updatedEntries);

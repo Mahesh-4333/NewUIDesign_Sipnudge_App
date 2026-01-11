@@ -284,55 +284,20 @@ class _QrScannerState extends State<QrScanner>
                         padding: EdgeInsets.symmetric(horizontal: 24.h),
                         child: SizedBox(
                           width: double.infinity,
-                          height: 52.h,
+                          height: 58.h,
                           child: DecoratedBox(
                             decoration: BoxDecoration(
                               gradient: const LinearGradient(
                                 begin: Alignment.centerLeft,
                                 end: Alignment.centerRight,
                                 colors: [
-                                  Color(0xFF9FFFFA), // Teal
-                                  Color(0xFFD1FFC4), // Light Green
+                                  Color(0xFF9FFFFA),
+                                  Color(0xFFD1FFC4),
                                 ],
                               ),
                               border: Border.all(color: AppColors.bluegray),
                               borderRadius: BorderRadius.circular(30),
                             ),
-                            // child: ElevatedButton(
-                            //   style: ElevatedButton.styleFrom(
-                            //     backgroundColor: Colors.transparent,
-                            //     shadowColor: Colors.transparent,
-                            //     shape: RoundedRectangleBorder(
-                            //       borderRadius: BorderRadius.circular(30.r),
-                            //     ),
-                            //   ),
-                            //   onPressed: () {
-                            //     Navigator.of(context, rootNavigator: true)
-                            //         .pushReplacement(
-                            //       //context,
-                            //       MaterialPageRoute(
-                            //         builder: (_) => const BottomNavScreenNew(),
-                            //       ),
-                            //     );
-                            //   },
-                            //   child: Text(
-                            //     "Continue as Guest",
-                            //     //   style: TextStyle(
-                            //     //     color: Colors.black,
-                            //     //     fontSize: 16.sp,
-                            //     //     fontWeight: FontWeight.bold,
-                            //     //   ),
-                            //     // ),
-                            //     style: TextStyle(
-                            //       color: AppColors.bluegray,
-                            //       fontSize: AppFontStyles.fontSize_16.sp,
-                            //       fontFamily: AppFontStyles.urbanistFontFamily,
-                            //       fontVariations: [
-                            //         AppFontStyles.boldFontVariation,
-                            //       ],
-                            //     ),
-                            //   ),
-                            // ),
                             child: AuthButton(
                               text: "Continue as Guest",
                               gradient: AppColors.guestButtonColor,
