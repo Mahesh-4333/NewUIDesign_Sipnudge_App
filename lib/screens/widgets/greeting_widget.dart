@@ -1,4 +1,5 @@
 import 'dart:developer';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -45,18 +46,28 @@ class _GreetingWidgetState extends State<GreetingWidget> {
     // If no name in UserManager, try to get from email
     if (name.isEmpty) {
       final userEmail = await SharedPrefsHelper.getUserEmail() ?? "";
-      final extractedName = userEmail.isEmpty
-          ? ""
-          : DataVerifcationHelper.extractNameFromEmail(userEmail);
 
-      if (extractedName.isNotEmpty) {
-        await UserManager().setUserName(extractedName);
+      if (Platform.isIOS) {
+        final String userName = "Username";
+        await UserManager().setUserName(userName);
+        setState(() {
+          _userName = userName;
+        });
+      } else {
+        final extractedName = userEmail.isEmpty
+            ? ""
+            : DataVerifcationHelper.extractNameFromEmail(userEmail);
+
+        if (extractedName.isNotEmpty) {
+          await UserManager().setUserName(extractedName);
+        }
+
+        setState(() {
+          _userName = extractedName;
+        });
       }
-
-      setState(() {
-        _userName = extractedName;
-      });
     } else {
+      log("userName is ${name}");
       setState(() {
         _userName = name;
       });

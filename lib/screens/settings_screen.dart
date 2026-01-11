@@ -248,15 +248,9 @@ class _SettingScreenState extends State<SettingScreen> {
             height: double.infinity,
             decoration: const BoxDecoration(
               image: DecorationImage(
-                image: AssetImage(
-                    "assets/images/app_background.png"), // your image path
+                image: AssetImage("assets/images/app_background.png"),
                 fit: BoxFit.cover,
               ),
-              // gradient: LinearGradient(
-              //   colors: [AppColors.gradientStart, AppColors.gradientEnd],
-              //   begin: Alignment.topLeft,
-              //   end: Alignment.bottomRight,
-              // ),
             ),
             child: SafeArea(
               child: SingleChildScrollView(

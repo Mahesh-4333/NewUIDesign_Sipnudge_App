@@ -480,28 +480,27 @@ class _HomeScreenState extends State<HomeScreen> {
         children: [
           GreetingWidget(),
           Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               /// 📷 QR Scanner Button
-              IconButton(
-                onPressed: () {
-                  Navigator.of(context, rootNavigator: true).pushReplacement(
-                    //context,
-                    MaterialPageRoute(
-                      builder: (_) => const QrScanner(),
-                    ),
-                  );
-                },
-                icon: Icon(
-                  Icons.qr_code_scanner,
-                  color: AppColors.black,
-                  size: AppDimensions.dim28.sp,
-                ),
-                tooltip: "Rescan Bottle",
-              ),
+              // IconButton(
+              //   onPressed: () {
+              //     Navigator.of(context, rootNavigator: true).pushReplacement(
+              //       //context,
+              //       MaterialPageRoute(
+              //         builder: (_) => const QrScanner(),
+              //       ),
+              //     );
+              //   },
+              //   icon: Icon(
+              //     Icons.qr_code_scanner,
+              //     color: AppColors.black,
+              //     size: AppDimensions.dim28.sp,
+              //   ),
+              //   tooltip: "Rescan Bottle",
+              // ),
 
               SizedBox(width: AppDimensions.dim8.w),
-
-              /// Existing BLE + Battery widgets
               Column(
                 children: [
                   CustomBeatingBleStatusIndicator(),

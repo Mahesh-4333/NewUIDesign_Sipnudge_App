@@ -2,6 +2,7 @@ import 'package:cloud_functions/cloud_functions.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -154,6 +155,10 @@ class MyApp extends StatelessWidget {
                     debugShowCheckedModeBanner: false,
                     theme: ThemeData(
                       appBarTheme: const AppBarTheme(
+                        systemOverlayStyle: SystemUiOverlayStyle(
+                          statusBarIconBrightness: Brightness.dark,
+                          statusBarBrightness: Brightness.light,
+                        ),
                         centerTitle: true,
                         iconTheme: IconThemeData(),
                       ),
