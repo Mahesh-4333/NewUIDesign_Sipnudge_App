@@ -102,7 +102,6 @@ class _EditableProfileAvatarState extends State<EditableProfileAvatar> {
                     if (pickedFile != null) {
                       await _saveImageLocally(File(pickedFile.path));
                     }
-                    Navigator.pop(context);
                   },
                 ),
                 ListTile(
@@ -122,7 +121,6 @@ class _EditableProfileAvatarState extends State<EditableProfileAvatar> {
                     if (pickedFile != null) {
                       await _saveImageLocally(File(pickedFile.path));
                     }
-                    //Navigator.pop(context);
                   },
                 ),
               ],

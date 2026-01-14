@@ -5,6 +5,7 @@ import 'package:hydrify/constants/app_colors.dart';
 import 'package:hydrify/constants/app_dimensions.dart';
 import 'package:hydrify/constants/app_font_styles.dart';
 import 'package:hydrify/constants/app_strings.dart';
+import 'package:hydrify/helpers/openurl.dart';
 import 'package:hydrify/helpers/shared_pref_helper.dart';
 import 'package:hydrify/screens/auth/signin_signup_screen.dart';
 import 'package:hydrify/screens/info/privacy_policy_screen.dart';
@@ -98,16 +99,6 @@ class _AuthOptionsScreenState extends State<AuthOptionsScreen> {
                   fontVariations: [
                     AppFontStyles.regularFontVariation,
                   ],
-                  // shadows: [
-                  //   Shadow(
-                  //     blurRadius: AppDimensions.dim5,
-                  //     color: Colors.black.withOpacity(.2),
-                  //     offset: Offset(
-                  //       0,
-                  //       AppDimensions.dim3,
-                  //     ),
-                  //   )
-                  // ]
                 ),
               ),
               SizedBox(
@@ -142,40 +133,11 @@ class _AuthOptionsScreenState extends State<AuthOptionsScreen> {
                 },
               ),
 
-              SizedBox(
-                height: AppDimensions.dim20.h,
-              ),
-
-              // Continue as Guest button for ANDROID (below Google)
-              // if (!Platform.isIOS)
-              //   AuthButton(
-              //     text: "Continue as Guest",
-              //     gradient: AppColors.guestButtonColor,
-              //     textColor: AppColors.buttonTextPurpleColor,
-              //     areTwoItems: false,
-              //     borderColor: AppColors.bluegray,
-              //     onTap: () {
-              //       SharedPrefsHelper.setUserEmail("guest_user");
-
-              //       UiUtilsService.showToast(
-              //         context: context,
-              //         text: "Continuing as Guest",
-              //       );
-
-              //       Navigator.pushAndRemoveUntil(
-              //         context,
-              //         MaterialPageRoute(
-              //           builder: (context) => UserInfoInputScreen(),
-              //         ),
-              //         (route) => false,
-              //       );
-              //     },
-              //   ),
               // Divider for Android only
               if (!Platform.isIOS)
                 Padding(
                   padding: EdgeInsets.symmetric(
-                    vertical: AppDimensions.dim20.h,
+                    vertical: AppDimensions.dim10.h,
                     horizontal: AppDimensions.dim16.w,
                   ),
                   child: Row(
@@ -244,35 +206,11 @@ class _AuthOptionsScreenState extends State<AuthOptionsScreen> {
                         }
                       },
                     ),
-                    SizedBox(height: AppDimensions.dim20.h),
-                    // // Continue as Guest button for iOS (after Apple button)
-                    // AuthButton(
-                    //   text: "Continue as Guest",
-                    //   gradient: AppColors.guestButtonColor,
-                    //   textColor: AppColors.buttonTextPurpleColor,
-                    //   areTwoItems: false,
-                    //   borderColor: AppColors.bluegray,
-                    //   onTap: () {
-                    //     SharedPrefsHelper.setUserEmail("guest_user");
 
-                    //     UiUtilsService.showToast(
-                    //       context: context,
-                    //       text: "Continuing as Guest",
-                    //     );
-
-                    //     Navigator.pushAndRemoveUntil(
-                    //       context,
-                    //       MaterialPageRoute(
-                    //         builder: (context) => UserInfoInputScreen(),
-                    //       ),
-                    //       (route) => false,
-                    //     );
-                    //   },
-                    // ),
                     // // Divider for iOS only
                     Padding(
                       padding: EdgeInsets.symmetric(
-                        vertical: AppDimensions.dim20.h,
+                        vertical: AppDimensions.dim10.h,
                         horizontal: AppDimensions.dim33.w,
                       ),
                       child: Row(
@@ -309,7 +247,7 @@ class _AuthOptionsScreenState extends State<AuthOptionsScreen> {
                   ],
                 ),
               ),
-              SizedBox(height: AppDimensions.dim7.h),
+              SizedBox(height: AppDimensions.dim3.h),
               AuthButton(
                 text: AppStrings.signUp,
                 color: AppColors.blueGradient,
@@ -353,18 +291,13 @@ class _AuthOptionsScreenState extends State<AuthOptionsScreen> {
           children: [
             GestureDetector(
               onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => PrivacyPolicyScreen(),
-                  ),
-                );
+                OpenUrlHelper.openprivacysUrl();
               },
               child: Text(
                 AppStrings.privacyPolicy,
                 style: TextStyle(
                     fontFamily: AppFontStyles.urbanistFontFamily,
-                    color: AppColors.white,
+                    color: AppColors.black,
                     fontSize: AppFontStyles.fontSize_14.sp,
                     fontVariations: [
                       AppFontStyles.regularFontVariation,
@@ -374,20 +307,28 @@ class _AuthOptionsScreenState extends State<AuthOptionsScreen> {
             SizedBox(
               width: AppDimensions.dim20.w,
             ),
+            Text(
+              "•",
+              style: TextStyle(
+                  fontFamily: AppFontStyles.urbanistFontFamily,
+                  color: AppColors.black,
+                  fontSize: AppFontStyles.fontSize_14.sp,
+                  fontVariations: [
+                    AppFontStyles.regularFontVariation,
+                  ]),
+            ),
+            SizedBox(
+              width: AppDimensions.dim20.w,
+            ),
             GestureDetector(
               onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => TermsOfServiceScreen(),
-                  ),
-                );
+                OpenUrlHelper.openTermsUrl();
               },
               child: Text(
                 AppStrings.termsOfService,
                 style: TextStyle(
                     fontFamily: AppFontStyles.urbanistFontFamily,
-                    color: AppColors.white,
+                    color: AppColors.black,
                     fontSize: AppFontStyles.fontSize_14.sp,
                     fontVariations: [
                       AppFontStyles.regularFontVariation,

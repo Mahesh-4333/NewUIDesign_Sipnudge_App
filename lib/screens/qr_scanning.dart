@@ -5,6 +5,8 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:hydrify/constants/app_colors.dart';
 import 'package:hydrify/constants/app_dimensions.dart';
 import 'package:hydrify/constants/app_font_styles.dart';
+import 'package:hydrify/constants/app_strings.dart';
+import 'package:hydrify/helpers/openurl.dart';
 import 'package:hydrify/helpers/shared_pref_helper.dart';
 import 'package:hydrify/screens/auth/auth_options_screen.dart';
 import 'package:hydrify/screens/bottom_nav_screen_new.dart';
@@ -220,7 +222,7 @@ class _QrScannerState extends State<QrScanner>
               child: Align(
                 alignment: Alignment.bottomCenter,
                 child: Padding(
-                  padding: EdgeInsets.only(bottom: 140.h),
+                  padding: EdgeInsets.only(bottom: 200.h),
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
@@ -331,20 +333,58 @@ class _QrScannerState extends State<QrScanner>
             ),
           ),
 
-          /// 🔹 FOOTER TEXT
           Container(
-            width: double.infinity,
-            padding: EdgeInsets.only(bottom: 25.h),
-            decoration: const BoxDecoration(
-              image: DecorationImage(
-                image: AssetImage('assets/images/app_background.png'),
-                fit: BoxFit.cover,
-              ),
-            ),
-            child: Text(
-              "Privacy Policy    ·   Terms of Service",
-              textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 13.sp, color: Colors.black),
+            padding: EdgeInsets.only(bottom: AppDimensions.padding_30.h),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                GestureDetector(
+                  onTap: () {
+                    OpenUrlHelper.openprivacysUrl();
+                  },
+                  child: Text(
+                    AppStrings.privacyPolicy,
+                    style: TextStyle(
+                        fontFamily: AppFontStyles.urbanistFontFamily,
+                        color: AppColors.black,
+                        fontSize: AppFontStyles.fontSize_14.sp,
+                        fontVariations: [
+                          AppFontStyles.regularFontVariation,
+                        ]),
+                  ),
+                ),
+                SizedBox(
+                  width: AppDimensions.dim20.w,
+                ),
+                Text(
+                  "•",
+                  style: TextStyle(
+                      fontFamily: AppFontStyles.urbanistFontFamily,
+                      color: AppColors.black,
+                      fontSize: AppFontStyles.fontSize_14.sp,
+                      fontVariations: [
+                        AppFontStyles.regularFontVariation,
+                      ]),
+                ),
+                SizedBox(
+                  width: AppDimensions.dim20.w,
+                ),
+                GestureDetector(
+                  onTap: () {
+                    OpenUrlHelper.openTermsUrl();
+                  },
+                  child: Text(
+                    AppStrings.termsOfService,
+                    style: TextStyle(
+                        fontFamily: AppFontStyles.urbanistFontFamily,
+                        color: AppColors.black,
+                        fontSize: AppFontStyles.fontSize_14.sp,
+                        fontVariations: [
+                          AppFontStyles.regularFontVariation,
+                        ]),
+                  ),
+                ),
+              ],
             ),
           ),
         ],

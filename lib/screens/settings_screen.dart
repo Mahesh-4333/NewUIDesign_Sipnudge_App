@@ -45,6 +45,12 @@ class _SettingScreenState extends State<SettingScreen> {
     _loadSavedName();
   }
 
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    context.read<BottomNavCubit>().showBar();
+  }
+
   void _onNameChanged(String newName) {
     setState(() {
       _nameController.text = newName;
@@ -96,14 +102,6 @@ class _SettingScreenState extends State<SettingScreen> {
           );
           break;
 
-        // case AppStrings.sipnudgebottle:
-        //   navigator.push(
-        //     MaterialPageRoute(
-        //       builder: (_) => const SipNudgeBottleScreen(),
-        //     ),
-        //   );
-        //   break;
-
         case AppStrings.preferences:
           navigator.push(
             MaterialPageRoute(
@@ -111,22 +109,6 @@ class _SettingScreenState extends State<SettingScreen> {
             ),
           );
           break;
-
-        // case AppStrings.dataAnalytics:
-        //   navigator.push(
-        //     MaterialPageRoute(
-        //       builder: (_) => const DataAnalyticsScreen(),
-        //     ),
-        //   );
-        //   break;
-
-        // case AppStrings.linkaccounts:
-        //   navigator.push(
-        //     MaterialPageRoute(
-        //       builder: (_) => const LinkedAccountsScreen(),
-        //     ),
-        //   );
-        //   break;
 
         case AppStrings.helpandsupport:
           navigator.push(
@@ -334,14 +316,6 @@ class _SettingScreenState extends State<SettingScreen> {
                         decoration: BoxDecoration(
                           borderRadius:
                               BorderRadius.circular(AppDimensions.radius_16.r),
-                          // boxShadow: [
-                          //   BoxShadow(
-                          //     color: Colors.black.withOpacity(0.10),
-                          //     blurRadius: 4.r,
-                          //     spreadRadius: 3.r,
-                          //     offset: Offset(4.r, 4.r),
-                          //   ),
-                          // ],
                         ),
                         child: Container(
                           decoration: BoxDecoration(
@@ -369,33 +343,6 @@ class _SettingScreenState extends State<SettingScreen> {
                         ),
                       ),
                     ),
-                    //SizedBox(height: AppDimensions.dim34.h),
-
-                    // 🔥 NEW: Bottle Info Menu Item
-                    // Padding(
-                    //   padding: EdgeInsets.symmetric(
-                    //     horizontal: AppDimensions.dim24.w,
-                    //   ),
-                    //   child: Container(
-                    //     decoration: BoxDecoration(
-                    //       color: AppColors.white1A,
-                    //       border: Border.all(color: Color(0xCCC6C6C6)),
-                    //       borderRadius:
-                    //           BorderRadius.circular(AppDimensions.radius_16.r),
-                    //     ),
-                    //     child: ProfileMenuItemWidget(
-                    //       iconPath:
-                    //           "assets/images/bottle_icon.png", // 🔥 Add your bottle icon
-                    //       title: "Sipnudge Bottle",
-                    //       isRed: false,
-                    //       iconPathArrow: "assets/arrow.png",
-                    //       onTap: () =>
-                    //           _handleNavigation(context, 'Sipnudge Bottle'),
-                    //     ),
-                    //   ),
-                    // ),
-
-                    // Menu group 2
                     SizedBox(height: AppDimensions.dim34.h),
                     const SipnudgeShopWidget(),
                     SizedBox(height: AppDimensions.dim165.h),
