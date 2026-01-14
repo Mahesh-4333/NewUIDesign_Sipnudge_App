@@ -43,11 +43,6 @@ class AllSetScreen extends StatelessWidget {
                 "assets/images/app_background.png"), // your image path
             fit: BoxFit.cover,
           ),
-          // gradient: LinearGradient(
-          //   begin: Alignment.topCenter,
-          //   end: Alignment.bottomCenter,
-          //   colors: [AppColors.gradientStart, AppColors.gradientEnd],
-          // ),
         ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,

@@ -110,12 +110,10 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _showStartJourneyDialog(BuildContext context) async {
-    // Check if user is logged in as guest by checking email
     final userEmail = await SharedPrefsHelper.getUserEmail();
     final isGuest = userEmail == "guest_user";
 
-    // Add debug print to verify
-    print('🔍 DEBUG: userEmail = $userEmail, isGuest = $isGuest');
+    if (isGuest) return;
 
     if (!context.mounted) return;
 
@@ -127,7 +125,6 @@ class _HomeScreenState extends State<HomeScreen> {
         return Stack(
           alignment: Alignment.center,
           children: [
-            // Background Blur + Dismiss Area
             Positioned.fill(
               child: GestureDetector(
                 onTap: () => Navigator.of(context).pop(),
@@ -137,16 +134,12 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ),
             ),
-
-            // Center Card
             Center(
               child: Container(
                 width: AppDimensions.dim310.w,
-                height: isGuest
-                    ? AppDimensions.dim375.h // Increased for guest message
-                    : AppDimensions.dim210.h,
+                height: AppDimensions.dim210.h,
                 decoration: BoxDecoration(
-                  color: Color(0xFFFFFFFF),
+                  color: const Color(0xFFFFFFFF),
                   borderRadius:
                       BorderRadius.circular(AppDimensions.radius_10.r),
                   border: Border.all(
@@ -168,12 +161,8 @@ class _HomeScreenState extends State<HomeScreen> {
                   child: Stack(
                     children: [
                       Positioned(
-                        top: isGuest
-                            ? AppDimensions.dim19.h
-                            : AppDimensions.dim17.h,
-                        bottom: isGuest
-                            ? AppDimensions.dim10.h
-                            : AppDimensions.dim8.h,
+                        top: AppDimensions.dim17.h,
+                        bottom: AppDimensions.dim8.h,
                         left: 0,
                         right: 0,
                         child: SingleChildScrollView(
@@ -182,24 +171,17 @@ class _HomeScreenState extends State<HomeScreen> {
                           child: Column(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              //if (isGuest) // Show bottle image only for non-guest
                               Image.asset(
                                 'assets/images/black_bottle.png',
                                 width: AppDimensions.dim150.w,
                                 fit: BoxFit.cover,
                               ),
-                              SizedBox(
-                                height: isGuest
-                                    ? AppDimensions.dim15.h
-                                    : AppDimensions.dim15.h,
-                              ),
+                              SizedBox(height: AppDimensions.dim15.h),
                               Padding(
                                 padding: EdgeInsets.symmetric(
                                     horizontal: AppDimensions.dim10.w),
                                 child: RichText(
-                                  textAlign: isGuest
-                                      ? TextAlign.start
-                                      : TextAlign.center,
+                                  textAlign: TextAlign.center,
                                   text: TextSpan(
                                     style: TextStyle(
                                       color: AppColors.bluegray,
@@ -208,75 +190,15 @@ class _HomeScreenState extends State<HomeScreen> {
                                       fontVariations: [
                                         AppFontStyles.boldFontVariation,
                                       ],
-                                      fontSize: isGuest
-                                          ? AppFontStyles.fontSize_13.sp
-                                          : AppFontStyles.fontSize_13.sp,
-                                      height: isGuest ? 1.4.sp : 1.5.sp,
+                                      fontSize: AppFontStyles.fontSize_13.sp,
+                                      height: 1.5.sp,
                                     ),
-                                    children: isGuest
-                                        ? [
-                                            TextSpan(
-                                              text:
-                                                  "If you have purchased the bottle and accidentally entered the guest page, you can log out from the settings page and log in normally.\n",
-                                              style: TextStyle(
-                                                fontVariations: [
-                                                  AppFontStyles
-                                                      .boldFontVariation,
-                                                ],
-                                              ),
-                                            ),
-                                            TextSpan(
-                                              text:
-                                                  "If you don't have the bottle and want to use the basic water-reminder feature, you can schedule reminders from the settings page",
-                                              style: TextStyle(
-                                                fontVariations: [
-                                                  AppFontStyles
-                                                      .boldFontVariation,
-                                                ],
-                                              ),
-                                            ),
-                                            TextSpan(
-                                              text:
-                                                  "> Drink Reminder > Water Intake",
-                                              style: TextStyle(
-                                                fontVariations: [
-                                                  AppFontStyles
-                                                      .boldFontVariation,
-                                                ],
-                                              ),
-                                            ),
-                                            TextSpan(
-                                              text: "\nTimeline.\n",
-                                              style: TextStyle(
-                                                fontVariations: [
-                                                  AppFontStyles
-                                                      .boldFontVariation,
-                                                ],
-                                              ),
-                                            ),
-                                            TextSpan(
-                                              text:
-                                                  "You can also place your bottle order directly from the settings page.",
-                                              style: TextStyle(
-                                                fontVariations: [
-                                                  AppFontStyles
-                                                      .boldFontVariation,
-                                                ],
-                                              ),
-                                            ),
-                                          ]
-                                        : [
-                                            TextSpan(
-                                              text:
-                                                  "Start your journey right fill your bottle till 600ml to ensure accurate data.",
-                                              style: TextStyle(
-                                                fontVariations: [
-                                                  AppFontStyles
-                                                      .boldFontVariation,
-                                                ],
-                                              ),
-                                            ),
-                                          ],
+                                    children: const [
+                                      TextSpan(
+                                        text:
+                                            "Start your journey right fill your bottle till 600ml to ensure accurate data.",
+                                      ),
+                                    ],
                                   ),
                                 ),
                               ),
@@ -305,10 +227,10 @@ class _HomeScreenState extends State<HomeScreen> {
                                           await SharedPreferences.getInstance();
                                       await prefs.setBool(
                                           'ble_connected_once', true);
-                                    } else {}
+                                    }
                                   },
                                   child: Text(
-                                    isGuest ? "OK" : "Start",
+                                    "Start",
                                     style: TextStyle(
                                       color: AppColors.white,
                                       fontFamily:
@@ -484,24 +406,6 @@ class _HomeScreenState extends State<HomeScreen> {
           Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              /// 📷 QR Scanner Button
-              // IconButton(
-              //   onPressed: () {
-              //     Navigator.of(context, rootNavigator: true).pushReplacement(
-              //       //context,
-              //       MaterialPageRoute(
-              //         builder: (_) => const QrScanner(),
-              //       ),
-              //     );
-              //   },
-              //   icon: Icon(
-              //     Icons.qr_code_scanner,
-              //     color: AppColors.black,
-              //     size: AppDimensions.dim28.sp,
-              //   ),
-              //   tooltip: "Rescan Bottle",
-              // ),
-
               SizedBox(width: AppDimensions.dim8.w),
               Column(
                 children: [
@@ -1045,20 +949,8 @@ class _HomeScreenState extends State<HomeScreen> {
               offset: Offset(AppDimensions.dim2.w, AppDimensions.dim2.h),
             )
           ],
-          border:
-              // GradientBoxBorder(
-              //   gradient: LinearGradient(
-              //     begin: Alignment.topCenter,
-              //     end: Alignment.bottomCenter,
-              //     colors: [
-              //       Colors.white,
-              //       const Color(0XFF3F3F3F),
-              //     ],
-              //   ),
-              //   width: AppDimensions.dim1.w,
-              // ),
-              Border.all(
-                  color: AppColors.greywith80, width: AppDimensions.dim1),
+          border: Border.all(
+              color: AppColors.greywith80, width: AppDimensions.dim1),
           borderRadius: BorderRadius.circular(AppDimensions.dim90.r),
         ),
         padding: EdgeInsets.symmetric(
@@ -1251,53 +1143,6 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
     );
   }
-
-  // Widget _buildGoalText(double todayConsumptionPercentage, bool isGuest) {
-  //   final goalText = isGuest
-  //       ? "If you have purchased the bottle and accidentally entered the guest page, you can log out from the settings page and log in normally.\n"
-  //           "If you don’t have the bottle and want to use the basic water-reminder feature, you can schedule reminders from the settings page > Drink Reminder > Water Intake Timeline.\n"
-  //           "You can also place your bottle order directly from the settings page."
-  //       : AppStrings.getGoalString(todayConsumptionPercentage);
-
-  //   final textStyle = TextStyle(
-  //     fontSize: AppFontStyles.fontSize_16,
-  //     color: AppColors.bluegray,
-  //     height: AppFontStyles.getLineHeight(
-  //       AppFontStyles.fontSize_16,
-  //       120,
-  //     ),
-  //     fontVariations: [
-  //       AppFontStyles.semiBoldFontVariation,
-  //     ],
-  //   );
-
-  //   return SizedBox(
-  //     width: AppDimensions.dim350.w,
-  //     height: isGuest ? 70.h : null, // enough space to center vertically
-  //     child: isGuest
-  //         ? Align(
-  //             alignment: Alignment.center,
-  //             child: Marquee(
-  //               text: goalText,
-  //               style: textStyle,
-  //               scrollAxis: Axis.vertical,
-
-  //               // 🔥 Smooth, readable scroll
-  //               velocity: 8.0,
-  //               blankSpace: 40.0,
-  //               startPadding: 30.0,
-  //               pauseAfterRound: const Duration(seconds: 3),
-  //               accelerationDuration: const Duration(seconds: 1),
-  //               decelerationDuration: const Duration(seconds: 1),
-  //             ),
-  //           )
-  //         : Text(
-  //             goalText,
-  //             style: textStyle,
-  //             textAlign: TextAlign.center,
-  //           ),
-  //   );
-  // }
 
   Widget _buildGoalText(double todayConsumptionPercentage, bool isGuest) {
     final goalText = isGuest

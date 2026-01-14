@@ -279,9 +279,9 @@ class _UserInfoInputScreenState extends State<UserInfoInputScreen> {
               Container(
                 height: AppDimensions.dim60.h,
                 margin: EdgeInsets.only(
-                  top: AppDimensions.dim170.h,
-                  // left: AppDimensions.defaultPadding.w,
-                  // right: AppDimensions.defaultPadding.w,
+                  top: Platform.isIOS
+                      ? AppDimensions.dim155.h
+                      : AppDimensions.dim170.h,
                 ),
                 child: BlocBuilder<UserInfoCubit, UserInfoState>(
                   builder: (context, state) {
