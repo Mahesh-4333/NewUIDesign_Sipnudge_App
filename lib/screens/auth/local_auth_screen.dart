@@ -30,34 +30,22 @@ class _LocalAuthScreenState extends State<LocalAuthScreen> {
   }
 
   Future<void> _handleStartupAuth() async {
-    if (!mounted) return;
-
     final authProvider =
         Provider.of<AuthenticationProvider>(context, listen: false);
 
-    bool success = true;
-
-    // Keep showing popup until user authenticates
-    while (mounted && !success) {
-      success = await authProvider.authenticateWithBiometrics();
-
-      if (!success) {
-        await Future.delayed(const Duration(milliseconds: 300));
-      }
-    }
-
-    if (!mounted) return;
-
+    final success = await authProvider.authenticateWithBiometrics();
     final loggedInUserEmail = await SharedPrefsHelper.getUserEmail() ?? "";
     final hasUserFilledInPersonalInfo =
         await SharedPrefsHelper.isPersonalInfoSubmitted();
     final hasUserSelectedPersonalGoal = await SharedPrefsHelper.getUserGoal();
 
-    Future.delayed(
-      const Duration(milliseconds: 800),
-      () {
-        if (!mounted) return;
+    if (!mounted) return;
 
+    if (success) {
+      Future.delayed(
+          Duration(
+            milliseconds: 800,
+          ), () {
         Navigator.of(context).pushReplacement(
           PageRouteBuilder(
             pageBuilder: (context, animation, secondaryAnimation) {
@@ -69,7 +57,6 @@ class _LocalAuthScreenState extends State<LocalAuthScreen> {
                   return UserInfoInputScreen();
                 }
               } else {
-                //return AuthOptionsScreen();
                 return QrScanner();
               }
             },
@@ -82,8 +69,10 @@ class _LocalAuthScreenState extends State<LocalAuthScreen> {
             },
           ),
         );
-      },
-    );
+      });
+    } else {
+      _handleStartupAuth();
+    }
   }
 
   @override
@@ -97,6 +86,14 @@ class _LocalAuthScreenState extends State<LocalAuthScreen> {
                 "assets/images/app_background.png"), // your image path
             fit: BoxFit.cover,
           ),
+          // gradient: LinearGradient(
+          //   begin: Alignment.topCenter,
+          //   end: Alignment.bottomCenter,
+          //   colors: [
+          //     AppColors.gradientStart,
+          //     AppColors.gradientEnd,
+          //   ],
+          // ),
         ),
         child: Column(
           children: [

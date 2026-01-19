@@ -46,16 +46,6 @@ class _CustomChartDataWidgetState extends State<CustomChartDataWidget> {
               ),
             )
           ],
-          // gradient: LinearGradient(
-          //     begin: Alignment.topCenter,
-          //     end: Alignment.bottomCenter,
-          //     colors: [
-          //       Color(0XFF9F7DA5),
-          //       Color.fromARGB(255, 121, 101, 123),
-          //     ]),
-          // borderRadius: BorderRadius.circular(
-          //   AppDimensions.radius_10,
-          // ),
           borderRadius: BorderRadius.circular(AppDimensions.radius_16.r),
           border: Border.all(color: AppColors.greywith80, width: 1.w),
           //color: Colors.transparent,
