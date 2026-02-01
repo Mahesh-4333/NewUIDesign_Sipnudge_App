@@ -229,7 +229,9 @@ class HydrationCubit extends Cubit<HydrationState> {
   }
 
   // -------------------- BLE ENTRIES UPDATE --------------------
+// -------------------- BLE ENTRIES UPDATE --------------------
   Future<void> markCompletedByEntries(List<HydrationEntry> newEntries) async {
+    // 1. Create a copy of the current slots to modify
     final currentEntries = List<HydrationEntry>.from(state.entries);
 
     for (final incoming in newEntries) {
@@ -238,23 +240,48 @@ class HydrationCubit extends Cubit<HydrationState> {
       if (index >= 0) {
         final updatedEntry = currentEntries[index].copyWith(
           waterDrank: incoming.waterDrank,
-          status: HydrationStatus.completed,
+          status: incoming.waterDrank >= currentEntries[index].amount
+              ? HydrationStatus.completed
+              : HydrationStatus.pending,
         );
         currentEntries[index] = updatedEntry;
+
         await _dbHelper.insertOrUpdateSlot(updatedEntry);
-      } else {
-        final newEntry = incoming.copyWith(status: HydrationStatus.completed);
-        currentEntries.add(newEntry);
-        await _dbHelper.insertOrUpdateSlot(newEntry);
       }
     }
 
-    final total = currentEntries
-        .where((e) => e.status == HydrationStatus.completed)
-        .fold(0.0, (sum, e) => sum + e.waterDrank);
+    final double totalDrankToday =
+        currentEntries.fold(0.0, (sum, e) => sum + e.waterDrank);
 
-    emit(state.copyWith(entries: currentEntries, totalDrank: total.round()));
+    int updatedLevel = state.currentLevel;
+    int? newlyUnlocked;
+
+    if (totalDrankToday >= state.goal && state.goal > 0) {
+      final todayStr = DateFormat('yyyy-MM-dd').format(DateTime.now());
+      final lastLevelUpDate = await SharedPrefsHelper.getLastLevelUpDate();
+      if (lastLevelUpDate != todayStr) {
+        await SharedPrefsHelper.setLastLevelUpDate(todayStr);
+        updatedLevel++;
+        newlyUnlocked = updatedLevel;
+
+        await refreshAchievementStats();
+      }
+    }
+
+    // 4. Emit the updated state
+    emit(state.copyWith(
+      entries: currentEntries,
+      totalDrank: totalDrankToday.round(),
+      currentLevel: updatedLevel,
+      newlyUnlockedLevel: newlyUnlocked,
+    ));
+
     _calculateCurrentSlotStatus();
+    if (newlyUnlocked != null) {
+      Future.delayed(const Duration(seconds: 2), () {
+        if (!isClosed) emit(state.copyWith(newlyUnlockedLevel: null));
+      });
+    }
   }
 
   void subscribeToBleUpdates(BleCubit bleCubit) {
@@ -338,6 +365,27 @@ class HydrationCubit extends Cubit<HydrationState> {
 
   bool _intervalsOverlap(int s1, int e1, int s2, int e2) {
     return s1 < e2 && e1 > s2;
+  }
+
+  Future<void> refreshAchievementStats() async {
+    final summaries = await _dbHelper.getHydrationSummariesForRange();
+    summaries.sort((a, b) => a.date.compareTo(b.date));
+
+    int completedDays = 0;
+    Map<int, String> levelMap = {};
+
+    for (var summary in summaries) {
+      if (summary.consumed >= summary.target && summary.target > 0) {
+        completedDays++;
+        levelMap[completedDays] =
+            "${(summary.consumed / 1000).toStringAsFixed(1)}L";
+      }
+    }
+
+    emit(state.copyWith(
+      currentLevel: completedDays,
+      levelToIntakeMap: levelMap,
+    ));
   }
 }
 

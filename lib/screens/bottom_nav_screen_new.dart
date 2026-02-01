@@ -4,6 +4,8 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:hydrify/constants/app_colors.dart';
 import 'package:hydrify/constants/app_dimensions.dart';
 import 'package:hydrify/cubit/bottom_nav/bottom_nav_cubit.dart';
+import 'package:hydrify/cubit/hydration/hydration_cubit.dart';
+import 'package:hydrify/cubit/hydration/hydration_state.dart';
 import 'package:hydrify/screens/achevements_badge_screen.dart';
 import 'package:hydrify/screens/analysis_screen.dart';
 import 'package:hydrify/screens/drink_reminder_page.dart';
@@ -80,8 +82,77 @@ class _BottomNavScreenNewState extends State<BottomNavScreenNew> {
           ),
           child: BlocBuilder<BottomNavCubit, BottomNavState>(
             builder: (context, state) {
-              return _buildTabNavigators(state.selectedTab);
+              return BlocListener<HydrationCubit, HydrationState>(
+                listenWhen: (prev, curr) =>
+                    curr.newlyUnlockedLevel != null &&
+                    prev.newlyUnlockedLevel != curr.newlyUnlockedLevel,
+                listener: (context, hydrationState) {
+                  _showLevelUpSnackbar(
+                      context, hydrationState.newlyUnlockedLevel!);
+                },
+                child: _buildTabNavigators(state.selectedTab),
+              );
             },
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showLevelUpSnackbar(BuildContext context, int level) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        behavior: SnackBarBehavior.floating,
+        duration: const Duration(seconds: 4),
+        content: Container(
+          padding: EdgeInsets.all(AppDimensions.padding_15.w),
+          decoration: BoxDecoration(
+            color: AppColors.bluegray,
+            borderRadius: BorderRadius.circular(AppDimensions.radius_16.r),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black26,
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Row(
+            children: [
+              // Badge Icon
+              Image.asset(
+                "assets/images/goals_new_img.png",
+                width: AppDimensions.dim40.w,
+                height: AppDimensions.dim40.h,
+              ),
+              SizedBox(width: AppDimensions.dim12.w),
+              // Text Content
+              Expanded(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      "Achievement Unlocked!",
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14.sp,
+                      ),
+                    ),
+                    Text(
+                      "Congratulations! You've reached Level $level",
+                      style: TextStyle(
+                        color: Colors.white70,
+                        fontSize: 12.sp,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
         ),
       ),
@@ -154,7 +225,6 @@ class _BottomNavScreenNewState extends State<BottomNavScreenNew> {
               // add other setting routes here...
             }
           }
-          // You can expand this later with named routes if needed
           return MaterialPageRoute(
             builder: (_) => child,
             settings: settings,

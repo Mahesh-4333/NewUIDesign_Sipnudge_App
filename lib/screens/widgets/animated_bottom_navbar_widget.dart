@@ -154,9 +154,6 @@ class _AnimatedBottomNavBarState extends State<AnimatedBottomNavBar>
       builder: (context, state) {
         final cubit = context.read<BottomNavCubit>();
         final currentIndex = state.selectedIndex;
-
-        log("Current Index is ${currentIndex}");
-
         return !state.isVisible
             ? SizedBox.shrink()
             : Container(
