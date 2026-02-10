@@ -40,7 +40,7 @@ class BottleDataCubit extends Cubit<BottleDataState> {
           "battery=${lastData.battery}, "
           "timestamp=${lastData.timestamp}");
 
-      emit(state.copyWith(  
+      emit(state.copyWith(
         volume: lastData.liquidVolume,
         volumePercent: lastData.liquidPercent,
         battery: lastData.battery,
@@ -61,7 +61,6 @@ class BottleDataCubit extends Cubit<BottleDataState> {
     final newPercent = bleState.percent ?? 0;
     final newBattery = bleState.battery ?? 0;
 
-    // if ((bleState.volume ?? 0.0) > 600) {
     final newData = BottleData(
       liquidVolume: newVolume,
       liquidPercent: newPercent,
