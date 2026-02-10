@@ -377,9 +377,30 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
             await dbHelper.saveLastSyncDate(DateTime.now());
 
             _hydrationController.add(updatedEntries);
+
             for (final updatedEntry in updatedEntries) {
               await dbHelper.insertOrUpdateSlot(updatedEntry);
             }
+
+            // 🔥 NEW: Check if today is now perfect
+            final bool isPerfectNow = await dbHelper.isDayPerfect();
+
+            // Calculate total consumed for the summary
+            final double totalConsumed =
+                updatedEntries.fold(0.0, (sum, e) => sum + e.waterDrank);
+            final double totalTarget =
+                updatedEntries.fold(0.0, (sum, e) => sum + e.amount);
+
+            final todaySummary = HydrationDaySummary(
+              date: DateTime(DateTime.now().year, DateTime.now().month,
+                  DateTime.now().day),
+              dayIndex: 0,
+              target: totalTarget,
+              consumed: totalConsumed,
+              isPerfect: isPerfectNow,
+              deviceId: savedDeviceId,
+            );
+            await dbHelper.bulkUpsert30Days([todaySummary]);
           }
 
           _sendAck(device);
@@ -455,6 +476,8 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
       final startEpoch = int.parse(parts[2]);
       final endEpoch = int.parse(parts[3]);
       final amount = int.parse(parts[4]);
+
+      log("Start time ${_epochToTimeOfDay(startEpoch)}  \nEnd Time ${_epochToTimeOfDay(endEpoch)}");
 
       final slot = HydrationSlot.values[index];
       return HydrationEntry(
@@ -752,6 +775,72 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
   @override
   Stream<List<HydrationEntry>> get hydrationUpdates =>
       _hydrationController.stream;
-}
 
-// -----------------------------------------------------------------------------
+  // Inside BleCubit
+  Future<void> injectMockSlotData(String mockPayload) async {
+    log("Injecting Mock Data: $mockPayload", name: "TESTING");
+
+    final updatedEntries = _parseHydrationSlotData(mockPayload);
+
+    if (updatedEntries.isNotEmpty) {
+      // This goes through your DB updates and triggers the perfection check
+      for (final updatedEntry in updatedEntries) {
+        await dbHelper.insertOrUpdateSlot(updatedEntry);
+      }
+
+      final bool isPerfectNow = await dbHelper.isDayPerfect();
+
+      final testDate = DateTime.now().subtract(const Duration(days: 0));
+
+      final summary = HydrationDaySummary(
+        date: DateTime(testDate.year, testDate.month, testDate.day),
+        dayIndex: 0,
+        target: 1750, // 7 slots * 250
+        consumed: 2100, // 7 slots * 300
+        isPerfect: isPerfectNow,
+      );
+
+      await dbHelper.bulkUpsert30Days([summary]);
+
+      // Notify the HydrationCubit to refresh
+      _hydrationController.add(updatedEntries);
+    }
+  }
+
+  // Inside BleCubit
+  Future<void> testFullWeeklyStreak() async {
+    log("🚀 Starting Full 7-Day Streak Injection...", name: "TEST_DEBUG");
+
+    final dummyPayload =
+        "0/250/300|1/250/300|2/250/300|3/250/300|4/250/300|5/250/300|6/250/300";
+
+    // 1. Clear existing summaries so we start fresh
+    await dbHelper.clearHydrationDaySummaries();
+
+    // 2. Inject 7 consecutive days (from 6 days ago up to today)
+    for (int i = 6; i >= 0; i--) {
+      final testDate = DateTime.now().subtract(Duration(days: i));
+      final normalizedDate =
+          DateTime(testDate.year, testDate.month, testDate.day);
+
+      final summary = HydrationDaySummary(
+        date: normalizedDate,
+        dayIndex: 0,
+        target: 1750,
+        consumed: 2100,
+        isPerfect: true, // Mark each as perfect
+      );
+
+      await dbHelper.bulkUpsert30Days([summary]);
+      log("✅ Injected Perfect Day for: ${normalizedDate.toIso8601String()}",
+          name: "TEST_DEBUG");
+    }
+
+    // 3. IMPORTANT: Tell the HydrationCubit to recalculate everything
+    // We trigger this by sending an empty update to the stream that the HydrationCubit listens to
+    _hydrationController.add([]);
+
+    log("🏁 Injection Complete. Check your console for 'Achievement stats refreshed'",
+        name: "TEST_DEBUG");
+  }
+}

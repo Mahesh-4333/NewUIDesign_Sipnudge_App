@@ -101,27 +101,7 @@ CREATE TABLE IF NOT EXISTS hydration_day_summaries (
   day_index INTEGER NOT NULL,
   target REAL NOT NULL,
   consumed REAL NOT NULL,
-  device_id TEXT,
-  created_at INTEGER NOT NULL,
-  updated_at INTEGER,
-  UNIQUE(date, device_id) ON CONFLICT REPLACE
-);
-''');
-
-        await db.execute('''
-CREATE TABLE IF NOT EXISTS app_metadata (
-  key TEXT PRIMARY KEY,
-  value TEXT
-);
-''');
-
-        await db.execute('''
-CREATE TABLE IF NOT EXISTS hydration_day_summaries (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  date INTEGER NOT NULL,         -- epoch millis at local midnight (start of day)
-  day_index INTEGER NOT NULL,
-  target REAL NOT NULL,
-  consumed REAL NOT NULL,
+  is_perfect INTEGER DEFAULT 0,
   device_id TEXT,
   created_at INTEGER NOT NULL,
   updated_at INTEGER,
@@ -397,6 +377,30 @@ CREATE TABLE IF NOT EXISTS app_metadata (
       log("[DB] Cleared hydration_day_summaries table. Rows deleted: $deletedRows");
     } catch (e) {
       log("[DB] Error clearing hydration_day_summaries table: $e");
+    }
+  }
+
+  Future<bool> isDayPerfect() async {
+    try {
+      final db = await database;
+
+      final List<Map<String, dynamic>> maps = await db.query('hydration_slots');
+
+      if (maps.isEmpty) return false;
+
+      for (var row in maps) {
+        final double consumed = (row['waterDrank'] as num?)?.toDouble() ?? 0.0;
+        final double target = (row['waterGoal'] as num?)?.toDouble() ?? 0.0;
+        final String status = row['status'] as String? ?? 'pending';
+
+        if (status != 'completed' || consumed < target) {
+          return false;
+        }
+      }
+      return true;
+    } catch (e) {
+      log("[DB] Error checking perfect day: $e");
+      return false;
     }
   }
 }

@@ -171,9 +171,9 @@ class NotificationService {
     final today = DateTime(now.year, now.month, now.day);
     final tenDaysOut = today.add(Duration(days: _scheduleDaysAhead));
 
-    final calendarManager = GoogleCalendarManager();
-    final allEvents =
-        await calendarManager.fetchEventsForRange(now, tenDaysOut);
+    // final calendarManager = GoogleCalendarManager();
+    // final allEvents =
+    //     await calendarManager.fetchEventsForRange(now, tenDaysOut);
 
     for (int dayOffset = 0; dayOffset < _scheduleDaysAhead; dayOffset++) {
       final baseDay = today.add(Duration(days: dayOffset));
@@ -188,8 +188,10 @@ class NotificationService {
         if (notifyAt.isBefore(now)) continue;
 
         // 2. Local check (Instant)
-        final shouldSilence = calendarManager.checkOverlapLocally(
-            notifyAt, notifyAt.add(const Duration(minutes: 5)), allEvents);
+        // final shouldSilence = calendarManager.checkOverlapLocally(
+        //     notifyAt, notifyAt.add(const Duration(minutes: 5)), allEvents);
+
+        final shouldSilence = false;
 
         await _scheduleSingleReminder(
           entry: entry,
