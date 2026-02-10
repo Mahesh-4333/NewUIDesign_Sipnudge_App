@@ -1,20 +1,23 @@
 // reminder_state.dart
 import 'package:equatable/equatable.dart';
 
-class Reminder_Mode_BottonSheet_State extends Equatable {
+class ReminderModeBottonSheetState extends Equatable {
   final bool aiReminder;
   final bool steadySipReminder;
 
-  const Reminder_Mode_BottonSheet_State({
-    this.aiReminder = false,
-    this.steadySipReminder = false,
-  });
+  const ReminderModeBottonSheetState(
+      {required this.aiReminder, required this.steadySipReminder});
 
-  Reminder_Mode_BottonSheet_State copyWith({
+  factory ReminderModeBottonSheetState.initial() {
+    return ReminderModeBottonSheetState(
+        aiReminder: false, steadySipReminder: true);
+  }
+
+  ReminderModeBottonSheetState copyWith({
     bool? aiReminder,
     bool? steadySipReminder,
   }) {
-    return Reminder_Mode_BottonSheet_State(
+    return ReminderModeBottonSheetState(
       aiReminder: aiReminder ?? this.aiReminder,
       steadySipReminder: steadySipReminder ?? this.steadySipReminder,
     );

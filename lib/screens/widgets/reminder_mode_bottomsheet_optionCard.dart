@@ -4,6 +4,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:hydrify/constants/app_colors.dart';
 import 'package:hydrify/constants/app_dimensions.dart';
 import 'package:hydrify/constants/app_font_styles.dart';
+import 'package:hydrify/screens/widgets/custom_toggle_switch.dart';
 
 class ReminderOptionCard extends StatelessWidget {
   final String title;
@@ -33,19 +34,9 @@ class ReminderOptionCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(AppDimensions.radius_16.r),
         color: isActive
             ? null
-            : AppColors.bottomSheetGradientStart.withOpacity(0.30),
-        gradient: isActive
-            ? const LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [
-                  AppColors.bottomSheetGradientStart,
-                  AppColors.bottomSheetGradientEnd,
-                ],
-              )
-            : null,
+            : AppColors.white,
         border: Border.all(
-          color: isActive ? AppColors.lavender : AppColors.darkLavender,
+          color: isActive ? AppColors.batteryIndicator : AppColors.darkLavender,
           width: isActive ? AppDimensions.dim3.w : AppDimensions.dim1.w,
         ),
       ),
@@ -65,7 +56,7 @@ class ReminderOptionCard extends StatelessWidget {
                       fontFamily: AppFontStyles.urbanistFontFamily,
                       fontSize: AppFontStyles.fontSize_16.sp,
                       fontVariations: [AppFontStyles.fontWeightVariation600],
-                      color: AppColors.white,
+                      color: AppColors.bluegray,
                       letterSpacing: 0.2,
                     ),
                   ),
@@ -76,32 +67,18 @@ class ReminderOptionCard extends StatelessWidget {
                         fontFamily: AppFontStyles.urbanistFontFamily,
                         fontSize: AppFontStyles.fontSize_14.sp,
                         fontVariations: [AppFontStyles.semiBoldFontVariation],
-                        color: AppColors.white,
+                        color: AppColors.bluegray,
                         letterSpacing: 0.2,
                       ),
                     ),
                 ],
               ),
-              SwitchTheme(
-                data: SwitchThemeData(
-                  thumbColor: WidgetStateProperty.resolveWith<Color>((states) {
-                    if (states.contains(WidgetState.selected)) {
-                      return activeColor;
-                    }
-                    return AppColors.white;
-                  }),
-                  trackColor: WidgetStateProperty.resolveWith<Color>((states) {
-                    if (states.contains(WidgetState.selected)) {
-                      return activeTrackColor;
-                    }
-                    return AppColors.tuna;
-                  }),
-                  overlayColor: WidgetStateProperty.all(Colors.transparent),
-                  trackOutlineColor: WidgetStateProperty.all(Colors.white),
-                  trackOutlineWidth: WidgetStateProperty.all(1),
-                ),
-                child: Switch(value: isActive, onChanged: onToggle),
-              ),
+              CustomToggleSwitch(
+                value: isActive,
+                onChanged: onToggle,
+                activeTrackColor: activeTrackColor ?? AppColors.violetBlue,
+                inactiveTrackColor: AppColors.tuna,
+              )
             ],
           ),
 
@@ -119,7 +96,7 @@ class ReminderOptionCard extends StatelessWidget {
                       children: [
                         Icon(
                           Icons.check,
-                          color: AppColors.white,
+                          color: AppColors.bluegray,
                           size: AppFontStyles.fontSize_18.sp,
                         ),
                         SizedBox(width: AppDimensions.dim9.w),
@@ -132,7 +109,7 @@ class ReminderOptionCard extends StatelessWidget {
                               fontVariations: [
                                 AppFontStyles.semiBoldFontVariation,
                               ],
-                              color: AppColors.white,
+                              color: AppColors.bluegray,
                               letterSpacing: 0.2,
                             ),
                           ),

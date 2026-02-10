@@ -23,6 +23,8 @@ class SharedPrefsHelper {
   static const String _keySelectedRingtone = 'selected_ringtone';
   static const String _keyRingtoneFeedback = 'ringtone_feedback';
 
+  static const String _keyReminderMode = "reminder_mode";
+
   // ----------------------------
   // RINGTONE METHODS (NEW)
   // ----------------------------
@@ -73,7 +75,8 @@ class SharedPrefsHelper {
 
   static Future<String?> getUserEmail() async {
     final prefs = await SharedPreferences.getInstance();
-    return prefs.getString(_keyUserEmail);
+    // return prefs.getString(_keyUserEmail);
+    return "normal_user";
   }
 
   static Future<int?> getUserGoal() async {
@@ -170,6 +173,17 @@ class SharedPrefsHelper {
   static Future<void> resetBottle() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_bottleKey);
+  }
+
+  /// Remider Mode
+  static Future<void> setReminderMode(String mode) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_keyReminderMode, mode);
+  }
+
+  static Future<String?> getReminderMode() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_keyReminderMode);
   }
 }
 
