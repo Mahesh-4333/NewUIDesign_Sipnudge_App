@@ -4,8 +4,11 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:hydrify/constants/app_colors.dart';
 import 'package:hydrify/constants/app_dimensions.dart';
 import 'package:hydrify/constants/app_font_styles.dart';
+import 'package:hydrify/cubit/bottom_nav/bottom_nav_cubit.dart';
+import 'package:hydrify/helpers/dialog_manager_helper.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:path/path.dart' as path;
 
@@ -51,46 +54,42 @@ class _EditableProfileAvatarState extends State<EditableProfileAvatar> {
   }
 
   Future<void> _pickImage() async {
-    showModalBottomSheet(
-      context: Navigator.of(context, rootNavigator: true).context,
-      backgroundColor: Colors.transparent,
-      builder: (_) {
-        return Container(
-          decoration: const BoxDecoration(
-            color: AppColors.white,
-            // gradient: LinearGradient(
-            //   colors: [
-            //     AppColors.bottomSheetGradientStart,
-            //     AppColors.bottomSheetGradientEnd,
-            //   ],
-            //   begin: Alignment.topCenter,
-            //   end: Alignment.bottomCenter,
-            // ),
-            borderRadius: BorderRadius.only(
-              topLeft: Radius.circular(AppDimensions.radius_20),
-              topRight: Radius.circular(AppDimensions.radius_20),
+    // Close any existing dialog
+    await DialogManager().showTrackedModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (context) {
+        return SizedBox(
+          height: AppDimensions.dim200.h,
+          child: Container(
+            width: double.infinity,
+            decoration: const BoxDecoration(
+              color: AppColors.white,
+              borderRadius: BorderRadius.only(
+                topLeft: Radius.circular(AppDimensions.radius_20),
+                topRight: Radius.circular(AppDimensions.radius_20),
+              ),
             ),
-          ),
-          child: SafeArea(
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Container(
-                  margin: const EdgeInsets.symmetric(vertical: 10),
-                  width: AppDimensions.dim40.w,
-                  height: AppDimensions.dim5,
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.6),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                ),
+                SizedBox(height: AppDimensions.dim16.h),
+                Text("Pick Image",
+                    style: TextStyle(
+                      color: AppColors.bluegray,
+                      fontSize: AppFontStyles.fontSize_18.sp,
+                      fontFamily: AppFontStyles.urbanistFontFamily,
+                      fontVariations: [AppFontStyles.fontWeightVariation600],
+                    )),
+                Divider(),
+                
                 ListTile(
                   leading:
-                      const Icon(Icons.photo_library, color: AppColors.black),
+                      const Icon(Icons.photo_library, color: AppColors.lightSkyBlue),
                   title: Text(
                     'Gallery',
                     style: TextStyle(
-                      color: AppColors.black,
+                      color: AppColors.bluegray,
                       fontSize: AppFontStyles.fontSize_18.sp,
                       fontFamily: AppFontStyles.urbanistFontFamily,
                       fontVariations: [AppFontStyles.fontWeightVariation600],
@@ -106,11 +105,11 @@ class _EditableProfileAvatarState extends State<EditableProfileAvatar> {
                   },
                 ),
                 ListTile(
-                  leading: const Icon(Icons.camera_alt, color: AppColors.black),
+                  leading: const Icon(Icons.camera_alt, color: AppColors.lightSkyBlue),
                   title: Text(
                     'Camera',
                     style: TextStyle(
-                      color: AppColors.black,
+                      color: AppColors.bluegray,
                       fontSize: AppFontStyles.fontSize_18.sp,
                       fontFamily: AppFontStyles.urbanistFontFamily,
                       fontVariations: [AppFontStyles.fontWeightVariation600],
@@ -122,7 +121,7 @@ class _EditableProfileAvatarState extends State<EditableProfileAvatar> {
                     if (pickedFile != null) {
                       await _saveImageLocally(File(pickedFile.path));
                     }
-                    //Navigator.pop(context);
+                    Navigator.pop(context);
                   },
                 ),
               ],
@@ -131,12 +130,17 @@ class _EditableProfileAvatarState extends State<EditableProfileAvatar> {
         );
       },
     );
+
+    context.read<BottomNavCubit>().showBar();
   }
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: _pickImage,
+      onTap: () {
+        context.read<BottomNavCubit>().hideBar();
+        _pickImage();
+      },
       child: Container(
         decoration: BoxDecoration(
           shape: BoxShape.circle,
