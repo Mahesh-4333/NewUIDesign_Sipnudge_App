@@ -286,13 +286,13 @@ class _UserInfoDailyGoalScreenState extends State<UserInfoDailyGoalScreen> {
               onTap: () async {
                 log("isViaSettingsScreen ${widget.isViaSettingsScreen}");
                 if (widget.isViaSettingsScreen == false) {
-                  var response = await showGoogleCalendarDialog();
-                  if (response == false) {
-                    return;
-                  }
-                  if (isButtonClicked == true) {
-                    return;
-                  }
+                  // var response = await showGoogleCalendarDialog();
+                  // if (response == false) {
+                  //   return;
+                  // }
+                  // if (isButtonClicked == true) {
+                  //   return;
+                  // }
                 }
 
                 setState(() {
