@@ -39,7 +39,6 @@ import 'package:hydrify/screens/data_and_analytics_screen.dart';
 import 'package:hydrify/screens/drink_reminder_page.dart';
 import 'package:hydrify/screens/faq_page.dart';
 import 'package:hydrify/screens/help&support_page.dart';
-import 'package:hydrify/screens/home_screen.dart';
 import 'package:hydrify/screens/link_accounts_page.dart';
 import 'package:hydrify/screens/personal_info_in_setting.dart';
 import 'package:hydrify/screens/preferences_page.dart';
@@ -48,12 +47,14 @@ import 'package:hydrify/screens/splash_screen.dart';
 import 'package:hydrify/screens/user_info_daily_goal_screen.dart';
 import 'package:hydrify/screens/user_lifestyle_info_input_screen.dart';
 import 'package:hydrify/screens/user_personal_info_input_screen..dart';
-import 'package:hydrify/screens/water_intake_timeline_screen.dart';
+import 'package:hydrify/screens/water_intake_timeline/water_intake_timeline_screen.dart';
 import 'package:hydrify/services/location_service.dart';
 import 'package:hydrify/services/notification/notification_service.dart';
 import 'package:hydrify/services/user_manager.dart';
 import 'package:hydrify/services/weather_service.dart';
 import 'package:provider/provider.dart';
+
+import 'screens/home_screen.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
