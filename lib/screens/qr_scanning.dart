@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:hydrify/constants/app_colors.dart';
 import 'package:hydrify/constants/app_dimensions.dart';
@@ -15,6 +16,7 @@ import 'package:hydrify/screens/widgets/auth_button_widget.dart';
 import 'package:hydrify/services/qr_generator.dart';
 import 'package:hydrify/services/ui_utils_service.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class QrScanner extends StatefulWidget {
   const QrScanner({super.key});
@@ -34,6 +36,10 @@ class _QrScannerState extends State<QrScanner>
 
   late AnimationController _lineController;
   late Animation<double> _lineAnimation;
+
+  // Tap recognizers for footer links
+  final TapGestureRecognizer _privacyTap = TapGestureRecognizer();
+  final TapGestureRecognizer _termsTap = TapGestureRecognizer();
 
   @override
   void initState() {
@@ -55,12 +61,19 @@ class _QrScannerState extends State<QrScanner>
     _lineAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(parent: _lineController, curve: Curves.easeInOut),
     );
+
+    // Initialize tap handlers
+    _privacyTap.onTap = () => _onFooterLinkTap(LinkType.privacy);
+    _termsTap.onTap = () => _onFooterLinkTap(LinkType.terms);
   }
 
   @override
   void dispose() {
     _controller.dispose();
     _lineController.dispose();
+    // dispose recognizers
+    _privacyTap.dispose();
+    _termsTap.dispose();
     super.dispose();
   }
 
@@ -341,10 +354,52 @@ class _QrScannerState extends State<QrScanner>
                 fit: BoxFit.cover,
               ),
             ),
-            child: Text(
-              "Privacy Policy    ·   Terms of Service",
-              textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 13.sp, color: Colors.black),
+            child: Center(
+              child: RichText(
+                textAlign: TextAlign.center,
+                text: TextSpan(
+                  style: TextStyle(
+                      fontSize: AppFontStyles.fontSize_13,
+                      color: Colors.black,
+                      fontVariations: [AppFontStyles.boldFontVariation],
+                      fontFamily: AppFontStyles.urbanistFontFamily),
+                  children: [
+                    TextSpan(
+                      text: 'By continuing, you agree to our \n',
+                      style: TextStyle(
+                          color: AppColors.black,
+                          fontSize: AppFontStyles.fontSize_13,
+                          fontVariations: [AppFontStyles.boldFontVariation],
+                          fontFamily: AppFontStyles.urbanistFontFamily),
+                      recognizer: _privacyTap,
+                    ),
+                    TextSpan(
+                      text: 'Privacy Policy',
+                      style: TextStyle(
+                        color: Colors.blue.shade700,
+                        decoration: TextDecoration.underline,
+                        fontSize: AppFontStyles.fontSize_13,
+                        fontWeight: FontWeight.w600,
+                      ),
+                      recognizer: _privacyTap,
+                    ),
+                    TextSpan(
+                      text: ' and ',
+                      style: TextStyle(color: Colors.black),
+                    ),
+                    TextSpan(
+                      text: 'Terms of Service.',
+                      style: TextStyle(
+                        color: Colors.blue.shade700,
+                        decoration: TextDecoration.underline,
+                        fontSize: AppFontStyles.fontSize_13,
+                        fontWeight: FontWeight.w600,
+                      ),
+                      recognizer: _termsTap,
+                    ),
+                  ],
+                ),
+              ),
             ),
           ),
         ],
@@ -440,6 +495,19 @@ class _QrScannerState extends State<QrScanner>
       },
     );
   }
+
+  void _onFooterLinkTap(LinkType type) async {
+    final uri = Uri.parse(type == LinkType.privacy
+        ? "https://sipnudge.com/policies/privacy-policy"
+        : "https://sipnudge.com/policies/terms-of-service");
+    try {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Could not open the webpage")),
+      );
+    }
+  }
 }
 
 /// 🔹 SCANNER OVERLAY PAINTER
@@ -530,3 +598,5 @@ class _ScannerOverlayPainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
+
+enum LinkType { privacy, terms }
