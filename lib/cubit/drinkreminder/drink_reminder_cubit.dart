@@ -32,9 +32,17 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import 'package:hydrify/cubit/drinkreminder/drink_reminder_state.dart';
+import 'package:hydrify/helpers/shared_pref_helper.dart';
 
 class DrinkReminderCubit extends Cubit<DrinkReminderState> {
-  DrinkReminderCubit() : super(const DrinkReminderState());
+  DrinkReminderCubit() : super(const DrinkReminderState()){
+    SharedPrefsHelper.getReminderMode().then((value) {
+      if(value == null){
+        setReminderMode("Static");
+      }
+      setReminderMode(value == "AI" ? "AI" : "Static");
+    });
+  }
 
   final List<String> smartSkipOptions = ['3 mins', '5 mins', '10 mins'];
   final List<String> alarmRepeatOptions = ['3 Times', '5 Times', '10 Times'];

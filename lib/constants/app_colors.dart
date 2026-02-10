@@ -51,6 +51,7 @@ class AppColors {
   static const textBlue = Color(0XFFB3F0F8);
   static const hintTextBlack = Color(0XFF1D1D1D);
   static const bleDeviceNamePopUp = Color(0x4000D0FF);
+  static const switchReminderColor = Color(0xFF4d758b);
 
   //Below contents are added by Dhananjay
   static const whitewithopacity90 = Color(0x90FFFFFF);

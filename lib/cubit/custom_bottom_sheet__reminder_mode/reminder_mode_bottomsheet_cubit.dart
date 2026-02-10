@@ -1,11 +1,19 @@
 // reminder_cubit.dart
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:hydrify/cubit/custom_bottom_sheet__reminder_mode/reminder_mode_bottomsheet_state.dart';
+import 'package:hydrify/helpers/shared_pref_helper.dart';
 
-class Reminder_Mode_BottonSheet_Cubit
-    extends Cubit<Reminder_Mode_BottonSheet_State> {
-  Reminder_Mode_BottonSheet_Cubit()
-      : super(const Reminder_Mode_BottonSheet_State());
+class ReminderModeBottonSheetCubit
+    extends Cubit<ReminderModeBottonSheetState> {
+  ReminderModeBottonSheetCubit()
+      : super(ReminderModeBottonSheetState.initial()){
+    SharedPrefsHelper.getReminderMode().then((value){
+      if(value == null) {
+        emit(state.copyWith(aiReminder: false, steadySipReminder: true));
+      }
+      emit(state.copyWith(aiReminder: value == "AI", steadySipReminder: value == "SteadySip"));
+    });
+  }
 
   void toggleAiReminder(bool value) {
     emit(state.copyWith(aiReminder: value));
