@@ -12,7 +12,7 @@ import 'package:hydrify/screens/drink_reminder_page.dart';
 import 'package:hydrify/screens/home_screen.dart';
 import 'package:hydrify/screens/settings_screen.dart';
 import 'package:hydrify/screens/user_personal_info_input_screen..dart';
-import 'package:hydrify/screens/water_intake_timeline_screen.dart';
+import 'package:hydrify/screens/water_intake_timeline/water_intake_timeline_screen.dart';
 import 'package:hydrify/screens/widgets/animated_bottom_navbar_widget.dart';
 
 class BottomNavScreenNew extends StatefulWidget {
