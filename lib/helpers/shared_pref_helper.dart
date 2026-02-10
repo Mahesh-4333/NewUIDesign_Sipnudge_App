@@ -185,7 +185,6 @@ class SharedPrefsHelper {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getString(_keyReminderMode);
   }
-}
 
 // =======================================================================
 
