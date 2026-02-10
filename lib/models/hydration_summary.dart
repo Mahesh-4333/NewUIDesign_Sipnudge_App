@@ -7,6 +7,7 @@ class HydrationDaySummary {
   final String? deviceId;
   final DateTime createdAt;
   final DateTime? updatedAt;
+  final bool isPerfect;
 
   HydrationDaySummary({
     this.id,
@@ -16,6 +17,7 @@ class HydrationDaySummary {
     required this.consumed,
     this.deviceId,
     DateTime? createdAt,
+    this.isPerfect = false,
     this.updatedAt,
   }) : createdAt = createdAt ?? DateTime.now();
 
@@ -30,6 +32,7 @@ class HydrationDaySummary {
       'device_id': deviceId,
       'created_at': createdAt.millisecondsSinceEpoch,
       'updated_at': updatedAt?.millisecondsSinceEpoch,
+      'is_perfect': isPerfect ? 1 : 0,
     };
   }
 
@@ -41,6 +44,7 @@ class HydrationDaySummary {
       target: (m['target'] as num).toDouble(),
       consumed: (m['consumed'] as num).toDouble(),
       deviceId: m['device_id'] as String?,
+      isPerfect: (m['is_perfect'] as int? ?? 0) == 1,
       createdAt:
           DateTime.fromMillisecondsSinceEpoch(m['created_at'] as int).toLocal(),
       updatedAt: m['updated_at'] != null

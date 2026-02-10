@@ -1,6 +1,7 @@
 import 'dart:developer';
 import 'dart:ui';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -32,6 +33,8 @@ import 'package:hydrify/services/notification/notification_service.dart';
 import 'package:marquee/marquee.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+import '../helpers/hydration_test_helper.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -703,7 +706,12 @@ class _HomeScreenState extends State<HomeScreen> {
             bottom: -(AppDimensions.dim20.h),
             child: GestureDetector(
               onTap: () async {
-                // await context.read<BleCubit>().forceFlushSlots();
+                // if (kDebugMode) {
+                //   final dummyData =
+                //       HydrationTestHelper.generatePerfectDayString();
+                //
+                //   context.read<BleCubit>().testFullWeeklyStreak();
+                // }
               },
               child: Image.asset(
                 //'assets/images/bottle_image1.png',

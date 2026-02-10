@@ -116,153 +116,157 @@ class _AchievementsBadgeScreenState extends State<AchievementsBadgeScreen> {
   // ===================== REGULAR SCREEN + GUEST OVERLAY =====================
 
   Widget _buildRegularScreen() {
-    return Scaffold(
-      extendBody: true,
-      extendBodyBehindAppBar: true,
-      body: Stack(
-        children: [
-          // ---------------- BASE ACHIEVEMENTS UI ----------------
-          Container(
-            decoration: const BoxDecoration(
-              image: DecorationImage(
-                image: AssetImage("assets/images/app_background.png"),
-                fit: BoxFit.cover,
-              ),
-            ),
-            child: Column(
-              children: [
-                Expanded(
-                  child: Stack(
-                    children: [
-                      const ConcentricCirclesAnimation(),
-                      Positioned(
-                        left: AppDimensions.dim75.w,
-                        top: AppDimensions.dim90.w,
-                        child: getCurrentLevelBadge(
-                          _currentLevel.toString(),
-                        ),
-                      ),
-                      Positioned(
-                        top: AppDimensions.dim380.h,
-                        left: 0,
-                        right: 0,
-                        child: getCongratulationsText(
-                          _currentLevel.toString(),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                Expanded(
-                  child: Container(
-                      padding: EdgeInsets.symmetric(
-                        horizontal: AppDimensions.padding_20.w,
-                        //vertical: AppDimensions.padding_20.h,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.vertical(
-                          top: Radius.circular(
-                            AppDimensions.radius_24.r,
-                          ),
-                        ),
-                      ),
-                      child: BlocBuilder<HydrationCubit, HydrationState>(
-                          builder: (context, state) {
-                        return GridView.builder(
-                          itemCount: 365,
-                          gridDelegate:
-                              SliverGridDelegateWithFixedCrossAxisCount(
-                            crossAxisCount: 3,
-                            childAspectRatio: 1.2.r,
-                            mainAxisSpacing: 24.h,
-                          ),
-                          itemBuilder: (context, index) {
-                            final level = index + 1;
-                            final isUnlocked = level <= _currentLevel;
-                            final intake = _getWaterIntakeForLevel(level);
-
-                            return GestureDetector(
-                              onTap: () {
-                                if (isUnlocked && !isGuest!) {
-                                  showLevelUpDialog(context, level, intake);
-                                }
-                              },
-                              child: getLevelBadges(
-                                level.toString(),
-                                isUnlocked,
-                                intake,
-                              ),
-                            );
-                          },
-                        );
-                      })),
-                ),
-              ],
-            ),
-          ),
-
-          // ---------------- GUEST BLUR + DIALOG ----------------
-          if (isGuest == true) ...[
-            Positioned.fill(
-              child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
-                child: Container(
-                  color: Colors.white.withOpacity(0.35),
+    return BlocBuilder<HydrationCubit, HydrationState>(
+        builder: (context, state) {
+      return Scaffold(
+        extendBody: true,
+        extendBodyBehindAppBar: true,
+        body: Stack(
+          children: [
+            Container(
+              decoration: const BoxDecoration(
+                image: DecorationImage(
+                  image: AssetImage("assets/images/app_background.png"),
+                  fit: BoxFit.cover,
                 ),
               ),
-            ),
-            Center(
-              child: Container(
-                width: Platform.isIOS
-                    ? AppDimensions.dim340.w
-                    : AppDimensions.dim380.w,
-                height: Platform.isIOS
-                    ? AppDimensions.dim75.h
-                    : AppDimensions.dim75.h,
-                margin: EdgeInsets.symmetric(horizontal: AppDimensions.dim20.w),
-                padding: EdgeInsets.symmetric(
-                  horizontal: Platform.isIOS
-                      ? AppDimensions.dim20.w
-                      : AppDimensions.dim11.w,
-                  vertical: Platform.isIOS
-                      ? AppDimensions.dim16.h
-                      : AppDimensions.dim13.h,
-                ),
-                decoration: BoxDecoration(
-                  borderRadius:
-                      BorderRadius.circular(AppDimensions.radius_100.r),
-                  image: DecorationImage(
-                    image: AssetImage(
-                      "assets/images/guest_dialog.png",
+              child: Column(
+                children: [
+                  Expanded(
+                    child: Stack(
+                      children: [
+                        const ConcentricCirclesAnimation(),
+                        Positioned(
+                          left: AppDimensions.dim75.w,
+                          top: AppDimensions.dim90.w,
+                          child: getCurrentLevelBadge(
+                            state.currentLevel.toString(),
+                          ),
+                        ),
+                        Positioned(
+                          top: AppDimensions.dim380.h,
+                          left: 0,
+                          right: 0,
+                          child: getCongratulationsText(
+                            state.currentLevel.toString(),
+                          ),
+                        ),
+                      ],
                     ),
-                    fit: BoxFit.cover,
                   ),
-                ),
-                child: Text(
-                  "Connect to Sipnudge bottle to access analysis",
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: AppColors.bluegray,
-                    fontFamily: AppFontStyles.museoModernoFontFamily,
-                    fontSize: AppFontStyles.fontSize_16.sp,
-                    fontVariations: [AppFontStyles.fontWeightVariation600],
-                    height: 1.4,
+                  Expanded(
+                    child: Container(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: AppDimensions.padding_20.w,
+                          //vertical: AppDimensions.padding_20.h,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.vertical(
+                            top: Radius.circular(
+                              AppDimensions.radius_24.r,
+                            ),
+                          ),
+                        ),
+                        child: BlocBuilder<HydrationCubit, HydrationState>(
+                            builder: (context, state) {
+                          return GridView.builder(
+                            itemCount: 52,
+                            gridDelegate:
+                                SliverGridDelegateWithFixedCrossAxisCount(
+                              crossAxisCount: 3,
+                              childAspectRatio: 1.2.r,
+                              mainAxisSpacing: 24.h,
+                            ),
+                            itemBuilder: (context, index) {
+                              final level = index + 1;
+                              final isUnlocked = level <= state.currentLevel;
+
+                              final intakeInfo =
+                                  state.levelToIntakeMap[level] ?? '';
+
+                              return GestureDetector(
+                                onTap: () {
+                                  if (isUnlocked && !isGuest!) {
+                                    showLevelUpDialog(
+                                        context, level, intakeInfo);
+                                  }
+                                },
+                                child: getLevelBadges(
+                                  level.toString(),
+                                  isUnlocked,
+                                  intakeInfo,
+                                ),
+                              );
+                            },
+                          );
+                        })),
+                  ),
+                ],
+              ),
+            ),
+
+            // ---------------- GUEST BLUR + DIALOG ----------------
+            if (isGuest == true) ...[
+              Positioned.fill(
+                child: BackdropFilter(
+                  filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
+                  child: Container(
+                    color: Colors.white.withOpacity(0.35),
                   ),
                 ),
               ),
-            ),
+              Center(
+                child: Container(
+                  width: Platform.isIOS
+                      ? AppDimensions.dim340.w
+                      : AppDimensions.dim380.w,
+                  height: Platform.isIOS
+                      ? AppDimensions.dim75.h
+                      : AppDimensions.dim75.h,
+                  margin:
+                      EdgeInsets.symmetric(horizontal: AppDimensions.dim20.w),
+                  padding: EdgeInsets.symmetric(
+                    horizontal: Platform.isIOS
+                        ? AppDimensions.dim20.w
+                        : AppDimensions.dim11.w,
+                    vertical: Platform.isIOS
+                        ? AppDimensions.dim16.h
+                        : AppDimensions.dim13.h,
+                  ),
+                  decoration: BoxDecoration(
+                    borderRadius:
+                        BorderRadius.circular(AppDimensions.radius_100.r),
+                    image: DecorationImage(
+                      image: AssetImage(
+                        "assets/images/guest_dialog.png",
+                      ),
+                      fit: BoxFit.cover,
+                    ),
+                  ),
+                  child: Text(
+                    "Connect to Sipnudge bottle to access analysis",
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: AppColors.bluegray,
+                      fontFamily: AppFontStyles.museoModernoFontFamily,
+                      fontSize: AppFontStyles.fontSize_16.sp,
+                      fontVariations: [AppFontStyles.fontWeightVariation600],
+                      height: 1.4,
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ],
-        ],
-      ),
-    );
+        ),
+      );
+    });
   }
 
   Widget getCurrentLevelBadge(String level) {
     final int currentLevelNum = int.tryParse(level) ?? 0;
-    final bool isCurrentLevelUnlocked =
-        currentLevelNum > 0 && currentLevelNum <= _currentLevel;
-
+    final bool hasAchievedAnyLevel = currentLevelNum > 0;
     return SizedBox(
       width: AppDimensions.dim330.w,
       height: AppDimensions.dim320.h,
@@ -275,13 +279,13 @@ class _AchievementsBadgeScreenState extends State<AchievementsBadgeScreen> {
               child: Transform.translate(
                 offset: Offset(-16.w, 0),
                 child: Image.asset(
-                  isCurrentLevelUnlocked
-                      ? "assets/images/goals_new_img.png" // Unlocked - colored badge
-                      : "assets/images/level_lock_img1.png", // Locked - grey badge
-                  width: isCurrentLevelUnlocked
+                  hasAchievedAnyLevel
+                      ? "assets/images/goals_new_img.png"
+                      : "assets/images/level_lock_img1.png",
+                  width: hasAchievedAnyLevel
                       ? AppDimensions.dim330.w
                       : AppDimensions.dim280.w,
-                  height: isCurrentLevelUnlocked
+                  height: hasAchievedAnyLevel
                       ? AppDimensions.dim320.h
                       : AppDimensions.dim280.h,
                   fit: BoxFit.contain,
@@ -289,9 +293,29 @@ class _AchievementsBadgeScreenState extends State<AchievementsBadgeScreen> {
               ),
             ),
           ),
+          // Positioned.fill(
+          //   child: Align(
+          //     alignment: Alignment.center,
+          //     child: Transform.translate(
+          //       offset: Offset(-16.w, 0),
+          //       child: Image.asset(
+          //         isCurrentLevelUnlocked
+          //             ? "assets/images/goals_new_img.png" // Unlocked - colored badge
+          //             : "assets/images/level_lock_img1.png", // Locked - grey badge
+          //         width: isCurrentLevelUnlocked
+          //             ? AppDimensions.dim330.w
+          //             : AppDimensions.dim280.w,
+          //         height: isCurrentLevelUnlocked
+          //             ? AppDimensions.dim320.h
+          //             : AppDimensions.dim280.h,
+          //         fit: BoxFit.contain,
+          //       ),
+          //     ),
+          //   ),
+          // ),
 
           // Show level number only if unlocked
-          if (isCurrentLevelUnlocked)
+          if (hasAchievedAnyLevel)
             Positioned(
               left: AppDimensions.dim100.w,
               top: AppDimensions.dim105.h,
