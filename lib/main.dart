@@ -83,7 +83,6 @@ Future<void> main() async {
 
   FlutterBluePlus.setLogLevel(LogLevel.none);
 
-  // Initialize UserManager
   await UserManager().init();
 
   runApp(
