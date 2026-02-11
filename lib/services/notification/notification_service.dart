@@ -28,6 +28,7 @@ class NotificationService {
       FlutterLocalNotificationsPlugin();
 
   static const int _scheduleDaysAhead = 10;
+  static const int _scheduleDaysAheadRepeat = 2;
   NotificationTapCallback? onNotificationTap;
 
   Future<void> init({NotificationTapCallback? onTap}) async {
@@ -203,44 +204,61 @@ class NotificationService {
     }
   }
 
-  // Future<void> scheduleHydrationRemindersForFuture(
-  //   List<HydrationEntry> entries,
-  // ) async {
-  //   final now = DateTime.now();
-  //   final today = DateTime(now.year, now.month, now.day);
+  Future<void> scheduleHydrationRemindersWithRepeats(
+      List<HydrationEntry> entries) async {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
 
-  //   for (int dayOffset = 0; dayOffset < _scheduleDaysAhead; dayOffset++) {
-  //     final baseDay = today.add(Duration(days: dayOffset));
+    // Get settings
+    final smartSkipIndex = await SharedPrefsHelper.getSmartSkipIndex();
+    final alarmRepeatIndex = await SharedPrefsHelper.getAlarmRepeatIndex();
 
-  //     for (final entry in entries) {
-  //       final endDateTime = baseDay.add(Duration(
-  //         hours: entry.endTime.hour,
-  //         minutes: entry.endTime.minute,
-  //       ));
+    // Map index to minutes
+    final smartSkipMinutes = [3, 5, 10][smartSkipIndex];
+    final alarmRepeatTimes = [3, 5, 10][alarmRepeatIndex];
 
-  //       final notifyAt = endDateTime.subtract(const Duration(minutes: 10));
+    for (int dayOffset = 0; dayOffset < _scheduleDaysAheadRepeat; dayOffset++) {
+      final baseDay = today.add(Duration(days: dayOffset));
 
-  //       if (notifyAt.isBefore(now)) continue;
+      for (final entry in entries) {
+        final endDateTime = baseDay.add(Duration(
+          hours: entry.endTime.hour,
+          minutes: entry.endTime.minute,
+        ));
 
-  //       final shouldSilence = await _shouldSilenceHydrationReminder(notifyAt);
+        // Base 10-minute alarm point
+        final baseAlarmTime =
+            endDateTime.subtract(const Duration(minutes: 10));
 
-  //       await _scheduleSingleReminder(
-  //         entry: entry,
-  //         notifyAt: notifyAt,
-  //         shouldSilence: shouldSilence,
-  //         dayOffset: dayOffset,
-  //       );
-  //     }
-  //   }
-  // }
+        // Start of the repeat sequence early based on Smart Skip
+        final sequenceStartTime =
+            baseAlarmTime.subtract(Duration(minutes: smartSkipMinutes));
+
+        for (int repeat = 0; repeat < alarmRepeatTimes; repeat++) {
+          final notifyAt = sequenceStartTime.add(Duration(minutes: repeat));
+
+          if (notifyAt.isBefore(now)) continue;
+
+          await _scheduleSingleReminder(
+            entry: entry,
+            notifyAt: notifyAt,
+            shouldSilence: false,
+            dayOffset: dayOffset,
+            repeatIndex: repeat + 1,
+          );
+        }
+      }
+    }
+  }
 
   Future<void> _scheduleSingleReminder({
     required HydrationEntry entry,
     required DateTime notifyAt,
     required bool shouldSilence,
     required int dayOffset,
+    int repeatIndex = 1111,
   }) async {
-    final id = _buildNotificationId(entry.slot, dayOffset);
+    final id = _buildNotificationId(entry.slot, dayOffset, repeatIndex);
 
     final title = "Hydration Reminder";
     final body =
@@ -296,16 +314,19 @@ class NotificationService {
 
   int _buildNotificationId(
     HydrationSlot slot,
-    int dayOffset,
-  ) {
-    return (dayOffset * 100) + slot.index;
+    int dayOffset, [
+    int repeatIndex = 0,
+  ]) {
+    // Unique ID: (DayOffset * 1000) + (SlotIndex * 10) + RepeatIndex
+    // This allows up to 10 repeats per slot per day.
+    return (dayOffset * 1000) + (slot.index * 10) + repeatIndex;
   }
 
   Future<void> resetAllHydrationReminders(
     List<HydrationEntry> newEntries,
   ) async {
     await cancelAllHydrationReminders();
-    await scheduleHydrationRemindersForFuture(newEntries);
+    await scheduleHydrationRemindersWithRepeats(newEntries);
   }
 
   Future<void> cancelAllHydrationReminders() async {
@@ -317,6 +338,21 @@ class NotificationService {
 
         if (Platform.isAndroid) {
           await NotificationManager.instance.stopAlarm(id);
+        }
+      }
+    }
+  }
+
+  Future<void> cancelAllHydrationRemindersRepeat() async {
+    await _plugin.cancelAll();
+
+    for (int dayOffset = 0; dayOffset < _scheduleDaysAheadRepeat; dayOffset++) {
+      for (final slot in HydrationSlot.values) {
+        for (int repeat = 0; repeat < 10; repeat++) {
+          final id = _buildNotificationId(slot, dayOffset, repeat);
+          if (Platform.isAndroid) {
+            await NotificationManager.instance.stopAlarm(id);
+          }
         }
       }
     }

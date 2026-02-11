@@ -385,6 +385,11 @@ class HydrationCubit extends Cubit<HydrationState> {
     return s1 < e2 && e1 > s2;
   }
 
+  void showError(String message) {
+    emit(state.copyWith(errorMessage: message, successMessage: null));
+  }
+
+
   Future<void> refreshAchievementStats() async {
     try {
       final summaries = await _dbHelper.getHydrationSummariesForRange();

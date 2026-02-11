@@ -43,7 +43,7 @@ class _WaterIntakeTimelineState extends State<WaterIntakeTimelineScreen> {
   TimeOfDay? tempEndTime;
 
   double waterGoal = 0;
-  
+
   @override
   void initState() {
     super.initState();
@@ -152,7 +152,8 @@ class _WaterIntakeTimelineState extends State<WaterIntakeTimelineScreen> {
     final formattedDate = DateFormat("EEEE, d MMM yyyy").format(now);
 
     return Container(
-      margin: EdgeInsets.symmetric(horizontal: AppDimensions.dim20, vertical: AppDimensions.dim10),
+      margin: EdgeInsets.symmetric(
+          horizontal: AppDimensions.dim20, vertical: AppDimensions.dim10),
       padding: EdgeInsets.symmetric(vertical: AppDimensions.dim10),
       width: double.infinity,
       decoration: BoxDecoration(
@@ -215,7 +216,7 @@ class _WaterIntakeTimelineState extends State<WaterIntakeTimelineScreen> {
           SizedBox(width: 30.w),
           Expanded(
             child: FutureBuilder(
-              future: (){
+              future: () {
                 DateTime now = DateTime.now();
                 DateTime startDate = DateTime(now.year, now.month, now.day);
                 DateTime endDate = startDate
@@ -240,7 +241,6 @@ class _WaterIntakeTimelineState extends State<WaterIntakeTimelineScreen> {
                           waterVolumeConsumed, waterGoal);
                 }
 
-                
                 return Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisAlignment: MainAxisAlignment.center,
@@ -328,7 +328,8 @@ class _WaterIntakeTimelineState extends State<WaterIntakeTimelineScreen> {
       child: GestureDetector(
         onTap: () => setState(() => _activeTabIndex = index),
         child: Container(
-          margin: EdgeInsets.symmetric(horizontal: 4.w, vertical: AppDimensions.dim8),
+          margin: EdgeInsets.symmetric(
+              horizontal: 4.w, vertical: AppDimensions.dim8),
           decoration: isSelected
               ? BoxDecoration(
                   color: Colors.white,
@@ -374,7 +375,9 @@ class _WaterIntakeTimelineState extends State<WaterIntakeTimelineScreen> {
       return Stack(
         alignment: Alignment.center,
         children: [
-          SizedBox(width: AppDimensions.dim600,),
+          SizedBox(
+            width: AppDimensions.dim600,
+          ),
           // Blur overlay
           Positioned.fill(
             child: ClipRRect(
@@ -697,7 +700,10 @@ class _WaterIntakeTimelineState extends State<WaterIntakeTimelineScreen> {
           Container(
             decoration: BoxDecoration(
               color: Color(0xffF7FAFF),
-              borderRadius: BorderRadius.only(topLeft: Radius.circular(20.r), topRight: Radius.circular(20.r),),
+              borderRadius: BorderRadius.only(
+                topLeft: Radius.circular(20.r),
+                topRight: Radius.circular(20.r),
+              ),
               boxShadow: [
                 BoxShadow(
                   color: Colors.black.withOpacity(0.05),
@@ -706,7 +712,7 @@ class _WaterIntakeTimelineState extends State<WaterIntakeTimelineScreen> {
                 ),
               ],
             ),
-            child:  Padding(
+            child: Padding(
               padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 15.h),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -862,7 +868,9 @@ class _WaterIntakeTimelineState extends State<WaterIntakeTimelineScreen> {
         borderRadius: BorderRadius.circular(15.r),
         boxShadow: [
           BoxShadow(
-              color: Colors.black.withValues(alpha: 0.2), blurRadius: 4, offset: Offset(0, 0)),
+              color: Colors.black.withValues(alpha: 0.2),
+              blurRadius: 4,
+              offset: Offset(0, 0)),
         ],
         border: Border.all(color: AppColors.bluegray.withOpacity(0.1)),
       ),
@@ -904,6 +912,17 @@ class _WaterIntakeTimelineState extends State<WaterIntakeTimelineScreen> {
               SizedBox(width: 20.w),
               MaterialButton(
                 onPressed: () {
+                  final isConflict = isOverlapping(
+                    newStart: tempStartTime!,
+                    newEnd: tempEndTime!,
+                    excludeIndex: _expandedIndex,
+                  );
+
+                  if (isConflict) {
+                    context.read<HydrationCubit>().showError("Time slot overlapping!");
+                    return;
+                  }
+
                   // Actually logic to update would go here
                   context.read<HydrationCubit>().updateTimeSlot(
                         slot: entry.slot,
@@ -973,6 +992,38 @@ class _WaterIntakeTimelineState extends State<WaterIntakeTimelineScreen> {
     } else {
       return AssetsPath.midMorning;
     }
+  }
+
+  bool isOverlapping({
+    required TimeOfDay newStart,
+    required TimeOfDay newEnd,
+    int? excludeIndex,
+  }) {
+    final newStartMin = _toMinutes(newStart);
+    final newEndMin = _toMinutes(newEnd);
+
+    // basic validation
+    if (newStartMin >= newEndMin) return true;
+
+    final entries = context.read<HydrationCubit>().state.entries;
+    for (int i = 0; i < entries.length; i++) {
+      if (excludeIndex != null && i == excludeIndex) continue;
+
+      final entry = entries[i];
+      final startMin = _toMinutes(entry.startTime);
+      final endMin = _toMinutes(entry.endTime);
+
+      // Overlap condition: (StartA < EndB) and (EndA > StartB)
+      if (newStartMin < endMin && newEndMin > startMin) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  int _toMinutes(TimeOfDay time) {
+    return time.hour * 60 + time.minute;
   }
 }
 

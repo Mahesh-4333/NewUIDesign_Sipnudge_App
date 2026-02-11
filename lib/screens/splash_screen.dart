@@ -21,11 +21,11 @@ class _SplashScreenState extends State<SplashScreen> {
       Future.delayed(const Duration(seconds: 2), () async {
         if (!mounted) return;
 
-        try {
-          await LocationService().handlePermission();
-        } catch (e) {
-          print(e);
-        }
+        // try {
+        //   await LocationService().handlePermission();
+        // } catch (e) {
+        //   print(e);
+        // }
 
         Navigator.of(context).pushReplacement(
           PageRouteBuilder(

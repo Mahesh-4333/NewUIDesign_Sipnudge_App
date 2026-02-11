@@ -8,8 +8,9 @@ import 'package:hydrify/screens/widgets/custom_wheel_inline_time_widget.dart';
 class InlineTimeColumnUpdateWidget extends StatelessWidget {
   final String label;
   final TimeOfDay time;
+  final bool isEndTime;
   final Function onTimeChanged;
-  const InlineTimeColumnUpdateWidget({super.key, required this.label, required this.onTimeChanged, required this.time});
+  const InlineTimeColumnUpdateWidget({super.key, required this.label, required this.onTimeChanged, required this.time, this.isEndTime = false});
 
   @override
   Widget build(BuildContext context) {
