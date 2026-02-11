@@ -35,14 +35,13 @@ class _LocalAuthScreenState extends State<LocalAuthScreen> {
     final authProvider =
         Provider.of<AuthenticationProvider>(context, listen: false);
 
-    bool success = true;
+    bool success = false;
 
-    // Keep showing popup until user authenticates
     while (mounted && !success) {
       success = await authProvider.authenticateWithBiometrics();
 
       if (!success) {
-        await Future.delayed(const Duration(milliseconds: 300));
+        await Future.delayed(const Duration(milliseconds: 500));
       }
     }
 
@@ -54,7 +53,7 @@ class _LocalAuthScreenState extends State<LocalAuthScreen> {
     final hasUserSelectedPersonalGoal = await SharedPrefsHelper.getUserGoal();
 
     Future.delayed(
-      const Duration(milliseconds: 800),
+      const Duration(milliseconds: 300),
       () {
         if (!mounted) return;
 
@@ -64,13 +63,13 @@ class _LocalAuthScreenState extends State<LocalAuthScreen> {
               if (loggedInUserEmail.isNotEmpty) {
                 if (hasUserFilledInPersonalInfo == true &&
                     hasUserSelectedPersonalGoal != null) {
-                  return BottomNavScreenNew();
+                  return const BottomNavScreenNew();
                 } else {
-                  return UserInfoInputScreen();
+                  return const UserInfoInputScreen();
                 }
               } else {
-                //return AuthOptionsScreen();
-                return QrScanner();
+                // If logged out, send to QR Scanner or Auth Options
+                return const QrScanner();
               }
             },
             transitionsBuilder:
