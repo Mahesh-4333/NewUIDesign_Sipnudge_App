@@ -365,37 +365,32 @@ class _QrScannerState extends State<QrScanner>
                       fontFamily: AppFontStyles.urbanistFontFamily),
                   children: [
                     TextSpan(
-                      text: 'By continuing, you agree to our \n',
-                      style: TextStyle(
-                          color: AppColors.black,
-                          fontSize: AppFontStyles.fontSize_13,
-                          fontVariations: [AppFontStyles.boldFontVariation],
-                          fontFamily: AppFontStyles.urbanistFontFamily),
-                      recognizer: _privacyTap,
-                    ),
-                    TextSpan(
                       text: 'Privacy Policy',
                       style: TextStyle(
-                        color: Colors.blue.shade700,
-                        decoration: TextDecoration.underline,
+                        color: AppColors.black,
                         fontSize: AppFontStyles.fontSize_13,
-                        fontWeight: FontWeight.w600,
+                        fontVariations: [AppFontStyles.semiBoldFontVariation],
                       ),
-                      recognizer: _privacyTap,
+                      recognizer: TapGestureRecognizer()
+                        ..onTap = () {
+                          _onFooterLinkTap(LinkType.privacy);
+                        },
                     ),
                     TextSpan(
-                      text: ' and ',
+                      text: '     .     ',
                       style: TextStyle(color: Colors.black),
                     ),
                     TextSpan(
-                      text: 'Terms of Service.',
+                      text: 'Terms of Service',
                       style: TextStyle(
-                        color: Colors.blue.shade700,
-                        decoration: TextDecoration.underline,
+                        color: AppColors.black,
                         fontSize: AppFontStyles.fontSize_13,
-                        fontWeight: FontWeight.w600,
+                        fontVariations: [AppFontStyles.semiBoldFontVariation],
                       ),
-                      recognizer: _termsTap,
+                      recognizer: TapGestureRecognizer()
+                        ..onTap = () {
+                          _onFooterLinkTap(LinkType.terms);
+                        },
                     ),
                   ],
                 ),

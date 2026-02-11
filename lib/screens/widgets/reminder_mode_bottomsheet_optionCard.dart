@@ -29,16 +29,22 @@ class ReminderOptionCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
+
       padding: EdgeInsets.all(AppDimensions.dim16.w),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(AppDimensions.radius_16.r),
-        color: isActive
-            ? null
-            : AppColors.white,
+        color: AppColors.white,
         border: Border.all(
           color: isActive ? AppColors.batteryIndicator : AppColors.darkLavender,
           width: isActive ? AppDimensions.dim3.w : AppDimensions.dim1.w,
         ),
+        boxShadow : [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: .3),
+            blurRadius: 2,
+            offset: Offset(4, 4),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -60,6 +66,7 @@ class ReminderOptionCard extends StatelessWidget {
                       letterSpacing: 0.2,
                     ),
                   ),
+                  SizedBox(height: AppDimensions.dim10,),
                   if (subtitle != null)
                     Text(
                       subtitle!,
@@ -81,9 +88,9 @@ class ReminderOptionCard extends StatelessWidget {
               )
             ],
           ),
-
-          Divider(color: AppColors.white46, thickness: 1.5),
-          SizedBox(height: AppDimensions.dim12.h),
+          SizedBox(height: AppDimensions.dim10,),
+          Divider(color: AppColors.blueWaterIntake.withValues(alpha: 0.8), thickness: 1, height: AppDimensions.dim20.h,),
+          SizedBox(height: AppDimensions.dim5.h),
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: features

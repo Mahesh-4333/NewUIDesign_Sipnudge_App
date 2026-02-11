@@ -207,7 +207,8 @@ class AppStrings {
   static const smartSnoozeAndPersonalizedTips =
       "Smart snooze and personalized tips";
   static const steadySipReminder = "Steady Sip Reminder";
-  static const fixedIntervals = "Fixed intervals (e.g., every 2 hours)";
+  static const steadySipSeriousResult = "“Steady sips. Serious results.”";
+  static const fixedIntervals = "7 Micro-Milestones";
   static const simpleHydrationAlerts = "Simple hydration alerts";
   static const biomatricsID = "Biomatrics ID";
   static const faceID = "Face ID";

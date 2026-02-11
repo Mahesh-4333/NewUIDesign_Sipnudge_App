@@ -1,5 +1,6 @@
 import 'dart:math';
 import 'dart:ui' as ui;
+import 'dart:ui';
 
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
@@ -95,9 +96,9 @@ class _WaterIntakeTimelineState extends State<WaterIntakeTimelineScreen> {
                   _getDateWidget(),
                   SizedBox(height: 10.h),
                   _getProgressWidget(state),
-                  SizedBox(height: 15.h),
+                  SizedBox(height: AppDimensions.dim30),
                   _getTabBarWidget(),
-                  SizedBox(height: 15.h),
+                  SizedBox(height: AppDimensions.dim25),
                   Expanded(
                     child: Padding(
                       padding: EdgeInsets.symmetric(horizontal: 20.w),
@@ -143,8 +144,8 @@ class _WaterIntakeTimelineState extends State<WaterIntakeTimelineScreen> {
     final formattedDate = DateFormat("EEEE, d MMM yyyy").format(now);
 
     return Container(
-      margin: EdgeInsets.symmetric(horizontal: 20.w),
-      padding: EdgeInsets.symmetric(vertical: 14.h),
+      margin: EdgeInsets.symmetric(horizontal: AppDimensions.dim20, vertical: AppDimensions.dim10),
+      padding: EdgeInsets.symmetric(vertical: AppDimensions.dim10),
       width: double.infinity,
       decoration: BoxDecoration(
         color: Colors.white,
@@ -185,9 +186,9 @@ class _WaterIntakeTimelineState extends State<WaterIntakeTimelineScreen> {
                 Color(0xFF9FDCFF),
                 Color(0xFF3FBAFF)
               ],
-              backgroundColor: Color(0x22AAAAAA),
-              elevation: 4,
-              shadowOffset: Offset(2, 4),
+              backgroundColor: AppColors.gray400,
+              elevation: 0,
+              shadowOffset: Offset(0, 0),
               strokeWidth: 10.w,
               labelStyle: TextStyle(
                 fontSize: 16.sp,
@@ -290,7 +291,7 @@ class _WaterIntakeTimelineState extends State<WaterIntakeTimelineScreen> {
       child: GestureDetector(
         onTap: () => setState(() => _activeTabIndex = index),
         child: Container(
-          margin: EdgeInsets.symmetric(horizontal: 4.w, vertical: 4.h),
+          margin: EdgeInsets.symmetric(horizontal: 4.w, vertical: AppDimensions.dim8),
           decoration: isSelected
               ? BoxDecoration(
                   color: Colors.white,
@@ -298,23 +299,26 @@ class _WaterIntakeTimelineState extends State<WaterIntakeTimelineScreen> {
                   gradient: LinearGradient(
                       begin: Alignment.topCenter,
                       end: Alignment.bottomCenter,
-                      colors: [AppColors.white, AppColors.bottomnavbar]),
+                      colors: [
+                        AppColors.white,
+                        AppColors.white,
+                        AppColors.bottomnavbar
+                      ]),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.1),
-                      blurRadius: 10,
+                      color: Colors.black.withValues(alpha: 0.2),
+                      blurRadius: 7,
                       offset: Offset(0, 2),
                     ),
                   ],
-                  border: Border.all(
-                      color: AppColors.bluegray.withValues(alpha: 0.2)),
+                  border: Border.all(color: Color(0xff4D758B)),
                 )
               : null,
           alignment: Alignment.center,
           child: Text(
             label,
             style: TextStyle(
-              color: AppColors.bluegray,
+              color: AppColors.darkgray,
               fontSize: 14.sp,
               fontFamily: AppFontStyles.urbanistFontFamily,
               fontVariations: [AppFontStyles.boldFontVariation],
@@ -330,14 +334,39 @@ class _WaterIntakeTimelineState extends State<WaterIntakeTimelineScreen> {
       return _buildIntakeWindowsView(state);
     } else {
       // return _buildActivityTimelineView(state);
-      return Center(
-        child: Text(
-          "Coming Soon",
-          style: TextStyle(
-            color: AppColors.greyColor,
-            fontFamily: AppFontStyles.urbanistFontFamily,
+      return Stack(
+        alignment: Alignment.center,
+        children: [
+          SizedBox(width: AppDimensions.dim600,),
+          // Blur overlay
+          Positioned.fill(
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(16), // match your card radius
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 6, sigmaY: 6),
+                child: Container(
+                  color: Colors.black.withOpacity(0.2),
+                ),
+              ),
+            ),
           ),
-        ),
+
+          // Center Text
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            decoration: BoxDecoration(
+              color: Colors.black.withOpacity(0.7),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: const Text(
+              "Coming Soon",
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        ],
       );
     }
   }
@@ -576,14 +605,14 @@ class _WaterIntakeTimelineState extends State<WaterIntakeTimelineScreen> {
           width: 50.w,
           height: 50.w,
           decoration: BoxDecoration(
-            color: isCompleted ? Color(0xFF3FB7FF) : Colors.white,
+            color: AppColors.lightBlue400,
             shape: BoxShape.rectangle,
             borderRadius: BorderRadius.circular(15.r),
             border:
                 Border.all(color: Color(0xFF3FB7FF).withOpacity(0.5), width: 1),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.1),
+                color: Colors.black.withValues(alpha: 0.3),
                 blurRadius: 2,
                 offset: Offset(0, 2),
               ),
@@ -628,42 +657,56 @@ class _WaterIntakeTimelineState extends State<WaterIntakeTimelineScreen> {
       ),
       child: Column(
         children: [
-          Padding(
-            padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 15.h),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  "INTAKE WINDOWS",
-                  style: TextStyle(
-                    color: AppColors.mediumgray,
-                    fontSize: AppFontStyles.fontSize_14,
-                    fontFamily: AppFontStyles.urbanistFontFamily,
-                    fontVariations: [AppFontStyles.boldFontVariation],
-                    letterSpacing: 1.2,
-                  ),
+          Container(
+            decoration: BoxDecoration(
+              color: Color(0xffF7FAFF),
+              borderRadius: BorderRadius.only(topLeft: Radius.circular(20.r), topRight: Radius.circular(20.r),),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.05),
+                  blurRadius: 20,
+                  offset: Offset(0, 5),
                 ),
-                // GestureDetector(
-                //   onTap: () {
-                //     // Logic to add slots
-                //   },
-                //   child: Text(
-                //     "Add Slots",
-                //     style: TextStyle(
-                //       color: Color(0xFF3FB7FF),
-                //       fontSize: AppFontStyles.fontSize_14,
-                //       fontFamily: AppFontStyles.urbanistFontFamily,
-                //       fontVariations: [AppFontStyles.boldFontVariation],
-                //     ),
-                //   ),
-                // ),
               ],
+            ),
+            child:  Padding(
+              padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 15.h),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    "INTAKE WINDOWS",
+                    style: TextStyle(
+                      color: AppColors.greyColorText1,
+                      fontSize: AppFontStyles.fontSize_14,
+                      fontFamily: AppFontStyles.urbanistFontFamily,
+                      fontVariations: [AppFontStyles.boldFontVariation],
+                      letterSpacing: 1.2,
+                    ),
+                  ),
+                  GestureDetector(
+                    onTap: () {
+                      // Logic to add slots
+                    },
+                    child: Text(
+                      "Add Slots",
+                      style: TextStyle(
+                        color: AppColors.blueWaterIntake,
+                        fontSize: AppFontStyles.fontSize_14,
+                        fontFamily: AppFontStyles.urbanistFontFamily,
+                        fontVariations: [AppFontStyles.boldFontVariation],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
           Divider(height: 1, color: AppColors.bluegray.withValues(alpha: 0.1)),
           Expanded(
             child: ListView.separated(
-              padding: EdgeInsets.symmetric(vertical: 10.h),
+              padding: EdgeInsets.symmetric(
+                  vertical: 10.h, horizontal: AppDimensions.dim10),
               itemCount: state.entries.length,
               itemBuilder: (context, index) {
                 final entry = state.entries[index];
@@ -678,12 +721,14 @@ class _WaterIntakeTimelineState extends State<WaterIntakeTimelineScreen> {
                         width: 45.w,
                         height: 45.w,
                         decoration: BoxDecoration(
-                          color: Color(0xFFEFF9FF),
+                          color: isExpanded
+                              ? AppColors.blueWaterIntake
+                              : Color(0xFFEFF9FF),
                           shape: BoxShape.rectangle,
                           borderRadius: BorderRadius.circular(12.r),
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.1),
+                              color: Colors.black.withValues(alpha: 0.2),
                               blurRadius: 2,
                               offset: Offset(0, 2),
                             ),
@@ -692,7 +737,7 @@ class _WaterIntakeTimelineState extends State<WaterIntakeTimelineScreen> {
                         padding: EdgeInsets.all(10.w),
                         child: Image.asset(
                           _getSlotIconPath(entry.slot.label),
-                          color: Color(0xFF3FB7FF),
+                          color: isExpanded ? Colors.white : Color(0xFF3FB7FF),
                         ),
                       ),
                       title: Text(
@@ -707,9 +752,9 @@ class _WaterIntakeTimelineState extends State<WaterIntakeTimelineScreen> {
                       subtitle: Text(
                         entry.formattedRange,
                         style: TextStyle(
-                          color: AppColors.greyColor,
+                          color: AppColors.greyColorText1,
                           fontSize: 12.sp,
-                          fontVariations: [AppFontStyles.semiBoldFontVariation],
+                          fontVariations: [AppFontStyles.boldFontVariation],
                           fontFamily: AppFontStyles.urbanistFontFamily,
                         ),
                       ),
@@ -718,10 +763,9 @@ class _WaterIntakeTimelineState extends State<WaterIntakeTimelineScreen> {
                         children: [
                           if (!isExpanded)
                             IconButton(
-                              icon: SvgPicture.asset(
-                                "assets/images/edit_ic.svg",
-                                color: Color(0xFF3FB7FF),
-                                width: 18.w,
+                              icon: Image.asset(
+                                AssetsPath.updateSlot,
+                                width: 30.w,
                               ),
                               onPressed: () {
                                 setState(() {
@@ -740,12 +784,11 @@ class _WaterIntakeTimelineState extends State<WaterIntakeTimelineScreen> {
                                   });
                                 },
                                 icon: CircleAvatar(
-                                  backgroundColor: AppColors.lightSkyBlue,
+                                  backgroundColor: AppColors.lightBlue400,
                                   child: Icon(
-                                    isExpanded
-                                        ? Icons.keyboard_arrow_up
-                                        : Icons.keyboard_arrow_down,
+                                    Icons.keyboard_arrow_up,
                                     color: AppColors.white,
+                                    size: AppDimensions.dim30,
                                   ),
                                 )),
                         ],
@@ -771,14 +814,18 @@ class _WaterIntakeTimelineState extends State<WaterIntakeTimelineScreen> {
 
   Widget _buildInlineTimePicker(HydrationEntry entry) {
     return Container(
-      margin: EdgeInsets.symmetric(horizontal: 20.w, vertical: 10.h),
+      margin: EdgeInsets.only(
+        left: 20.w,
+        right: 20.w,
+        bottom: 20.h,
+      ),
       padding: EdgeInsets.all(15.w),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(15.r),
         boxShadow: [
           BoxShadow(
-              color: Colors.black12, blurRadius: 10, offset: Offset(0, 4)),
+              color: Colors.black.withValues(alpha: 0.2), blurRadius: 4, offset: Offset(0, 0)),
         ],
         border: Border.all(color: AppColors.bluegray.withOpacity(0.1)),
       ),
@@ -787,17 +834,22 @@ class _WaterIntakeTimelineState extends State<WaterIntakeTimelineScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
-              InlineTimeColumnUpdateWidget(label : "FROM",time: entry.startTime, onTimeChanged: (newTime) {
-                setState(() {
-                  tempStartTime = TimeOfDay.fromDateTime(newTime);
-                });
-
-              }),
-              InlineTimeColumnUpdateWidget(label : "TO", time: entry.endTime, onTimeChanged:  (newTime) {
-                setState(() {
-                  tempEndTime = TimeOfDay.fromDateTime(newTime);
-                });
-              }),
+              InlineTimeColumnUpdateWidget(
+                  label: "FROM",
+                  time: entry.startTime,
+                  onTimeChanged: (newTime) {
+                    setState(() {
+                      tempStartTime = TimeOfDay.fromDateTime(newTime);
+                    });
+                  }),
+              InlineTimeColumnUpdateWidget(
+                  label: "TO",
+                  time: entry.endTime,
+                  onTimeChanged: (newTime) {
+                    setState(() {
+                      tempEndTime = TimeOfDay.fromDateTime(newTime);
+                    });
+                  }),
             ],
           ),
           SizedBox(height: 20.h),
@@ -813,7 +865,7 @@ class _WaterIntakeTimelineState extends State<WaterIntakeTimelineScreen> {
                         fontVariations: [AppFontStyles.boldFontVariation])),
               ),
               SizedBox(width: 20.w),
-              ElevatedButton(
+              MaterialButton(
                 onPressed: () {
                   // Actually logic to update would go here
                   context.read<HydrationCubit>().updateTimeSlot(
@@ -824,16 +876,25 @@ class _WaterIntakeTimelineState extends State<WaterIntakeTimelineScreen> {
 
                   setState(() => _expandedIndex = null);
                 },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Color(0xFF3FB7FF),
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(20.r)),
+                child: Container(
+                  padding: EdgeInsets.symmetric(
+                      vertical: AppDimensions.dim4,
+                      horizontal: AppDimensions.dim20),
+                  decoration: BoxDecoration(
+                    color: AppColors.blueWaterIntake,
+                    borderRadius: BorderRadius.only(
+                      topLeft: Radius.circular(15.r),
+                      bottomLeft: Radius.circular(15.r),
+                      bottomRight: Radius.circular(15.r),
+                      topRight: Radius.circular(15.r),
+                    ),
+                  ),
+                  child: Text("UPDATE",
+                      style: TextStyle(
+                          color: Colors.white,
+                          fontFamily: AppFontStyles.urbanistFontFamily,
+                          fontVariations: [AppFontStyles.boldFontVariation])),
                 ),
-                child: Text("UPDATE",
-                    style: TextStyle(
-                        color: Colors.white,
-                        fontFamily: AppFontStyles.urbanistFontFamily,
-                        fontVariations: [AppFontStyles.boldFontVariation])),
               ),
             ],
           ),
@@ -841,8 +902,6 @@ class _WaterIntakeTimelineState extends State<WaterIntakeTimelineScreen> {
       ),
     );
   }
-
-
 
   Widget _buildTimeBox(String text) {
     return Container(

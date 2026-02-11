@@ -17,8 +17,8 @@ class CustomToggleSwitch extends StatelessWidget {
     super.key,
     required this.value,
     required this.onChanged,
-    this.width = 52,
-    this.height = 30,
+    this.width = 45,
+    this.height = 25,
     this.activeTrackColor = const Color(0xFF5B4FFF), // violet/blue
     this.inactiveTrackColor = const Color(0xFF3A4F5C), // bluish grey
     this.thumbColor = Colors.white,

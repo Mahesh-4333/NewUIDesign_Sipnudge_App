@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:hydrify/constants/app_colors.dart';
@@ -9,11 +10,13 @@ import 'package:hydrify/helpers/shared_pref_helper.dart';
 import 'package:hydrify/screens/auth/signin_signup_screen.dart';
 import 'package:hydrify/screens/info/privacy_policy_screen.dart';
 import 'package:hydrify/screens/info/terms_of_service.dart';
+import 'package:hydrify/screens/qr_scanning.dart';
 import 'package:hydrify/screens/user_personal_info_input_screen..dart';
 import 'package:hydrify/screens/widgets/auth_button_widget.dart';
 import 'package:hydrify/services/firebase_functions_service.dart';
 import 'package:hydrify/services/google_calendar_manager.dart';
 import 'package:hydrify/services/ui_utils_service.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class AuthOptionsScreen extends StatefulWidget {
   const AuthOptionsScreen({super.key});
@@ -342,6 +345,60 @@ class _AuthOptionsScreenState extends State<AuthOptionsScreen> {
                   );
                 },
               ),
+              Spacer(),
+              /// 🔹 FOOTER TEXT
+              Container(
+                width: double.infinity,
+                padding: EdgeInsets.only(bottom: 25.h),
+                decoration: const BoxDecoration(
+                  image: DecorationImage(
+                    image: AssetImage('assets/images/app_background.png'),
+                    fit: BoxFit.cover,
+                  ),
+                ),
+                child: Center(
+                  child: RichText(
+                    textAlign: TextAlign.center,
+                    text: TextSpan(
+                      style: TextStyle(
+                          fontSize: AppFontStyles.fontSize_13,
+                          color: Colors.black,
+                          fontVariations: [AppFontStyles.boldFontVariation],
+                          fontFamily: AppFontStyles.urbanistFontFamily),
+                      children: [
+                        TextSpan(
+                          text: 'Privacy Policy',
+                          style: TextStyle(
+                            color: AppColors.black,
+                            fontSize: AppFontStyles.fontSize_13,
+                            fontVariations: [AppFontStyles.semiBoldFontVariation],
+                          ),
+                          recognizer: TapGestureRecognizer()
+                            ..onTap = () {
+                              _onFooterLinkTap(LinkType.privacy);
+                            },
+                        ),
+                        TextSpan(
+                          text: '     .     ',
+                          style: TextStyle(color: Colors.black),
+                        ),
+                        TextSpan(
+                          text: 'Terms of Service',
+                          style: TextStyle(
+                            color: AppColors.black,
+                            fontSize: AppFontStyles.fontSize_13,
+                            fontVariations: [AppFontStyles.semiBoldFontVariation],
+                          ),
+                          recognizer: TapGestureRecognizer()
+                            ..onTap = () {
+                              _onFooterLinkTap(LinkType.terms);
+                            },
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
             ],
           ),
         ),
@@ -398,5 +455,18 @@ class _AuthOptionsScreenState extends State<AuthOptionsScreen> {
         ),
       ),
     );
+  }
+
+  void _onFooterLinkTap(LinkType type) async {
+    final uri = Uri.parse(type == LinkType.privacy
+        ? "https://sipnudge.com/policies/privacy-policy"
+        : "https://sipnudge.com/policies/terms-of-service");
+    try {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Could not open the webpage")),
+      );
+    }
   }
 }

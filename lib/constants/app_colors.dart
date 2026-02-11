@@ -39,11 +39,13 @@ class AppColors {
   static const mintGreenColor = Color(0XFF53C1BC);
   static const secondaryMintGreen = Color(0XFF8BDEF3);
   static const lightSkyBlue = Color(0XFF4EABFF);
+  static const blueWaterIntake = Color(0XFF32A6E9);
   static const nextButtonColor = Color(0XFFB889D2);
   static const settingsTileBackgroundColor = Color(0xFF1F222A);
   static const redColor = Color(0XFFE30B01);
   static const errorRedColor = Color(0XFFFE4848);
   static const greyColor = Color(0xff616161);
+  static const greyColorText1 = Color(0xff9D9D9D);
   static const dividerColor = Color(0XFFE9E9E9);
   static const loadingDialogBacgkroundColor = Color(0XFF1F222A);
   static const buttonTextPurpleColor = Color(0XFF4C3F57);

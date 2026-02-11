@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
+import 'package:hydrify/constants/app_colors.dart';
+import 'package:hydrify/constants/app_dimensions.dart';
 import 'package:hydrify/constants/app_font_styles.dart';
 
 class InlineTimePicker extends StatefulWidget {
@@ -69,6 +71,7 @@ class _InlineTimePickerState extends State<InlineTimePicker> {
     required String Function(int) label,
     required void Function(int) onSelected,
     double width = 40,
+    bool isAmPm = false
   }) {
     return SizedBox(
       width: width,
@@ -87,12 +90,12 @@ class _InlineTimePickerState extends State<InlineTimePicker> {
               child: Text(
                 label(index),
                 style: TextStyle(
-                  fontSize: isSelected ? AppFontStyles.fontSize_22 : AppFontStyles.fontSize_16,
-                  fontVariations: [isSelected ? AppFontStyles.boldFontVariation : AppFontStyles.regularFontVariation],
+                  fontSize: isAmPm ? AppFontStyles.fontSize_18 :  AppFontStyles.fontSize_28,
+                  fontVariations: [isSelected ? AppFontStyles.boldFontVariation : AppFontStyles.boldFontVariation],
                   fontFamily: AppFontStyles.urbanistFontFamily,
                   color: isSelected
                       ? const Color(0xFF3FB7FF)
-                      : Colors.grey.shade400,
+                      : AppColors.greyColorText1,
                 ),
               ),
             );
@@ -171,8 +174,49 @@ class _InlineTimePickerState extends State<InlineTimePicker> {
                 });
                 _emit();
               },
+              isAmPm: true
             ),
           ],
+
+        ),
+        Positioned.fill(
+          child: IgnorePointer(
+            child: Column(
+              children: [
+                // 🔝 Top Shadow
+                Container(
+                  height: AppDimensions.dim50,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        Colors.white,
+                        Colors.white.withOpacity(0.0),
+                      ],
+                    ),
+                  ),
+                ),
+
+                const Spacer(),
+
+                // 🔻 Bottom Shadow
+                Container(
+                  height: AppDimensions.dim50,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.bottomCenter,
+                      end: Alignment.topCenter,
+                      colors: [
+                        Colors.white,
+                        Colors.white.withOpacity(0.0),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
         ),
       ],
     );

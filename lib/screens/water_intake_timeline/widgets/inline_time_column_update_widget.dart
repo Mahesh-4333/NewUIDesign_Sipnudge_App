@@ -30,7 +30,7 @@ class InlineTimeColumnUpdateWidget extends StatelessWidget {
               scale: 0.9,
               child: SizedBox(
                 height: 120,
-                width: 155,
+                width: 145,
                 child: InlineTimePicker(onChanged: (newTime) {
                   onTimeChanged(DateTime(
                     0,

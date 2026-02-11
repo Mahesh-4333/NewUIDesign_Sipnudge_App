@@ -33,7 +33,7 @@ class ReminderBottomSheet extends StatelessWidget {
           padding: EdgeInsets.only(
               left: AppDimensions.dim30.w,
               right: AppDimensions.dim30.w,
-              bottom: AppDimensions.dim100.h,
+              bottom: AppDimensions.dim30.h,
               top: AppDimensions.dim30.h),
           decoration: const BoxDecoration(
             borderRadius: BorderRadius.only(
@@ -79,42 +79,81 @@ class ReminderBottomSheet extends StatelessWidget {
                   ReminderModeBottonSheetState>(
                 builder: (context, state) {
                   debugPrint("AI Reminder: ${state.aiReminder}");
-                  return ReminderOptionCard(
-                    title: AppStrings.aiDrivenSmartReminder,
-                    subtitle: AppStrings.predictiveHydration,
-                    features: const [
-                      AppStrings.adaptsToYourScheduleWeatherAndActivity,
-                      AppStrings.syncsWithGoogleCalender,
-                      AppStrings.smartSnoozeAndPersonalizedTips,
-                    ],
-                    isActive: state.aiReminder,
-                    onToggle: (value) async {
-                      if(value){
-                        GoogleCalendarManager().ensureSignedIn().then((value) async {
-                          if(value){
-                            await SharedPrefsHelper.setReminderMode("AI");
-                            context.read<DrinkReminderCubit>().setReminderMode("AI");
+                  return Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      // Disable interaction
+                      AbsorbPointer(
+                        absorbing: true, // makes it non-clickable
+                        child: ReminderOptionCard(
+                          title: AppStrings.aiDrivenSmartReminder,
+                          subtitle: AppStrings.predictiveHydration,
+                          features: const [
+                            AppStrings.adaptsToYourScheduleWeatherAndActivity,
+                            AppStrings.syncsWithGoogleCalender,
+                            AppStrings.smartSnoozeAndPersonalizedTips,
+                          ],
+                          isActive: state.aiReminder,
+                          onToggle: (value) async {
                             if(value){
+                              GoogleCalendarManager().ensureSignedIn().then((value) async {
+                                if(value){
+                                  await SharedPrefsHelper.setReminderMode("AI");
+                                  context.read<DrinkReminderCubit>().setReminderMode("AI");
+                                  if(value){
+                                    context
+                                        .read<ReminderModeBottonSheetCubit>()
+                                        .toggleAiReminder(value);
+                                    context
+                                        .read<ReminderModeBottonSheetCubit>()
+                                        .toggleSteadySipReminder(false);
+                                  }
+                                }
+                              });
+                            }else{
+                              await SharedPrefsHelper.setReminderMode("");
                               context
                                   .read<ReminderModeBottonSheetCubit>()
-                                  .toggleAiReminder(value);
-                              context
-                                  .read<ReminderModeBottonSheetCubit>()
-                                  .toggleSteadySipReminder(false);
+                                  .toggleAiReminder(false);
                             }
-                          }
-                        });
-                      }else{
-                        await SharedPrefsHelper.setReminderMode("");
-                        context
-                            .read<ReminderModeBottonSheetCubit>()
-                            .toggleAiReminder(false);
-                      }
 
-                    },
-                    activeColor: AppColors.white,
-                    activeTrackColor: AppColors.switchReminderColor,
+                          },
+                          activeColor: AppColors.white,
+                          activeTrackColor: AppColors.switchReminderColor,
+                        )
+                      ),
+
+                      // Blur overlay
+                      Positioned.fill(
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(16), // match your card radius
+                          child: BackdropFilter(
+                            filter: ImageFilter.blur(sigmaX: 6, sigmaY: 6),
+                            child: Container(
+                              color: Colors.black.withOpacity(0.2),
+                            ),
+                          ),
+                        ),
+                      ),
+
+                      // Center Text
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                        decoration: BoxDecoration(
+                          color: Colors.black.withOpacity(0.7),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: const Text(
+                          "Coming Soon",
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ],
                   );
+
                 },
               ),
 
@@ -126,6 +165,7 @@ class ReminderBottomSheet extends StatelessWidget {
                 builder: (context, state) {
                   return ReminderOptionCard(
                     title: AppStrings.steadySipReminder,
+                    subtitle: AppStrings.steadySipSeriousResult,
                     features: const [
                       AppStrings.fixedIntervals,
                       AppStrings.simpleHydrationAlerts,
@@ -151,6 +191,7 @@ class ReminderBottomSheet extends StatelessWidget {
                     activeColor: AppColors.white,
                     activeTrackColor: AppColors.switchReminderColor,
                   );
+
                 },
               ),
             ],

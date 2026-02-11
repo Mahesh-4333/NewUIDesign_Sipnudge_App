@@ -8,6 +8,7 @@ class AssetsPath {
   static const String evening = "${intakeTimeline}evening.png";
   static const String midAfternoon = "${intakeTimeline}mid_afternoon.png";
   static const String midMorning = "${intakeTimeline}mid_morning.png";
+  static const String updateSlot = "${intakeTimeline}update_slot.png";
 
 
 }
