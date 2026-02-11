@@ -138,7 +138,7 @@ class MyApp extends StatelessWidget {
         BlocProvider(create: (context) => AccountSecurityCubit()),
         BlocProvider(create: (context) => HelpAndSupportCubit()),
         BlocProvider(create: (context) => PersonalInfoCubit()),
-        BlocProvider(create: (context) => DrinkReminderCubit()),
+        BlocProvider(create: (context) => DrinkReminderCubit(hydrationCubit: hydrationCubit)),
         BlocProvider(create: (context) => PersonalInfoCubit()),
         BlocProvider(create: (context) => PreferencesCubit()),
         // BlocProvider(create: (Context) => NotificationCubit()),

@@ -329,44 +329,44 @@ class HydrationCubit extends Cubit<HydrationState> {
     return [
       HydrationEntry(
         slot: HydrationSlot.wakeup,
-        startTime: const TimeOfDay(hour: 6, minute: 0),
+        startTime: const TimeOfDay(hour: 7, minute: 0),
         endTime: const TimeOfDay(hour: 8, minute: 0),
         amount: dailyGoalMl * 0.25,
       ),
       HydrationEntry(
         slot: HydrationSlot.breakfast,
-        startTime: const TimeOfDay(hour: 8, minute: 0),
+        startTime: const TimeOfDay(hour: 8, minute: 30),
         endTime: const TimeOfDay(hour: 9, minute: 30),
         amount: dailyGoalMl * 0.125,
       ),
       HydrationEntry(
         slot: HydrationSlot.midMorning,
-        startTime: const TimeOfDay(hour: 9, minute: 30),
+        startTime: const TimeOfDay(hour: 11, minute: 00),
         endTime: const TimeOfDay(hour: 11, minute: 30),
         amount: dailyGoalMl * 0.125,
       ),
       HydrationEntry(
         slot: HydrationSlot.lunch,
-        startTime: const TimeOfDay(hour: 12, minute: 0),
+        startTime: const TimeOfDay(hour: 13, minute: 0),
         endTime: const TimeOfDay(hour: 14, minute: 0),
         amount: dailyGoalMl * 0.125,
       ),
       HydrationEntry(
         slot: HydrationSlot.midAfternoon,
-        startTime: const TimeOfDay(hour: 15, minute: 0),
-        endTime: const TimeOfDay(hour: 17, minute: 0),
+        startTime: const TimeOfDay(hour: 16, minute: 0),
+        endTime: const TimeOfDay(hour: 16, minute: 30),
         amount: dailyGoalMl * 0.125,
       ),
       HydrationEntry(
         slot: HydrationSlot.evening,
-        startTime: const TimeOfDay(hour: 17, minute: 0),
+        startTime: const TimeOfDay(hour: 18, minute: 0),
         endTime: const TimeOfDay(hour: 19, minute: 0),
         amount: dailyGoalMl * 0.125,
       ),
       HydrationEntry(
         slot: HydrationSlot.afterDinner,
-        startTime: const TimeOfDay(hour: 19, minute: 0),
-        endTime: const TimeOfDay(hour: 22, minute: 0),
+        startTime: const TimeOfDay(hour: 20, minute: 30),
+        endTime: const TimeOfDay(hour: 21, minute: 30),
         amount: dailyGoalMl * 0.125,
       ),
     ];

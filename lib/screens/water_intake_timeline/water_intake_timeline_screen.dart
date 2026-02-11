@@ -42,6 +42,8 @@ class _WaterIntakeTimelineState extends State<WaterIntakeTimelineScreen> {
   TimeOfDay? tempStartTime;
   TimeOfDay? tempEndTime;
 
+  double waterGoal = 0;
+  
   @override
   void initState() {
     super.initState();
@@ -58,6 +60,12 @@ class _WaterIntakeTimelineState extends State<WaterIntakeTimelineScreen> {
     bottleCubit.stream.listen((_) {
       //hydrationCubit.updateSlotCompletionStatus();
     });
+
+    getWaterGoal();
+  }
+
+  Future<void> getWaterGoal() async {
+    waterGoal = (await SharedPrefsHelper.getUserGoal() ?? 0).toDouble();
   }
 
   @override
@@ -206,45 +214,74 @@ class _WaterIntakeTimelineState extends State<WaterIntakeTimelineScreen> {
           ),
           SizedBox(width: 30.w),
           Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                RichText(
-                  text: TextSpan(
-                    children: [
-                      TextSpan(
-                        text: "100%",
-                        style: TextStyle(
-                          color: Color(0xFF3FB7FF),
-                          fontSize: 22.sp,
-                          fontFamily: AppFontStyles.urbanistFontFamily,
-                          fontVariations: [AppFontStyles.boldFontVariation],
-                        ),
+            child: FutureBuilder(
+              future: (){
+                DateTime now = DateTime.now();
+                DateTime startDate = DateTime(now.year, now.month, now.day);
+                DateTime endDate = startDate
+                    .add(const Duration(days: 1))
+                    .subtract(const Duration(milliseconds: 1));
+
+                return context
+                    .read<BottleDataCubit>()
+                    .getHistoryForDateRange(startDate, endDate);
+              }(),
+              builder: (BuildContext context, AsyncSnapshot<dynamic> snapshot) {
+                double waterVolumeConsumed = 0;
+                double completionPercent = 0;
+
+                if (snapshot.hasData || snapshot.data?.isNotEmpty == true) {
+                  waterVolumeConsumed =
+                      WaterConsumptionCalculator.calculateDailyConsumption(
+                          snapshot.data!);
+
+                  completionPercent =
+                      WaterConsumptionCalculator.calculateCompletionPercentage(
+                          waterVolumeConsumed, waterGoal);
+                }
+
+                
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    RichText(
+                      text: TextSpan(
+                        children: [
+                          TextSpan(
+                            text: "${completionPercent.toStringAsFixed(0)} %",
+                            style: TextStyle(
+                              color: Color(0xFF3FB7FF),
+                              fontSize: 22.sp,
+                              fontFamily: AppFontStyles.urbanistFontFamily,
+                              fontVariations: [AppFontStyles.boldFontVariation],
+                            ),
+                          ),
+                          TextSpan(
+                            text: " of Daily Target",
+                            style: TextStyle(
+                              color: Color(0xFFD4AF37),
+                              fontSize: 14.sp,
+                              fontFamily: AppFontStyles.urbanistFontFamily,
+                              fontVariations: [AppFontStyles.boldFontVariation],
+                            ),
+                          ),
+                        ],
                       ),
-                      TextSpan(
-                        text: " of Daily Target",
-                        style: TextStyle(
-                          color: Color(0xFFD4AF37),
-                          fontSize: 14.sp,
-                          fontFamily: AppFontStyles.urbanistFontFamily,
-                          fontVariations: [AppFontStyles.boldFontVariation],
-                        ),
+                    ),
+                    SizedBox(height: 4.h),
+                    Text(
+                      "Connect your Bottle to sync data",
+                      style: TextStyle(
+                        color: Color(0xFFD4AF37),
+                        fontSize: 12.sp,
+                        fontFamily: AppFontStyles.urbanistFontFamily,
+                        fontVariations: [AppFontStyles.boldFontVariation],
                       ),
-                    ],
-                  ),
-                ),
-                SizedBox(height: 4.h),
-                Text(
-                  "Connect your Bottle to sync data",
-                  style: TextStyle(
-                    color: Color(0xFFD4AF37),
-                    fontSize: 12.sp,
-                    fontFamily: AppFontStyles.urbanistFontFamily,
-                    fontVariations: [AppFontStyles.boldFontVariation],
-                  ),
-                ),
-              ],
+                    ),
+                  ],
+                );
+              },
             ),
           ),
         ],
@@ -936,293 +973,6 @@ class _WaterIntakeTimelineState extends State<WaterIntakeTimelineScreen> {
     } else {
       return AssetsPath.midMorning;
     }
-  }
-
-  void _showTimeEditBottomSheet(
-    BuildContext context,
-    HydrationSlot slot,
-  ) {
-    final entry = context
-        .read<HydrationCubit>()
-        .state
-        .entries
-        .firstWhere((e) => e.slot == slot);
-
-    showModalBottomSheet(
-      context: Navigator.of(context, rootNavigator: true).context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) {
-        TimeOfDay? selectedStartTime = entry.startTime;
-        TimeOfDay? selectedEndTime = entry.endTime;
-
-        return StatefulBuilder(
-          builder: (context, setState) {
-            Future<void> pickTime(bool isStart) async {
-              final picked = await showTimePicker(
-                context: context,
-                initialTime: isStart
-                    ? (selectedStartTime ?? TimeOfDay.now())
-                    : (selectedEndTime ?? TimeOfDay.now()),
-                builder: (context, child) {
-                  return Theme(
-                    data: Theme.of(context).copyWith(
-                      colorScheme: const ColorScheme.light(
-                        primary: Color(0xFF2196F3),
-                        onPrimary: Colors.white,
-                        surface: AppColors.gradientEnd,
-                        onSurface: Colors.white,
-                        secondary: Color(0xFFB586BE),
-                      ),
-                      textButtonTheme: TextButtonThemeData(
-                        style: TextButton.styleFrom(
-                          foregroundColor: Color(0xFF2196F3),
-                        ),
-                      ),
-                    ),
-                    child: child!,
-                  );
-                },
-              );
-
-              if (picked != null) {
-                setState(() {
-                  if (isStart) {
-                    selectedStartTime = picked;
-                  } else {
-                    selectedEndTime = picked;
-                  }
-                });
-              }
-            }
-
-            return FractionallySizedBox(
-              //heightFactor: 0.55, // Adjust height as needed
-              child: Container(
-                padding: EdgeInsets.only(
-                  left: 25.w,
-                  right: 30.w,
-                  top: 15.h,
-                  bottom: MediaQuery.of(context).viewInsets.bottom + 30.h,
-                ),
-                decoration: BoxDecoration(
-                  borderRadius:
-                      BorderRadius.vertical(top: Radius.circular(30.r)),
-                  gradient: const LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [Color(0xFFFFFFFF), Color(0xFFFFFFFF)],
-                  ),
-                ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Title + close
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          // "${slot.label} Slot",
-                          slot.label,
-                          style: TextStyle(
-                            fontFamily: AppFontStyles.urbanistFontFamily,
-                            fontVariations: [
-                              AppFontStyles.semiBoldFontVariation
-                            ],
-                            color: AppColors.black,
-                            fontSize: AppFontStyles.fontSize_24,
-                          ),
-                        ),
-                        GestureDetector(
-                          onTap: () =>
-                              Navigator.of(context, rootNavigator: true)
-                                  .pop(context),
-                          child: Icon(
-                            Icons.close,
-                            color: AppColors.black,
-                            size: 22.sp,
-                          ),
-                        ),
-                      ],
-                    ),
-                    SizedBox(height: 20.h),
-
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        // Start
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              "Start Time",
-                              style: TextStyle(
-                                fontFamily: AppFontStyles.urbanistFontFamily,
-                                fontVariations: [
-                                  AppFontStyles.semiBoldFontVariation
-                                ],
-                                color: Colors.black,
-                                fontSize: AppFontStyles.fontSize_16,
-                              ),
-                            ),
-                            SizedBox(height: 6.h),
-                            GestureDetector(
-                              onTap: () => pickTime(true),
-                              child: Container(
-                                padding: EdgeInsets.symmetric(
-                                    horizontal: 16.w, vertical: 14.h),
-                                decoration: BoxDecoration(
-                                  color: const Color(0x90000000),
-                                  borderRadius: BorderRadius.circular(50.r),
-                                  border: Border.all(
-                                      color: const Color(0x40000000)),
-                                ),
-                                child: Text(
-                                  selectedStartTime != null
-                                      ? selectedStartTime!.format(context)
-                                      : "Pick Start Time",
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontSize: AppFontStyles.fontSize_16,
-                                    fontFamily:
-                                        AppFontStyles.urbanistFontFamily,
-                                    fontVariations: [
-                                      AppFontStyles.semiBoldFontVariation
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        // End
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              "End Time",
-                              style: TextStyle(
-                                fontFamily: AppFontStyles.urbanistFontFamily,
-                                fontVariations: [
-                                  AppFontStyles.semiBoldFontVariation
-                                ],
-                                color: Colors.black,
-                                fontSize: AppFontStyles.fontSize_16,
-                              ),
-                            ),
-                            SizedBox(height: 6.h),
-                            GestureDetector(
-                              onTap: () => pickTime(false),
-                              child: Container(
-                                padding: EdgeInsets.symmetric(
-                                    horizontal: 16.w, vertical: 10.h),
-                                decoration: BoxDecoration(
-                                  color: const Color(0x90000000),
-                                  borderRadius: BorderRadius.circular(50.r),
-                                  border: Border.all(
-                                      color: const Color(0x40000000)),
-                                ),
-                                child: Text(
-                                  selectedEndTime != null
-                                      ? selectedEndTime!.format(context)
-                                      : "Pick End Time",
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontSize: AppFontStyles.fontSize_16,
-                                    fontFamily:
-                                        AppFontStyles.urbanistFontFamily,
-                                    fontVariations: [
-                                      AppFontStyles.semiBoldFontVariation
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-
-                    SizedBox(height: 20.h),
-
-                    Row(
-                      children: [
-                        Expanded(
-                          child: ElevatedButton(
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.white,
-                              foregroundColor: Colors.white,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(50.r),
-                              ),
-                              minimumSize: Size(AppDimensions.dim183.w,
-                                  AppDimensions.dim60.h),
-                            ),
-                            onPressed: () {
-                              Navigator.pop(context);
-                            },
-                            child: Text(
-                              "Cancel",
-                              style: TextStyle(
-                                fontFamily: AppFontStyles.urbanistFontFamily,
-                                fontVariations: [
-                                  AppFontStyles.boldFontVariation
-                                ],
-                                color: const Color(0xFF2196F3),
-                                fontSize: 16.sp,
-                              ),
-                            ),
-                          ),
-                        ),
-                        SizedBox(
-                          width: AppDimensions.dim20.w,
-                        ),
-                        Expanded(
-                          child: ElevatedButton(
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFF2196F3),
-                              foregroundColor: Colors.white,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(50.r),
-                              ),
-                              minimumSize: Size(AppDimensions.dim183.w,
-                                  AppDimensions.dim60.h),
-                            ),
-                            onPressed: () {
-                              if (selectedStartTime != null &&
-                                  selectedEndTime != null) {
-                                context.read<HydrationCubit>().updateTimeSlot(
-                                      slot: slot,
-                                      newStart: selectedStartTime!,
-                                      newEnd: selectedEndTime!,
-                                    );
-                              }
-                              Navigator.pop(context);
-                            },
-                            child: Text(
-                              "OK",
-                              style: TextStyle(
-                                fontFamily: AppFontStyles.urbanistFontFamily,
-                                fontVariations: [
-                                  AppFontStyles.boldFontVariation
-                                ],
-                                color: Colors.white,
-                                fontSize: 16.sp,
-                              ),
-                            ),
-                          ),
-                        )
-                      ],
-                    )
-                  ],
-                ),
-              ),
-            );
-          },
-        );
-      },
-    );
   }
 }
 
