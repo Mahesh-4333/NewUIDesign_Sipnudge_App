@@ -36,7 +36,7 @@ class NotificationService {
     await NotificationManager.instance.initialize();
 
     const androidSettings =
-        AndroidInitializationSettings('@mipmap/ic_launcher');
+        AndroidInitializationSettings('@mipmap/launcher_icon');
 
     // Retained iOS Category for the notification action
     final iosSettings = DarwinInitializationSettings(
