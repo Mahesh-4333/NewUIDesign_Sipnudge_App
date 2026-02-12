@@ -8,9 +8,6 @@ class ReminderModeBottonSheetCubit
   ReminderModeBottonSheetCubit()
       : super(ReminderModeBottonSheetState.initial()){
     SharedPrefsHelper.getReminderMode().then((value){
-      if(value == null) {
-        emit(state.copyWith(aiReminder: false, steadySipReminder: true));
-      }
       emit(state.copyWith(aiReminder: value == "AI", steadySipReminder: value == "SteadySip"));
     });
   }
