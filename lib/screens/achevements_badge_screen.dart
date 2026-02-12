@@ -167,6 +167,13 @@ class _AchievementsBadgeScreenState extends State<AchievementsBadgeScreen> {
                               AppDimensions.radius_24.r,
                             ),
                           ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: .2),
+                              blurRadius: 10,
+                              offset: Offset(0, -2),
+                            ),
+                          ]
                         ),
                         child: BlocBuilder<HydrationCubit, HydrationState>(
                             builder: (context, state) {
