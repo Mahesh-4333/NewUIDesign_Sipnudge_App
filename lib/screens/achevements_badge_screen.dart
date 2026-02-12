@@ -169,7 +169,7 @@ class _AchievementsBadgeScreenState extends State<AchievementsBadgeScreen> {
                           ),
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.black.withValues(alpha: .2),
+                              color: Colors.black.withValues(alpha: .1),
                               blurRadius: 10,
                               offset: Offset(0, -2),
                             ),

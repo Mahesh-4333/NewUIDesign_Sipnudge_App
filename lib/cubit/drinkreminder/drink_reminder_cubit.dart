@@ -9,28 +9,26 @@ import 'package:hydrify/services/notification/notification_service.dart';
 class DrinkReminderCubit extends Cubit<DrinkReminderState> {
   final HydrationCubit hydrationCubit;
 
-  final List<String> smartSkipOptions = ['3 min', '5 min', '10 min'];
-  final List<String> alarmRepeatOptions = ['3 min', '5 min', '10 min'];
-
+  final List<String> alarmRepeatOptions = ['3 times', '5 times', '10 times'];
   DrinkReminderCubit({required this.hydrationCubit}) : super(const DrinkReminderState()){
     _init();
-    _setupHydrationListener();
+    // _setupHydrationListener();
   }
 
-  void _setupHydrationListener() {
-    hydrationCubit.stream.listen((hydrationState) {
-      if (state.stopWhenFull && state.reminderEnabled) {
-        // Find if any entry just reached 100% or more
-        // For simplicity and correctness, we can just reschedule
-        // which will skip all completed entries for today.
-        if (state.reminderMode == "AI") {
-           _rescheduleAllReminders();
-        } else {
-           _rescheduleAllRemindersRepeat();
-        }
-      }
-    });
-  }
+  // void _setupHydrationListener() {
+  //   hydrationCubit.stream.listen((hydrationState) {
+  //     if (state.stopWhenFull && state.reminderEnabled) {
+  //       // Find if any entry just reached 100% or more
+  //       // For simplicity and correctness, we can just reschedule
+  //       // which will skip all completed entries for today.
+  //       if (state.reminderMode == "AI") {
+  //          _rescheduleAllReminders();
+  //       } else {
+  //          _rescheduleAllRemindersRepeat();
+  //       }
+  //     }
+  //   });
+  // }
 
   void _init() async {
     final mode = await SharedPrefsHelper.getReminderMode();
@@ -40,12 +38,10 @@ class DrinkReminderCubit extends Cubit<DrinkReminderState> {
       setReminderMode(mode == "AI" ? "AI" : "Static");
     }
 
-    final smartSkipIndex = await SharedPrefsHelper.getSmartSkipIndex();
     final alarmRepeatIndex = await SharedPrefsHelper.getAlarmRepeatIndex();
     final stopWhenFull = await SharedPrefsHelper.getStopWhenFull();
     
     emit(state.copyWith(
-      smartSkipIndex: smartSkipIndex,
       alarmRepeatIndex: alarmRepeatIndex,
       stopWhenFull: stopWhenFull,
     ));
@@ -74,8 +70,8 @@ class DrinkReminderCubit extends Cubit<DrinkReminderState> {
   Future<void> _rescheduleAllRemindersRepeat() async {
     final notificationService = NotificationService();
     final allSlots = hydrationCubit.state.entries;
-    await notificationService.cancelAllHydrationRemindersRepeat();
-    await notificationService.scheduleHydrationRemindersWithRepeats(allSlots);
+    await notificationService.cancelAllHydrationReminders();
+    await notificationService.scheduleHydrationRemindersForFuture(allSlots);
   }
 
   Future<void> toggleStopWhenFull(bool value) async {
@@ -99,16 +95,6 @@ class DrinkReminderCubit extends Cubit<DrinkReminderState> {
       } else {
         await _rescheduleAllRemindersRepeat();
       }
-    }
-  }
-
-  void cycleSmartSkip() async {
-    final nextIndex = (state.smartSkipIndex + 1) % smartSkipOptions.length;
-    emit(state.copyWith(smartSkipIndex: nextIndex));
-    await SharedPrefsHelper.setSmartSkipIndex(nextIndex);
-    
-    if (state.reminderEnabled) {
-      await _rescheduleAllRemindersRepeat();
     }
   }
 

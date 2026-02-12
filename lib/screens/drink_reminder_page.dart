@@ -88,8 +88,6 @@ class DrinkReminderPage extends StatelessWidget {
                             //--------------------------------------//
                             ReminderCard(
                               children: [
-                                // Smart Skip
-                                _buildSmartSkip(cubit, state),
 
                                 // Alarm Repeat
                                 _buildAlarmRepeat(cubit, state),
@@ -167,29 +165,6 @@ class DrinkReminderPage extends StatelessWidget {
     );
   }
 
-  ReminderCycleItem _buildSmartSkip(
-      DrinkReminderCubit cubit, DrinkReminderState state) {
-    return ReminderCycleItem(
-      title: AppStrings.smartSkip,
-      value: cubit.smartSkipOptions[state.smartSkipIndex],
-      onTap: cubit.cycleSmartSkip,
-      titleStyle: TextStyle(
-        color: AppColors.bluegray,
-        fontSize: AppFontStyles.fontSize_20.sp,
-        fontFamily: AppFontStyles.urbanistFontFamily,
-        fontVariations: [AppFontStyles.fontWeightVariation600],
-      ),
-      chipBackgroundColor: Colors.transparent,
-      chipBorderColor: AppColors.lightBlue400,
-      chipTextStyle: TextStyle(
-        color: AppColors.bluegray,
-        fontWeight: FontWeight.w600,
-        fontSize: AppFontStyles.fontSize_16.sp,
-        fontFamily: AppFontStyles.urbanistFontFamily,
-        fontVariations: [AppFontStyles.boldFontVariation],
-      ),
-    );
-  }
 
   AppBar _appBarWidget(BuildContext context) {
     return AppBar(

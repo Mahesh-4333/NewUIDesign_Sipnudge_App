@@ -279,7 +279,7 @@ class _UserInfoInputScreenState extends State<UserInfoInputScreen> {
               Container(
                 height: AppDimensions.dim60,
                 margin: EdgeInsets.only(
-                  top: AppDimensions.dim170.h,
+                  top: AppDimensions.dim120.h,
                   // left: AppDimensions.defaultPadding.w,
                   // right: AppDimensions.defaultPadding.w,
                 ),
@@ -316,6 +316,7 @@ class _UserInfoInputScreenState extends State<UserInfoInputScreen> {
                   },
                 ),
               ),
+              SizedBox(height: AppDimensions.dim30,)
             ],
           ),
         ),

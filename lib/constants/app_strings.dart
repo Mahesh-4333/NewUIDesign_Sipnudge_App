@@ -157,7 +157,6 @@ class AppStrings {
   static const linkaccounts = "Linked Accounts";
   static const reminder = "Reminder";
   static const reminderMode = "Reminder Mode";
-  static const smartSkip = "Smart Skip";
   static const alarmRepeat = "Alarm Repeat";
   static const stopWhen100 = "Stop When 100%";
   static const remindersetting = "Reminder Settings";

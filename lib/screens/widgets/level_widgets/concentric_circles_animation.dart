@@ -133,7 +133,7 @@ class ConcentricCirclePainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     final Paint paint = Paint()
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 2;
+      ..strokeWidth = 1;
 
     final Offset center = Offset(size.width / 2, size.height / 2);
     final double maxRadius = min(size.width, size.height) / 1.8;
@@ -144,12 +144,12 @@ class ConcentricCirclePainter extends CustomPainter {
       final radius = (offset / circleCount) * maxRadius;
 
       final color = Color.lerp(
-        AppColors.sandstorm,
-        AppColors.violapurple,
+        AppColors.greyColorText1,
+        AppColors.gray400,
         offset / circleCount,
       )!;
 
-      paint.color = color.withOpacity(1 - (offset / circleCount));
+      paint.color = color.withValues(alpha : 1 - (offset / circleCount));
       canvas.drawCircle(center, radius, paint);
     }
   }

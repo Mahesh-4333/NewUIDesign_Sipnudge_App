@@ -27,8 +27,8 @@ class NotificationService {
   final FlutterLocalNotificationsPlugin _plugin =
       FlutterLocalNotificationsPlugin();
 
-  static const int _scheduleDaysAhead = 10;
-  static const int _scheduleDaysAheadRepeat = 2;
+  static const int _scheduleDaysAhead = 1;
+  static const int _scheduleDaysAheadRepeat = 1;
   NotificationTapCallback? onNotificationTap;
 
   Future<void> init({NotificationTapCallback? onTap}) async {
@@ -170,59 +170,13 @@ class NotificationService {
       List<HydrationEntry> entries) async {
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
-    final tenDaysOut = today.add(Duration(days: _scheduleDaysAhead));
-
-    final stopWhenFull = await SharedPrefsHelper.getStopWhenFull();
-
-    // final calendarManager = GoogleCalendarManager();
-    // final allEvents =
-    //     await calendarManager.fetchEventsForRange(now, tenDaysOut);
-
-    for (int dayOffset = 0; dayOffset < _scheduleDaysAhead; dayOffset++) {
-      final baseDay = today.add(Duration(days: dayOffset));
-
-      for (final entry in entries) {
-        final endDateTime = baseDay.add(Duration(
-          hours: entry.endTime.hour,
-          minutes: entry.endTime.minute,
-        ));
-
-        final notifyAt = endDateTime.subtract(const Duration(minutes: 10));
-        if (notifyAt.isBefore(now)) continue;
-
-        if (dayOffset == 0 && stopWhenFull && entry.status == HydrationStatus.completed) {
-          continue;
-        }
-
-        // 2. Local check (Instant)
-        // final shouldSilence = calendarManager.checkOverlapLocally(
-        //     notifyAt, notifyAt.add(const Duration(minutes: 5)), allEvents);
-
-        final shouldSilence = false;
-
-        await _scheduleSingleReminder(
-          entry: entry,
-          notifyAt: notifyAt,
-          shouldSilence: shouldSilence,
-          dayOffset: dayOffset,
-        );
-      }
-    }
-  }
-
-  Future<void> scheduleHydrationRemindersWithRepeats(
-      List<HydrationEntry> entries) async {
-    final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
 
     final stopWhenFull = await SharedPrefsHelper.getStopWhenFull();
 
     // Get settings
-    final smartSkipIndex = await SharedPrefsHelper.getSmartSkipIndex();
     final alarmRepeatIndex = await SharedPrefsHelper.getAlarmRepeatIndex();
 
-    // Map index to minutes
-    final smartSkipMinutes = [3, 5, 10][smartSkipIndex];
+    // Map index to repeat counts (3, 5, 10 times)
     final alarmRepeatTimes = [3, 5, 10][alarmRepeatIndex];
 
     for (int dayOffset = 0; dayOffset < _scheduleDaysAheadRepeat; dayOffset++) {
@@ -234,20 +188,28 @@ class NotificationService {
           minutes: entry.endTime.minute,
         ));
 
-        // Base 10-minute alarm point
+        // Base 10-minute alarm point (Start of the last 10 minutes)
         final baseAlarmTime =
             endDateTime.subtract(const Duration(minutes: 10));
 
-        if (dayOffset == 0 && stopWhenFull && entry.status == HydrationStatus.completed) {
+        if (dayOffset == 0 &&
+            stopWhenFull &&
+            entry.status == HydrationStatus.completed) {
           continue;
         }
 
-        // Start of the repeat sequence early based on Smart Skip
-        final sequenceStartTime =
-            baseAlarmTime.subtract(Duration(minutes: smartSkipMinutes));
+        // Requirement: "when end time is 10:00Pm there is slot reminder set to 9:50 right 
+        // and reminder will repeat based on alarm repeat 3,5,10 times in last 10 min."
+        
+        // Calculate interval to spread repeats across 10 minutes
+        // For example, if alarmRepeatTimes is 5, reminders could be every 2 minutes.
+        // If 10, every 1 minute. If 3, approx every 3.3 minutes.
+        final double intervalMinutes = 10.0 / alarmRepeatTimes;
 
         for (int repeat = 0; repeat < alarmRepeatTimes; repeat++) {
-          final notifyAt = sequenceStartTime.add(Duration(minutes: repeat));
+          final notifyAt = baseAlarmTime.add(Duration(
+            seconds: (repeat * intervalMinutes * 60).toInt(),
+          ));
 
           if (notifyAt.isBefore(now)) continue;
 
@@ -338,24 +300,9 @@ class NotificationService {
     List<HydrationEntry> newEntries,
   ) async {
     await cancelAllHydrationReminders();
-    await cancelAllHydrationRemindersRepeat();
   }
 
   Future<void> cancelAllHydrationReminders() async {
-    await _plugin.cancelAll();
-
-    for (int dayOffset = 0; dayOffset < _scheduleDaysAhead; dayOffset++) {
-      for (final slot in HydrationSlot.values) {
-        final id = _buildNotificationId(slot, dayOffset);
-
-        if (Platform.isAndroid) {
-          await NotificationManager.instance.stopAlarm(id);
-        }
-      }
-    }
-  }
-
-  Future<void> cancelAllHydrationRemindersRepeat() async {
     await _plugin.cancelAll();
 
     for (int dayOffset = 0; dayOffset < _scheduleDaysAheadRepeat; dayOffset++) {

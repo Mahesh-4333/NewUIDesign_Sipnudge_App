@@ -14,6 +14,7 @@ import 'package:hydrify/cubit/ble/ble_cubit.dart';
 import 'package:hydrify/cubit/bottle/bottle_data_cubit.dart';
 import 'package:hydrify/cubit/hydration/hydration_cubit.dart';
 import 'package:hydrify/cubit/hydration/hydration_state.dart';
+import 'package:hydrify/helpers/database_helper.dart';
 import 'package:hydrify/helpers/shared_pref_helper.dart';
 import 'package:hydrify/helpers/water_consumption_data_helper.dart';
 import 'package:hydrify/models/bottle_info.dart';
@@ -67,8 +68,16 @@ class _HomeScreenState extends State<HomeScreen> {
     _checkGuestStatus();
 
     NotificationService().init(
-      onTap: (slot) {},
+      onTap: (slot) {
+
+      },
     );
+
+    DatabaseHelper().getAllSlots().then((slots) async {
+      await NotificationService().resetAllHydrationReminders(slots);
+      await NotificationService().scheduleHydrationRemindersForFuture(slots);
+    });
+
     //==================================================================
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       final prefs = await SharedPreferences.getInstance();

@@ -318,6 +318,7 @@ class _UserInfoDailyGoalScreenState extends State<UserInfoDailyGoalScreen> {
                 }
                 await context.read<BleCubit>().queueHydrationSlots(slots);
                 await NotificationService().resetAllHydrationReminders(slots);
+                await NotificationService().scheduleHydrationRemindersForFuture(slots);
                 UiUtilsService.dismissLoading(context);
                 setState(() {
                   isButtonClicked = false;

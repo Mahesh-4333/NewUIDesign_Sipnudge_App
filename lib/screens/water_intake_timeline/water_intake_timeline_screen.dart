@@ -53,7 +53,7 @@ class _WaterIntakeTimelineState extends State<WaterIntakeTimelineScreen> {
     final bleCubit = context.read<BleCubit>();
     bleCubit.checkAndResetForNewDay(hydrationCubit
         .generateDefaultHydrationSlots(hydrationCubit.state.goal.toDouble()));
-    //hydrationCubit.subscribeToBleUpdates(bleCubit);
+    // hydrationCubit.subscribeToBleUpdates(bleCubit);
 
     hydrationCubit.loadSlotsFromDb();
 

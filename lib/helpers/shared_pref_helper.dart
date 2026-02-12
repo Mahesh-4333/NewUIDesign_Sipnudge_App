@@ -25,7 +25,6 @@ class SharedPrefsHelper {
   static const String _keyRingtoneFeedback = 'ringtone_feedback';
 
   static const String _keyReminderMode = "reminder_mode";
-  static const String _keySmartSkipIndex = "smart_skip_index";
   static const String _keyAlarmRepeatIndex = "alarm_repeat_index";
   static const String _keyStopWhenFull = "stop_when_full";
 
@@ -189,15 +188,6 @@ class SharedPrefsHelper {
     return prefs.getString(_keyReminderMode) ?? "SteadySip";
   }
 
-  static Future<void> setSmartSkipIndex(int index) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setInt(_keySmartSkipIndex, index);
-  }
-
-  static Future<int> getSmartSkipIndex() async {
-    final prefs = await SharedPreferences.getInstance();
-    return prefs.getInt(_keySmartSkipIndex) ?? 2; // Default to 10 mins (index 2)
-  }
 
   static Future<void> setAlarmRepeatIndex(int index) async {
     final prefs = await SharedPreferences.getInstance();
