@@ -16,6 +16,7 @@ class DatabaseHelper {
   static Completer<Database>? _initCompleter;
 
   static const String tableName = 'bottle_history';
+  static const String hydrationSummaryTableName = 'hydration_day_summaries';
 
   // REPLACE your old getter with this one:
   Future<Database> get database async {
@@ -95,7 +96,7 @@ CREATE TABLE user (
 ''');
 
         await db.execute('''
-CREATE TABLE IF NOT EXISTS hydration_day_summaries (
+CREATE TABLE IF NOT EXISTS $hydrationSummaryTableName (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   date INTEGER NOT NULL,         -- epoch millis at local midnight (start of day)
   day_index INTEGER NOT NULL,
@@ -324,7 +325,7 @@ CREATE TABLE IF NOT EXISTS app_metadata (
     final batch = db.batch();
     for (final s in list) {
       batch.insert(
-        'hydration_day_summaries',
+        '$hydrationSummaryTableName',
         s.toMap(),
         conflictAlgorithm: ConflictAlgorithm.replace,
       );
@@ -357,7 +358,7 @@ CREATE TABLE IF NOT EXISTS app_metadata (
     }
 
     final result = await db.query(
-      'hydration_day_summaries',
+      '$hydrationSummaryTableName',
       where: whereClause,
       whereArgs: whereArgs,
       orderBy: 'date ASC',
@@ -373,7 +374,7 @@ CREATE TABLE IF NOT EXISTS app_metadata (
     final db = await database;
 
     try {
-      final deletedRows = await db.delete('hydration_day_summaries');
+      final deletedRows = await db.delete('$hydrationSummaryTableName');
       log("[DB] Cleared hydration_day_summaries table. Rows deleted: $deletedRows");
     } catch (e) {
       log("[DB] Error clearing hydration_day_summaries table: $e");

@@ -1,5 +1,7 @@
+import 'dart:developer';
+
 import 'package:flutter/material.dart';
-import 'package:flutter/cupertino.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:hydrify/constants/app_colors.dart';
 import 'package:hydrify/constants/app_dimensions.dart';
 import 'package:hydrify/constants/app_font_styles.dart';
@@ -50,6 +52,7 @@ class _InlineTimePickerState extends State<InlineTimePicker> {
 
       // IMPORTANT: jump wheels after build
       WidgetsBinding.instance.addPostFrameCallback((_) {
+        log("Hour index is => $hourIndex");
         hourCtrl.jumpToItem(hourIndex);
         minuteCtrl.jumpToItem(minuteIndex);
         amPmCtrl.jumpToItem(amPmIndex);
@@ -58,24 +61,21 @@ class _InlineTimePickerState extends State<InlineTimePicker> {
   }
 
   void _emit() {
-    final h = isAm
-        ? (hour == 12 ? 0 : hour)
-        : (hour == 12 ? 12 : hour + 12);
+    final h = isAm ? (hour == 12 ? 0 : hour) : (hour == 12 ? 12 : hour + 12);
 
     widget.onChanged(TimeOfDay(hour: h, minute: minute));
   }
 
-  Widget _wheel({
-    required FixedExtentScrollController controller,
-    required int count,
-    required int selectedIndex,
-    required String Function(int) label,
-    required void Function(int) onSelected,
-    double width = 32,
-    bool isAmPm = false
-  }) {
+  Widget _wheel(
+      {required FixedExtentScrollController controller,
+      required int count,
+      required int selectedIndex,
+      required String Function(int) label,
+      required void Function(int) onSelected,
+      double width = 32,
+      bool isAmPm = false}) {
     return SizedBox(
-      width: width,
+      width: width.w,
       height: 120,
       child: ListWheelScrollView.useDelegate(
         controller: controller,
@@ -86,13 +86,18 @@ class _InlineTimePickerState extends State<InlineTimePicker> {
           childCount: count,
           builder: (_, index) {
             final isSelected = index == selectedIndex;
-
             return Center(
               child: Text(
                 label(index),
                 style: TextStyle(
-                  fontSize: isAmPm ? AppFontStyles.fontSize_18 :  AppFontStyles.fontSize_28,
-                  fontVariations: [isSelected ? AppFontStyles.boldFontVariation : AppFontStyles.boldFontVariation],
+                  fontSize: isAmPm
+                      ? AppFontStyles.fontSize_18
+                      : AppFontStyles.fontSize_28,
+                  fontVariations: [
+                    isSelected
+                        ? AppFontStyles.boldFontVariation
+                        : AppFontStyles.boldFontVariation
+                  ],
                   fontFamily: AppFontStyles.urbanistFontFamily,
                   color: isSelected
                       ? const Color(0xFF3FB7FF)
@@ -132,8 +137,7 @@ class _InlineTimePickerState extends State<InlineTimePicker> {
               selectedIndex: hourIndex,
               label: (i) => (i + 1).toString().padLeft(2, '0'),
               onSelected: (i) {
-                VibrationHelper.vibrate(
-                    duration: 15, amplitude: 100);
+                VibrationHelper.vibrate(duration: 15, amplitude: 100);
                 setState(() {
                   hourIndex = i;
                   hour = i + 1;
@@ -141,7 +145,6 @@ class _InlineTimePickerState extends State<InlineTimePicker> {
                 _emit();
               },
             ),
-
             const Padding(
               padding: EdgeInsets.symmetric(horizontal: 4),
               child: Text(
@@ -149,15 +152,13 @@ class _InlineTimePickerState extends State<InlineTimePicker> {
                 style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
               ),
             ),
-
             _wheel(
               controller: minuteCtrl,
               count: 60,
               selectedIndex: minuteIndex,
               label: (i) => i.toString().padLeft(2, '0'),
               onSelected: (i) {
-                VibrationHelper.vibrate(
-                    duration: 15, amplitude: 100);
+                VibrationHelper.vibrate(duration: 15, amplitude: 100);
                 setState(() {
                   minuteIndex = i;
                   minute = i;
@@ -165,26 +166,22 @@ class _InlineTimePickerState extends State<InlineTimePicker> {
                 _emit();
               },
             ),
-
             _wheel(
-              controller: amPmCtrl,
-              count: 2,
-              width: 40,
-              selectedIndex: amPmIndex,
-              label: (i) => i == 0 ? 'AM' : 'PM',
-              onSelected: (i) {
-                VibrationHelper.vibrate(
-                    duration: 15, amplitude: 100);
-                setState(() {
-                  amPmIndex = i;
-                  isAm = i == 0;
-                });
-                _emit();
-              },
-              isAmPm: true
-            ),
+                controller: amPmCtrl,
+                count: 2,
+                width: 40,
+                selectedIndex: amPmIndex,
+                label: (i) => i == 0 ? 'AM' : 'PM',
+                onSelected: (i) {
+                  VibrationHelper.vibrate(duration: 15, amplitude: 100);
+                  setState(() {
+                    amPmIndex = i;
+                    isAm = i == 0;
+                  });
+                  _emit();
+                },
+                isAmPm: true),
           ],
-
         ),
         Positioned.fill(
           child: IgnorePointer(
