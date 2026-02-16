@@ -124,16 +124,16 @@ class HydrationCubit extends Cubit<HydrationState> {
     try {
       final slotsFromDb = await _dbHelper.getAllSlots();
 
-      final updatedSlots = slotsFromDb.map((slot) {
-        final isCompleted = Random().nextBool();
+      // final updatedSlots = slotsFromDb.map((slot) {
+      //   final isCompleted = Random().nextBool();
 
-        return slot.copyWith(
-          status: isCompleted
-              ? HydrationStatus.completed
-              : HydrationStatus.pending,
-          waterDrank: isCompleted ? slot.amount : 0.0,
-        );
-      }).toList();
+      //   return slot.copyWith(
+      //     status: isCompleted
+      //         ? HydrationStatus.completed
+      //         : HydrationStatus.pending,
+      //     waterDrank: isCompleted ? slot.amount : 0.0,
+      //   );
+      // }).toList();
 
       if (slotsFromDb.isEmpty) {
         emit(state.copyWith(entries: []));
@@ -142,7 +142,7 @@ class HydrationCubit extends Cubit<HydrationState> {
             .where((e) => e.status == HydrationStatus.completed)
             .fold(0.0, (sum, e) => sum + e.amount);
 
-        emit(state.copyWith(entries: updatedSlots, totalDrank: total.round()));
+        emit(state.copyWith(entries: slotsFromDb, totalDrank: total.round()));
       }
     } catch (e) {
       log("[Cubit] Failed to load slots from DB: $e");
