@@ -27,8 +27,7 @@ class NotificationService {
   final FlutterLocalNotificationsPlugin _plugin =
       FlutterLocalNotificationsPlugin();
 
-  static const int _scheduleDaysAhead = 1;
-  static const int _scheduleDaysAheadRepeat = 1;
+  static const int _scheduleDaysAheadRepeat = 2;
   NotificationTapCallback? onNotificationTap;
 
   Future<void> init({NotificationTapCallback? onTap}) async {
@@ -273,7 +272,7 @@ class NotificationService {
   Future<void> rescheduleSlotForFuture(
     HydrationEntry updatedEntry,
   ) async {
-    for (int dayOffset = 0; dayOffset < _scheduleDaysAhead; dayOffset++) {
+    for (int dayOffset = 0; dayOffset < _scheduleDaysAheadRepeat; dayOffset++) {
       final id = _buildNotificationId(updatedEntry.slot, dayOffset);
 
       await _plugin.cancel(id);

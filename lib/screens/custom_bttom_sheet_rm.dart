@@ -38,11 +38,12 @@ class ReminderBottomSheet extends StatelessWidget {
           decoration: const BoxDecoration(
             borderRadius: BorderRadius.only(
                 topLeft: Radius.circular(20), topRight: Radius.circular(20)),
-            image: DecorationImage(
-              image: AssetImage(
-                  "assets/images/app_background.png"), // your image path
-              fit: BoxFit.cover,
-            ),
+            // image: DecorationImage(
+            //   image: AssetImage(
+            //       "assets/images/app_background.png"), // your image path
+            //   fit: BoxFit.cover,
+            // ),
+            color: AppColors.white,
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,

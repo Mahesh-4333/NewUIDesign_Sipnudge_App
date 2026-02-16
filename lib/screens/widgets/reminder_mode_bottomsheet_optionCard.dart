@@ -29,13 +29,12 @@ class ReminderOptionCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-
       padding: EdgeInsets.all(AppDimensions.dim16.w),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(AppDimensions.radius_16.r),
         color: AppColors.white,
         border: Border.all(
-          color: isActive ? AppColors.batteryIndicator : AppColors.darkLavender,
+          color: isActive ? AppColors.batteryIndicator : AppColors.gray400,
           width: isActive ? AppDimensions.dim3.w : AppDimensions.dim1.w,
         ),
         boxShadow : [
@@ -50,46 +49,47 @@ class ReminderOptionCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           /// Title + Switch
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
                     title,
                     style: TextStyle(
                       fontFamily: AppFontStyles.urbanistFontFamily,
-                      fontSize: AppFontStyles.fontSize_16.sp,
+                      fontSize: AppFontStyles.fontSize_18.sp,
                       fontVariations: [AppFontStyles.fontWeightVariation600],
                       color: AppColors.bluegray,
                       letterSpacing: 0.2,
                     ),
                   ),
-                  SizedBox(height: AppDimensions.dim10,),
-                  if (subtitle != null)
-                    Text(
-                      subtitle!,
-                      style: TextStyle(
-                        fontFamily: AppFontStyles.urbanistFontFamily,
-                        fontSize: AppFontStyles.fontSize_14.sp,
-                        fontVariations: [AppFontStyles.semiBoldFontVariation],
-                        color: AppColors.bluegray,
-                        letterSpacing: 0.2,
-                      ),
-                    ),
+                  CustomToggleSwitch(
+                    value: isActive,
+                    onChanged: onToggle,
+                    activeTrackColor: activeTrackColor ?? AppColors.violetBlue,
+                    inactiveTrackColor: AppColors.tuna,
+                  ),
                 ],
               ),
-              CustomToggleSwitch(
-                value: isActive,
-                onChanged: onToggle,
-                activeTrackColor: activeTrackColor ?? AppColors.violetBlue,
-                inactiveTrackColor: AppColors.tuna,
-              )
+              SizedBox(height: AppDimensions.dim5,),
+              if (subtitle != null)
+                Text(
+                  subtitle!,
+                  style: TextStyle(
+                    fontFamily: AppFontStyles.urbanistFontFamily,
+                    fontSize: AppFontStyles.fontSize_16.sp,
+                    fontVariations: [AppFontStyles.semiBoldFontVariation],
+                    color: AppColors.bluegray,
+                    letterSpacing: 0.2,
+                  ),
+                ),
             ],
           ),
-          SizedBox(height: AppDimensions.dim10,),
-          Divider(color: AppColors.blueWaterIntake.withValues(alpha: 0.8), thickness: 1, height: AppDimensions.dim20.h,),
+          SizedBox(height: AppDimensions.dim5,),
+          Divider(color: Color(0xffA8DCFF), thickness: 1, height: AppDimensions.dim20.h,),
           SizedBox(height: AppDimensions.dim5.h),
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -104,7 +104,7 @@ class ReminderOptionCard extends StatelessWidget {
                         Icon(
                           Icons.check,
                           color: AppColors.bluegray,
-                          size: AppFontStyles.fontSize_18.sp,
+                          size: AppFontStyles.fontSize_19.sp,
                         ),
                         SizedBox(width: AppDimensions.dim9.w),
                         Expanded(
@@ -112,7 +112,7 @@ class ReminderOptionCard extends StatelessWidget {
                             f,
                             style: TextStyle(
                               fontFamily: AppFontStyles.urbanistFontFamily,
-                              fontSize: AppFontStyles.fontSize_14.sp,
+                              fontSize: AppFontStyles.fontSize_16.sp,
                               fontVariations: [
                                 AppFontStyles.semiBoldFontVariation,
                               ],

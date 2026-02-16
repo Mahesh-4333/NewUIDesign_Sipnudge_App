@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:equatable/equatable.dart';
 
 /// Represents the completion status of a hydration slot.
-enum HydrationStatus { pending, completed }
+enum HydrationStatus { pending, completed, ongoing }
 
 /// Represents the different hydration slots during the day.
 enum HydrationSlot {

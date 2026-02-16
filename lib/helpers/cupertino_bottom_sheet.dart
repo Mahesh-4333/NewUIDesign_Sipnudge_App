@@ -104,6 +104,16 @@ Future<Map<String, dynamic>?> showCupertinoPickerBottomSheet({
                               selectedValue = index + minValue; // HOURS
                             });
                           },
+                          selectionOverlay: Center(
+                            child: Container(
+                              height: 40,
+                              margin: const EdgeInsets.symmetric(horizontal: 20),
+                              decoration: BoxDecoration(
+                                color: AppColors.gray400.withValues(alpha: 0.2),
+                                borderRadius: BorderRadius.circular(30),
+                              ),
+                            ),
+                          ),
                           scrollController: FixedExtentScrollController(
                             initialItem: initialValue - minValue,
                           ),
@@ -137,6 +147,16 @@ Future<Map<String, dynamic>?> showCupertinoPickerBottomSheet({
                                     index + secondaryMinValue;
                               });
                             },
+                            selectionOverlay: Center(
+                              child: Container(
+                                height: 40,
+                                margin: const EdgeInsets.symmetric(horizontal: 20),
+                                decoration: BoxDecoration(
+                                  color: AppColors.gray400.withValues(alpha: 0.2),
+                                  borderRadius: BorderRadius.circular(30),
+                                ),
+                              ),
+                            ),
                             scrollController: FixedExtentScrollController(
                               initialItem:
                                   (secondaryInitialValue ?? secondaryMinValue) -

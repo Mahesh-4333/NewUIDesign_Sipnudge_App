@@ -196,7 +196,7 @@ class SharedPrefsHelper {
 
   static Future<int> getAlarmRepeatIndex() async {
     final prefs = await SharedPreferences.getInstance();
-    return prefs.getInt(_keyAlarmRepeatIndex) ?? 2; // Default to 10 mins (index 2)
+    return prefs.getInt(_keyAlarmRepeatIndex) ?? 0; // Default to 10 mins (index 2)
   }
 
   static Future<void> setStopWhenFull(bool value) async {

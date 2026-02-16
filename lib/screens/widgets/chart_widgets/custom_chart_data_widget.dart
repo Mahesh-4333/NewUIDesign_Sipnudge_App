@@ -259,4 +259,62 @@ class _CustomChartDataWidgetState extends State<CustomChartDataWidget> {
       ),
     );
   }
+
+  List<HydrationDaySummary> generateMockWeeklyData(DateTime currentDate) {
+    final weekStart =
+    currentDate.subtract(Duration(days: currentDate.weekday - 1));
+
+    return List.generate(7, (i) {
+      final date = DateTime(
+        weekStart.year,
+        weekStart.month,
+        weekStart.day - i,
+      );
+
+      return HydrationDaySummary(
+        date: date,
+        dayIndex: i,
+        target: 3000, // 3L target
+        consumed: 1000 + (i * 250), // increasing mock intake
+      );
+    });
+  }
+
+  List<HydrationDaySummary> generateMockMonthlyData(DateTime currentDate) {
+    final year = currentDate.year;
+    final month = currentDate.month;
+    final lastDay = DateTime(year, month + 1, 0).day;
+
+    return List.generate(lastDay, (i) {
+      final date = DateTime(year, month, i + 1);
+
+      return HydrationDaySummary(
+        date: date,
+        dayIndex: i,
+        target: 3000,
+        consumed: (1500 + (i * 100)) % 3000, // varied mock pattern
+      );
+    });
+  }
+
+  List<HydrationDaySummary> generateMockYearlyData(int year) {
+    List<HydrationDaySummary> data = [];
+
+    for (int month = 1; month <= 12; month++) {
+      final daysInMonth = DateTime(year, month + 1, 0).day;
+
+      for (int day = 1; day <= daysInMonth; day++) {
+        data.add(
+          HydrationDaySummary(
+            date: DateTime(year, month, day),
+            dayIndex: day,
+            target: 3000,
+            consumed: 1000 + (month * 100), // month-based variation
+          ),
+        );
+      }
+    }
+
+    return data;
+  }
 }

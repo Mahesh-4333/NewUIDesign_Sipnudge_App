@@ -3,6 +3,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:hydrify/constants/app_colors.dart';
 import 'package:hydrify/constants/app_dimensions.dart';
 import 'package:hydrify/constants/app_font_styles.dart';
+import 'package:hydrify/helpers/vibration_helper.dart';
 
 class InlineTimePicker extends StatefulWidget {
   final ValueChanged<TimeOfDay> onChanged;
@@ -70,7 +71,7 @@ class _InlineTimePickerState extends State<InlineTimePicker> {
     required int selectedIndex,
     required String Function(int) label,
     required void Function(int) onSelected,
-    double width = 40,
+    double width = 32,
     bool isAmPm = false
   }) {
     return SizedBox(
@@ -131,6 +132,8 @@ class _InlineTimePickerState extends State<InlineTimePicker> {
               selectedIndex: hourIndex,
               label: (i) => (i + 1).toString().padLeft(2, '0'),
               onSelected: (i) {
+                VibrationHelper.vibrate(
+                    duration: 15, amplitude: 100);
                 setState(() {
                   hourIndex = i;
                   hour = i + 1;
@@ -153,6 +156,8 @@ class _InlineTimePickerState extends State<InlineTimePicker> {
               selectedIndex: minuteIndex,
               label: (i) => i.toString().padLeft(2, '0'),
               onSelected: (i) {
+                VibrationHelper.vibrate(
+                    duration: 15, amplitude: 100);
                 setState(() {
                   minuteIndex = i;
                   minute = i;
@@ -164,10 +169,12 @@ class _InlineTimePickerState extends State<InlineTimePicker> {
             _wheel(
               controller: amPmCtrl,
               count: 2,
-              width: 50,
+              width: 40,
               selectedIndex: amPmIndex,
               label: (i) => i == 0 ? 'AM' : 'PM',
               onSelected: (i) {
+                VibrationHelper.vibrate(
+                    duration: 15, amplitude: 100);
                 setState(() {
                   amPmIndex = i;
                   isAm = i == 0;

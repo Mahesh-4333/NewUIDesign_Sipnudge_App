@@ -7,3 +7,10 @@ enum ReminderInterval {
   final int minutes;
   final String label;
 }
+
+
+enum IntakeTimelineType {
+  pending,
+  completed,
+  ongoing
+}

@@ -18,11 +18,10 @@ class InlineTimeColumnUpdateWidget extends StatelessWidget {
       children: [
         Text(label,
             style: TextStyle(
-                color: AppColors.greyColor,
-                fontSize: AppFontStyles.fontSize_10,
+                color: AppColors.greyColorText1,
+                fontSize: AppFontStyles.fontSize_12,
                 fontFamily: AppFontStyles.urbanistFontFamily,
-                fontWeight: FontWeight.bold)),
-        SizedBox(height: AppDimensions.dim10.h),
+                fontVariations: [AppFontStyles.boldFontVariation]),),
         // Simplified time display as in screenshot
         Row(
           mainAxisSize: MainAxisSize.min,
@@ -30,8 +29,6 @@ class InlineTimeColumnUpdateWidget extends StatelessWidget {
             Transform.scale(
               scale: 0.9,
               child: SizedBox(
-                height: 120,
-                width: 145,
                 child: InlineTimePicker(onChanged: (newTime) {
                   onTimeChanged(DateTime(
                     0,
