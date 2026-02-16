@@ -168,6 +168,7 @@ class BottleDataCubit extends Cubit<BottleDataState> {
     try {
       final db = await _dbHelper.database;
       await db.delete(DatabaseHelper.tableName);
+      await db.delete(DatabaseHelper.hydrationSummaryTableName);
 
       emit(BottleDataState.initial());
       print("✅ All bottle tracking data cleared.");
