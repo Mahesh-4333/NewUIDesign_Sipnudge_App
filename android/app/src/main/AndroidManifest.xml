@@ -33,6 +33,7 @@
     <application
         android:label="NewUI_test_V2x11_New_Sipnudge_V2x11"
         android:name="${applicationName}"
+        android:allowBackup="false"
         android:icon="@mipmap/launcher_icon">
 
         <activity
