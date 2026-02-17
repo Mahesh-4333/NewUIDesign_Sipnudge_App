@@ -99,7 +99,7 @@ Future<Map<String, dynamic>?> showCupertinoPickerBottomSheet({
                           itemExtent: 40,
                           onSelectedItemChanged: (int index) {
                             VibrationHelper.vibrate(
-                                duration: 15, amplitude: 100);
+                                duration: 15, amplitude: 100, playSound: true);
                             setState(() {
                               selectedValue = index + minValue; // HOURS
                             });
@@ -141,7 +141,7 @@ Future<Map<String, dynamic>?> showCupertinoPickerBottomSheet({
                             itemExtent: 40,
                             onSelectedItemChanged: (int index) {
                               VibrationHelper.vibrate(
-                                  duration: 15, amplitude: 100);
+                                  duration: 15, amplitude: 100, playSound: true);
                               setState(() {
                                 selectedSecondaryValue =
                                     index + secondaryMinValue;

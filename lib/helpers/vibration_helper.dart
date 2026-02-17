@@ -1,9 +1,31 @@
+import 'package:flutter/services.dart';
+import 'package:hydrify/constants/assets_path.dart';
 import 'package:vibration/vibration.dart';
+import 'package:audioplayers/audioplayers.dart';
 
 class VibrationHelper {
-  static Future<void> vibrate({int duration = 250, int amplitude = -1}) async {
+  static final AudioPlayer _player = AudioPlayer();
+
+  static Future<void> vibrate({
+    int duration = 250,
+    int amplitude = -1,
+    bool playSound = false,
+  }) async {
+    // vibration
     if (await Vibration.hasVibrator() ?? false) {
-      Vibration.vibrate(duration: duration, amplitude: amplitude);
+      await Vibration.vibrate(
+        duration: duration,
+        amplitude: amplitude,
+      );
+    }
+
+    // sound (only if requested)
+    if (playSound) {
+      await _player.stop(); // prevent overlap
+      await _player.play(
+        AssetSource(AssetsPath.clickSound),
+        volume: 0.4,
+      );
     }
   }
 
@@ -33,5 +55,6 @@ class VibrationHelper {
 
   static void stop() {
     Vibration.cancel();
+    _player.stop();
   }
 }

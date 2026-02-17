@@ -39,7 +39,7 @@ class _CustomChartDataWidgetState extends State<CustomChartDataWidget> {
           boxShadow: [
             BoxShadow(
               blurRadius: AppDimensions.radius_4,
-              color: AppColors.black.withOpacity(.25),
+              color: AppColors.black.withAlpha((0.25 * 255).round()),
               offset: Offset(
                 AppDimensions.dim2,
                 AppDimensions.dim2,
@@ -83,10 +83,10 @@ class _CustomChartDataWidgetState extends State<CustomChartDataWidget> {
                   boxShadow: [
                     BoxShadow(
                       blurRadius: AppDimensions.radius_5,
-                      color: Colors.black.withOpacity(.4),
+                      color: Colors.black.withAlpha((0.4 * 255).round()),
                       offset: Offset(
                         AppDimensions.dim2,
-                        AppDimensions.dim2,
+                          AppDimensions.dim2
                       ),
                     )
                   ],
@@ -113,9 +113,9 @@ class _CustomChartDataWidgetState extends State<CustomChartDataWidget> {
                         ),
                         child: SvgPicture.asset(
                           "assets/images/bar_chart_ic.svg",
-                          color: _isColumnChartSelected
+                          colorFilter: _isColumnChartSelected
                               ? null
-                              : AppColors.disabledGreyColor,
+                              : ColorFilter.mode(AppColors.disabledGreyColor, BlendMode.srcIn),
                         ),
                       ),
                     ),
@@ -137,9 +137,9 @@ class _CustomChartDataWidgetState extends State<CustomChartDataWidget> {
                                 : Color(0XFF369FFF)),
                         child: SvgPicture.asset(
                           "assets/images/spline_chart_ic.svg",
-                          color: _isColumnChartSelected
-                              ? AppColors.disabledGreyColor
-                              : AppColors.white,
+                          colorFilter: _isColumnChartSelected
+                              ? ColorFilter.mode(AppColors.disabledGreyColor, BlendMode.srcIn)
+                              : const ColorFilter.mode(AppColors.white, BlendMode.srcIn),
                         ),
                       ),
                     )
@@ -155,7 +155,6 @@ class _CustomChartDataWidgetState extends State<CustomChartDataWidget> {
             builder: (context, state) {
               return BlocBuilder<FilterCubit, FilterState>(
                 builder: (context, filterState) {
-                  final filterCubit = context.read<FilterCubit>();
                   DateTime startDate;
                   DateTime endDate;
 
@@ -238,7 +237,7 @@ class _CustomChartDataWidgetState extends State<CustomChartDataWidget> {
 
                       return Visibility(
                         visible: _isColumnChartSelected,
-                        replacement: SyncfusionAreaChartWidget(
+                        replacement: FlAreaChartWidget(
                           interval: filterState.currentInterval,
                           currentDate: filterState.currentDate,
                           bottleData: snapshot.data ?? [],

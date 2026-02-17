@@ -68,14 +68,14 @@ class _InlineTimePickerState extends State<InlineTimePicker> {
 
   Widget _wheel(
       {required FixedExtentScrollController controller,
-      required int count,
-      required int selectedIndex,
-      required String Function(int) label,
-      required void Function(int) onSelected,
-      double width = 32,
-      bool isAmPm = false}) {
+        required int count,
+        required int selectedIndex,
+        required String Function(int) label,
+        required void Function(int) onSelected,
+        double width = 32,
+        bool isAmPm = false}) {
     return SizedBox(
-      width: width.w,
+      width: width,
       height: 120,
       child: ListWheelScrollView.useDelegate(
         controller: controller,
@@ -137,7 +137,7 @@ class _InlineTimePickerState extends State<InlineTimePicker> {
               selectedIndex: hourIndex,
               label: (i) => (i + 1).toString().padLeft(2, '0'),
               onSelected: (i) {
-                VibrationHelper.vibrate(duration: 15, amplitude: 100);
+                VibrationHelper.vibrate(duration: 15, amplitude: 100, playSound: true);
                 setState(() {
                   hourIndex = i;
                   hour = i + 1;
@@ -158,7 +158,7 @@ class _InlineTimePickerState extends State<InlineTimePicker> {
               selectedIndex: minuteIndex,
               label: (i) => i.toString().padLeft(2, '0'),
               onSelected: (i) {
-                VibrationHelper.vibrate(duration: 15, amplitude: 100);
+                VibrationHelper.vibrate(duration: 15, amplitude: 100, playSound: true);
                 setState(() {
                   minuteIndex = i;
                   minute = i;
@@ -173,7 +173,7 @@ class _InlineTimePickerState extends State<InlineTimePicker> {
                 selectedIndex: amPmIndex,
                 label: (i) => i == 0 ? 'AM' : 'PM',
                 onSelected: (i) {
-                  VibrationHelper.vibrate(duration: 15, amplitude: 100);
+                  VibrationHelper.vibrate(duration: 15, amplitude: 100, playSound: true);
                   setState(() {
                     amPmIndex = i;
                     isAm = i == 0;

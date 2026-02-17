@@ -1,5 +1,6 @@
 import 'dart:developer';
 import 'dart:io';
+import 'dart:math' as math;
 
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:fluttertoast/fluttertoast.dart';
@@ -143,8 +144,9 @@ class NotificationService {
           subtitle: "Swipe to stop the reminder",
           interruptionLevel: isSilent
               ? InterruptionLevel.passive
-              : InterruptionLevel.timeSensitive,
+              : InterruptionLevel.critical,
           categoryIdentifier: 'hydration_category',
+            criticalSoundVolume: 0.9, // 0.0 to 1.0
         ),
       ),
       payload: payload,
@@ -176,7 +178,7 @@ class NotificationService {
     final alarmRepeatIndex = await SharedPrefsHelper.getAlarmRepeatIndex();
 
     // Map index to repeat counts (3, 5, 10 times)
-    final alarmRepeatTimes = [3, 5, 10][alarmRepeatIndex];
+    final alarmRepeatTimes = [1, 3, 5, 10][alarmRepeatIndex];
 
     for (int dayOffset = 0; dayOffset < _scheduleDaysAheadRepeat; dayOffset++) {
       final baseDay = today.add(Duration(days: dayOffset));
@@ -233,9 +235,19 @@ class NotificationService {
   }) async {
     final id = _buildNotificationId(entry.slot, dayOffset, repeatIndex);
 
+    final nowDate = DateTime.now();
+    final today = DateTime(nowDate.year, nowDate.month, nowDate.day);
+    final endDateTime = today.add(Duration(
+      days: dayOffset,
+      hours: entry.endTime.hour,
+      minutes: entry.endTime.minute,
+    ));
+
+    final remainingMinutes = endDateTime.difference(notifyAt).inMinutes;
+
     final title = "Hydration Reminder";
     final body =
-        "Only 10 minutes left for ${entry.slot.label} – Drink ${entry.amount} ml";
+        "Only ${math.max(0, remainingMinutes)} minutes left for ${entry.slot.label} – Drink ${entry.amount} ml";
 
     bool isRingtoneFeedbackEnabled =
         await SharedPrefsHelper.getRingtoneFeedBack();

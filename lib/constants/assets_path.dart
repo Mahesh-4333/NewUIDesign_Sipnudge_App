@@ -38,5 +38,7 @@ class AssetsPath {
 
   static const String updateSlot = "assets/intake_timeline/update_slot.png";
 
+  static const String clickSound = "sound/click_sound.mp3";
+
 
 }

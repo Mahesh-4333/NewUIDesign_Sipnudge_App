@@ -73,11 +73,6 @@ class _HomeScreenState extends State<HomeScreen> {
       },
     );
 
-    // DatabaseHelper().getAllSlots().then((slots) async {
-    //   await NotificationService().resetAllHydrationReminders(slots);
-    //   await NotificationService().scheduleHydrationRemindersForFuture(slots);
-    // });
-
     //==================================================================
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       final prefs = await SharedPreferences.getInstance();

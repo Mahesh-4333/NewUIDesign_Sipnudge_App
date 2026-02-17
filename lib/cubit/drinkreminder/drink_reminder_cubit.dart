@@ -9,7 +9,7 @@ import 'package:hydrify/services/notification/notification_service.dart';
 class DrinkReminderCubit extends Cubit<DrinkReminderState> {
   final HydrationCubit hydrationCubit;
 
-  final List<String> alarmRepeatOptions = ['3 Times', '5 Times', '10 Times'];
+  final List<String> alarmRepeatOptions = ['1 Times', '3 Times', '5 Times', '10 Times'];
   DrinkReminderCubit({required this.hydrationCubit}) : super(const DrinkReminderState()){
     _init();
     // _setupHydrationListener();

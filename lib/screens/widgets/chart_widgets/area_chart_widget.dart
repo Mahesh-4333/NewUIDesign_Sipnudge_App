@@ -1,8 +1,6 @@
-import 'dart:developer';
-
+import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:fluttertoast/fluttertoast.dart';
 import 'package:hydrify/constants/app_colors.dart';
 import 'package:hydrify/constants/app_dimensions.dart';
 import 'package:hydrify/constants/app_font_styles.dart';
@@ -11,14 +9,13 @@ import 'package:hydrify/models/chart_data.dart';
 import 'package:hydrify/models/hydration_summary.dart';
 import 'package:hydrify/screens/widgets/chart_widgets/column_chart_widget.dart'; // CustomYAxis
 import 'package:hydrify/screens/widgets/chart_widgets/tool_tip_widget.dart'; // CustomChartToolTip
-import 'package:syncfusion_flutter_charts/charts.dart';
 
-class SyncfusionAreaChartWidget extends StatefulWidget {
+class FlAreaChartWidget extends StatefulWidget {
   final FilterInterval interval;
   final DateTime currentDate;
   final List<HydrationDaySummary> bottleData;
 
-  const SyncfusionAreaChartWidget({
+  const FlAreaChartWidget({
     super.key,
     required this.interval,
     required this.currentDate,
@@ -26,19 +23,15 @@ class SyncfusionAreaChartWidget extends StatefulWidget {
   });
 
   @override
-  State<SyncfusionAreaChartWidget> createState() =>
-      _SyncfusionAreaChartWidgetState();
+  State<FlAreaChartWidget> createState() => _FlAreaChartWidgetState();
 }
 
-class _SyncfusionAreaChartWidgetState extends State<SyncfusionAreaChartWidget> {
+class _FlAreaChartWidgetState extends State<FlAreaChartWidget> {
   late List<ChartData> chartData;
   final ScrollController _scrollController = ScrollController();
-  late SelectionBehavior _selectionBehavior;
-  late TooltipBehavior _tooltipBehavior;
-  int? _selectedPointIndex;
-  Offset? _touchPosition;
-  // Inside _SyncfusionAreaChartWidgetState
-  ChartSeriesController? _seriesController;
+  
+  int? _touchedIndex;
+  Offset? _touchOffset;
 
   final List<String> weekLabels = const [
     'Mon',
@@ -69,49 +62,13 @@ class _SyncfusionAreaChartWidgetState extends State<SyncfusionAreaChartWidget> {
   void initState() {
     super.initState();
     _updateChartData();
-    _initializeSelectionBehavior();
-    _initializeTooltipBehavior();
+    _scrollController.addListener(_scrollListener);
   }
 
-  void _initializeSelectionBehavior() {
-    _selectionBehavior = SelectionBehavior(
-      enable: true,
-      toggleSelection: true,
-      selectedColor: const Color(0xFFA22EFF),
-      unselectedColor: const Color(0xFF42A5FF),
-      selectedBorderColor: Colors.white,
-      selectedBorderWidth: 2,
-      unselectedBorderColor: const Color(0xFF42A5FF),
-      unselectedBorderWidth: AppDimensions.dim3.w,
-    );
-  }
-
-  void _initializeTooltipBehavior() {
-    _tooltipBehavior = TooltipBehavior(
-      enable: true,
-      activationMode: ActivationMode.singleTap,
-      tooltipPosition: TooltipPosition.pointer,
-      duration: 1000,
-      color: Colors.transparent,
-      borderColor: Colors.transparent,
-      borderWidth: 0,
-      canShowMarker: true,
-      shouldAlwaysShow: false,
-      builder: (dynamic data, dynamic point, dynamic series, int pointIndex,
-          int seriesIndex) {
-        if (data == null || data is! ChartData) {
-          return const SizedBox.shrink();
-        }
-
-        final ChartData chartDataPoint = data;
-        final liters = (chartDataPoint.completionVolume ?? 0) / 1000;
-
-        return CustomChartToolTip(
-          isPercent: false,
-          percent: num.parse(liters.toStringAsFixed(2)),
-        );
-      },
-    );
+  void _scrollListener() {
+    if (_touchedIndex != null) {
+      setState(() {});
+    }
   }
 
   void _updateChartData() {
@@ -209,15 +166,12 @@ class _SyncfusionAreaChartWidgetState extends State<SyncfusionAreaChartWidget> {
       chartData = [];
     }
 
-    // Reset selection when data changes
-    _selectedPointIndex = null;
-
-    print(
-        "DEBUG [SyncfusionArea]: Interval=${widget.interval}, points=${chartData.length}");
+    _touchedIndex = null;
+    _touchOffset = null;
   }
 
   @override
-  void didUpdateWidget(covariant SyncfusionAreaChartWidget oldWidget) {
+  void didUpdateWidget(covariant FlAreaChartWidget oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.interval != widget.interval ||
         oldWidget.currentDate != widget.currentDate ||
@@ -234,6 +188,9 @@ class _SyncfusionAreaChartWidgetState extends State<SyncfusionAreaChartWidget> {
     final chartWidth = isWeekly
         ? AppDimensions.dim365.w
         : pointWidth * (chartData.isEmpty ? 1 : chartData.length);
+    final expandedWidth = AppDimensions.dim365.w - AppDimensions.dim40.w;
+    final drawingWidth = isWeekly ? expandedWidth - AppDimensions.dim9.w : chartWidth - AppDimensions.dim9.w - (pointWidth / 2);
+    final drawingHeight = AppDimensions.dim262.h - AppDimensions.dim9.h - 32.h;
 
     return Container(
       color: Colors.transparent,
@@ -251,14 +208,11 @@ class _SyncfusionAreaChartWidgetState extends State<SyncfusionAreaChartWidget> {
                 height: AppDimensions.dim262.h,
                 child: Row(
                   children: [
-                    // Sticky Y axis (fixed)
                     SizedBox(
                       width: AppDimensions.dim40.w,
                       height: AppDimensions.dim265.h,
                       child: const CustomYAxis(maxY: 100, divisions: 5),
                     ),
-
-                    // Chart area (scrollable horizontally for monthly/yearly)
                     Expanded(
                       child: isWeekly
                           ? Container(
@@ -267,8 +221,7 @@ class _SyncfusionAreaChartWidgetState extends State<SyncfusionAreaChartWidget> {
                                 left: AppDimensions.dim9.w,
                                 top: AppDimensions.dim9.h,
                               ),
-                              child:
-                                  _buildSyncfusionChart(chartWidth, isWeekly),
+                              child: _buildAreaChart(chartWidth, isWeekly),
                             )
                           : SingleChildScrollView(
                               controller: _scrollController,
@@ -282,8 +235,7 @@ class _SyncfusionAreaChartWidgetState extends State<SyncfusionAreaChartWidget> {
                                   right: pointWidth / 2,
                                   top: AppDimensions.dim9.h,
                                 ),
-                                child:
-                                    _buildSyncfusionChart(chartWidth, isWeekly),
+                                child: _buildAreaChart(chartWidth, isWeekly),
                               ),
                             ),
                     ),
@@ -291,15 +243,42 @@ class _SyncfusionAreaChartWidgetState extends State<SyncfusionAreaChartWidget> {
                 ),
               ),
             ),
-            if (_touchPosition != null && _selectedPointIndex != null)
+            if (_touchedIndex != null)
               Positioned(
-                left: (_touchPosition?.dx ?? 0) -
-                    (_scrollController.hasClients
-                        ? _scrollController.offset
-                        : 0) +
-                    15,
-                top: _touchPosition!.dy,
-                child: _buildManualTooltip(),
+                left: () {
+                  final data = chartData[_touchedIndex!];
+                  double localX;
+                  if (chartData.length > 1) {
+                    localX = (_touchedIndex! / (chartData.length - 1)) * drawingWidth;
+                  } else {
+                    localX = 0;
+                  }
+                  
+                  double left = AppDimensions.dim40.w +
+                      AppDimensions.dim14.w +
+                      localX;
+                  
+                  if (!isWeekly && _scrollController.hasClients) {
+                    left -= _scrollController.offset;
+                  }
+                  // Center the tooltip (width is 55.w)
+                  return left - (AppDimensions.dim55.w / 2);
+                }(),
+                top: () {
+                  final data = chartData[_touchedIndex!];
+                  double percent = data.completionPercent;
+                  // Map percent 0-100 to 0-drawingHeight (top to bottom)
+                  double localY = (1 - (percent / 100)) * drawingHeight;
+                  
+                  // The chart container is at the bottom of the 324.h stack with height 262.h
+                  // So the chart content starts at 324.h - 262.h = 62.h
+                  // Plus the internal padding top of 9.h
+                  double chartTopOffset = 62.h + AppDimensions.dim9.h;
+                  // Put the tooltip above the point (tooltip height is 55.h)
+                  // Added extra 5.h gap (approx 10% of tooltip height)
+                  return chartTopOffset + localY - AppDimensions.dim55.h - 15.h;
+                }(),
+                child: _buildTooltip(),
               ),
           ],
         ),
@@ -307,9 +286,8 @@ class _SyncfusionAreaChartWidgetState extends State<SyncfusionAreaChartWidget> {
     );
   }
 
-  Widget _buildManualTooltip() {
-    log("=-=-=-= building manual tool tip =-=-=-=-=-=- ");
-    final data = chartData[_selectedPointIndex!];
+  Widget _buildTooltip() {
+    final data = chartData[_touchedIndex!];
     final liters = (data.completionVolume ?? 0) / 1000;
 
     return CustomChartToolTip(
@@ -318,113 +296,111 @@ class _SyncfusionAreaChartWidgetState extends State<SyncfusionAreaChartWidget> {
     );
   }
 
-  Widget _buildSyncfusionChart(double chartWidth, bool isWeekly) {
-    return SfCartesianChart(
-      backgroundColor: Colors.transparent,
-      selectionGesture: ActivationMode.singleTap,
-      selectionType: SelectionType.point,
-      enableMultiSelection: false,
-      tooltipBehavior: _tooltipBehavior,
-      primaryYAxis: NumericAxis(
-        isVisible: false,
-        minimum: 0,
-        maximum: 100,
-        interval: 20,
-        axisLine: const AxisLine(width: 0),
-        majorTickLines: const MajorTickLines(size: 0),
-      ),
-      primaryXAxis: CategoryAxis(
-        majorGridLines: const MajorGridLines(width: 0),
-        majorTickLines: MajorTickLines(width: 0),
-        axisLine: const AxisLine(width: 0),
-        labelPlacement: LabelPlacement.onTicks,
-        labelStyle: TextStyle(
-          color: AppColors.black,
-          fontFamily: AppFontStyles.urbanistFontFamily,
-          fontSize: AppFontStyles.fontSize_14,
-          fontVariations: [AppFontStyles.boldFontVariation],
+  Widget _buildAreaChart(double chartWidth, bool isWeekly) {
+    return LineChart(
+      LineChartData(
+        minY: 0,
+        maxY: 100,
+        gridData: FlGridData(show: false),
+        borderData: FlBorderData(show: false),
+        titlesData: FlTitlesData(
+          bottomTitles: AxisTitles(
+            sideTitles: SideTitles(
+              showTitles: true,
+              getTitlesWidget: (value, meta) {
+                int index = value.toInt();
+                if (index < 0 || index >= chartData.length) return const SizedBox();
+                return Padding(
+                  padding: EdgeInsets.only(top: 8.h),
+                  child: Text(
+                    chartData[index].x,
+                    style: TextStyle(
+                      color: AppColors.black,
+                      fontFamily: AppFontStyles.urbanistFontFamily,
+                      fontSize: AppFontStyles.fontSize_14,
+                      fontVariations: [AppFontStyles.boldFontVariation],
+                    ),
+                  ),
+                );
+              },
+              reservedSize: 32.h,
+            ),
+          ),
+          leftTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+          topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+          rightTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
         ),
-      ),
-      plotAreaBorderWidth: 0,
-      margin: EdgeInsets.zero,
-      onChartTouchInteractionUp: (tapArgs) {
-        setState(() {
-          _selectedPointIndex = null;
-          _touchPosition = null;
-        });
-      },
-      onChartTouchInteractionDown: (tapArgs) {
-        if (_seriesController != null) {
-          final CartesianChartPoint<dynamic> chartPoint =
-              _seriesController!.pixelToPoint(tapArgs.position);
-
-          setState(() {
-            final dynamic xValue = chartPoint.x;
-            int? targetIndex;
-
-            if (xValue is String) {
-              targetIndex = chartData.indexWhere((data) => data.x == xValue);
-            } else if (xValue is num) {
-              int idx = xValue.round();
-              if (idx >= 0 && idx < chartData.length) targetIndex = idx;
-            }
-
-            if (targetIndex != null && targetIndex != -1) {
-              _selectedPointIndex = targetIndex;
-
-              // FIX: Match the types <String, double> (or num) to avoid the Subtype error
-              final Offset pointInPixels = _seriesController!.pointToPixel(
-                CartesianChartPoint<String>(
-                  x: chartData[targetIndex].x,
-                  y: chartData[targetIndex].completionPercent,
-                ),
-              );
-
-              // We use the calculated pointInPixels.dy for vertical positioning
-              // We use tapArgs.position.dx for horizontal so it follows the finger/tap
-              _touchPosition = Offset(tapArgs.position.dx, pointInPixels.dy);
+        lineTouchData: LineTouchData(
+          touchSpotThreshold: 5,
+          touchCallback: (event, response) {
+            if (response != null &&
+                response.lineBarSpots != null &&
+                response.lineBarSpots!.isNotEmpty) {
+              final spot = response.lineBarSpots!.first;
+              if (spot.y != 0) {
+                setState(() {
+                  _touchedIndex = spot.spotIndex;
+                  _touchOffset = event.localPosition;
+                });
+              } else {
+                setState(() {
+                  _touchedIndex = null;
+                  _touchOffset = null;
+                });
+              }
             } else {
-              _selectedPointIndex = null;
-              _touchPosition = null;
+              setState(() {
+                _touchedIndex = null;
+                _touchOffset = null;
+              });
             }
-          });
-        }
-      },
-      series: <CartesianSeries<ChartData, String>>[
-        SplineAreaSeries<ChartData, String>(
-          dataSource: chartData,
-          onRendererCreated: (ChartSeriesController controller) {
-            _seriesController = controller;
           },
-          xValueMapper: (ChartData d, _) => d.x,
-          yValueMapper: (ChartData d, _) => d.completionPercent,
-
-          splineType: SplineType.natural, // makes it smooth & rounded
-
-          borderColor: const Color(0xFF42A5FF),
-          borderWidth: AppDimensions.dim3.w,
-
-          markerSettings: MarkerSettings(
-            isVisible: true,
-            height: AppDimensions.dim10.h,
-            width: AppDimensions.dim10.h,
-            borderWidth: AppDimensions.dim4.w,
-            borderColor: const Color(0xFF42A5FF),
-            color: AppColors.white,
-            shape: DataMarkerType.circle,
-          ),
-
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              AppColors.blueGradient.withOpacity(0.6),
-              AppColors.blueGradient.withOpacity(0.1),
-            ],
+          handleBuiltInTouches: false,
+          touchTooltipData: LineTouchTooltipData(
+            getTooltipColor: (spot) => Colors.transparent,
           ),
         ),
-      ],
-
+        lineBarsData: [
+          LineChartBarData(
+            spots: List.generate(chartData.length, (i) {
+              return FlSpot(i.toDouble(), chartData[i].completionPercent);
+            }),
+            isCurved: true,
+            curveSmoothness: 0.35,
+            preventCurveOverShooting: true,
+            color: const Color(0xFF42A5FF),
+            barWidth: 3.w,
+            isStrokeCapRound: true,
+            dotData: FlDotData(
+              show: true,
+              getDotPainter: (spot, percent, barData, index) {
+                final isSelected = _touchedIndex == index;
+                return FlDotCirclePainter(
+                  radius: isSelected ? 6.w : 4.w,
+                  color: Colors.white,
+                  strokeWidth: isSelected ? 4.w : 3.w,
+                  strokeColor: const Color(0xFF42A5FF),
+                );
+              },
+              checkToShowDot: (spot, barData) {
+                // Show dot only if y != 0
+                return spot.y != 0;
+              },
+            ),
+            belowBarData: BarAreaData(
+              show: true,
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  const Color(0xFF42A5FF).withOpacity(0.4),
+                  const Color(0xFF42A5FF).withOpacity(0.0),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 

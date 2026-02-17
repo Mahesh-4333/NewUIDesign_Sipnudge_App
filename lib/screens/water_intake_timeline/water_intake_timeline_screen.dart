@@ -48,7 +48,7 @@ class _WaterIntakeTimelineState extends State<WaterIntakeTimelineScreen> {
   @override
   void initState() {
     super.initState();
-    context.read<BottomNavCubit>().hideBar();
+    // context.read<BottomNavCubit>().hideBar();
     final hydrationCubit = context.read<HydrationCubit>();
     final bottleCubit = context.read<BottleDataCubit>();
     final bleCubit = context.read<BleCubit>();
@@ -74,7 +74,7 @@ class _WaterIntakeTimelineState extends State<WaterIntakeTimelineScreen> {
     return PopScope(
       onPopInvokedWithResult: (result, result1) {
         // Handle back navigation if needed
-        context.read<BottomNavCubit>().showBar(); // Refresh data on return
+        // context.read<BottomNavCubit>().showBar(); // Refresh data on return
       },
       child: BlocConsumer<HydrationCubit, HydrationState>(
         listener: (context, state) {
@@ -86,7 +86,6 @@ class _WaterIntakeTimelineState extends State<WaterIntakeTimelineScreen> {
         builder: (context, state) {
           return Scaffold(
             extendBodyBehindAppBar: true,
-            extendBody: true,
             appBar: _getAppBarWidget(),
             body: Container(
               width: double.infinity,
@@ -101,7 +100,7 @@ class _WaterIntakeTimelineState extends State<WaterIntakeTimelineScreen> {
               ),
               child: Column(
                 children: [
-                  SizedBox(height: 10.h),
+                  SizedBox(height: 25.h),
                   _getDateWidget(),
                   SizedBox(height: 10.h),
                   _getProgressWidget(state),
@@ -127,6 +126,9 @@ class _WaterIntakeTimelineState extends State<WaterIntakeTimelineScreen> {
   PreferredSizeWidget _getAppBarWidget() {
     return AppBar(
       elevation: 0.0,
+      scrolledUnderElevation: 0.0,
+      forceMaterialTransparency: true,
+      surfaceTintColor: Colors.transparent,
       backgroundColor: Colors.transparent,
       centerTitle: true,
       leading: IconButton(
@@ -420,6 +422,7 @@ class _WaterIntakeTimelineState extends State<WaterIntakeTimelineScreen> {
         : state.entries.where((e) => e.waterDrank < e.amount).toList();
 
     return Container(
+      margin: EdgeInsets.only(bottom: 110.h),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20.r),
@@ -493,6 +496,7 @@ class _WaterIntakeTimelineState extends State<WaterIntakeTimelineScreen> {
     final entries = state.entries;
 
     return Container(
+      margin: EdgeInsets.only(bottom: 110.h),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20.r),
@@ -549,7 +553,7 @@ class _WaterIntakeTimelineState extends State<WaterIntakeTimelineScreen> {
                     ),
                   )
                 : ListView.builder(
-                    padding: EdgeInsets.only(top: 20.h, bottom: 20.h),
+                    padding: EdgeInsets.only(top: 20.h, bottom: 30.h),
                     itemCount: entries.length,
                     itemBuilder: (context, index) {
                       return _buildCompletedTimelineItem(
@@ -727,6 +731,7 @@ class _WaterIntakeTimelineState extends State<WaterIntakeTimelineScreen> {
     final now = TimeOfDay.now();
     final nowMin = _toMinutes(now);
 
+    debugPrint("entry.amount :: ${entry.amount}");
     // 1️⃣ Completed has highest priority
     if (entry.waterDrank >= entry.amount) {
       return HydrationStatus.completed;
@@ -971,6 +976,7 @@ class _WaterIntakeTimelineState extends State<WaterIntakeTimelineScreen> {
 
   Widget _buildIntakeScheduleView(HydrationState state) {
     return Container(
+      margin: EdgeInsets.only(bottom: 110.h),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20.r),
