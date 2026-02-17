@@ -2,13 +2,14 @@ import 'dart:developer';
 
 import 'package:hydrify/cubit/filter/filter_cubit.dart';
 import 'package:hydrify/cubit/user_info/user_info_cubit.dart';
+import 'package:hydrify/helpers/shared_pref_helper.dart';
 import 'package:hydrify/models/bottle_data.dart';
 import 'package:hydrify/models/chart_data.dart';
 import 'package:hydrify/models/water_consumption_data.dart';
 import 'package:intl/intl.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class WaterConsumptionCalculator {
-  static const double DAILY_GOAL_ML = 2500.0;
   // Calculate consumption for a single day from bottle readings
   static double calculateDailyConsumption(List<BottleData> dayReadings) {
     if (dayReadings.isEmpty) return 0;
@@ -32,14 +33,12 @@ class WaterConsumptionCalculator {
   }
 
   // Calculate completion percentage
-  static double calculateCompletionPercentage(
+  static Future<double> calculateCompletionPercentage(
     double consumedVolume,
-    double goal,
-  ) {
+  ) async {
+    var goal = await SharedPrefsHelper.getUserGoal() ?? 0;
     if (goal <= 0) return 0.0;
-
     final percentage = (consumedVolume / goal) * 100;
-    print("goal data==> $consumedVolume $goal");
     return double.parse(percentage.toStringAsFixed(1));
   }
 
@@ -304,22 +303,17 @@ class WaterConsumptionCalculator {
   }
 }
 
-
-
-
-// 
-// Shaking of password when password is wrong 
-// Instead of 35 = use 30 
-// Goal calculation 
-// Checks 
+//
+// Shaking of password when password is wrong
+// Instead of 35 = use 30
+// Goal calculation
+// Checks
 // home weather || icon change || blur || dabna chahea
-// home fade in / fade out 
-// analysis pill size 
-// yearly dummy data , 
-// reduce height of water completion 
-// Drink reminder || Static 
-
-
+// home fade in / fade out
+// analysis pill size
+// yearly dummy data ,
+// reduce height of water completion
+// Drink reminder || Static
 
 //===========================================================================
 // import 'dart:developer';
@@ -634,4 +628,3 @@ class WaterConsumptionCalculator {
 // // Drink reminder || Static
 
 //===========================================================================
-
