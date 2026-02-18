@@ -50,7 +50,6 @@ class _HomeScreenState extends State<HomeScreen> {
   bool _isPickerShown = false;
   bool hasConnectedBefore = false;
   bool isGuest = false;
-  double userGoalLiters = 0;
   String selectedBottle = 'purple';
   BottleInfo? bottleInfo;
 
@@ -68,9 +67,7 @@ class _HomeScreenState extends State<HomeScreen> {
     _checkGuestStatus();
 
     NotificationService().init(
-      onTap: (slot) {
-
-      },
+      onTap: (slot) {},
     );
 
     //==================================================================
@@ -443,35 +440,32 @@ class _HomeScreenState extends State<HomeScreen> {
                 buildWhen: (previous, current) =>
                     previous.volumePercent != current.volumePercent,
                 builder: (context, state) {
-                  return FutureBuilder(future: () {
-                    DateTime now = DateTime.now();
+                  return FutureBuilder(
+                    future: () async {
+                      DateTime now = DateTime.now();
+                      DateTime startDate =
+                          DateTime(now.year, now.month, now.day);
+                      DateTime endDate = startDate
+                          .add(const Duration(days: 1))
+                          .subtract(const Duration(milliseconds: 1));
 
-                    DateTime startDate = DateTime(now.year, now.month, now.day);
-
-                    DateTime endDate = startDate
-                        .add(const Duration(days: 1))
-                        .subtract(const Duration(milliseconds: 1));
-
-                    return context
-                        .read<BottleDataCubit>()
-                        .getHistoryForDateRange(startDate, endDate);
-                  }(), builder: (context, snapshot) {
-                    double completionPercent = 0;
-                    double waterVolumeConsumed = 0;
-
-                    if (snapshot.hasData || snapshot.data?.isNotEmpty == true) {
-                      waterVolumeConsumed =
+                      final history = await context
+                          .read<BottleDataCubit>()
+                          .getHistoryForDateRange(startDate, endDate);
+                      double consumed =
                           WaterConsumptionCalculator.calculateDailyConsumption(
-                              snapshot.data!);
+                              history);
 
-                      completionPercent = WaterConsumptionCalculator
-                          .calculateCompletionPercentage(
-                              waterVolumeConsumed, userGoalLiters * 1000);
-                      // .calculateCompletionPercentage(waterVolumeConsumed);
-                    }
-                    return _buildGoalText(completionPercent, isGuest);
-                    // return _buildGoalText(completionPercent);
-                  });
+                      double percent = await WaterConsumptionCalculator
+                          .calculateCompletionPercentage(consumed);
+
+                      return percent;
+                    }(),
+                    builder: (context, snapshot) {
+                      double completionPercent = snapshot.data ?? 0.0;
+                      return _buildGoalText(completionPercent, isGuest);
+                    },
+                  );
                 },
               ),
             ],
@@ -733,51 +727,40 @@ class _HomeScreenState extends State<HomeScreen> {
                       previous.volumePercent != current.volumePercent ||
                       previous.volume != current.volume,
                   builder: (context, state) {
-                    return FutureBuilder(future: () {
+                    return FutureBuilder<(double, double)>(future: () async {
                       DateTime now = DateTime.now();
-
                       DateTime startDate =
                           DateTime(now.year, now.month, now.day);
-
                       DateTime endDate = startDate
                           .add(const Duration(days: 1))
                           .subtract(const Duration(milliseconds: 1));
 
-                      return context
+                      final history = await context
                           .read<BottleDataCubit>()
                           .getHistoryForDateRange(startDate, endDate);
+
+                      if (history == null || history.isEmpty) return (0.0, 0.0);
+
+                      double waterVolumeConsumed =
+                          WaterConsumptionCalculator.calculateDailyConsumption(
+                              history);
+
+                      double completionPercent =
+                          await WaterConsumptionCalculator
+                              .calculateCompletionPercentage(
+                                  waterVolumeConsumed);
+
+                      return (completionPercent, waterVolumeConsumed);
                     }(), builder: (context, snapshot) {
-                      double completionPercent = 0;
-                      double waterVolumeConsumed = 0;
+                      final (completionPercent, waterVolumeConsumed) =
+                          snapshot.data ?? (0.0, 0.0);
 
-                      if (snapshot.hasData ||
-                          snapshot.data?.isNotEmpty == true) {
-                        waterVolumeConsumed = WaterConsumptionCalculator
-                            .calculateDailyConsumption(snapshot.data!);
-
-                        completionPercent = WaterConsumptionCalculator
-                            .calculateCompletionPercentage(
-                                waterVolumeConsumed, userGoalLiters * 1000);
-                        //.calculateCompletionPercentage(waterVolumeConsumed,);
+                      if (snapshot.connectionState == ConnectionState.waiting) {
+                        return const Center(child: CircularProgressIndicator());
                       }
-
                       return CustomCircularWaterProgressIndicator(
                         height: AppDimensions.dim70.h,
                         width: AppDimensions.dim70.w,
-                        // radius: AppDimensions.dim32.w,
-                        // lineWidth: AppDimensions.dim7.w,
-                        // backgroundNeedsGradient: true,
-                        // linearGradient: LinearGradient(
-                        //   begin: Alignment.centerLeft,
-                        //   end: Alignment.centerRight,
-                        //   transform: GradientRotation(-10 * pi / 180),
-                        //   colors: [
-                        //     Color(0XFFFFFFFF),
-                        //     Color(0XFFFFFFFF),
-                        //     Color(0XFF369FFF), //0XFF48CAFF
-                        //     Color(0XFF369FFF), //0XFF48CAFF
-                        //   ],
-                        // ),
                         boxShadow: [
                           BoxShadow(
                             blurRadius: AppDimensions.dim4.r,
@@ -1263,53 +1246,6 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
     );
   }
-
-  // Widget _buildGoalText(double todayConsumptionPercentage, bool isGuest) {
-  //   final goalText = isGuest
-  //       ? "If you have purchased the bottle and accidentally entered the guest page, you can log out from the settings page and log in normally.\n"
-  //           "If you don’t have the bottle and want to use the basic water-reminder feature, you can schedule reminders from the settings page > Drink Reminder > Water Intake Timeline.\n"
-  //           "You can also place your bottle order directly from the settings page."
-  //       : AppStrings.getGoalString(todayConsumptionPercentage);
-
-  //   final textStyle = TextStyle(
-  //     fontSize: AppFontStyles.fontSize_16,
-  //     color: AppColors.bluegray,
-  //     height: AppFontStyles.getLineHeight(
-  //       AppFontStyles.fontSize_16,
-  //       120,
-  //     ),
-  //     fontVariations: [
-  //       AppFontStyles.semiBoldFontVariation,
-  //     ],
-  //   );
-
-  //   return SizedBox(
-  //     width: AppDimensions.dim350.w,
-  //     height: isGuest ? 70.h : null, // enough space to center vertically
-  //     child: isGuest
-  //         ? Align(
-  //             alignment: Alignment.center,
-  //             child: Marquee(
-  //               text: goalText,
-  //               style: textStyle,
-  //               scrollAxis: Axis.vertical,
-
-  //               // 🔥 Smooth, readable scroll
-  //               velocity: 8.0,
-  //               blankSpace: 40.0,
-  //               startPadding: 30.0,
-  //               pauseAfterRound: const Duration(seconds: 3),
-  //               accelerationDuration: const Duration(seconds: 1),
-  //               decelerationDuration: const Duration(seconds: 1),
-  //             ),
-  //           )
-  //         : Text(
-  //             goalText,
-  //             style: textStyle,
-  //             textAlign: TextAlign.center,
-  //           ),
-  //   );
-  // }
 
   Widget _buildGoalText(double todayConsumptionPercentage, bool isGuest) {
     final goalText = isGuest

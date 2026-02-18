@@ -203,8 +203,6 @@ CREATE TABLE IF NOT EXISTS app_metadata (
         slot: HydrationSlot.values[row['slotIndex'] as int],
         startTime: _epochToTimeOfDay(row['startEpoch'] as int),
         endTime: _epochToTimeOfDay(row['endEpoch'] as int),
-        // waterDrank: row['waterDrank'] as int? ?? 0,
-        // amount: row['waterGoal'] as int,
         waterDrank: (row['waterDrank'] as num?)?.toDouble() ?? 0.0,
         amount: (row['waterGoal'] as num).toDouble(),
         status: row['status'] == 'completed'

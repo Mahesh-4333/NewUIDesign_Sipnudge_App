@@ -218,30 +218,34 @@ class _WaterIntakeTimelineState extends State<WaterIntakeTimelineScreen> {
           ),
           SizedBox(width: 30.w),
           Expanded(
-            child: FutureBuilder(
-              future: () {
+            child: FutureBuilder<double>(
+              future: () async {
                 DateTime now = DateTime.now();
                 DateTime startDate = DateTime(now.year, now.month, now.day);
                 DateTime endDate = startDate
                     .add(const Duration(days: 1))
                     .subtract(const Duration(milliseconds: 1));
 
-                return context
+                final historyData = await context
                     .read<BottleDataCubit>()
                     .getHistoryForDateRange(startDate, endDate);
+
+                double waterVolumeConsumed =
+                    WaterConsumptionCalculator.calculateDailyConsumption(
+                        historyData);
+
+                double completionPercent = await WaterConsumptionCalculator
+                    .calculateCompletionPercentage(
+                  waterVolumeConsumed,
+                );
+
+                return completionPercent;
               }(),
-              builder: (BuildContext context, AsyncSnapshot<dynamic> snapshot) {
-                double waterVolumeConsumed = 0;
-                double completionPercent = 0;
+              builder: (BuildContext context, AsyncSnapshot<double> snapshot) {
+                double completionPercent = snapshot.data ?? 0.0;
 
-                if (snapshot.hasData || snapshot.data?.isNotEmpty == true) {
-                  waterVolumeConsumed =
-                      WaterConsumptionCalculator.calculateDailyConsumption(
-                          snapshot.data!);
-
-                  completionPercent =
-                      WaterConsumptionCalculator.calculateCompletionPercentage(
-                          waterVolumeConsumed, waterGoal);
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const CircularProgressIndicator();
                 }
 
                 return Column(
@@ -569,7 +573,6 @@ class _WaterIntakeTimelineState extends State<WaterIntakeTimelineScreen> {
   Widget _buildCompletedTimelineItem(HydrationEntry entry, bool isLast) {
     final status = _getSlotStatus(entry);
 
-
     return IntrinsicHeight(
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -699,7 +702,7 @@ class _WaterIntakeTimelineState extends State<WaterIntakeTimelineScreen> {
                       ),
                       FractionallySizedBox(
                         widthFactor:
-                        (entry.waterDrank / entry.amount).clamp(0.001, 1.0),
+                            (entry.waterDrank / entry.amount).clamp(0.001, 1.0),
                         child: Container(
                           height: 6.h,
                           decoration: BoxDecoration(
@@ -724,9 +727,8 @@ class _WaterIntakeTimelineState extends State<WaterIntakeTimelineScreen> {
     final entries = context.read<HydrationCubit>().state.entries;
 
     // Sort slots by start time
-    final sorted = [...entries]
-      ..sort((a, b) =>
-          _toMinutes(a.startTime).compareTo(_toMinutes(b.startTime)));
+    final sorted = [...entries]..sort(
+        (a, b) => _toMinutes(a.startTime).compareTo(_toMinutes(b.startTime)));
 
     final now = TimeOfDay.now();
     final nowMin = _toMinutes(now);
@@ -754,8 +756,7 @@ class _WaterIntakeTimelineState extends State<WaterIntakeTimelineScreen> {
       if (nowMin < startMin) {
         if (i > 0) {
           final previous = sorted[i - 1];
-          if (previous == entry &&
-              previous.waterDrank < previous.amount) {
+          if (previous == entry && previous.waterDrank < previous.amount) {
             return HydrationStatus.ongoing;
           }
         }
@@ -933,19 +934,19 @@ class _WaterIntakeTimelineState extends State<WaterIntakeTimelineScreen> {
       children: [
         Stack(
           children: [
-            if(status == HydrationStatus.ongoing)
-            Image.asset(
-              _getSlotIconPath(label, 3),
-              width: AppDimensions.dim60,
-              height: AppDimensions.dim60,
-            ),
-            if(status == HydrationStatus.completed)
+            if (status == HydrationStatus.ongoing)
+              Image.asset(
+                _getSlotIconPath(label, 3),
+                width: AppDimensions.dim60,
+                height: AppDimensions.dim60,
+              ),
+            if (status == HydrationStatus.completed)
               Image.asset(
                 _getSlotIconPath(label, 1),
                 width: AppDimensions.dim60,
                 height: AppDimensions.dim60,
               ),
-            if(status == HydrationStatus.pending)
+            if (status == HydrationStatus.pending)
               Image.asset(
                 _getSlotIconPath(label, 2),
                 width: AppDimensions.dim60,

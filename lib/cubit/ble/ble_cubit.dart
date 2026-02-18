@@ -19,16 +19,17 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
 
   final Guid serviceUUID = Guid("6E400001-B5A3-F393-E0A9-E50E24DCCA9E");
   final Guid dataUUID = Guid("6E400003-B5A3-F393-E0A9-E50E24DCCA9E");
-  final Guid hydrationDataUUID = Guid("6E400004-B5A3-F393-E0A9-E50E24DCCA9E");
+  final Guid hydrationGoalDataUUID =
+      Guid("6E400004-B5A3-F393-E0A9-E50E24DCCA9E");
   final Guid ackUUID = Guid("6E400002-B5A3-F393-E0A9-E50E24DCCA9E");
 
-  final Guid hydrationCharUUID = Guid("6E400005-B5A3-F393-E0A9-E50E24DCCA9E");
+  final Guid hydrationSlotsUUID = Guid("6E400005-B5A3-F393-E0A9-E50E24DCCA9E");
   final Guid water30DaysDataUUID = Guid("6E400006-B5A3-F393-E0A9-E50E24DCCA9E");
 
   BluetoothCharacteristic? _dataChar;
   BluetoothCharacteristic? _ackChar;
-  BluetoothCharacteristic? _hydrationDataChar;
-  BluetoothCharacteristic? _hydrationChar; // 🔹 NEW for 7-slot hydration data
+  BluetoothCharacteristic? _hydrationGoalDataChar;
+  BluetoothCharacteristic? _hydrationSlotsChar;
   BluetoothCharacteristic? _hydration30DaysChar;
 
   StreamSubscription<List<ScanResult>>? _scanSub;
@@ -286,8 +287,8 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
           for (var c in s.characteristics) {
             if (c.uuid == dataUUID) _dataChar = c;
             if (c.uuid == ackUUID) _ackChar = c;
-            if (c.uuid == hydrationDataUUID) _hydrationDataChar = c;
-            if (c.uuid == hydrationCharUUID) _hydrationChar = c; // ✅ new
+            if (c.uuid == hydrationGoalDataUUID) _hydrationGoalDataChar = c;
+            if (c.uuid == hydrationSlotsUUID) _hydrationSlotsChar = c; // ✅ new
             if (c.uuid == water30DaysDataUUID) {
               _hydration30DaysChar = c; // ✅ new
             }
@@ -364,10 +365,10 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
         });
       }
       // 🔹 NEW: Real-time hydration slot data (slotId/Target/Consumed)
-      if (_hydrationChar != null) {
-        await _hydrationChar!.setNotifyValue(true);
+      if (_hydrationSlotsChar != null) {
+        await _hydrationSlotsChar!.setNotifyValue(true);
         // Inside _discoverServices where you listen to _hydrationChar:
-        _hydrationChar!.onValueReceived.listen((value) async {
+        _hydrationSlotsChar!.onValueReceived.listen((value) async {
           final data = String.fromCharCodes(value);
           emit(state.copyWith(slotData: data));
           log("Hydration Slot Data: $data", name: "BLE_Cubit");
@@ -406,10 +407,10 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
           _sendAck(device);
         });
       }
-      await _hydrationDataChar?.setNotifyValue(true);
+      await _hydrationGoalDataChar?.setNotifyValue(true);
 
       // 💧 Hydration history data
-      _hydrationDataChar?.onValueReceived.listen((value) {
+      _hydrationGoalDataChar?.onValueReceived.listen((value) {
         final data = String.fromCharCodes(value);
         log("HydrationDataReceived: $data", name: "BLE_Cubit");
         var slots = _parseHydrationData(data);
@@ -419,7 +420,6 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
 
       await _dataChar!.setNotifyValue(true);
 
-      // 🩵 Main data (battery, volume, percent)
       _dataChar!.onValueReceived.listen((value) {
         final data = String.fromCharCodes(value);
         log("Received data: $data", name: "BLE_Cubit");
