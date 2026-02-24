@@ -124,17 +124,6 @@ class HydrationCubit extends Cubit<HydrationState> {
     try {
       final slotsFromDb = await _dbHelper.getAllSlots();
 
-      // final updatedSlots = slotsFromDb.map((slot) {
-      //   final isCompleted = Random().nextBool();
-
-      //   return slot.copyWith(
-      //     status: isCompleted
-      //         ? HydrationStatus.completed
-      //         : HydrationStatus.pending,
-      //     waterDrank: isCompleted ? slot.amount : 0.0,
-      //   );
-      // }).toList();
-
       if (slotsFromDb.isEmpty) {
         emit(state.copyWith(entries: []));
       } else {

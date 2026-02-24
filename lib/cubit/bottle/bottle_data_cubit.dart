@@ -5,6 +5,7 @@ import 'package:bloc/bloc.dart';
 import 'package:equatable/equatable.dart';
 import 'package:hydrify/cubit/ble/ble_cubit.dart';
 import 'package:hydrify/helpers/database_helper.dart';
+import 'package:hydrify/helpers/logger.dart';
 import 'package:hydrify/models/bottle_data.dart';
 import 'package:hydrify/models/hydration_summary.dart';
 import 'package:sqflite/sqflite.dart';
@@ -143,6 +144,8 @@ class BottleDataCubit extends Cubit<BottleDataState> {
       whereArgs: [start.toIso8601String(), end.toIso8601String()],
       orderBy: 'timestamp DESC',
     );
+
+    Console.log(tag: "getHistoryForDateRange", value: maps.toString());
 
     return List.generate(
       maps.length,

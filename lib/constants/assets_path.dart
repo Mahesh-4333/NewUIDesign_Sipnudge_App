@@ -3,6 +3,7 @@ class AssetsPath {
   static const String intakeTimelinePending = "assets/intake_timeline/pending/";
   static const String intakeTimelineOngoing = "assets/intake_timeline/ongoing/";
   static const String intakeTimelineSelected = "assets/intake_timeline/selected/";
+  static const String intakeScheduleUnSelected = "assets/intake_timeline/schedule_unselected/";
 
   static const String wakeUpCompleted = "${intakeTimelineCompleted}morning.png";
   static const String breakfastCompleted = "${intakeTimelineCompleted}breakfast.png";
@@ -35,6 +36,14 @@ class AssetsPath {
   static const String eveningSelected = "${intakeTimelineSelected}evening.png";
   static const String midAfternoonSelected = "${intakeTimelineSelected}mid-afternoon.png";
   static const String midMorningSelected = "${intakeTimelineSelected}midmorning.png";
+
+  static const String wakeUpUnSelected = "${intakeScheduleUnSelected}morning.png";
+  static const String breakfastUnSelected = "${intakeScheduleUnSelected}breakfast.png";
+  static const String lunchUnSelected = "${intakeScheduleUnSelected}lunchtime.png";
+  static const String dinnerUnSelected = "${intakeScheduleUnSelected}dinner.png";
+  static const String eveningUnSelected = "${intakeScheduleUnSelected}evening.png";
+  static const String midAfternoonUnSelected = "${intakeScheduleUnSelected}mid-afternoon.png";
+  static const String midMorningUnSelected = "${intakeScheduleUnSelected}midmorning.png";
 
   static const String updateSlot = "assets/intake_timeline/update_slot.png";
 

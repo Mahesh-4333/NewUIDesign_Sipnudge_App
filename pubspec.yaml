@@ -88,6 +88,8 @@ flutter:
     - assets/intake_timeline/pending/
     - assets/intake_timeline/ongoing/
     - assets/intake_timeline/selected/
+    - assets/intake_timeline/selected/
+    - assets/intake_timeline/schedule_unselected/
     - assets/intake_timeline/
     - assets/icon/
     - assets/sound/

@@ -6,6 +6,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:hydrify/cubit/hydration/hydration_sync.dart';
 import 'package:hydrify/helpers/database_helper.dart';
+import 'package:hydrify/helpers/logger.dart';
+import 'package:hydrify/models/bottle_data.dart';
 import 'package:hydrify/models/hydration_entry.dart';
 import 'package:hydrify/models/hydration_summary.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -776,48 +778,212 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
   Stream<List<HydrationEntry>> get hydrationUpdates =>
       _hydrationController.stream;
 
-  // Inside BleCubit
-  Future<void> injectMockSlotData(String mockPayload) async {
-    log("Injecting Mock Data: $mockPayload", name: "TESTING");
+  // ---------------------------------------------------------------------------
+  // MOCKING & TESTING METHODS
+  // ---------------------------------------------------------------------------
+
+  /// Simulates a Bluetooth device scan.
+  /// Sets the status to [BleStatus.scanning].
+  void mockBluetoothScan() {
+    log("🧪 [MOCK] Simulating Bluetooth Scan...", name: "BLE_Cubit");
+    emit(state.copyWith(
+      status: BleStatus.scanning,
+      message: "[MOCK] Scanning for Sipnudge devices...",
+    ));
+  }
+
+  /// Simulates the asynchronous initialization and connection flow of [start].
+  ///
+  /// If [isFirstConnection] is true, it stops at the [scanning] state,
+  /// mimicking the discovery of new devices.
+  /// If false, it proceeds to the [connected] state, mimicking a reconnection.
+  Future<void> mockStart({bool isFirstConnection = false}) async {
+    log("🧪 [MOCK] Starting asynchronous connection flow (isFirstConnection: $isFirstConnection)...",
+        name: "BLE_Cubit");
+
+    emit(state.copyWith(
+      status: BleStatus.initializing,
+      message: "[MOCK] Initializing...",
+    ));
+    await Future.delayed(const Duration(milliseconds: 500));
+
+    emit(state.copyWith(
+      status: BleStatus.initializing,
+      message: "[MOCK] Initializing Bluetooth",
+      isFirstConnection: isFirstConnection,
+    ));
+    await Future.delayed(const Duration(milliseconds: 500));
+
+    emit(state.copyWith(
+      status: BleStatus.scanning,
+      message: "[MOCK] Scanning for Sipnudge devices...",
+    ));
+
+    if (isFirstConnection) {
+      log("🧪 [MOCK] Stopping at scanning state for discovery...",
+          name: "BLE_Cubit");
+      // Note: We don't populate scannedDevices here because ScanResult
+      // requires real BluetoothDevice objects which are hard to instantiate.
+      // We rely on the UI to show a "Mock Device" if it's in mock mode or similar.
+      return;
+    }
+
+    await Future.delayed(const Duration(milliseconds: 1000));
+
+    emit(state.copyWith(
+      status: BleStatus.connecting,
+      message: "[MOCK] Connecting to Sipnudge MOCK...",
+    ));
+    await Future.delayed(const Duration(milliseconds: 1000));
+
+    savedDeviceId = "MOCK_DEVICE_01";
+    savedDeviceName = "Sipnudge MOCK";
+
+    emit(state.copyWith(
+      status: BleStatus.connected,
+      message: "[MOCK] Connected to Sipnudge MOCK",
+    ));
+  }
+
+  /// Simulates connecting to a selected device from the scan list.
+  /// Mimics the behavior of [connectToSelectedDevice].
+  Future<void> mockConnectToSelectedDevice() async {
+    log("🧪 [MOCK] Simulating selection and connection to device...",
+        name: "BLE_Cubit");
+
+    emit(state.copyWith(
+      status: BleStatus.connecting,
+      message: "[MOCK] Connecting to selected Sipnudge device...",
+    ));
+
+    await Future.delayed(const Duration(milliseconds: 1000));
+
+    savedDeviceId = "MOCK_DEVICE_01";
+    savedDeviceName = "Sipnudge MOCK";
+
+    emit(state.copyWith(
+      status: BleStatus.connected,
+      message: "[MOCK] Connected to Sipnudge MOCK",
+    ));
+  }
+
+  /// Simulates a successful Bluetooth connection to a Sipnudge device.
+  /// Sets the status to [BleStatus.connected].
+  @Deprecated("Use mockStart() for full flow or mockBluetoothConnect for instant")
+  void mockBluetoothConnect() {
+    log("🧪 [MOCK] Simulating Bluetooth Connection...", name: "BLE_Cubit");
+    savedDeviceId = "MOCK_DEVICE_01";
+    savedDeviceName = "Sipnudge MOCK";
+    emit(state.copyWith(
+      status: BleStatus.connected,
+      message: "[MOCK] Connected to Sipnudge MOCK",
+    ));
+  }
+
+  /// Simulates receiving real-time bottle data.
+  /// [volume]: current water volume in ml.
+  /// [battery]: battery percentage (0-100).
+  /// [percent]: hydration percentage of the current goal.
+  void mockBottleData(
+      {double volume = 450.0, int battery = 85, int percent = 45}) {
+    final mockPayload = "battery=$battery;volume=$volume;percent=$percent";
+    log("🧪 [MOCK] Simulating Bottle Data: $mockPayload", name: "BLE_Cubit");
+    _parseData(mockPayload);
+  }
+
+  /// Simulates receiving hydration slot data (e.g., from the current day).
+  /// [mockPayload]: formatted string "slotId/target/consumed|..."
+  /// Example: "0/250/200|1/250/0"
+  Future<void> mockHydrationSlots(String mockPayload) async {
+    log("🧪 [MOCK] Injecting Hydration Slot Data: $mockPayload",
+        name: "BLE_Cubit");
 
     final updatedEntries = _parseHydrationSlotData(mockPayload);
 
     if (updatedEntries.isNotEmpty) {
-      // This goes through your DB updates and triggers the perfection check
+      // 1. Update last sync date
+      await dbHelper.saveLastSyncDate(DateTime.now());
+
+      // 2. Persist to local database
       for (final updatedEntry in updatedEntries) {
         await dbHelper.insertOrUpdateSlot(updatedEntry);
       }
 
+      // 3. Check for "perfect day" achievement
       final bool isPerfectNow = await dbHelper.isDayPerfect();
 
-      final testDate = DateTime.now().subtract(const Duration(days: 0));
+      // 4. Create summary for today
+      final double totalConsumed =
+          updatedEntries.fold(0.0, (sum, e) => sum + e.waterDrank);
+      final double totalTarget =
+          updatedEntries.fold(0.0, (sum, e) => sum + e.amount);
 
-      final summary = HydrationDaySummary(
-        date: DateTime(testDate.year, testDate.month, testDate.day),
+      final todaySummary = HydrationDaySummary(
+        date: DateTime(
+            DateTime.now().year, DateTime.now().month, DateTime.now().day),
         dayIndex: 0,
-        target: 1750, // 7 slots * 250
-        consumed: 2100, // 7 slots * 300
+        target: totalTarget,
+        consumed: totalConsumed,
         isPerfect: isPerfectNow,
+        deviceId: savedDeviceId,
       );
 
-      await dbHelper.bulkUpsert30Days([summary]);
+      Console.log(
+          tag: "mockHydrationSlots_todaySummary",
+          value: todaySummary.toMap().toString());
 
-      // Notify the HydrationCubit to refresh
+      // 5. Update 30-day history with today's summary
+      await dbHelper.bulkUpsert30Days([todaySummary]);
+
+      // 6. Notify observers (like HydrationCubit)
       _hydrationController.add(updatedEntries);
     }
   }
 
-  // Inside BleCubit
-  Future<void> testFullWeeklyStreak() async {
-    log("🚀 Starting Full 7-Day Streak Injection...", name: "TEST_DEBUG");
+  /// Simulates receiving a 30-day historical hydration payload.
+  /// [mockPayload]: "epoch|index/target/consumed|..."
+  Future<void> mock30DayHistory(String mockPayload) async {
+    log("🧪 [MOCK] Injecting 30-Day History: $mockPayload", name: "BLE_Cubit");
 
-    final dummyPayload =
-        "0/250/300|1/250/300|2/250/300|3/250/300|4/250/300|5/250/300|6/250/300";
+    final parsed = _parse30DaysHydration(mockPayload);
+    if (parsed.isNotEmpty) {
+      final List<HydrationDaySummary> list = parsed.map((m) {
+        final DateTime rawDate = m['date'] as DateTime;
+        final date = DateTime(rawDate.year, rawDate.month, rawDate.day);
+        return HydrationDaySummary(
+          date: date,
+          dayIndex: m['dayIndex'] as int,
+          target: (m['target'] as num).toDouble(),
+          consumed: (m['consumed'] as num).toDouble(),
+          deviceId: savedDeviceId,
+        );
+      }).toList();
 
-    // 1. Clear existing summaries so we start fresh
+      // Save to database
+      await dbHelper.bulkUpsert30Days(list);
+
+      // Update state for UI feedback
+      emit(state.copyWith(
+        isHydration30DaysDataSync: true,
+        historyData: mockPayload,
+      ));
+
+      log("🧪 [MOCK] Saved ${list.length} day summaries to DB",
+          name: "BLE_Cubit");
+
+      // Notify to refresh charts
+      _hydrationController.add([]);
+    }
+  }
+
+  /// Helper to quickly simulate a full 7-day perfect hydration streak.
+  Future<void> mockFull7DayStreak() async {
+    log("🚀 [MOCK] Starting Full 7-Day Streak Injection...", name: "BLE_Cubit");
+
+    // 1. Clear existing summaries
     await dbHelper.clearHydrationDaySummaries();
 
-    // 2. Inject 7 consecutive days (from 6 days ago up to today)
+    // 2. Inject 7 consecutive perfect days
     for (int i = 6; i >= 0; i--) {
       final testDate = DateTime.now().subtract(Duration(days: i));
       final normalizedDate =
@@ -826,21 +992,99 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
       final summary = HydrationDaySummary(
         date: normalizedDate,
         dayIndex: 0,
-        target: 1750,
-        consumed: 2100,
-        isPerfect: true, // Mark each as perfect
+        target: 2000,
+        consumed: 2000,
+        isPerfect: true,
       );
 
       await dbHelper.bulkUpsert30Days([summary]);
-      log("✅ Injected Perfect Day for: ${normalizedDate.toIso8601String()}",
-          name: "TEST_DEBUG");
+      log("✅ [MOCK] Injected Perfect Day for: ${normalizedDate.toIso8601String()}",
+          name: "BLE_Cubit");
     }
 
-    // 3. IMPORTANT: Tell the HydrationCubit to recalculate everything
-    // We trigger this by sending an empty update to the stream that the HydrationCubit listens to
+    // 3. Trigger recalculation in other Cubits
     _hydrationController.add([]);
 
-    log("🏁 Injection Complete. Check your console for 'Achievement stats refreshed'",
-        name: "TEST_DEBUG");
+    log("🏁 [MOCK] Injection Complete. Achievement stats should refresh.",
+        name: "BLE_Cubit");
+  }
+
+  /// Manually adds water consumption to a specific slot for a given date.
+  /// [slotIndex]: The index of the HydrationSlot (0 to 6).
+  /// [amount]: The amount of water to add in mL.
+  /// [date]: The date for which to add consumption (defaults to today).
+  Future<void> mockManualConsumption(int slotIndex, double amount,
+      {DateTime? date}) async {
+    final effectiveDate = date ?? DateTime.now();
+    final slots = await dbHelper.getAllSlots();
+    if (slotIndex < 0 || slotIndex >= slots.length) {
+      Console.error("MOCK", "Invalid slot index: $slotIndex");
+      return;
+    }
+
+    final entry = slots[slotIndex];
+    final updatedEntry = entry.copyWith(
+      waterDrank: entry.waterDrank + amount,
+    );
+
+    // Save to DB (today's slots)
+    await dbHelper.insertOrUpdateSlot(updatedEntry);
+
+    // Record reading in history for WaterConsumptionCalculator
+    double currentVol = state.volume ?? 750.0;
+    // If we would go below 0, simulate a refill first
+    // if (currentVol < amount) {
+    //   await dbHelper.insertBottleData(BottleData(
+    //     liquidVolume: 1000.0,
+    //     liquidPercent: 100,
+    //     battery: state.battery ?? 100,
+    //     timestamp: effectiveDate.subtract(const Duration(seconds: 1)),
+    //   ));
+    //   currentVol = 1000.0;
+    // }
+
+    final newVol = currentVol - amount;
+    final newPercent = ((newVol / 1000.0) * 100).toInt();
+
+    await dbHelper.insertBottleData(BottleData(
+      liquidVolume: newVol,
+      liquidPercent: newPercent,
+      battery: state.battery ?? 100,
+      timestamp: effectiveDate,
+    ));
+
+    // Update state to reflect the new bottle volume and trigger listeners
+    emit(state.copyWith(
+      status: BleStatus.connected,
+      volume: newVol,
+      percent: newPercent,
+    ));
+
+    // Notify observers (only for today)
+    final updatedSlots = await dbHelper.getAllSlots();
+    _hydrationController.add(updatedSlots);
+
+    double totalTarget = updatedSlots.fold(0.0, (sum, e) => sum + e.amount);
+    double currentConsumed =
+        updatedSlots.fold(0.0, (sum, e) => sum + e.waterDrank);
+
+    // Simple heuristic for isPerfect: if consumed >= target
+    final bool isPerfect = currentConsumed >= totalTarget;
+
+    final updatedSummary = HydrationDaySummary(
+      date: DateTime(
+          effectiveDate.year, effectiveDate.month, effectiveDate.day),
+      dayIndex: slotIndex,
+      target: totalTarget,
+      consumed: currentConsumed,
+      isPerfect: isPerfect,
+      deviceId: savedDeviceId,
+    );
+
+    Console.log(tag: "updatedSummary", value: updatedSummary.toMap());
+
+    await dbHelper.bulkUpsert30Days([updatedSummary]);
+
+    _hydrationController.add([]);
   }
 }

@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/services.dart';
 import 'package:hydrify/constants/assets_path.dart';
 import 'package:vibration/vibration.dart';
@@ -17,15 +19,7 @@ class VibrationHelper {
         duration: duration,
         amplitude: amplitude,
       );
-    }
-
-    // sound (only if requested)
-    if (playSound) {
-      await _player.stop(); // prevent overlap
-      await _player.play(
-        AssetSource(AssetsPath.clickSound),
-        volume: 0.4,
-      );
+      SystemSound.play(Platform.isIOS ? SystemSoundType.tick : SystemSoundType.click);
     }
   }
 

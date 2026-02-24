@@ -15,6 +15,7 @@ import 'package:hydrify/cubit/bottle/bottle_data_cubit.dart';
 import 'package:hydrify/cubit/hydration/hydration_cubit.dart';
 import 'package:hydrify/cubit/hydration/hydration_state.dart';
 import 'package:hydrify/helpers/database_helper.dart';
+import 'package:hydrify/helpers/logger.dart';
 import 'package:hydrify/helpers/shared_pref_helper.dart';
 import 'package:hydrify/helpers/water_consumption_data_helper.dart';
 import 'package:hydrify/models/bottle_info.dart';
@@ -410,25 +411,7 @@ class _HomeScreenState extends State<HomeScreen> {
               SizedBox(
                 height: AppDimensions.dim12.h,
               ),
-              BlocBuilder<HydrationCubit, HydrationState>(
-                buildWhen: (p, c) =>
-                    p.currentSlotConsumption != c.currentSlotConsumption ||
-                    p.currentSlotPercentage != c.currentSlotPercentage ||
-                    p.currentSlotEntry != c.currentSlotEntry,
-                builder: (context, state) {
-                  final slotName =
-                      state.currentSlotEntry?.slot.label ?? "Off-Slot Time";
-
-                  final consumption = state.currentSlotConsumption;
-                  final percentage = state.currentSlotPercentage;
-
-                  return _buildTodayStats(
-                    consumption,
-                    percentage,
-                    slotName,
-                  );
-                },
-              ),
+              _currentSlotInfoWidget(),
               SizedBox(
                 height: AppDimensions.dim9.h,
               ),
@@ -436,42 +419,399 @@ class _HomeScreenState extends State<HomeScreen> {
               SizedBox(
                 height: AppDimensions.dim10.h,
               ),
-              BlocBuilder<BottleDataCubit, BottleDataState>(
-                buildWhen: (previous, current) =>
-                    previous.volumePercent != current.volumePercent,
-                builder: (context, state) {
-                  return FutureBuilder(
-                    future: () async {
-                      DateTime now = DateTime.now();
-                      DateTime startDate =
-                          DateTime(now.year, now.month, now.day);
-                      DateTime endDate = startDate
-                          .add(const Duration(days: 1))
-                          .subtract(const Duration(milliseconds: 1));
-
-                      final history = await context
-                          .read<BottleDataCubit>()
-                          .getHistoryForDateRange(startDate, endDate);
-                      double consumed =
-                          WaterConsumptionCalculator.calculateDailyConsumption(
-                              history);
-
-                      double percent = await WaterConsumptionCalculator
-                          .calculateCompletionPercentage(consumed);
-
-                      return percent;
-                    }(),
-                    builder: (context, snapshot) {
-                      double completionPercent = snapshot.data ?? 0.0;
-                      return _buildGoalText(completionPercent, isGuest);
-                    },
-                  );
-                },
-              ),
+              _otherInfoWidget(),
             ],
           ),
         ),
+        // floatingActionButton: Padding(
+        //   padding: EdgeInsets.only(bottom: 100.h),
+        //   child: FloatingActionButton(
+        //     onPressed: () => _showMockBottomSheet(context),
+        //     backgroundColor: AppColors.bluegray,
+        //     child: const Icon(Icons.bug_report, color: Colors.white),
+        //   ),
+        // ),
       ),
+    );
+  }
+
+  BlocBuilder<HydrationCubit, HydrationState> _currentSlotInfoWidget() {
+    return BlocBuilder<HydrationCubit, HydrationState>(
+      buildWhen: (p, c) =>
+          p.currentSlotConsumption != c.currentSlotConsumption ||
+          p.currentSlotPercentage != c.currentSlotPercentage ||
+          p.currentSlotEntry != c.currentSlotEntry,
+      builder: (context, state) {
+        final slotName = state.currentSlotEntry?.slot.label ?? "Off-Slot Time";
+
+        final consumption = state.currentSlotConsumption;
+        final percentage = state.currentSlotPercentage;
+
+        return _buildTodayStats(
+          consumption,
+          percentage,
+          slotName,
+        );
+      },
+    );
+  }
+
+  BlocBuilder<BottleDataCubit, BottleDataState> _otherInfoWidget() {
+    return BlocBuilder<BottleDataCubit, BottleDataState>(
+      buildWhen: (previous, current) =>
+          previous.volumePercent != current.volumePercent,
+      builder: (context, state) {
+        Console.log(
+            tag: "home_screen_bottle_data_cubit", value: state.volumePercent);
+        return FutureBuilder(
+          future: () async {
+            DateTime now = DateTime.now();
+            DateTime startDate = DateTime(now.year, now.month, now.day);
+            DateTime endDate = startDate
+                .add(const Duration(days: 1))
+                .subtract(const Duration(milliseconds: 1));
+
+            final history = await context
+                .read<BottleDataCubit>()
+                .getHistoryForDateRange(startDate, endDate);
+            double consumed =
+                WaterConsumptionCalculator.calculateDailyConsumption(history);
+
+            double percent =
+                await WaterConsumptionCalculator.calculateCompletionPercentage(
+                    consumed);
+
+            return percent;
+          }(),
+          builder: (context, snapshot) {
+            double completionPercent = snapshot.data ?? 0.0;
+            return _buildGoalText(completionPercent, isGuest);
+          },
+        );
+      },
+    );
+  }
+
+  void _showMockBottomSheet(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        return Container(
+          padding: EdgeInsets.all(20.w),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                "Bluetooth Debug Mocks",
+                style: TextStyle(
+                  fontSize: 18.sp,
+                  fontWeight: FontWeight.bold,
+                  fontFamily: AppFontStyles.museoModernoFontFamily,
+                ),
+              ),
+              SizedBox(height: 10.h),
+              const Divider(),
+              SizedBox(
+                height: 400.h,
+                child: ListView(
+                  shrinkWrap: true,
+                  children: [
+                    ListTile(
+                      leading: const Icon(Icons.search),
+                      title: const Text("Simulate Scanning"),
+                      onTap: () {
+                        context.read<BleCubit>().mockBluetoothScan();
+                        Navigator.pop(context);
+                      },
+                    ),
+                    ListTile(
+                      leading: const Icon(Icons.bluetooth_connected),
+                      title: const Text("Simulate Connection"),
+                      onTap: () {
+                        context.read<BleCubit>().mockBluetoothConnect();
+                        Navigator.pop(context);
+                      },
+                    ),
+                    ListTile(
+                      leading: const Icon(Icons.battery_charging_full),
+                      title: const Text("Simulate Real-time Data"),
+                      subtitle: const Text("Volume: 450ml | Battery: 85%"),
+                      onTap: () {
+                        context.read<BleCubit>().mockBottleData(
+                              volume: 450.0,
+                              battery: 85,
+                              percent: 45,
+                            );
+                        Navigator.pop(context);
+                      },
+                    ),
+                    ListTile(
+                      leading: const Icon(Icons.list_alt),
+                      title: const Text("Inject Today's Slots"),
+                      subtitle: const Text(
+                          "Generates mock data from current DB slots"),
+                      onTap: () async {
+                        final dbHelper = DatabaseHelper();
+                        final slotsFromDb = await dbHelper.getAllSlots();
+
+                        if (slotsFromDb.isNotEmpty) {
+                          // Generate payload: "index/target/consumed|..."
+                          // We use the existing values to simulate a sync event
+                          final payload = slotsFromDb
+                              .map((s) =>
+                                  "${s.slot.index}/${s.amount.toInt()}/${s.waterDrank.toInt()}")
+                              .join("|");
+
+                          context.read<BleCubit>().mockHydrationSlots(payload);
+                        } else {
+                          // Fallback to hardcoded dummy if DB is empty
+                          context
+                              .read<BleCubit>()
+                              .mockHydrationSlots("0/250/200|1/250/300");
+                        }
+                        Navigator.pop(context);
+                      },
+                    ),
+                    ListTile(
+                      leading: const Icon(Icons.auto_awesome),
+                      title: const Text("Simulate 7-Day Streak"),
+                      subtitle: const Text("Injects 7 perfect days"),
+                      onTap: () {
+                        context.read<BleCubit>().mockFull7DayStreak();
+                        Navigator.pop(context);
+                      },
+                    ),
+                    ListTile(
+                      leading: const Icon(Icons.history),
+                      title: const Text("Load 30-Day History (Mock)"),
+                      onTap: () {
+                        final now =
+                            DateTime.now().millisecondsSinceEpoch ~/ 1000;
+                        context.read<BleCubit>().mock30DayHistory(
+                            "$now|0/2000/1800|1/2000/2100|2/2000/2000");
+                        Navigator.pop(context);
+                      },
+                    ),
+                    const Divider(),
+                    ListTile(
+                      leading:
+                          const Icon(Icons.calendar_month, color: Colors.green),
+                      title: const Text("Manual Drink (Select Date)",
+                          style: TextStyle(color: Colors.green)),
+                      subtitle: const Text("Pick any date and amount to add"),
+                      onTap: () {
+                        Navigator.pop(context); // Close bottom sheet
+                        _showManualConsumptionForDateDialog(context);
+                      },
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  void _showManualConsumptionForDateDialog(BuildContext context) {
+    DateTime selectedDate = DateTime.now();
+    int selectedSlotIndex = 0;
+    double amount = 250.0;
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(builder: (context, setState) {
+          return AlertDialog(
+            title: const Text("Manual Entry (Historical)"),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text("Select Date:"),
+                InkWell(
+                  onTap: () async {
+                    final picked = await showDatePicker(
+                      context: context,
+                      initialDate: selectedDate,
+                      firstDate:
+                          DateTime.now().subtract(const Duration(days: 30)),
+                      lastDate: DateTime.now(),
+                    );
+                    if (picked != null) {
+                      setState(() => selectedDate = picked);
+                    }
+                  },
+                  child: Container(
+                    padding:
+                        const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+                    decoration: BoxDecoration(
+                      border: Border.all(color: Colors.grey),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                            "${selectedDate.year}-${selectedDate.month}-${selectedDate.day}"),
+                        const Icon(Icons.calendar_today, size: 16),
+                      ],
+                    ),
+                  ),
+                ),
+                SizedBox(height: 16.h),
+                const Text("Slot Index (0-6):"),
+                DropdownButton<int>(
+                  value: selectedSlotIndex,
+                  isExpanded: true,
+                  items: List.generate(7, (index) {
+                    return DropdownMenuItem(
+                      value: index,
+                      child: Text("Slot $index"),
+                    );
+                  }),
+                  onChanged: (val) => setState(() => selectedSlotIndex = val!),
+                ),
+                SizedBox(height: 16.h),
+                const Text("Amount (mL):"),
+                TextField(
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(hintText: "e.g. 250"),
+                  onChanged: (val) {
+                    amount = double.tryParse(val) ?? 250.0;
+                  },
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text("Cancel"),
+              ),
+              ElevatedButton(
+                onPressed: () {
+                  context.read<BleCubit>().mockManualConsumption(
+                        selectedSlotIndex,
+                        amount,
+                        date: selectedDate,
+                      );
+                  Navigator.pop(context);
+                },
+                child: const Text("Add Water"),
+              ),
+            ],
+          );
+        });
+      },
+    );
+  }
+
+  void _showManualConsumptionDialog(BuildContext context) {
+    int selectedSlotIndex = 0;
+    double? selectedAmount;
+    List<HydrationEntry> slots = [];
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return FutureBuilder<List<HydrationEntry>>(
+          future: DatabaseHelper().getAllSlots(),
+          builder: (context, snapshot) {
+            if (!snapshot.hasData) {
+              return const Center(child: CircularProgressIndicator());
+            }
+
+            slots = snapshot.data!;
+
+            return StatefulBuilder(builder: (context, setState) {
+              final currentSlot = slots[selectedSlotIndex];
+              final targetAmount = currentSlot.amount;
+
+              // Generate amount options (e.g., increments of 50 up to target, or at least 50ml)
+              final List<double> amountOptions = [];
+              for (double i = 50.0; i <= targetAmount; i += 50.0) {
+                amountOptions.add(i);
+              }
+              if (amountOptions.isEmpty)
+                amountOptions.add(targetAmount > 0 ? targetAmount : 50.0);
+              if (!amountOptions.contains(targetAmount) && targetAmount > 0)
+                amountOptions.add(targetAmount);
+
+              // Ensure selectedAmount is valid for the current slot
+              if (selectedAmount == null ||
+                  !amountOptions.contains(selectedAmount)) {
+                selectedAmount = amountOptions.first;
+              }
+
+              return AlertDialog(
+                title: const Text("Manual Water Entry"),
+                content: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text("Select Slot:"),
+                    DropdownButton<int>(
+                      value: selectedSlotIndex,
+                      isExpanded: true,
+                      items: List.generate(slots.length, (index) {
+                        return DropdownMenuItem(
+                          value: index,
+                          child:
+                              Text("Slot $index (${slots[index].slot.label})"),
+                        );
+                      }),
+                      onChanged: (val) {
+                        setState(() {
+                          selectedSlotIndex = val!;
+                          selectedAmount =
+                              null; // Reset amount for new calculations
+                        });
+                      },
+                    ),
+                    SizedBox(height: 20.h),
+                    const Text("Select Amount (based on slot target):"),
+                    DropdownButton<double>(
+                      value: selectedAmount,
+                      isExpanded: true,
+                      items: amountOptions.map((amt) {
+                        return DropdownMenuItem(
+                          value: amt,
+                          child: Text("${amt.toInt()}ml"),
+                        );
+                      }).toList(),
+                      onChanged: (val) => setState(() => selectedAmount = val),
+                    ),
+                    SizedBox(height: 10.h),
+                    Text(
+                      "Target for this slot: ${targetAmount.toInt()}ml",
+                      style: TextStyle(fontSize: 12.sp, color: Colors.grey),
+                    ),
+                  ],
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text("Cancel"),
+                  ),
+                  ElevatedButton(
+                    onPressed: () {
+                      context.read<BleCubit>().mockManualConsumption(
+                          selectedSlotIndex, selectedAmount!);
+                      Navigator.pop(context);
+                    },
+                    child: const Text("Add Water"),
+                  ),
+                ],
+              );
+            });
+          },
+        );
+      },
     );
   }
 
@@ -701,7 +1041,7 @@ class _HomeScreenState extends State<HomeScreen> {
         children: [
           Positioned.fill(
             top: 0,
-            bottom: -(AppDimensions.dim20.h),
+            bottom: -(AppDimensions.dim15.h),
             child: GestureDetector(
               onTap: () async {
                 // if (kDebugMode) {

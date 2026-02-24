@@ -37,9 +37,21 @@ class HydrationDaySummary {
   }
 
   factory HydrationDaySummary.fromMap(Map<String, dynamic> m) {
+    // Robust parsing for 'date' which might be stored as String or int
+    DateTime parsedDate;
+    var rawDate = m['date'];
+    if (rawDate is int) {
+      parsedDate = DateTime.fromMillisecondsSinceEpoch(rawDate).toLocal();
+    } else if (rawDate is String) {
+      parsedDate = DateTime.tryParse(rawDate)?.toLocal() ?? 
+                   DateTime.fromMillisecondsSinceEpoch(0).toLocal();
+    } else {
+      parsedDate = DateTime.fromMillisecondsSinceEpoch(0).toLocal();
+    }
+
     return HydrationDaySummary(
       id: m['id'] as int?,
-      date: DateTime.fromMillisecondsSinceEpoch(m['date'] as int).toLocal(),
+      date: parsedDate,
       dayIndex: (m['day_index'] as int?) ?? 0,
       target: (m['target'] as num).toDouble(),
       consumed: (m['consumed'] as num).toDouble(),

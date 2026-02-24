@@ -3,6 +3,7 @@ import 'dart:developer';
 
 import 'package:flutter/material.dart';
 import 'package:hydrify/cubit/user_info/user_info_cubit.dart';
+import 'package:hydrify/helpers/logger.dart';
 import 'package:hydrify/models/bottle_data.dart';
 import 'package:hydrify/models/hydration_entry.dart';
 import 'package:hydrify/models/hydration_summary.dart';
@@ -305,6 +306,16 @@ CREATE TABLE IF NOT EXISTS app_metadata (
     log("[DB] Cleared all data in bottle_history table.");
   }
 
+  Future<void> insertBottleData(BottleData data) async {
+    final db = await database;
+    await db.insert(
+      tableName,
+      data.toMap(),
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+    log("[DB] Inserted bottle data: ${data.liquidVolume} mL at ${data.timestamp}");
+  }
+
   Future<List<BottleData>> getBottleDataForDateRange(
       DateTime start, DateTime end) async {
     final db = await database;
@@ -337,34 +348,35 @@ CREATE TABLE IF NOT EXISTS app_metadata (
   }) async {
     final db = await database;
 
-    // Build WHERE clause & args dynamically
-    String? whereClause;
-    List<dynamic>? whereArgs;
-
-    if (startDate != null && endDate != null) {
-      whereClause = 'date BETWEEN ? AND ?';
-      whereArgs = [
-        startDate.millisecondsSinceEpoch,
-        endDate.millisecondsSinceEpoch,
-      ];
-    } else if (startDate != null) {
-      whereClause = 'date >= ?';
-      whereArgs = [startDate.millisecondsSinceEpoch];
-    } else if (endDate != null) {
-      whereClause = 'date <= ?';
-      whereArgs = [endDate.millisecondsSinceEpoch];
-    }
-
+    // Fetch all records to support legacy String dates and new epoch millis.
+    // Given this is a 30-day history table, filtering in Dart is efficient enough.
     final result = await db.query(
-      '$hydrationSummaryTableName',
-      where: whereClause,
-      whereArgs: whereArgs,
+      hydrationSummaryTableName,
       orderBy: 'date ASC',
     );
 
-    return result.map((r) {
-      print(r);
+    final List<HydrationDaySummary> summaries = result.map((r) {
       return HydrationDaySummary.fromMap(r);
+    }).toList();
+
+    if (startDate == null && endDate == null) return summaries;
+
+    // Normalize input range to start and end of day
+    final normalizedStart = startDate != null
+        ? DateTime(startDate.year, startDate.month, startDate.day)
+        : null;
+    final normalizedEnd = endDate != null
+        ? DateTime(endDate.year, endDate.month, endDate.day, 23, 59, 59, 999)
+        : null;
+
+    return summaries.where((s) {
+      if (normalizedStart != null && s.date.isBefore(normalizedStart)) {
+        return false;
+      }
+      if (normalizedEnd != null && s.date.isAfter(normalizedEnd)) {
+        return false;
+      }
+      return true;
     }).toList();
   }
 

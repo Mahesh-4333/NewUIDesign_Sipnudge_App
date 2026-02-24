@@ -87,25 +87,29 @@ class _FlColumnChartWidgetState extends State<FlColumnChartWidget> {
       chartData = List.generate(7, (i) {
         final dayDate = weekStart.add(Duration(days: i));
 
-        final s = sorted.firstWhere(
+        final matches = sorted.where(
           (x) =>
               x.date.year == dayDate.year &&
               x.date.month == dayDate.month &&
               x.date.day == dayDate.day,
-          orElse: () => HydrationDaySummary(
-            date: dayDate,
-            dayIndex: i,
-            target: 0,
-            consumed: 0,
-          ),
-        );
+        ).toList();
 
-        final double target = s.target;
-        final double consumed = s.consumed;
+        double totalTarget = 0;
+        double totalConsumed = 0;
+
+        if (matches.isNotEmpty) {
+          for (var m in matches) {
+            totalTarget += m.target;
+            totalConsumed += m.consumed;
+          }
+        }
+
+        final double target = totalTarget;
+        final double consumed = totalConsumed;
         double percent = target > 0 ? (consumed / target) * 100 : 0;
         percent = percent.clamp(0, 100);
 
-        return ChartData(weekLabels[i], percent, consumed, s.date);
+        return ChartData(weekLabels[i], percent, consumed, dayDate);
       });
     } else if (isMonthly) {
       // --- MONTHLY: 1..lastDayOfMonth ---
@@ -119,21 +123,25 @@ class _FlColumnChartWidgetState extends State<FlColumnChartWidget> {
       chartData = List.generate(days, (i) {
         final dayDate = firstDay.add(Duration(days: i));
 
-        final s = sorted.firstWhere(
+        final matches = sorted.where(
           (x) =>
               x.date.year == dayDate.year &&
               x.date.month == dayDate.month &&
               x.date.day == dayDate.day,
-          orElse: () => HydrationDaySummary(
-            date: dayDate,
-            dayIndex: i,
-            target: 0,
-            consumed: 0,
-          ),
-        );
+        ).toList();
 
-        final double target = s.target;
-        final double consumed = s.consumed;
+        double totalTarget = 0;
+        double totalConsumed = 0;
+
+        if (matches.isNotEmpty) {
+          for (var m in matches) {
+            totalTarget += m.target;
+            totalConsumed += m.consumed;
+          }
+        }
+
+        final double target = totalTarget;
+        final double consumed = totalConsumed;
         double percent = target > 0 ? (consumed / target) * 100 : 0;
         percent = percent.clamp(0, 100);
 
@@ -141,7 +149,7 @@ class _FlColumnChartWidgetState extends State<FlColumnChartWidget> {
             (i + 1).toString(), // 1,2,3,...
             percent,
             consumed,
-            s.date);
+            dayDate);
       });
     } else if (isYearly) {
       // --- YEARLY: 12 months Jan..Dec ---
@@ -349,7 +357,7 @@ class _FlColumnChartWidgetState extends State<FlColumnChartWidget> {
               return const SizedBox();
             }
 
-            final label = isWeekly ? weekLabels[index] : chartData[index].x;
+            final label = isWeekly ? weekLabels[index]  : chartData[index].x;
 
             return Padding(
               padding: EdgeInsets.only(top: AppDimensions.dim5.h),

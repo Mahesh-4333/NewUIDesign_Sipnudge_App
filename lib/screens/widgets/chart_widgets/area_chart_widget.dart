@@ -5,6 +5,7 @@ import 'package:hydrify/constants/app_colors.dart';
 import 'package:hydrify/constants/app_dimensions.dart';
 import 'package:hydrify/constants/app_font_styles.dart';
 import 'package:hydrify/cubit/filter/filter_cubit.dart';
+import 'package:hydrify/helpers/logger.dart';
 import 'package:hydrify/models/chart_data.dart';
 import 'package:hydrify/models/hydration_summary.dart';
 import 'package:hydrify/screens/widgets/chart_widgets/column_chart_widget.dart'; // CustomYAxis
@@ -31,7 +32,6 @@ class _FlAreaChartWidgetState extends State<FlAreaChartWidget> {
   final ScrollController _scrollController = ScrollController();
   
   int? _touchedIndex;
-  Offset? _touchOffset;
 
   final List<String> weekLabels = const [
     'Mon',
@@ -86,29 +86,35 @@ class _FlAreaChartWidgetState extends State<FlAreaChartWidget> {
 
       chartData = List.generate(7, (i) {
         final dayDate = weekStart.add(Duration(days: i));
-        final s = sorted.firstWhere(
+        final matches = sorted.where(
           (x) =>
               x.date.year == dayDate.year &&
               x.date.month == dayDate.month &&
               x.date.day == dayDate.day,
-          orElse: () => HydrationDaySummary(
-            date: dayDate,
-            dayIndex: i,
-            target: 0,
-            consumed: 0,
-          ),
-        );
+        ).toList();
 
-        final double target = s.target;
-        final double consumed = s.consumed;
+        double totalTarget = 0;
+        double totalConsumed = 0;
+
+        if (matches.isNotEmpty) {
+          for (var m in matches) {
+            totalTarget += m.target;
+            totalConsumed += m.consumed;
+          }
+        }
+
+        // If no matches, use default values
+        final double target = totalTarget;
+        final double consumed = totalConsumed;
         double percent = target > 0 ? (consumed / target) * 100 : 0;
         percent = percent.clamp(0, 100);
 
+        //Console.log(tag: "IsWeeklyAreaChart", value: "$target $consumed $percent");
         return ChartData(
           weekLabels[i],
           percent,
           consumed,
-          s.date,
+          dayDate,
         );
       });
     } else if (isMonthly) {
@@ -120,25 +126,29 @@ class _FlAreaChartWidgetState extends State<FlAreaChartWidget> {
 
       chartData = List.generate(days, (i) {
         final dayDate = firstDay.add(Duration(days: i));
-        final s = sorted.firstWhere(
+        final matches = sorted.where(
           (x) =>
               x.date.year == dayDate.year &&
               x.date.month == dayDate.month &&
               x.date.day == dayDate.day,
-          orElse: () => HydrationDaySummary(
-            date: dayDate,
-            dayIndex: i,
-            target: 0,
-            consumed: 0,
-          ),
-        );
+        ).toList();
 
-        final double target = s.target;
-        final double consumed = s.consumed;
+        double totalTarget = 0;
+        double totalConsumed = 0;
+
+        if (matches.isNotEmpty) {
+          for (var m in matches) {
+            totalTarget += m.target;
+            totalConsumed += m.consumed;
+          }
+        }
+
+        final double target = totalTarget;
+        final double consumed = totalConsumed;
         double percent = target > 0 ? (consumed / target) * 100 : 0;
         percent = percent.clamp(0, 100);
 
-        return ChartData((i + 1).toString(), percent, consumed, s.date);
+        return ChartData((i + 1).toString(), percent, consumed, dayDate);
       });
     } else if (isYearly) {
       final year = widget.currentDate.year;
@@ -157,6 +167,8 @@ class _FlAreaChartWidgetState extends State<FlAreaChartWidget> {
         double percent = target > 0 ? (consumed / target) * 100 : 0;
         percent = percent.clamp(0, 100);
 
+        Console.log(tag: "IsYearlyAreaChart", value: "$target $consumed $percent");
+
         final dateForPoint =
             list.isNotEmpty ? list.first.date : DateTime(year, monthIndex, 1);
 
@@ -167,7 +179,6 @@ class _FlAreaChartWidgetState extends State<FlAreaChartWidget> {
     }
 
     _touchedIndex = null;
-    _touchOffset = null;
   }
 
   @override
@@ -246,7 +257,6 @@ class _FlAreaChartWidgetState extends State<FlAreaChartWidget> {
             if (_touchedIndex != null)
               Positioned(
                 left: () {
-                  final data = chartData[_touchedIndex!];
                   double localX;
                   if (chartData.length > 1) {
                     localX = (_touchedIndex! / (chartData.length - 1)) * drawingWidth;
@@ -340,18 +350,11 @@ class _FlAreaChartWidgetState extends State<FlAreaChartWidget> {
               if (spot.y != 0) {
                 setState(() {
                   _touchedIndex = spot.spotIndex;
-                  _touchOffset = event.localPosition;
-                });
-              } else {
-                setState(() {
-                  _touchedIndex = null;
-                  _touchOffset = null;
                 });
               }
             } else {
               setState(() {
                 _touchedIndex = null;
-                _touchOffset = null;
               });
             }
           },
@@ -393,8 +396,8 @@ class _FlAreaChartWidgetState extends State<FlAreaChartWidget> {
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
                 colors: [
-                  const Color(0xFF42A5FF).withOpacity(0.4),
-                  const Color(0xFF42A5FF).withOpacity(0.0),
+                  const Color(0xFF42A5FF).withValues(alpha: 0.4),
+                  const Color(0xFF42A5FF).withValues(alpha: 0.0),
                 ],
               ),
             ),

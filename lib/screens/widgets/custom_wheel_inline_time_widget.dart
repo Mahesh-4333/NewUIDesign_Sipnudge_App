@@ -222,6 +222,20 @@ class _InlineTimePickerState extends State<InlineTimePicker> {
             ),
           ),
         ),
+        Positioned(
+          left: 0,
+          right: 0,
+          child: SizedBox(
+            height: 36, // must match itemExtent
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Container(height: 1.5, color: Color(0xFFADDEFF).withValues(alpha: 0.2)),
+                Container(height: 1.5, color: Color(0xFFADDEFF).withValues(alpha: 0.2)),
+              ],
+            ),
+          ),
+        ),
       ],
     );
   }
