@@ -102,7 +102,7 @@ class _EditableProfileAvatarState extends State<EditableProfileAvatar> {
                   color: AppColors.greyColorText1,
                   fontSize: 15.sp,
                   fontFamily: AppFontStyles.urbanistFontFamily,
-                  fontVariations: [AppFontStyles.regularFontVariation],
+                  fontVariations: [AppFontStyles.semiBoldFontVariation],
                 ),
               ),
               SizedBox(height: AppDimensions.dim24.h),
