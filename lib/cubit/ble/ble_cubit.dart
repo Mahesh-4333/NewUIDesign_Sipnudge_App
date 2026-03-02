@@ -343,7 +343,10 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
               // Save to DB in bulk (fast)
               // if ((state.volume ?? 0) > 600) {
               await dbHelper.bulkUpsert30Days(list);
-              // }
+              await Future.delayed(Duration(seconds: 1));
+
+              final history = await getCurrentDayHistory();
+              emit(state.copyWith(currentHydrationValue: history));
 
               emit(state.copyWith(
                   isHydration30DaysDataSync: true, historyData: data));
@@ -353,11 +356,11 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
               // Optionally emit to UI stream:
               // _hydrationController.add(list.map((e) => convertToHydrationEntryIfNeeded(e)).toList());
 
-              for (final day in list) {
-                // Example debug print (you already log inside parser)
-                print("30d -> ${day.dayIndex} : ${day.date} "
-                    "target=${day.target} consumed=${day.consumed}  percentage ${(day.consumed / day.target) * 100}");
-              }
+              // for (final day in list) {
+              //   // Example debug print (you already log inside parser)
+              //   print("30d -> ${day.dayIndex} : ${day.date} "
+              //       "target=${day.target} consumed=${day.consumed}  percentage ${(day.consumed / day.target) * 100}");
+              // }
             }
 
             _sendAck(device);
@@ -386,24 +389,24 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
             }
 
             // 🔥 NEW: Check if today is now perfect
-            final bool isPerfectNow = await dbHelper.isDayPerfect();
+            // final bool isPerfectNow = await dbHelper.isDayPerfect();
 
             // Calculate total consumed for the summary
-            final double totalConsumed =
-                updatedEntries.fold(0.0, (sum, e) => sum + e.waterDrank);
-            final double totalTarget =
-                updatedEntries.fold(0.0, (sum, e) => sum + e.amount);
+            // final double totalConsumed =
+            //     updatedEntries.fold(0.0, (sum, e) => sum + e.waterDrank);
+            // final double totalTarget =
+            //     updatedEntries.fold(0.0, (sum, e) => sum + e.amount);
 
-            final todaySummary = HydrationDaySummary(
-              date: DateTime(DateTime.now().year, DateTime.now().month,
-                  DateTime.now().day),
-              dayIndex: 0,
-              target: totalTarget,
-              consumed: totalConsumed,
-              isPerfect: isPerfectNow,
-              deviceId: savedDeviceId,
-            );
-            await dbHelper.bulkUpsert30Days([todaySummary]);
+            // final todaySummary = HydrationDaySummary(
+            //   date: DateTime(DateTime.now().year, DateTime.now().month,
+            //       DateTime.now().day),
+            //   dayIndex: 0,
+            //   target: totalTarget,
+            //   consumed: totalConsumed,
+            //   isPerfect: isPerfectNow,
+            //   deviceId: savedDeviceId,
+            // );
+            // await dbHelper.bulkUpsert30Days([todaySummary]);
           }
 
           _sendAck(device);
@@ -869,7 +872,8 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
 
   /// Simulates a successful Bluetooth connection to a Sipnudge device.
   /// Sets the status to [BleStatus.connected].
-  @Deprecated("Use mockStart() for full flow or mockBluetoothConnect for instant")
+  @Deprecated(
+      "Use mockStart() for full flow or mockBluetoothConnect for instant")
   void mockBluetoothConnect() {
     log("🧪 [MOCK] Simulating Bluetooth Connection...", name: "BLE_Cubit");
     savedDeviceId = "MOCK_DEVICE_01";
@@ -1072,8 +1076,8 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
     final bool isPerfect = currentConsumed >= totalTarget;
 
     final updatedSummary = HydrationDaySummary(
-      date: DateTime(
-          effectiveDate.year, effectiveDate.month, effectiveDate.day),
+      date:
+          DateTime(effectiveDate.year, effectiveDate.month, effectiveDate.day),
       dayIndex: slotIndex,
       target: totalTarget,
       consumed: currentConsumed,
@@ -1086,5 +1090,49 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
     await dbHelper.bulkUpsert30Days([updatedSummary]);
 
     _hydrationController.add([]);
+  }
+
+  Future<double> getCurrentDayHistory() async {
+    final db = await dbHelper.database;
+
+    final now = DateTime.now();
+    final startDate = DateTime(now.year, now.month, now.day, 00, 00, 00);
+    final endDate = DateTime(now.year, now.month, now.day, 23, 59, 59);
+
+    final List<Map<String, dynamic>> maps = await db.query(
+      DatabaseHelper.hydrationSummaryTableName,
+    );
+
+    Console.log(tag: "getCurrentDayHistory", value: maps.toString());
+
+    var hyderationData = List.generate(
+      maps.length,
+          (i) => HydrationDaySummary.fromMap(maps[i]),
+    );
+
+    // Normalize input range to start and end of day
+    final normalizedStart =
+    DateTime(startDate.year, startDate.month, startDate.day);
+    final normalizedEnd =
+    DateTime(endDate.year, endDate.month, endDate.day, 23, 59, 59, 999);
+
+    var hydrationDataTemp = hyderationData.where((s) {
+      if (s.date.isBefore(normalizedStart)) {
+        return false;
+      }
+      if (s.date.isAfter(normalizedEnd)) {
+        return false;
+      }
+      return true;
+    }).toList();
+    if (hydrationDataTemp.isEmpty) {
+      return 0;
+    }
+
+    return hydrationDataTemp.first.consumed;
+  }
+
+  Future<void> clearData() async{
+    emit(state.copyWith(currentHydrationValue: 0));
   }
 }

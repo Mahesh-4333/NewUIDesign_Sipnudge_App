@@ -93,6 +93,8 @@ flutter:
     - assets/intake_timeline/
     - assets/icon/
     - assets/sound/
+    - assets/profile/
+    - assets/sipnudge_bottle/
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images
   # For details regarding adding assets from package dependencies, see

@@ -1,4 +1,4 @@
-import 'dart:developer';
+import 'package:hydrify/helpers/logger.dart';
 
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
@@ -331,8 +331,8 @@ class _FlColumnChartWidgetState extends State<FlColumnChartWidget> {
             tappedIndex = response.spot!.touchedBarGroupIndex;
             tappedIndexOffset = response.spot!.offset;
 
-            log("X - ${tappedIndexOffset?.dx}");
-            log("Y - ${tappedIndexOffset?.dy}");
+            Console.log(tag: "APP", value: "X - ${tappedIndexOffset?.dx}");
+            Console.log(tag: "APP", value: "Y - ${tappedIndexOffset?.dy}");
           });
         } else {
           setState(() {

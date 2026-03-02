@@ -1,6 +1,12 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:hydrify/helpers/logger.dart';
+import 'package:path/path.dart' as p;
+import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
+import 'package:sqflite/sqflite.dart';
 import 'package:hydrify/constants/app_colors.dart';
 import 'package:hydrify/constants/app_dimensions.dart';
 import 'package:hydrify/constants/app_font_styles.dart';
@@ -159,6 +165,10 @@ class _SettingScreenState extends State<SettingScreen> {
 
           break;
 
+        case 'Export Log':
+          _exportLog(context);
+          break;
+
         case AppStrings.logout:
           _showLogoutConfirmation(context);
           break;
@@ -213,6 +223,49 @@ class _SettingScreenState extends State<SettingScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Unable to load bottle information')),
       );
+    }
+  }
+
+  Future<void> _exportLog(BuildContext context) async {
+    try {
+      final dbPath = p.join(await getDatabasesPath(), 'bottle_history.db');
+      final logDir = await getApplicationDocumentsDirectory();
+      final logPath = '${logDir.path}/app_logs.txt';
+
+      List<XFile> filesToShare = [];
+
+      Console.log(tag: "await File(dbPath).exists()", value: await File(dbPath).exists());
+      if (await File(dbPath).exists()) {
+        filesToShare.add(XFile(dbPath));
+      } else {
+        debugPrint("DB file not found");
+      }
+
+      if (await File(logPath).exists()) {
+        filesToShare.add(XFile(logPath));
+      } else {
+        debugPrint("Log file not found");
+      }
+
+      if (filesToShare.isNotEmpty) {
+        final box = context.findRenderObject() as RenderBox;
+        await Share.shareXFiles(filesToShare,
+            text: 'SipNudge App Logs and Database', sharePositionOrigin: box.localToGlobal(Offset.zero) & box.size,);
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+                content: Text('No logs or database found to export.')),
+          );
+        }
+      }
+    } catch (e) {
+      debugPrint("Error exporting logs: $e");
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Failed to export logs')),
+        );
+      }
     }
   }
 

@@ -1,4 +1,4 @@
-import 'dart:developer';
+import 'package:hydrify/helpers/logger.dart';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -51,7 +51,8 @@ class _UserInfoDailyGoalScreenState extends State<UserInfoDailyGoalScreen> {
   @override
   void initState() {
     super.initState();
-    convertedWaterGoal = widget.waterGoal;
+    // convertedWaterGoal = widget.waterGoal;
+    convertedWaterGoal = 1800;
     _setupDynamicSlider();
     updateDisplayWaterGoal();
   }
@@ -89,10 +90,10 @@ class _UserInfoDailyGoalScreenState extends State<UserInfoDailyGoalScreen> {
 
     widgetMaxGoal = maxGoal * 1000;
 
-    log("Dynamic slider setup:");
-    log("Goal: ${goalInLiters}L");
-    log("Tick values: $tickValues");
-    log("Initial slider value: $initialSliderValue");
+    Console.log(tag: "APP", value: "Dynamic slider setup:");
+    Console.log(tag: "APP", value: "Goal: ${goalInLiters}L");
+    Console.log(tag: "APP", value: "Tick values: $tickValues");
+    Console.log(tag: "APP", value: "Initial slider value: $initialSliderValue");
   }
 
   @override
@@ -284,7 +285,7 @@ class _UserInfoDailyGoalScreenState extends State<UserInfoDailyGoalScreen> {
               color: AppColors.blueGradient,
               areTwoItems: false,
               onTap: () async {
-                log("isViaSettingsScreen ${widget.isViaSettingsScreen}");
+                Console.log(tag: "APP", value: "isViaSettingsScreen ${widget.isViaSettingsScreen}");
                 if (widget.isViaSettingsScreen == false) {
                   // var response = await showGoogleCalendarDialog();
                   // if (response == false) {
@@ -308,7 +309,7 @@ class _UserInfoDailyGoalScreenState extends State<UserInfoDailyGoalScreen> {
 
                 final slots = generateHydrationSlots(convertedWaterGoal);
                 for (var slot in slots) {
-                  log("Slot: ${slot.slot.label}, Water to drink: ${slot.amount} mL");
+                  Console.log(tag: "APP", value: "Slot: ${slot.slot.label}, Water to drink: ${slot.amount} mL");
                 }
 
                 final dbHelper = DatabaseHelper();

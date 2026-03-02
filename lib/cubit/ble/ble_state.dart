@@ -24,6 +24,8 @@ class BleState {
   final dynamic bottleData;
   final dynamic historyData;
   final dynamic slotData;
+  final double currentHydrationValue;
+
   const BleState(
       {this.status = BleStatus.idle,
       this.message = '',
@@ -35,7 +37,8 @@ class BleState {
       this.isHydration30DaysDataSync = false,
       this.bottleData,
       this.historyData,
-      this.slotData});
+      this.slotData,
+        this.currentHydrationValue =0});
 
   BleState copyWith(
       {BleStatus? status,
@@ -48,7 +51,7 @@ class BleState {
       bool? isHydration30DaysDataSync,
       dynamic bottleData,
       dynamic historyData,
-      dynamic slotData}) {
+      dynamic slotData, double? currentHydrationValue}) {
     return BleState(
         status: status ?? this.status,
         message: message ?? this.message,
@@ -61,6 +64,6 @@ class BleState {
             isHydration30DaysDataSync ?? this.isHydration30DaysDataSync,
         bottleData: bottleData ?? this.bottleData,
         historyData: historyData ?? this.historyData,
-        slotData: slotData ?? this.slotData);
+        slotData: slotData ?? this.slotData, currentHydrationValue: currentHydrationValue ?? this.currentHydrationValue);
   }
 }

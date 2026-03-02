@@ -1,5 +1,5 @@
 import 'dart:convert';
-import 'dart:developer';
+import 'package:hydrify/helpers/logger.dart';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -201,7 +201,7 @@ class _CustomChartDataWidgetState extends State<CustomChartDataWidget> {
                         23, 59, 59, 999999);
                   }
 
-                  log("Start date is $startDate , end date is $endDate");
+                  Console.log(tag: "APP", value: "Start date is $startDate , end date is $endDate");
 
                   return FutureBuilder<List<HydrationDaySummary>>(
                     future: context

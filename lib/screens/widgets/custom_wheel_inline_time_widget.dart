@@ -1,4 +1,4 @@
-import 'dart:developer';
+import 'package:hydrify/helpers/logger.dart';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -52,7 +52,7 @@ class _InlineTimePickerState extends State<InlineTimePicker> {
 
       // IMPORTANT: jump wheels after build
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        log("Hour index is => $hourIndex");
+        Console.log(tag: "APP", value: "Hour index is => $hourIndex");
         hourCtrl.jumpToItem(hourIndex);
         minuteCtrl.jumpToItem(minuteIndex);
         amPmCtrl.jumpToItem(amPmIndex);

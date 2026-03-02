@@ -1,4 +1,4 @@
-import 'dart:developer';
+import 'package:hydrify/helpers/logger.dart';
 import 'dart:ui';
 
 import 'package:flutter/foundation.dart';
@@ -20,6 +20,7 @@ import 'package:hydrify/helpers/shared_pref_helper.dart';
 import 'package:hydrify/helpers/water_consumption_data_helper.dart';
 import 'package:hydrify/models/bottle_info.dart';
 import 'package:hydrify/models/hydration_entry.dart';
+import 'package:hydrify/models/hydration_summary.dart';
 import 'package:hydrify/providers/weather_provider.dart';
 import 'package:hydrify/screens/hydration_30_day.dart';
 import 'package:hydrify/screens/notification.dart';
@@ -350,7 +351,7 @@ class _HomeScreenState extends State<HomeScreen> {
             !_isPickerShown &&
             state.isFirstConnection) {
           _isPickerShown = true;
-          log("✅ Showing picker...");
+          Console.log(tag: "APP", value: "✅ Showing picker...");
 
           WidgetsBinding.instance.addPostFrameCallback((_) {
             showDialog(
@@ -380,7 +381,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 );
               },
             ).then((_) {
-              log("❌ Picker closed.");
+              Console.log(tag: "APP", value: "❌ Picker closed.");
               _isPickerShown = false;
             });
           });
@@ -423,7 +424,7 @@ class _HomeScreenState extends State<HomeScreen> {
             ],
           ),
         ),
-        // floatingActionButton: Padding(
+        // floatingActionButton: Padding(f
         //   padding: EdgeInsets.only(bottom: 100.h),
         //   child: FloatingActionButton(
         //     onPressed: () => _showMockBottomSheet(context),
@@ -447,6 +448,10 @@ class _HomeScreenState extends State<HomeScreen> {
         final consumption = state.currentSlotConsumption;
         final percentage = state.currentSlotPercentage;
 
+        Console.log(
+            tag: "_currentSlotInfoWidget",
+            value:
+                "slotName : $slotName , consumption : $consumption , percentage : $percentage");
         return _buildTodayStats(
           consumption,
           percentage,
@@ -456,26 +461,27 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  BlocBuilder<BottleDataCubit, BottleDataState> _otherInfoWidget() {
-    return BlocBuilder<BottleDataCubit, BottleDataState>(
-      buildWhen: (previous, current) =>
-          previous.volumePercent != current.volumePercent,
-      builder: (context, state) {
+  BlocBuilder<BleCubit, BleState> _otherInfoWidget() {
+    return BlocBuilder<BleCubit, BleState>(
+      buildWhen: (previous, current) {
         Console.log(
-            tag: "home_screen_bottle_data_cubit", value: state.volumePercent);
+            tag: "home_Screen_biuld",
+            value:
+                "${previous.currentHydrationValue} : ${current.currentHydrationValue}");
+
+        if (previous.currentHydrationValue != current.currentHydrationValue) {
+          return true;
+        }
+        return false;
+      },
+      builder: (context, state) {
         return FutureBuilder(
           future: () async {
-            DateTime now = DateTime.now();
-            DateTime startDate = DateTime(now.year, now.month, now.day);
-            DateTime endDate = startDate
-                .add(const Duration(days: 1))
-                .subtract(const Duration(milliseconds: 1));
+            var history =
+                await context.read<BottleDataCubit>().getCurrentDayHistory();
 
-            final history = await context
-                .read<BottleDataCubit>()
-                .getHistoryForDateRange(startDate, endDate);
-            double consumed =
-                WaterConsumptionCalculator.calculateDailyConsumption(history);
+            Console.log(tag: "home_screen_history", value: history.toString());
+            double consumed = history;
 
             double percent =
                 await WaterConsumptionCalculator.calculateCompletionPercentage(
@@ -485,6 +491,8 @@ class _HomeScreenState extends State<HomeScreen> {
           }(),
           builder: (context, snapshot) {
             double completionPercent = snapshot.data ?? 0.0;
+            Console.log(
+                tag: "snapshot_ble_cubit", value: snapshot.data.toString());
             return _buildGoalText(completionPercent, isGuest);
           },
         );
@@ -558,21 +566,20 @@ class _HomeScreenState extends State<HomeScreen> {
                         final dbHelper = DatabaseHelper();
                         final slotsFromDb = await dbHelper.getAllSlots();
 
-                        if (slotsFromDb.isNotEmpty) {
-                          // Generate payload: "index/target/consumed|..."
-                          // We use the existing values to simulate a sync event
-                          final payload = slotsFromDb
-                              .map((s) =>
-                                  "${s.slot.index}/${s.amount.toInt()}/${s.waterDrank.toInt()}")
-                              .join("|");
-
-                          context.read<BleCubit>().mockHydrationSlots(payload);
-                        } else {
-                          // Fallback to hardcoded dummy if DB is empty
-                          context
-                              .read<BleCubit>()
-                              .mockHydrationSlots("0/250/200|1/250/300");
-                        }
+                        // if (slotsFromDb.isNotEmpty) {
+                        //   // Generate payload: "index/target/consumed|..."
+                        //   // We use the existing values to simulate a sync event
+                        //   final payload = slotsFromDb
+                        //       .map((s) =>
+                        //           "${s.slot.index}/${s.amount.toInt()}/${s.waterDrank.toInt()}")
+                        //       .join("|");
+                        //
+                        //   context.read<BleCubit>().mockHydrationSlots(payload);
+                        // } else {
+                        // Fallback to hardcoded dummy if DB is empty
+                        context.read<BleCubit>().mockHydrationSlots(
+                            "0/475/200|1/238/100|2/238/0|3/238/0|4/238/0|5/238/0|6/238/0");
+                        //}
                         Navigator.pop(context);
                       },
                     ),
@@ -680,7 +687,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 SizedBox(height: 16.h),
                 const Text("Amount (mL):"),
                 TextField(
-                  keyboardType: TextInputType.number,
+                  keyboardType: TextInputType.text,
                   decoration: const InputDecoration(hintText: "e.g. 250"),
                   onChanged: (val) {
                     amount = double.tryParse(val) ?? 250.0;
@@ -694,12 +701,31 @@ class _HomeScreenState extends State<HomeScreen> {
                 child: const Text("Cancel"),
               ),
               ElevatedButton(
-                onPressed: () {
-                  context.read<BleCubit>().mockManualConsumption(
-                        selectedSlotIndex,
-                        amount,
-                        date: selectedDate,
-                      );
+                onPressed: () async {
+                  Console.log(tag: "amount consumed", value: amount.toString());
+
+                  // 1. Update local database/state for immediate feedback
+                  final bleCubit = context.read<BleCubit>();
+                  await bleCubit.mockManualConsumption(
+                    selectedSlotIndex,
+                    amount,
+                    date: selectedDate,
+                  );
+
+                  // 2. Prepare mock command for Bluetooth mirroring
+                  // We get the current slot values to send the absolute new total
+                  final dbHelper = DatabaseHelper();
+                  final slots = await dbHelper.getAllSlots();
+                  if (selectedSlotIndex >= 0 &&
+                      selectedSlotIndex < slots.length) {
+                    final entry = slots[selectedSlotIndex];
+                    final mockCommand =
+                        "MOCK_SLOTS:${entry.slot.index}/${entry.amount.toInt()}/${entry.waterDrank.toInt()}";
+
+                    // 3. Send to Bluetooth - Device will echo this back via Notify
+                    // await bleCubit.sendBluetoothMock(mockCommand);
+                  }
+
                   Navigator.pop(context);
                 },
                 child: const Text("Add Water"),
@@ -707,110 +733,6 @@ class _HomeScreenState extends State<HomeScreen> {
             ],
           );
         });
-      },
-    );
-  }
-
-  void _showManualConsumptionDialog(BuildContext context) {
-    int selectedSlotIndex = 0;
-    double? selectedAmount;
-    List<HydrationEntry> slots = [];
-
-    showDialog(
-      context: context,
-      builder: (context) {
-        return FutureBuilder<List<HydrationEntry>>(
-          future: DatabaseHelper().getAllSlots(),
-          builder: (context, snapshot) {
-            if (!snapshot.hasData) {
-              return const Center(child: CircularProgressIndicator());
-            }
-
-            slots = snapshot.data!;
-
-            return StatefulBuilder(builder: (context, setState) {
-              final currentSlot = slots[selectedSlotIndex];
-              final targetAmount = currentSlot.amount;
-
-              // Generate amount options (e.g., increments of 50 up to target, or at least 50ml)
-              final List<double> amountOptions = [];
-              for (double i = 50.0; i <= targetAmount; i += 50.0) {
-                amountOptions.add(i);
-              }
-              if (amountOptions.isEmpty)
-                amountOptions.add(targetAmount > 0 ? targetAmount : 50.0);
-              if (!amountOptions.contains(targetAmount) && targetAmount > 0)
-                amountOptions.add(targetAmount);
-
-              // Ensure selectedAmount is valid for the current slot
-              if (selectedAmount == null ||
-                  !amountOptions.contains(selectedAmount)) {
-                selectedAmount = amountOptions.first;
-              }
-
-              return AlertDialog(
-                title: const Text("Manual Water Entry"),
-                content: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text("Select Slot:"),
-                    DropdownButton<int>(
-                      value: selectedSlotIndex,
-                      isExpanded: true,
-                      items: List.generate(slots.length, (index) {
-                        return DropdownMenuItem(
-                          value: index,
-                          child:
-                              Text("Slot $index (${slots[index].slot.label})"),
-                        );
-                      }),
-                      onChanged: (val) {
-                        setState(() {
-                          selectedSlotIndex = val!;
-                          selectedAmount =
-                              null; // Reset amount for new calculations
-                        });
-                      },
-                    ),
-                    SizedBox(height: 20.h),
-                    const Text("Select Amount (based on slot target):"),
-                    DropdownButton<double>(
-                      value: selectedAmount,
-                      isExpanded: true,
-                      items: amountOptions.map((amt) {
-                        return DropdownMenuItem(
-                          value: amt,
-                          child: Text("${amt.toInt()}ml"),
-                        );
-                      }).toList(),
-                      onChanged: (val) => setState(() => selectedAmount = val),
-                    ),
-                    SizedBox(height: 10.h),
-                    Text(
-                      "Target for this slot: ${targetAmount.toInt()}ml",
-                      style: TextStyle(fontSize: 12.sp, color: Colors.grey),
-                    ),
-                  ],
-                ),
-                actions: [
-                  TextButton(
-                    onPressed: () => Navigator.pop(context),
-                    child: const Text("Cancel"),
-                  ),
-                  ElevatedButton(
-                    onPressed: () {
-                      context.read<BleCubit>().mockManualConsumption(
-                          selectedSlotIndex, selectedAmount!);
-                      Navigator.pop(context);
-                    },
-                    child: const Text("Add Water"),
-                  ),
-                ],
-              );
-            });
-          },
-        );
       },
     );
   }
@@ -852,23 +774,31 @@ class _HomeScreenState extends State<HomeScreen> {
                     buildWhen: (previous, current) =>
                         previous.battery != current.battery,
                     builder: (context, state) {
-                      return CustomCircularProgressIndicator(
-                        height: AppDimensions.dim60.w,
-                        width: AppDimensions.dim60.w,
-                        backgroundColor: AppColors.bluegray,
-                        progressBackgroundColor: const Color(0XFFDDECDC),
-                        progressColor: state.battery <= 20
-                            ? const Color(0xFFFF0000)
-                            : const Color(0XFF43E73E),
-                        percentageValue: state.battery.toDouble(),
-                        center: Text(
-                          "${state.battery}%",
-                          style: TextStyle(
-                            color: AppColors.white,
-                            fontSize: AppFontStyles.fontSize_12,
-                            fontVariations: [
-                              AppFontStyles.fontWeightVariation600,
-                            ],
+                      return InkWell(
+                        onTap: () {
+                          Navigator.of(context)
+                              .push(MaterialPageRoute(builder: (builder) {
+                            return Hydration30DayPage();
+                          }));
+                        },
+                        child: CustomCircularProgressIndicator(
+                          height: AppDimensions.dim60.w,
+                          width: AppDimensions.dim60.w,
+                          backgroundColor: AppColors.bluegray,
+                          progressBackgroundColor: const Color(0XFFDDECDC),
+                          progressColor: state.battery <= 20
+                              ? const Color(0xFFFF0000)
+                              : const Color(0XFF43E73E),
+                          percentageValue: state.battery.toDouble(),
+                          center: Text(
+                            "${state.battery}%",
+                            style: TextStyle(
+                              color: AppColors.white,
+                              fontSize: AppFontStyles.fontSize_12,
+                              fontVariations: [
+                                AppFontStyles.fontWeightVariation600,
+                              ],
+                            ),
                           ),
                         ),
                       );
@@ -1062,122 +992,35 @@ class _HomeScreenState extends State<HomeScreen> {
             bottom: AppDimensions.dim55.h,
             left: AppDimensions.dim182.w,
             child: SizedBox(
-              child: BlocBuilder<BottleDataCubit, BottleDataState>(
-                  buildWhen: (previous, current) =>
-                      previous.volumePercent != current.volumePercent ||
-                      previous.volume != current.volume,
-                  builder: (context, state) {
-                    return FutureBuilder<(double, double)>(future: () async {
-                      DateTime now = DateTime.now();
-                      DateTime startDate =
-                          DateTime(now.year, now.month, now.day);
-                      DateTime endDate = startDate
-                          .add(const Duration(days: 1))
-                          .subtract(const Duration(milliseconds: 1));
+              child: BlocBuilder<BleCubit, BleState>(
+                  buildWhen: (previous, current) {
+                if (previous.currentHydrationValue !=
+                    current.currentHydrationValue) {
+                  return true;
+                }
+                return false;
+              }, builder: (context, state) {
+                return FutureBuilder<(double, double)>(future: () async {
+                  final history = await context
+                      .read<BottleDataCubit>()
+                      .getCurrentDayHistory();
 
-                      final history = await context
-                          .read<BottleDataCubit>()
-                          .getHistoryForDateRange(startDate, endDate);
+                  double waterVolumeConsumed = history;
+                  double completionPercent = await WaterConsumptionCalculator
+                      .calculateCompletionPercentage(waterVolumeConsumed);
 
-                      if (history == null || history.isEmpty) return (0.0, 0.0);
+                  return (completionPercent, waterVolumeConsumed);
+                }(), builder: (context, snapshot) {
+                  final (completionPercent, waterVolumeConsumed) =
+                      snapshot.data ?? (0.0, 0.0);
 
-                      double waterVolumeConsumed =
-                          WaterConsumptionCalculator.calculateDailyConsumption(
-                              history);
-
-                      double completionPercent =
-                          await WaterConsumptionCalculator
-                              .calculateCompletionPercentage(
-                                  waterVolumeConsumed);
-
-                      return (completionPercent, waterVolumeConsumed);
-                    }(), builder: (context, snapshot) {
-                      final (completionPercent, waterVolumeConsumed) =
-                          snapshot.data ?? (0.0, 0.0);
-
-                      if (snapshot.connectionState == ConnectionState.waiting) {
-                        return const Center(child: CircularProgressIndicator());
-                      }
-                      return CustomCircularWaterProgressIndicator(
-                        height: AppDimensions.dim70.h,
-                        width: AppDimensions.dim70.w,
-                        boxShadow: [
-                          BoxShadow(
-                            blurRadius: AppDimensions.dim4.r,
-                            spreadRadius: AppDimensions.dim1.r,
-                            color: Colors.black.withOpacity(.3),
-                            offset: Offset(
-                                AppDimensions.dim2.w, AppDimensions.dim2.h),
-                          ),
-                          BoxShadow(
-                            blurRadius: AppDimensions.dim4.r,
-                            spreadRadius: AppDimensions.dim1.r,
-                            color: Colors.black.withOpacity(.3),
-                            offset: Offset(
-                                -AppDimensions.dim1.w, -AppDimensions.dim1.h),
-                          ),
-                        ],
-                        backgroundColor: Color(0xFF767676),
-                        progressBackgroundColor:
-                            Color(0XFFFFFFFF).withOpacity(0.50),
-                        //needsInnerShadow: false,
-                        percentageValue: completionPercent,
-                        center: Container(
-                          width: AppDimensions.dim50.w,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                          ),
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              TweenAnimationBuilder<double>(
-                                tween: Tween<double>(
-                                  begin: 0.0,
-                                  end: waterVolumeConsumed / 1000,
-                                ),
-                                duration: Duration(milliseconds: 500),
-                                curve: Curves.fastEaseInToSlowEaseOut,
-                                builder: (context, value, child) {
-                                  return Text(
-                                    "${value.toStringAsFixed(1)}L",
-                                    style: TextStyle(
-                                      color: AppColors.white,
-                                      fontSize: AppFontStyles.fontSize_18,
-                                      fontVariations: [
-                                        AppFontStyles.boldFontVariation
-                                      ],
-                                    ),
-                                  );
-                                },
-                              ),
-                              FutureBuilder<int?>(
-                                future: SharedPrefsHelper.getUserGoal(),
-                                builder: (context, snapshot) {
-                                  double userGoalLiters = 0.0;
-
-                                  if (snapshot.hasData &&
-                                      snapshot.data != null) {
-                                    userGoalLiters = snapshot.data! / 1000.0;
-                                  }
-
-                                  return Text(
-                                    "/${userGoalLiters.toStringAsFixed(1)}L",
-                                    style: TextStyle(
-                                      color: AppColors.lightSkyBlue,
-                                      fontSize: AppFontStyles.fontSize_10,
-                                      fontVariations: [
-                                        AppFontStyles.semiBoldFontVariation,
-                                      ],
-                                    ),
-                                  );
-                                },
-                              )
-                            ],
-                          ),
-                        ),
-                      );
-                    });
-                  }),
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
+                  return _progressCircleWidget(
+                      completionPercent, waterVolumeConsumed);
+                });
+              }),
             ),
           ),
           Positioned(
@@ -1287,78 +1130,78 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildBleStatus(BuildContext context) {
-    return Container(
-      height: AppDimensions.dim60.h,
-      alignment: Alignment.center,
-      child: BlocBuilder<BleCubit, BleState>(
-        builder: (context, state) {
-          final connectionState = state.status;
+  CustomCircularWaterProgressIndicator _progressCircleWidget(
+      double completionPercent, double waterVolumeConsumed) {
+    return CustomCircularWaterProgressIndicator(
+      height: AppDimensions.dim70.h,
+      width: AppDimensions.dim70.w,
+      boxShadow: [
+        BoxShadow(
+          blurRadius: AppDimensions.dim4.r,
+          spreadRadius: AppDimensions.dim1.r,
+          color: Colors.black.withOpacity(.3),
+          offset: Offset(AppDimensions.dim2.w, AppDimensions.dim2.h),
+        ),
+        BoxShadow(
+          blurRadius: AppDimensions.dim4.r,
+          spreadRadius: AppDimensions.dim1.r,
+          color: Colors.black.withOpacity(.3),
+          offset: Offset(-AppDimensions.dim1.w, -AppDimensions.dim1.h),
+        ),
+      ],
+      backgroundColor: Color(0xFF767676),
+      progressBackgroundColor: Color(0XFFFFFFFF).withOpacity(0.50),
+      //needsInnerShadow: false,
+      percentageValue: completionPercent,
+      center: Container(
+        width: AppDimensions.dim50.w,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            TweenAnimationBuilder<double>(
+              tween: Tween<double>(
+                begin: 0.0,
+                end: waterVolumeConsumed / 1000,
+              ),
+              duration: Duration(milliseconds: 500),
+              curve: Curves.fastEaseInToSlowEaseOut,
+              builder: (context, value, child) {
+                return Text(
+                  "${value.toStringAsFixed(1)}L",
+                  style: TextStyle(
+                    color: AppColors.white,
+                    fontSize: AppFontStyles.fontSize_18,
+                    fontVariations: [AppFontStyles.boldFontVariation],
+                  ),
+                );
+              },
+            ),
+            FutureBuilder<int?>(
+              future: SharedPrefsHelper.getUserGoal(),
+              builder: (context, snapshot) {
+                double userGoalLiters = 0.0;
 
-          switch (connectionState) {
-            case BleStatus.disconnected:
-              return Text(
-                "Bottle disconnected",
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: AppFontStyles.fontSize_12,
-                  color: AppColors.redColor,
-                  fontVariations: [
-                    AppFontStyles.semiBoldFontVariation,
-                  ],
-                ),
-              );
+                if (snapshot.hasData && snapshot.data != null) {
+                  userGoalLiters = snapshot.data! / 1000.0;
+                }
 
-            case BleStatus.scanning:
-              return Text(
-                "Scanning for bottle",
-                style: TextStyle(
-                  fontSize: AppFontStyles.fontSize_12,
-                  color: AppColors.white,
-                  fontVariations: [
-                    AppFontStyles.semiBoldFontVariation,
-                  ],
-                ),
-              );
-
-            case BleStatus.connecting:
-              return Text(
-                "Initiating connection",
-                style: TextStyle(
-                  fontSize: AppFontStyles.fontSize_12,
-                  color: AppColors.white,
-                  fontVariations: [
-                    AppFontStyles.semiBoldFontVariation,
-                  ],
-                ),
-              );
-
-            case BleStatus.connected:
-              return Text(
-                "Bottle connected",
-                style: TextStyle(
-                  fontSize: AppFontStyles.fontSize_12,
-                  color: AppColors.white,
-                  fontVariations: [
-                    AppFontStyles.semiBoldFontVariation,
-                  ],
-                ),
-              );
-
-            default:
-              return Text(
-                "Bluetooth status unknown",
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: AppFontStyles.fontSize_12,
-                  color: AppColors.redColor,
-                  fontVariations: [
-                    AppFontStyles.semiBoldFontVariation,
-                  ],
-                ),
-              );
-          }
-        },
+                return Text(
+                  "/${userGoalLiters.toStringAsFixed(1)}L",
+                  style: TextStyle(
+                    color: AppColors.lightSkyBlue,
+                    fontSize: AppFontStyles.fontSize_10,
+                    fontVariations: [
+                      AppFontStyles.semiBoldFontVariation,
+                    ],
+                  ),
+                );
+              },
+            )
+          ],
+        ),
       ),
     );
   }

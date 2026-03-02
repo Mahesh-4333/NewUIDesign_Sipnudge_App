@@ -1,4 +1,4 @@
-import 'dart:developer';
+import 'package:hydrify/helpers/logger.dart';
 
 import 'package:dio/dio.dart';
 import 'package:hydrify/models/requests/login_details_request_model.dart';
@@ -43,7 +43,7 @@ class ApiService {
 
       return signinResponseModelFromJson(response.data);
     } on DioException catch (e) {
-      log("Exception occurred : signIn || ${e.toString()} ");
+      Console.log(tag: "APP", value: "Exception occurred : signIn || ${e.toString()} ");
       throw _handleError(e);
     }
   }
@@ -60,7 +60,7 @@ class ApiService {
 
       return signUpResponseModelFromJson(response.data);
     } on DioException catch (e) {
-      log("Exception occurred : signIn || ${e.toString()} ");
+      Console.log(tag: "APP", value: "Exception occurred : signIn || ${e.toString()} ");
       throw _handleError(e);
     }
   }
@@ -76,7 +76,7 @@ class ApiService {
 
       return otpResponseModelFromJson(response.data);
     } on DioException catch (e) {
-      log("Exception occurred : signIn || ${e.toString()} ");
+      Console.log(tag: "APP", value: "Exception occurred : signIn || ${e.toString()} ");
       throw _handleError(e);
     }
   }
@@ -92,7 +92,7 @@ class ApiService {
 
       return otpResponseModelFromJson(response.data);
     } on DioException catch (e) {
-      log("Exception occurred : signIn || ${e.toString()} ");
+      Console.log(tag: "APP", value: "Exception occurred : signIn || ${e.toString()} ");
       throw _handleError(e);
     }
   }
@@ -106,7 +106,7 @@ class ApiService {
 
       return otpResponseModelFromJson(response.data);
     } on DioException catch (e) {
-      log("Exception occurred : signIn || ${e.toString()} ");
+      Console.log(tag: "APP", value: "Exception occurred : signIn || ${e.toString()} ");
       throw _handleError(e);
     }
   }
@@ -132,7 +132,7 @@ class ApiService {
 
       return SignUpResponseModel.fromJson(response.data);
     } on DioException catch (e) {
-      log("Exception occurred : submitLoginDetails || ${e.toString()} ");
+      Console.log(tag: "APP", value: "Exception occurred : submitLoginDetails || ${e.toString()} ");
       throw _handleError(e);
     }
   }

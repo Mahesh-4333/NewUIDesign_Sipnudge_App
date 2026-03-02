@@ -49,5 +49,19 @@ class AssetsPath {
 
   static const String clickSound = "sound/click_sound.mp3";
 
+  static const String camera = "assets/profile/camera.png";
+  static const String gallery = "assets/profile/gallery.png";
+
+  static const String sBattery = "assets/sipnudge_bottle/battery.png";
+  static const String sFill_level = "assets/sipnudge_bottle/fill_level.png";
+  static const String sMaterial = "assets/sipnudge_bottle/material.png";
+  static const String sTemperature = "assets/sipnudge_bottle/temperature.png";
+  static const String sVolume = "assets/sipnudge_bottle/volume.png";
+  static const String sWeight = "assets/sipnudge_bottle/weight.png";
+  static const String upperArrow = "assets/sipnudge_bottle/uppar_arrow.png";
+  static const String downArrow = "assets/sipnudge_bottle/down_arrow.png";
+  static const String info = "assets/sipnudge_bottle/info.png";
+
+
 
 }

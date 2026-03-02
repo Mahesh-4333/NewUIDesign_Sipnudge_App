@@ -1,4 +1,4 @@
-import 'dart:developer';
+import 'package:hydrify/helpers/logger.dart';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -206,11 +206,11 @@ class NotificationManager {
     try {
       final result = await Alarm.set(alarmSettings: alarmSettings);
 
-      log('Alarm ID $id set for $dateTime. Success: $result');
+      Console.log(tag: "APP", value: 'Alarm ID $id set for $dateTime. Success: $result');
 
       return result;
     } catch (e) {
-      log('Error setting reliable alarm: $e');
+      Console.log(tag: "APP", value: 'Error setting reliable alarm: $e');
 
       return false;
     }

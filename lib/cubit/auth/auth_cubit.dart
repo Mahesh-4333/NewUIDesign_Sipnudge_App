@@ -1,4 +1,4 @@
-import 'dart:developer';
+import 'package:hydrify/helpers/logger.dart';
 
 import 'package:bloc/bloc.dart';
 import 'package:hydrify/models/responses/signin_response_model.dart';
@@ -48,7 +48,7 @@ class AuthCubit extends Cubit<AuthState> {
 
       return didAuthenticate;
     } catch (e) {
-      log('Biometric auth error: $e', name: 'auth_cubit');
+      Console.log(tag: 'auth_cubit', value: 'Biometric auth error: $e');
       emit(state.copyWith(
         isLoading: false,
         isError: true,
@@ -128,7 +128,7 @@ class AuthCubit extends Cubit<AuthState> {
       );
       emit(state.copyWith(isLoading: false));
     } catch (e) {
-      log('SignUp OTP exception: $e', name: 'auth_cubit');
+      Console.log(tag: 'auth_cubit', value: 'SignUp OTP exception: $e');
       emit(state.copyWith(
         isLoading: false,
         isError: true,
@@ -173,7 +173,7 @@ class AuthCubit extends Cubit<AuthState> {
         user: signInResult,
       ));
     } catch (e) {
-      log('SignIn exception: $e', name: 'auth_cubit');
+      Console.log(tag: 'auth_cubit', value: 'SignIn exception: $e');
       emit(state.copyWith(
         isLoading: false,
         isError: true,

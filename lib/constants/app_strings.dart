@@ -126,7 +126,7 @@ class AppStrings {
 
   static const letsHitHydrationGoals = "Let's hit our hydration goals";
   static getGoalString(double goalPercent) {
-    return "You got ${goalPercent.toInt()}% of today's goal, keep focusing on your health!";
+    return "You got ${goalPercent.toStringAsFixed(0)}% of today's goal, keep focusing on your health!";
   }
 
   static setResendOtpTimerString(int seconds) {

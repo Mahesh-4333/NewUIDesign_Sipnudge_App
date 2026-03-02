@@ -1,4 +1,4 @@
-import 'dart:developer';
+import 'package:hydrify/helpers/logger.dart';
 import 'dart:io';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
@@ -23,10 +23,10 @@ class FirebaseFunctionsService {
       }).timeout(Duration(seconds: 20), onTimeout: () {
         throw SocketException("Server error");
       });
-      log("$endpoint  ${jsonDecode(response.body)}");
+      Console.log(tag: "APP", value: "$endpoint  ${jsonDecode(response.body)}");
       return jsonDecode(response.body);
     } catch (e) {
-      log("Exception occurred in $endpoint : ${e.toString()}");
+      Console.log(tag: "APP", value: "Exception occurred in $endpoint : ${e.toString()}");
       return {
         "status": "failure",
         "statusCode": 500,
@@ -107,16 +107,16 @@ class FirebaseFunctionsService {
           await googleUser.authentication;
 
       // Log Google user information
-      log('=== GOOGLE SIGN-IN DATA ===');
-      log('User ID: ${googleUser.id}');
-      log('Email: ${googleUser.email}');
-      log('Display Name: ${googleUser.displayName}');
-      log('Photo URL: ${googleUser.photoUrl}');
-      log('Server Auth Code: ${googleUser.serverAuthCode}');
+      Console.log(tag: "APP", value: '=== GOOGLE SIGN-IN DATA ===');
+      Console.log(tag: "APP", value: 'User ID: ${googleUser.id}');
+      Console.log(tag: "APP", value: 'Email: ${googleUser.email}');
+      Console.log(tag: "APP", value: 'Display Name: ${googleUser.displayName}');
+      Console.log(tag: "APP", value: 'Photo URL: ${googleUser.photoUrl}');
+      Console.log(tag: "APP", value: 'Server Auth Code: ${googleUser.serverAuthCode}');
 
       // Log authentication tokens
-      log('Access Token: ${googleAuth.accessToken}');
-      log('ID Token: ${googleAuth.idToken}');
+      Console.log(tag: "APP", value: 'Access Token: ${googleAuth.accessToken}');
+      Console.log(tag: "APP", value: 'ID Token: ${googleAuth.idToken}');
       SharedPrefsHelper.setUserEmail(googleUser.email);
 
       final credential = GoogleAuthProvider.credential(
@@ -130,15 +130,15 @@ class FirebaseFunctionsService {
       // Log Firebase user information
       final user = userCredential.user;
       if (user != null) {
-        log('=== FIREBASE USER DATA (Google) ===');
-        log('UID: ${user.uid}');
-        log('Email: ${user.email}');
-        log('Display Name: ${user.displayName}');
-        log('Photo URL: ${user.photoURL}');
-        log('Email Verified: ${user.emailVerified}');
-        log('Creation Time: ${user.metadata.creationTime}');
-        log('Last Sign In: ${user.metadata.lastSignInTime}');
-        log('Provider Data: ${user.providerData.map((p) => {
+        Console.log(tag: "APP", value: '=== FIREBASE USER DATA (Google) ===');
+        Console.log(tag: "APP", value: 'UID: ${user.uid}');
+        Console.log(tag: "APP", value: 'Email: ${user.email}');
+        Console.log(tag: "APP", value: 'Display Name: ${user.displayName}');
+        Console.log(tag: "APP", value: 'Photo URL: ${user.photoURL}');
+        Console.log(tag: "APP", value: 'Email Verified: ${user.emailVerified}');
+        Console.log(tag: "APP", value: 'Creation Time: ${user.metadata.creationTime}');
+        Console.log(tag: "APP", value: 'Last Sign In: ${user.metadata.lastSignInTime}');
+        Console.log(tag: "APP", value: 'Provider Data: ${user.providerData.map((p) => {
               'providerId': p.providerId,
               'uid': p.uid,
               'email': p.email,
@@ -149,7 +149,7 @@ class FirebaseFunctionsService {
 
       return userCredential;
     } catch (e) {
-      log('Google Sign-In Error: $e');
+      Console.log(tag: "APP", value: 'Google Sign-In Error: $e');
       return null;
     }
   }
@@ -157,7 +157,7 @@ class FirebaseFunctionsService {
   static Future<Map<String, dynamic>> signInWithApple() async {
     try {
       if (!await SignInWithApple.isAvailable()) {
-        log('Apple Sign-In is not available on this device/simulator');
+        Console.log(tag: "APP", value: 'Apple Sign-In is not available on this device/simulator');
         return {
           'success': false,
           'message': 'Apple Sign-In is not available on this device'
@@ -171,14 +171,14 @@ class FirebaseFunctionsService {
         ],
       );
 
-      log('=== APPLE SIGN-IN DATA ===');
-      log('User Identifier: ${appleCredential.userIdentifier}');
-      log('Given Name: ${appleCredential.givenName}');
-      log('Family Name: ${appleCredential.familyName}');
-      log('Email: ${appleCredential.email}');
-      log('Identity Token: ${appleCredential.identityToken}');
-      log('Authorization Code: ${appleCredential.authorizationCode}');
-      log('State: ${appleCredential.state}');
+      Console.log(tag: "APP", value: '=== APPLE SIGN-IN DATA ===');
+      Console.log(tag: "APP", value: 'User Identifier: ${appleCredential.userIdentifier}');
+      Console.log(tag: "APP", value: 'Given Name: ${appleCredential.givenName}');
+      Console.log(tag: "APP", value: 'Family Name: ${appleCredential.familyName}');
+      Console.log(tag: "APP", value: 'Email: ${appleCredential.email}');
+      Console.log(tag: "APP", value: 'Identity Token: ${appleCredential.identityToken}');
+      Console.log(tag: "APP", value: 'Authorization Code: ${appleCredential.authorizationCode}');
+      Console.log(tag: "APP", value: 'State: ${appleCredential.state}');
 
       final oauthCredential = OAuthProvider("apple.com").credential(
         idToken: appleCredential.identityToken,
@@ -190,15 +190,15 @@ class FirebaseFunctionsService {
 
       final user = userCredential.user;
       if (user != null) {
-        log('=== FIREBASE USER DATA (Apple) ===');
-        log('UID: ${user.uid}');
-        log('Email: ${user.email}');
-        log('Display Name: ${user.displayName}');
-        log('Photo URL: ${user.photoURL}');
-        log('Email Verified: ${user.emailVerified}');
-        log('Creation Time: ${user.metadata.creationTime}');
-        log('Last Sign In: ${user.metadata.lastSignInTime}');
-        log('Provider Data: ${user.providerData.map((p) => {
+        Console.log(tag: "APP", value: '=== FIREBASE USER DATA (Apple) ===');
+        Console.log(tag: "APP", value: 'UID: ${user.uid}');
+        Console.log(tag: "APP", value: 'Email: ${user.email}');
+        Console.log(tag: "APP", value: 'Display Name: ${user.displayName}');
+        Console.log(tag: "APP", value: 'Photo URL: ${user.photoURL}');
+        Console.log(tag: "APP", value: 'Email Verified: ${user.emailVerified}');
+        Console.log(tag: "APP", value: 'Creation Time: ${user.metadata.creationTime}');
+        Console.log(tag: "APP", value: 'Last Sign In: ${user.metadata.lastSignInTime}');
+        Console.log(tag: "APP", value: 'Provider Data: ${user.providerData.map((p) => {
               'providerId': p.providerId,
               'uid': p.uid,
               'email': p.email,
@@ -216,7 +216,7 @@ class FirebaseFunctionsService {
         'message': 'Sign-in successful'
       };
     } catch (e) {
-      log('Apple Sign-In Error: $e');
+      Console.log(tag: "APP", value: 'Apple Sign-In Error: $e');
 
       String errorMessage = 'Apple Sign-In failed. Please try again.';
 
