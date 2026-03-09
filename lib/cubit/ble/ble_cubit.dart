@@ -48,6 +48,10 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
   // BLE initialization and scanning
   // ---------------------------------------------------------------------------
 
+  // investor bottle 3 day before
+  // new bottle 1 day before
+  // tap bottle 0 day before
+
   Future<void> start() async {
     // await _checkAndResetForNewDay();
 
@@ -322,7 +326,10 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
         _hydration30DaysChar!.onValueReceived.listen((value) async {
           try {
             final data = String.fromCharCodes(value);
-            log("Hydration 30 days Raw: $data", name: "BLE_Cubit");
+            //final data = "1771467000|0/1800/1165|1/1800/2082|2/1800/7|3/1800/0|4/1800/0|5/1800/125|6/1800/0|7/1800/738|8/1800/4|9/1800/0|10/1800/7|11/1800/3|12/1800/0|13/1800/10|14/1800/2436|15/1800/0|16/1800/0|17/1800/0|18/1800/0|19/1800/0|20/1800/0|21/1800/0|22/1800/0|23/1800/0|24/1800/0|25/1800/0|26/1800/0|27/1800/0|28/1800/0|29/1800/0";
+            // final data =
+            //     "1772763000|0/1800/547|1/1800/2697|2/1800/586|3/1800/0|4/1800/0|5/1800/0|6/1800/0|7/1800/0|8/1800/0|9/1800/0|10/1800/0|11/1800/0|12/1800/0|13/1800/0|14/1800/0|15/1800/0|16/1800/0|17/1800/0|18/1800/0|19/1800/0|20/1800/0|21/1800/0|22/1800/0|23/1800/0|24/1800/0|25/1800/0|26/1800/0|27/1800/0|28/1800/0|29/1800/0";
+            Console.log(tag: "Hydration 30 days Raw: ", value: "$data");
 
             final parsed = _parse30DaysHydration(data);
             if (parsed.isNotEmpty) {
@@ -378,7 +385,7 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
           emit(state.copyWith(slotData: data));
           log("Hydration Slot Data: $data", name: "BLE_Cubit");
 
-          final updatedEntries = _parseHydrationSlotData(data);
+          final updatedEntries = await _parseHydrationSlotData(data);
           if (updatedEntries.isNotEmpty) {
             await dbHelper.saveLastSyncDate(DateTime.now());
 
@@ -496,7 +503,7 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
   }
 
 // Replace the old _parseHydrationSlotData with this:
-  List<HydrationEntry> _parseHydrationSlotData(String payload) {
+  Future<List<HydrationEntry>> _parseHydrationSlotData(String payload) async {
     final List<HydrationEntry> results = [];
 
     try {
@@ -507,7 +514,7 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
 
       // The device might send multiple slot segments separated by '|'
       final segments = payload.split('|');
-
+      final currentHyderationData = await dbHelper.getAllSlots();
       for (final seg in segments) {
         final s = seg.trim();
         if (s.isEmpty || s.toLowerCase() == 'na') continue;
@@ -534,12 +541,18 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
         }
 
         final slot = HydrationSlot.values[slotId];
-        final now = DateTime.now();
+
+        var currentSlotIdData =
+            currentHyderationData.where((e) => e.slot == slot).first;
 
         results.add(HydrationEntry(
           slot: slot,
-          startTime: TimeOfDay(hour: now.hour, minute: now.minute),
-          endTime: TimeOfDay(hour: now.hour, minute: (now.minute + 1) % 60),
+          startTime: TimeOfDay(
+              hour: currentSlotIdData.startTime.hour,
+              minute: currentSlotIdData.startTime.minute),
+          endTime: TimeOfDay(
+              hour: currentSlotIdData.endTime.hour,
+              minute: currentSlotIdData.endTime.minute),
           waterDrank: consumed,
           amount: target,
         ));
@@ -581,6 +594,9 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
       // Heuristic: if epoch looks like milliseconds (> 1e12) treat as ms, else seconds.
       final epochMillis =
           (epochNum.toString().length == 13) ? epochNum : epochNum * 1000;
+      DateTime rawStartDate =
+          DateTime.fromMillisecondsSinceEpoch(epochMillis, isUtc: true);
+      // Normalize to UTC midnight for stable day-indexing
       DateTime startDate =
           DateTime.fromMillisecondsSinceEpoch(epochMillis).toLocal();
 
@@ -759,22 +775,31 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
         status: BleStatus.scanning,
         isFirstConnection: true,
         message: "Device forgotten. \nReady to scan for new devices.",
+        battery: 0,
+        volume: 0,
+        percent: 0,
+        bottleData: null,
+        slotData: null,
+        currentHydrationValue: 0,
+        scannedDevices: [],
       ),
     );
 
     if (FlutterBluePlus.isScanningNow) {
       await FlutterBluePlus.stopScan();
     }
-    emit(
-      state.copyWith(
-        status: BleStatus.scanning,
-        isFirstConnection: true,
-        scannedDevices: [],
-        message: "Device forgotten. \nReady to scan for new devices.",
-      ),
-    );
-
     _scanForAllDevices();
+  }
+
+  Future<void> clearData() async {
+    emit(state.copyWith(
+      currentHydrationValue: 0,
+      battery: 0,
+      volume: 0,
+      percent: 0,
+      bottleData: null,
+      slotData: null,
+    ));
   }
 
   @override
@@ -902,7 +927,7 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
     log("🧪 [MOCK] Injecting Hydration Slot Data: $mockPayload",
         name: "BLE_Cubit");
 
-    final updatedEntries = _parseHydrationSlotData(mockPayload);
+    final updatedEntries = await _parseHydrationSlotData(mockPayload);
 
     if (updatedEntries.isNotEmpty) {
       // 1. Update last sync date
@@ -952,10 +977,8 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
     final parsed = _parse30DaysHydration(mockPayload);
     if (parsed.isNotEmpty) {
       final List<HydrationDaySummary> list = parsed.map((m) {
-        final DateTime rawDate = m['date'] as DateTime;
-        final date = DateTime(rawDate.year, rawDate.month, rawDate.day);
         return HydrationDaySummary(
-          date: date,
+          date: m['date'] as DateTime,
           dayIndex: m['dayIndex'] as int,
           target: (m['target'] as num).toDouble(),
           consumed: (m['consumed'] as num).toDouble(),
@@ -1096,8 +1119,10 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
     final db = await dbHelper.database;
 
     final now = DateTime.now();
-    final startDate = DateTime(now.year, now.month, now.day, 00, 00, 00);
-    final endDate = DateTime(now.year, now.month, now.day, 23, 59, 59);
+    // Normalize "Today" to UTC midnight for matching against stable database entries
+    final normalizedStart = DateTime(now.year, now.month, now.day);
+    final normalizedEnd =
+        DateTime(now.year, now.month, now.day, 23, 59, 59, 999);
 
     final List<Map<String, dynamic>> maps = await db.query(
       DatabaseHelper.hydrationSummaryTableName,
@@ -1107,14 +1132,8 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
 
     var hyderationData = List.generate(
       maps.length,
-          (i) => HydrationDaySummary.fromMap(maps[i]),
+      (i) => HydrationDaySummary.fromMap(maps[i]),
     );
-
-    // Normalize input range to start and end of day
-    final normalizedStart =
-    DateTime(startDate.year, startDate.month, startDate.day);
-    final normalizedEnd =
-    DateTime(endDate.year, endDate.month, endDate.day, 23, 59, 59, 999);
 
     var hydrationDataTemp = hyderationData.where((s) {
       if (s.date.isBefore(normalizedStart)) {
@@ -1130,9 +1149,5 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
     }
 
     return hydrationDataTemp.first.consumed;
-  }
-
-  Future<void> clearData() async{
-    emit(state.copyWith(currentHydrationValue: 0));
   }
 }

@@ -28,6 +28,12 @@ class SharedPrefsHelper {
   static const String _keyAlarmRepeatIndex = "alarm_repeat_index";
   static const String _keyStopWhenFull = "stop_when_full";
 
+  static const String _keyVibrationStrength = "vibration_strength";
+  static const String _keyLedIntensity = "led_intensity";
+  static const String _keyLedColor = "led_color";
+  static const String _keyUvCleaning = "uv_cleaning";
+  static const String _keyFavoriteRingtones = 'favorite_ringtones';
+
   // ----------------------------
   // RINGTONE METHODS (NEW)
   // ----------------------------
@@ -49,6 +55,19 @@ class SharedPrefsHelper {
   static Future<bool> getRingtoneFeedBack() async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getBool(_keyRingtoneFeedback) ?? true;
+  }
+
+  static Future<void> setFavoriteRingtones(List<int> ids) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setStringList(
+        _keyFavoriteRingtones, ids.map((id) => id.toString()).toList());
+  }
+
+  static Future<List<int>> getFavoriteRingtones() async {
+    final prefs = await SharedPreferences.getInstance();
+    final list = prefs.getStringList(_keyFavoriteRingtones);
+    if (list == null) return [];
+    return list.map((id) => int.parse(id)).toList();
   }
 
   // ----------------------------
@@ -188,7 +207,6 @@ class SharedPrefsHelper {
     return prefs.getString(_keyReminderMode) ?? "SteadySip";
   }
 
-
   static Future<void> setAlarmRepeatIndex(int index) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setInt(_keyAlarmRepeatIndex, index);
@@ -196,7 +214,8 @@ class SharedPrefsHelper {
 
   static Future<int> getAlarmRepeatIndex() async {
     final prefs = await SharedPreferences.getInstance();
-    return prefs.getInt(_keyAlarmRepeatIndex) ?? 0; // Default to 10 mins (index 2)
+    return prefs.getInt(_keyAlarmRepeatIndex) ??
+        0; // Default to 10 mins (index 2)
   }
 
   static Future<void> setStopWhenFull(bool value) async {
@@ -207,6 +226,50 @@ class SharedPrefsHelper {
   static Future<bool> getStopWhenFull() async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getBool(_keyStopWhenFull) ?? true;
+  }
+
+  // Vibration Strength
+  static Future<void> setVibrationStrength(double strength) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setDouble(_keyVibrationStrength, strength);
+  }
+
+  static Future<double> getVibrationStrength() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getDouble(_keyVibrationStrength) ?? 0.75;
+  }
+
+  // LED Intensity
+  static Future<void> setLedIntensity(double intensity) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setDouble(_keyLedIntensity, intensity);
+  }
+
+  static Future<double> getLedIntensity() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getDouble(_keyLedIntensity) ?? 0.8;
+  }
+
+  // LED Hue (0.0 - 1.0)
+  static Future<void> setLedHue(double hue) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setDouble(_keyLedColor, hue);
+  }
+
+  static Future<double> getLedHue() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getDouble(_keyLedColor) ?? 0.6; // Default blue-ish hue
+  }
+
+  // UV Cleaning
+  static Future<void> setUvCleaning(bool enabled) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_keyUvCleaning, enabled);
+  }
+
+  static Future<bool> getUvCleaning() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool(_keyUvCleaning) ?? false;
   }
 
 // =======================================================================

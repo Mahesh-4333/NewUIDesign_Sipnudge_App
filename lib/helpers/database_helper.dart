@@ -133,7 +133,9 @@ CREATE TABLE IF NOT EXISTS app_metadata (
       conflictAlgorithm: ConflictAlgorithm.replace,
     );
 
-    Console.log(tag: "APP", value: '[DB] Last hydration sync saved: ${date.toIso8601String()}');
+    Console.log(
+        tag: "APP",
+        value: '[DB] Last hydration sync saved: ${date.toIso8601String()}');
   }
 
   Future<DateTime?> getLastSyncDate() async {
@@ -163,7 +165,10 @@ CREATE TABLE IF NOT EXISTS app_metadata (
       await clearHydrationSlots();
     }
 
-    Console.log(tag: "APP", value: "[DB] Inserting slot: ${entry.slot.label}, amount: ${entry.amount} mL ${entry.waterDrank} mL startEpoch ${startEpoch} endEpoch ${endEpoch}");
+    Console.log(
+        tag: "APP",
+        value:
+            "[DB] Inserting slot: ${entry.slot.label}, amount: ${entry.amount} mL ${entry.waterDrank} mL startEpoch ${startEpoch} endEpoch ${endEpoch}");
     await db.insert(
       'hydration_slots',
       {
@@ -181,7 +186,10 @@ CREATE TABLE IF NOT EXISTS app_metadata (
     final allSlots = await db.query('hydration_slots');
     Console.log(tag: "APP", value: "[DB] Current slots in DB:");
     for (var s in allSlots) {
-      Console.log(tag: "APP", value: "  ${s['slotName']} - waterGoal: ${s['waterGoal']}, status: ${s['status']}");
+      Console.log(
+          tag: "APP",
+          value:
+              "  ${s['slotName']} - waterGoal: ${s['waterGoal']}, status: ${s['status']}");
     }
   }
 
@@ -189,9 +197,12 @@ CREATE TABLE IF NOT EXISTS app_metadata (
     try {
       final db = await database;
       final count = await db.delete('hydration_slots');
-      Console.log(tag: "APP", value: "[DB] Cleared hydration_slots table. Rows deleted: $count");
+      Console.log(
+          tag: "APP",
+          value: "[DB] Cleared hydration_slots table. Rows deleted: $count");
     } catch (e) {
-      Console.log(tag: "APP", value: "[DB] Error clearing hydration_slots table: $e");
+      Console.log(
+          tag: "APP", value: "[DB] Error clearing hydration_slots table: $e");
     }
   }
 
@@ -304,7 +315,8 @@ CREATE TABLE IF NOT EXISTS app_metadata (
     // You can also clear `bottle_history` or `user` table if needed
     final db = await database;
     await db.delete('bottle_history');
-    Console.log(tag: "APP", value: "[DB] Cleared all data in bottle_history table.");
+    Console.log(
+        tag: "APP", value: "[DB] Cleared all data in bottle_history table.");
   }
 
   Future<void> insertBottleData(BottleData data) async {
@@ -314,7 +326,10 @@ CREATE TABLE IF NOT EXISTS app_metadata (
       data.toMap(),
       conflictAlgorithm: ConflictAlgorithm.replace,
     );
-    Console.log(tag: "APP", value: "[DB] Inserted bottle data: ${data.liquidVolume} mL at ${data.timestamp}");
+    Console.log(
+        tag: "APP",
+        value:
+            "[DB] Inserted bottle data: ${data.liquidVolume} mL at ${data.timestamp}");
   }
 
   Future<List<BottleData>> getBottleDataForDateRange(
@@ -334,7 +349,9 @@ CREATE TABLE IF NOT EXISTS app_metadata (
     final db = await database;
     final batch = db.batch();
     for (final s in list) {
-      Console.log(tag: "inserting30Day", value: "${s.dayIndex} : ${s.date.toIso8601String()} : ${s.consumed}");
+      Console.log(
+          tag: "inserting30Day",
+          value: "${s.dayIndex} : ${s.date.toIso8601String()} : ${s.consumed}");
       batch.insert(
         '$hydrationSummaryTableName',
         s.toMap(),
@@ -363,7 +380,7 @@ CREATE TABLE IF NOT EXISTS app_metadata (
 
     if (startDate == null && endDate == null) return summaries;
 
-    // Normalize input range to start and end of day
+    // Normalize input range to UTC midnight for matching against stable database entries
     final normalizedStart = startDate != null
         ? DateTime(startDate.year, startDate.month, startDate.day)
         : null;
@@ -387,9 +404,14 @@ CREATE TABLE IF NOT EXISTS app_metadata (
 
     try {
       final deletedRows = await db.delete('$hydrationSummaryTableName');
-      Console.log(tag: "APP", value: "[DB] Cleared hydration_day_summaries table. Rows deleted: $deletedRows");
+      Console.log(
+          tag: "APP",
+          value:
+              "[DB] Cleared hydration_day_summaries table. Rows deleted: $deletedRows");
     } catch (e) {
-      Console.log(tag: "APP", value: "[DB] Error clearing hydration_day_summaries table: $e");
+      Console.log(
+          tag: "APP",
+          value: "[DB] Error clearing hydration_day_summaries table: $e");
     }
   }
 

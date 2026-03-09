@@ -28,10 +28,6 @@ class _BottleInfoScreenState extends State<BottleInfoScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final remainingWater = BottleInfo.capacity - widget.bottleInfo.currentWater;
-    final consumedPercentage =
-        (widget.bottleInfo.currentWater / BottleInfo.capacity * 100).toInt();
-
     return Scaffold(
       body: Container(
         width: double.infinity,
@@ -408,7 +404,7 @@ class _BottleInfoScreenState extends State<BottleInfoScreen> {
                   snapshot.data ?? (0.0, 0.0);
 
               return _buildTopInfoItem('REMAINING',
-                  '${remainingIntakeWater}ml', Color(0xFF5D7B91));
+                  '${remainingIntakeWater.toStringAsFixed(0)}ml', Color(0xFF5D7B91));
             });
           }),
           Container(height: 30.h, width: 1, color: Color(0xFFE2E8F0)),

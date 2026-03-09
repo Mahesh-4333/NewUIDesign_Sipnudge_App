@@ -994,6 +994,7 @@ class _HomeScreenState extends State<HomeScreen> {
             child: SizedBox(
               child: BlocBuilder<BleCubit, BleState>(
                   buildWhen: (previous, current) {
+                    Console.log(tag: "current_hyderation_buildWhen", value: "${previous.currentHydrationValue} :: ${current.currentHydrationValue}");
                 if (previous.currentHydrationValue !=
                     current.currentHydrationValue) {
                   return true;
@@ -1004,6 +1005,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   final history = await context
                       .read<BottleDataCubit>()
                       .getCurrentDayHistory();
+                  Console.log(tag: "getCurrentDayHistory_progress", value: history.toString());
 
                   double waterVolumeConsumed = history;
                   double completionPercent = await WaterConsumptionCalculator

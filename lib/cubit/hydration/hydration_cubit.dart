@@ -33,7 +33,9 @@ class HydrationCubit extends Cubit<HydrationState> {
   Future<void> _init() async {
     try {
       ble.hydrationUpdates.listen((entries) async {
-        Console.log(tag: "CUBIT_DEBUG", value: "🔔 HydrationCubit received update signal");
+        Console.log(
+            tag: "CUBIT_DEBUG",
+            value: "🔔 HydrationCubit received update signal");
         if (entries.isNotEmpty) {
           await markCompletedByEntries(entries);
         }
@@ -60,7 +62,8 @@ class HydrationCubit extends Cubit<HydrationState> {
 
       _calculateCurrentSlotStatus();
     } catch (e) {
-      Console.log(tag: "APP", value: "[Cubit] Failed to load hydration data: $e");
+      Console.log(
+          tag: "APP", value: "[Cubit] Failed to load hydration data: $e");
     }
   }
 
@@ -134,7 +137,8 @@ class HydrationCubit extends Cubit<HydrationState> {
         emit(state.copyWith(entries: slotsFromDb, totalDrank: total.round()));
       }
     } catch (e) {
-      Console.log(tag: "APP", value: "[Cubit] Failed to load slots from DB: $e");
+      Console.log(
+          tag: "APP", value: "[Cubit] Failed to load slots from DB: $e");
       emit(state.copyWith(errorMessage: "Failed to load slots from DB."));
     }
   }
@@ -390,11 +394,12 @@ class HydrationCubit extends Cubit<HydrationState> {
     emit(state.copyWith(errorMessage: message, successMessage: null));
   }
 
-
   Future<void> refreshAchievementStats() async {
     try {
       final summaries = await _dbHelper.getHydrationSummariesForRange();
-      Console.log(tag: "APP", value: "DEBUG: Total summaries found: ${summaries.length}");
+      Console.log(
+          tag: "APP",
+          value: "DEBUG: Total summaries found: ${summaries.length}");
 
       summaries.sort((a, b) => a.date.compareTo(b.date));
 
@@ -411,14 +416,20 @@ class HydrationCubit extends Cubit<HydrationState> {
             final d2 = DateTime(day.date.year, day.date.month, day.date.day);
             final difference = d2.difference(d1).inDays;
 
-            Console.log(tag: "APP", value: "DEBUG: Comparing ${d1.toIso8601String()} to ${d2.toIso8601String()} | Diff: $difference");
+            Console.log(
+                tag: "APP",
+                value:
+                    "DEBUG: Comparing ${d1.toIso8601String()} to ${d2.toIso8601String()} | Diff: $difference");
 
             if (difference == 1) {
               currentStreak++;
             } else if (difference == 0) {
-              Console.log(tag: "APP", value: "DEBUG: Duplicate date detected, skipping increment.");
+              Console.log(
+                  tag: "APP",
+                  value: "DEBUG: Duplicate date detected, skipping increment.");
             } else {
-              Console.log(tag: "APP", value: "DEBUG: GAP DETECTED! Streak reset to 1.");
+              Console.log(
+                  tag: "APP", value: "DEBUG: GAP DETECTED! Streak reset to 1.");
               currentStreak = 1;
             }
           } else {
@@ -427,12 +438,15 @@ class HydrationCubit extends Cubit<HydrationState> {
           }
 
           lastDate = day.date;
-          Console.log(tag: "APP", value: "DEBUG: Current Streak Count: $currentStreak");
+          Console.log(
+              tag: "APP", value: "DEBUG: Current Streak Count: $currentStreak");
 
           if (currentStreak == 7) {
             badgesUnlocked++;
             levelMap[badgesUnlocked] = "Level $badgesUnlocked Unlocked";
-            Console.log(tag: "APP", value: "DEBUG: 🏆 BADGE UNLOCKED! Total: $badgesUnlocked");
+            Console.log(
+                tag: "APP",
+                value: "DEBUG: 🏆 BADGE UNLOCKED! Total: $badgesUnlocked");
             currentStreak = 0;
             lastDate = null;
           }
@@ -446,6 +460,17 @@ class HydrationCubit extends Cubit<HydrationState> {
     } catch (e) {
       Console.log(tag: "APP", value: "ERROR in refreshAchievementStats: $e");
     }
+  }
+
+  Future<void> resetUI() async {
+    emit(state.copyWith(
+      entries: [],
+      totalDrank: 0,
+      goal: 0,
+      currentSlotConsumption: 0,
+      currentSlotPercentage: 0,
+      currentSlotEntry: null,
+    ));
   }
 }
 

@@ -8,10 +8,13 @@ import 'package:hydrify/constants/app_colors.dart';
 import 'package:hydrify/constants/app_dimensions.dart';
 import 'package:hydrify/constants/app_font_styles.dart';
 import 'package:hydrify/constants/app_strings.dart';
+import 'package:hydrify/cubit/ble/ble_cubit.dart';
+import 'package:hydrify/cubit/bottle/bottle_data_cubit.dart';
 import 'package:hydrify/cubit/hydration/hydration_cubit.dart';
 import 'package:hydrify/cubit/hydration/hydration_state.dart';
 import 'package:hydrify/helpers/database_helper.dart';
 import 'package:hydrify/helpers/shared_pref_helper.dart';
+import 'package:hydrify/helpers/water_consumption_data_helper.dart';
 import 'package:hydrify/models/hydration_summary.dart';
 import 'package:hydrify/screens/levelreached.dart';
 import 'package:hydrify/screens/widgets/level_widgets/concentric_circles_animation.dart';
@@ -472,16 +475,40 @@ class _AchievementsBadgeScreenState extends State<AchievementsBadgeScreen> {
             ),
           ),
           SizedBox(height: AppDimensions.dim10.h),
-          Text(
-            AppStrings.congratulations(_dailyWaterGoal),
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontFamily: AppFontStyles.urbanistFontFamily,
-              fontVariations: [AppFontStyles.fontWeightVariation600],
-              color: AppColors.bluegray,
-              fontSize: AppFontStyles.fontSize_14.sp,
-            ),
-          ),
+          BlocBuilder<BleCubit, BleState>(buildWhen: (previous, current) {
+            if (previous.currentHydrationValue !=
+                current.currentHydrationValue) {
+              return true;
+            }
+            return false;
+          }, builder: (context, state) {
+            return FutureBuilder<(double, double)>(future: () async {
+              final history = await context
+                  .read<BottleDataCubit>()
+                  .getCurrentDayHistory();
+
+              double waterVolumeConsumed = history;
+              double remainingIntakeWater = await WaterConsumptionCalculator
+                  .calculateRemainingPercentage(waterVolumeConsumed);
+
+              return (remainingIntakeWater, waterVolumeConsumed);
+            }(), builder: (context, snapshot) {
+              final (remainingIntakeWater, waterVolumeConsumed) =
+                  snapshot.data ?? (0.0, 0.0);
+
+              return Text(
+                AppStrings.congratulations(waterVolumeConsumed.toStringAsFixed(0)),
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontFamily: AppFontStyles.urbanistFontFamily,
+                  fontVariations: [AppFontStyles.fontWeightVariation600],
+                  color: AppColors.bluegray,
+                  fontSize: AppFontStyles.fontSize_14.sp,
+                ),
+              );
+            });
+          }),
+
         ],
       ),
     );

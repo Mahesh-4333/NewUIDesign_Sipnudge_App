@@ -63,5 +63,23 @@ class AssetsPath {
   static const String info = "assets/sipnudge_bottle/info.png";
 
 
+  // ringtone
+  static const String song = "assets/ringtone_icons/song.png";
+  static const String dotcircle = "assets/ringtone_icons/dot_circle.png";
+  static const String forest = "assets/ringtone_icons/forest.png";
+  static const String oceanMist = "assets/ringtone_icons/ocean_mist.png";
+  static const String phoneWave = "assets/ringtone_icons/phone_wave.png";
+  static const String drop = "assets/ringtone_icons/drop.png";
+  static const String play = "assets/ringtone_icons/play.png";
+
+  static const String songUnselected = "assets/ringtone_icons/song_unselected.png";
+  static const String dotcircleUnselected = "assets/ringtone_icons/dot_circle_unselected.png";
+  static const String forestUnselected = "assets/ringtone_icons/forest_unselected.png";
+  static const String oceanMistUnselected = "assets/ringtone_icons/ocean_mist_unselected.png";
+  static const String phoneWaveUnselected = "assets/ringtone_icons/phone_wave_unselected.png";
+  static const String dropUnselected = "assets/ringtone_icons/drop_unselected.png";
+  static const String playUnselected = "assets/ringtone_icons/play_unselected.png";
+
+
 
 }

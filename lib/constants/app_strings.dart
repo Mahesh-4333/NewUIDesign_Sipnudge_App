@@ -137,10 +137,10 @@ class AppStrings {
   static const accountremove =
       "Permanently remove your account and data. Proceed with caution.";
   static const deleteaccount = "Delete Account";
-  static String congratulations(int waterGoalMl) {
-    final waterInLitres = (waterGoalMl / 1000).toStringAsFixed(1);
+  static String congratulations(String waterGoalMl) {
+    // final waterInLitres = (waterGoalMl / 1000).toStringAsFixed(1);
 
-    return "Congratulations! You've reached your goal of $waterInLitres L water intake. Keep up the incredible effort!";
+    return "Congratulations! You've reached your goal of $waterGoalMl L water intake. Keep up the incredible effort!";
   }
 
   static const congratulation =
@@ -234,4 +234,16 @@ class AppStrings {
   static const ringtone8 = "Ringtone 8";
   static const ringtone9 = "Ringtone 9";
   static const ringtone10 = "Ringtone 10";
+  static const vibrationStrength = "Vibration Strength";
+  static const ledIndicator = "LED Indicator";
+  static const selectColorOfLed = "Select Color of LED";
+  static const intensityOfLed = "Intensity of LED";
+  static const uvCleaning = "UV Cleaning";
+  static const general = "General";
+  static const alerts = "Alerts";
+  static const hapticsAndVisuals = "Haptics & Visuals";
+  static const playAudioWhenTargetIsMet = "Play audio when target is met";
+  static const pulseBaseLightDuringHydration =
+      "Pulse base light during hydration";
+  static const lastSynced = "Last synced: ";
 }

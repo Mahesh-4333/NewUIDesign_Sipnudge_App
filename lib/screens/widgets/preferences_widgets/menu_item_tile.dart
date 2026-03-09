@@ -8,6 +8,7 @@ class MenuItemTile extends StatelessWidget {
   final String title;
   final String info;
   final String iconpatharrow;
+  final bool hideDecoration;
   final VoidCallback? onTap;
 
   const MenuItemTile({
@@ -15,7 +16,7 @@ class MenuItemTile extends StatelessWidget {
     required this.title,
     required this.info,
     required this.iconpatharrow,
-    this.onTap,
+    this.onTap, this.hideDecoration = false,
   });
 
   @override
@@ -27,7 +28,7 @@ class MenuItemTile extends StatelessWidget {
         padding: EdgeInsets.symmetric(
             horizontal: AppDimensions.dim20.w, vertical: AppDimensions.dim12.h),
         margin: EdgeInsets.only(bottom: AppDimensions.dim10.h),
-        decoration: BoxDecoration(
+        decoration: hideDecoration ? null : BoxDecoration(
           color: AppColors.white,
           borderRadius: BorderRadius.circular(AppDimensions.radius_40.r),
           border: Border.all(
@@ -50,7 +51,7 @@ class MenuItemTile extends StatelessWidget {
               title,
               style: TextStyle(
                 color: AppColors.bluegray,
-                fontSize: AppFontStyles.fontSize_20.sp,
+                fontSize: hideDecoration ? AppFontStyles.fontSize_22.sp : AppFontStyles.fontSize_20.sp,
                 fontFamily: AppFontStyles.urbanistFontFamily,
                 fontVariations: [AppFontStyles.fontWeightVariation600],
               ),
@@ -59,10 +60,10 @@ class MenuItemTile extends StatelessWidget {
             Text(
               info,
               style: TextStyle(
-                color: AppColors.bluegray,
+                color: AppColors.blueWaterIntake,
                 fontSize: AppFontStyles.fontSize_16.sp,
                 fontFamily: AppFontStyles.urbanistFontFamily,
-                fontVariations: [AppFontStyles.fontWeightVariation600],
+                fontVariations: [AppFontStyles.boldFontVariation],
               ),
             ),
             SizedBox(width: AppDimensions.dim20.w),

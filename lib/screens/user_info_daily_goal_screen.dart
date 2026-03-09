@@ -51,8 +51,7 @@ class _UserInfoDailyGoalScreenState extends State<UserInfoDailyGoalScreen> {
   @override
   void initState() {
     super.initState();
-    // convertedWaterGoal = widget.waterGoal;
-    convertedWaterGoal = 1800;
+    convertedWaterGoal = widget.waterGoal;
     _setupDynamicSlider();
     updateDisplayWaterGoal();
   }
@@ -285,7 +284,9 @@ class _UserInfoDailyGoalScreenState extends State<UserInfoDailyGoalScreen> {
               color: AppColors.blueGradient,
               areTwoItems: false,
               onTap: () async {
-                Console.log(tag: "APP", value: "isViaSettingsScreen ${widget.isViaSettingsScreen}");
+                Console.log(
+                    tag: "APP",
+                    value: "isViaSettingsScreen ${widget.isViaSettingsScreen}");
                 if (widget.isViaSettingsScreen == false) {
                   // var response = await showGoogleCalendarDialog();
                   // if (response == false) {
@@ -313,10 +314,14 @@ class _UserInfoDailyGoalScreenState extends State<UserInfoDailyGoalScreen> {
                 }
 
                 final dbHelper = DatabaseHelper();
-                await dbHelper.clearHydrationSlots();
-                for (var slot in slots) {
-                  await dbHelper.insertOrUpdateSlot(slot);
+                var isSlotAvailableInDb = await dbHelper.getAllSlots();
+                if(isSlotAvailableInDb.isEmpty){
+                  await dbHelper.clearHydrationSlots();
+                  for (var slot in slots) {
+                    await dbHelper.insertOrUpdateSlot(slot);
+                  }
                 }
+
                 await context.read<BleCubit>().queueHydrationSlots(slots);
                 await NotificationService().resetAllHydrationReminders(slots);
                 await NotificationService().scheduleHydrationRemindersForFuture(slots);

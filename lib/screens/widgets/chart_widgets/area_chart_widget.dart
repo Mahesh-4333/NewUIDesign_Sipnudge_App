@@ -1,6 +1,7 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:hydrify/helpers/shared_pref_helper.dart';
 import 'package:hydrify/constants/app_colors.dart';
 import 'package:hydrify/constants/app_dimensions.dart';
 import 'package:hydrify/constants/app_font_styles.dart';
@@ -28,9 +29,11 @@ class FlAreaChartWidget extends StatefulWidget {
 }
 
 class _FlAreaChartWidgetState extends State<FlAreaChartWidget> {
-  late List<ChartData> chartData;
+  List<ChartData> chartData = [];
+  double maxY = 100;
+  double? currentUserGoal;
   final ScrollController _scrollController = ScrollController();
-  
+
   int? _touchedIndex;
 
   final List<String> weekLabels = const [
@@ -61,8 +64,19 @@ class _FlAreaChartWidgetState extends State<FlAreaChartWidget> {
   @override
   void initState() {
     super.initState();
-    _updateChartData();
+    _updateChartData(); // Initialize sync first
+    _loadUserGoal().then((_) {
+      _updateChartData();
+      if (mounted) setState(() {});
+    });
     _scrollController.addListener(_scrollListener);
+  }
+
+  Future<void> _loadUserGoal() async {
+    final goal = await SharedPrefsHelper.getUserGoal();
+    if (goal != null) {
+      currentUserGoal = goal.toDouble();
+    }
   }
 
   void _scrollListener() {
@@ -86,12 +100,14 @@ class _FlAreaChartWidgetState extends State<FlAreaChartWidget> {
 
       chartData = List.generate(7, (i) {
         final dayDate = weekStart.add(Duration(days: i));
-        final matches = sorted.where(
-          (x) =>
-              x.date.year == dayDate.year &&
-              x.date.month == dayDate.month &&
-              x.date.day == dayDate.day,
-        ).toList();
+        final matches = sorted
+            .where(
+              (x) =>
+                  x.date.year == dayDate.year &&
+                  x.date.month == dayDate.month &&
+                  x.date.day == dayDate.day,
+            )
+            .toList();
 
         double totalTarget = 0;
         double totalConsumed = 0;
@@ -104,10 +120,20 @@ class _FlAreaChartWidgetState extends State<FlAreaChartWidget> {
         }
 
         // If no matches, use default values
-        final double target = totalTarget;
+        final double target;
+        final now = DateTime.now();
+        final isToday = dayDate.year == now.year &&
+            dayDate.month == now.month &&
+            dayDate.day == now.day;
+
+        if (isToday && currentUserGoal != null) {
+          target = currentUserGoal!;
+        } else {
+          target = totalTarget;
+        }
+
         final double consumed = totalConsumed;
         double percent = target > 0 ? (consumed / target) * 100 : 0;
-        percent = percent.clamp(0, 100);
 
         //Console.log(tag: "IsWeeklyAreaChart", value: "$target $consumed $percent");
         return ChartData(
@@ -126,12 +152,14 @@ class _FlAreaChartWidgetState extends State<FlAreaChartWidget> {
 
       chartData = List.generate(days, (i) {
         final dayDate = firstDay.add(Duration(days: i));
-        final matches = sorted.where(
-          (x) =>
-              x.date.year == dayDate.year &&
-              x.date.month == dayDate.month &&
-              x.date.day == dayDate.day,
-        ).toList();
+        final matches = sorted
+            .where(
+              (x) =>
+                  x.date.year == dayDate.year &&
+                  x.date.month == dayDate.month &&
+                  x.date.day == dayDate.day,
+            )
+            .toList();
 
         double totalTarget = 0;
         double totalConsumed = 0;
@@ -143,10 +171,20 @@ class _FlAreaChartWidgetState extends State<FlAreaChartWidget> {
           }
         }
 
-        final double target = totalTarget;
+        final double target;
+        final now = DateTime.now();
+        final isToday = dayDate.year == now.year &&
+            dayDate.month == now.month &&
+            dayDate.day == now.day;
+
+        if (isToday && currentUserGoal != null) {
+          target = currentUserGoal!;
+        } else {
+          target = totalTarget;
+        }
+
         final double consumed = totalConsumed;
         double percent = target > 0 ? (consumed / target) * 100 : 0;
-        percent = percent.clamp(0, 100);
 
         return ChartData((i + 1).toString(), percent, consumed, dayDate);
       });
@@ -159,15 +197,23 @@ class _FlAreaChartWidgetState extends State<FlAreaChartWidget> {
         final list = inYear.where((x) => x.date.month == monthIndex).toList();
         double target = 0;
         double consumed = 0;
+        final now = DateTime.now();
+
         for (var e in list) {
-          target += e.target;
+          if (e.date.year == now.year &&
+              e.date.month == now.month &&
+              e.date.day == now.day) {
+            target += currentUserGoal ?? e.target;
+          } else {
+            target += e.target;
+          }
           consumed += e.consumed;
         }
 
         double percent = target > 0 ? (consumed / target) * 100 : 0;
-        percent = percent.clamp(0, 100);
 
-        Console.log(tag: "IsYearlyAreaChart", value: "$target $consumed $percent");
+        Console.log(
+            tag: "IsYearlyAreaChart", value: "$target $consumed $percent");
 
         final dateForPoint =
             list.isNotEmpty ? list.first.date : DateTime(year, monthIndex, 1);
@@ -178,6 +224,14 @@ class _FlAreaChartWidgetState extends State<FlAreaChartWidget> {
       chartData = [];
     }
 
+    double maxP = 0;
+    if (chartData.isNotEmpty) {
+      maxP = chartData
+          .map((e) => e.completionPercent)
+          .reduce((a, b) => a > b ? a : b);
+    }
+    maxY = maxP > 100 ? (maxP / 20).ceil() * 20.0 : 100.0;
+
     _touchedIndex = null;
   }
 
@@ -187,8 +241,11 @@ class _FlAreaChartWidgetState extends State<FlAreaChartWidget> {
     if (oldWidget.interval != widget.interval ||
         oldWidget.currentDate != widget.currentDate ||
         oldWidget.bottleData != widget.bottleData) {
-      _updateChartData();
-      setState(() {});
+      _updateChartData(); // Update sync first
+      _loadUserGoal().then((_) {
+        _updateChartData();
+        setState(() {});
+      });
     }
   }
 
@@ -200,7 +257,9 @@ class _FlAreaChartWidgetState extends State<FlAreaChartWidget> {
         ? AppDimensions.dim365.w
         : pointWidth * (chartData.isEmpty ? 1 : chartData.length);
     final expandedWidth = AppDimensions.dim365.w - AppDimensions.dim40.w;
-    final drawingWidth = isWeekly ? expandedWidth - AppDimensions.dim9.w : chartWidth - AppDimensions.dim9.w - (pointWidth / 2);
+    final drawingWidth = isWeekly
+        ? expandedWidth - AppDimensions.dim9.w
+        : chartWidth - AppDimensions.dim9.w - (pointWidth / 2);
     final drawingHeight = AppDimensions.dim262.h - AppDimensions.dim9.h - 32.h;
 
     return Container(
@@ -222,7 +281,7 @@ class _FlAreaChartWidgetState extends State<FlAreaChartWidget> {
                     SizedBox(
                       width: AppDimensions.dim40.w,
                       height: AppDimensions.dim265.h,
-                      child: const CustomYAxis(maxY: 100, divisions: 5),
+                      child: CustomYAxis(maxY: maxY, divisions: 5),
                     ),
                     Expanded(
                       child: isWeekly
@@ -259,15 +318,15 @@ class _FlAreaChartWidgetState extends State<FlAreaChartWidget> {
                 left: () {
                   double localX;
                   if (chartData.length > 1) {
-                    localX = (_touchedIndex! / (chartData.length - 1)) * drawingWidth;
+                    localX = (_touchedIndex! / (chartData.length - 1)) *
+                        drawingWidth;
                   } else {
                     localX = 0;
                   }
-                  
-                  double left = AppDimensions.dim40.w +
-                      AppDimensions.dim14.w +
-                      localX;
-                  
+
+                  double left =
+                      AppDimensions.dim40.w + AppDimensions.dim14.w + localX;
+
                   if (!isWeekly && _scrollController.hasClients) {
                     left -= _scrollController.offset;
                   }
@@ -277,9 +336,9 @@ class _FlAreaChartWidgetState extends State<FlAreaChartWidget> {
                 top: () {
                   final data = chartData[_touchedIndex!];
                   double percent = data.completionPercent;
-                  // Map percent 0-100 to 0-drawingHeight (top to bottom)
-                  double localY = (1 - (percent / 100)) * drawingHeight;
-                  
+                  // Map percent 0-maxY to 0-drawingHeight (top to bottom)
+                  double localY = (1 - (percent / maxY)) * drawingHeight;
+
                   // The chart container is at the bottom of the 324.h stack with height 262.h
                   // So the chart content starts at 324.h - 262.h = 62.h
                   // Plus the internal padding top of 9.h
@@ -310,7 +369,7 @@ class _FlAreaChartWidgetState extends State<FlAreaChartWidget> {
     return LineChart(
       LineChartData(
         minY: 0,
-        maxY: 100,
+        maxY: maxY,
         gridData: FlGridData(show: false),
         borderData: FlBorderData(show: false),
         titlesData: FlTitlesData(
@@ -319,7 +378,8 @@ class _FlAreaChartWidgetState extends State<FlAreaChartWidget> {
               showTitles: true,
               getTitlesWidget: (value, meta) {
                 int index = value.toInt();
-                if (index < 0 || index >= chartData.length) return const SizedBox();
+                if (index < 0 || index >= chartData.length)
+                  return const SizedBox();
                 return Padding(
                   padding: EdgeInsets.only(top: 8.h),
                   child: Text(

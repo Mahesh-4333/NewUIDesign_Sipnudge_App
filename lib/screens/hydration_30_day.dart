@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:hydrify/cubit/ble/ble_cubit.dart';
+import 'package:hydrify/helpers/shared_pref_helper.dart';
 import 'package:hydrify/models/hydration_summary.dart';
 import 'package:intl/intl.dart';
 
@@ -26,10 +27,17 @@ class _Hydration30DayPageState extends State<Hydration30DayPage> {
   bool _loading = true;
   List<HydrationDaySummary> _rows = [];
 
+  double waterGoal = 0;
+
   @override
   void initState() {
     super.initState();
     _loadLast30Days();
+    getWaterGoal();
+  }
+
+  Future<void> getWaterGoal() async {
+    waterGoal = (await SharedPrefsHelper.getUserGoal() ?? 0).toDouble();
   }
 
   Future<void> _loadLast30Days() async {
@@ -162,8 +170,8 @@ class _Hydration30DayPageState extends State<Hydration30DayPage> {
                                 ),
                                 // data rows
                                 ..._rows.map((r) {
-                                  final pct = r.target > 0
-                                      ? ((r.consumed / r.target) * 100)
+                                  final pct = waterGoal > 0
+                                      ? ((r.consumed / waterGoal) * 100)
                                           .clamp(0, 999)
                                           .toDouble()
                                       : 0.0;
@@ -176,7 +184,7 @@ class _Hydration30DayPageState extends State<Hydration30DayPage> {
                                       Padding(
                                         padding: const EdgeInsets.all(8.0),
                                         child:
-                                            Text(r.target.toStringAsFixed(0)),
+                                            Text(waterGoal.toStringAsFixed(0)),
                                       ),
                                       Padding(
                                         padding: const EdgeInsets.all(8.0),

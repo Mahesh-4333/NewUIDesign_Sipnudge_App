@@ -203,6 +203,8 @@ class BottleDataCubit extends Cubit<BottleDataState> {
       return 0;
     }
 
+    Console.log(
+        tag: "consumedThings", value: "${hydrationDataTemp.first.toMap()}");
     return hydrationDataTemp.first.consumed;
   }
 
@@ -225,7 +227,13 @@ class BottleDataCubit extends Cubit<BottleDataState> {
       final db = await _dbHelper.database;
       await db.delete(DatabaseHelper.tableName);
       await db.delete(DatabaseHelper.hydrationSummaryTableName);
-      await Future.delayed(Duration(seconds: 2));
+
+      // Ensure BleCubit's local state is cleared before emitting initial state
+      // to avoid re-insertion of old values in _handleBleStateChange
+      await _bleCubit.clearData();
+
+      await Future.delayed(
+          Duration(seconds: 1)); // Small delay for DB stability
       // emit(_bleCubit.state.copyWith(currentHydrationValue: 0));
 
       final dbEntry = await _dbHelper.getAllSlots();
