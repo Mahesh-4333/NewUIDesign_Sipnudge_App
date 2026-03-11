@@ -167,11 +167,17 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
     _scanSub = FlutterBluePlus.scanResults.listen((results) {
       for (var r in results) {
         // ✅ Filter for only Sipnudge devices
-        final deviceName = r.device.name.toLowerCase();
+        final deviceName = r.device.platformName.toLowerCase();
         if (!deviceName.contains('sipnudge')) continue;
 
-        if (r.device.id.id == savedDeviceId ||
-            r.device.name == savedDeviceName) {
+        bool match = false;
+        if (savedDeviceId != null && savedDeviceId!.isNotEmpty) {
+          match = (r.device.remoteId.str == savedDeviceId);
+        } else if (savedDeviceName != null && savedDeviceName!.isNotEmpty) {
+          match = (r.device.platformName == savedDeviceName);
+        }
+
+        if (match) {
           _scanSub?.cancel();
           FlutterBluePlus.stopScan();
           _connectToDevice(r.device);
@@ -264,11 +270,11 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
 
       final prefs = await SharedPreferences.getInstance();
       final wasFirst = (savedDeviceId == null || savedDeviceName == null);
-      await prefs.setString('last_device_id', device.id.id);
-      await prefs.setString('last_device_name', device.name);
+      await prefs.setString('last_device_id', device.remoteId.str);
+      await prefs.setString('last_device_name', device.platformName);
 
-      savedDeviceId = device.id.id;
-      savedDeviceName = device.name;
+      savedDeviceId = device.remoteId.str;
+      savedDeviceName = device.platformName;
       if (wasFirst) emit(state.copyWith(isFirstConnection: false));
 
       await _discoverServices(device);
@@ -394,26 +400,6 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
             for (final updatedEntry in updatedEntries) {
               await dbHelper.insertOrUpdateSlot(updatedEntry);
             }
-
-            // 🔥 NEW: Check if today is now perfect
-            // final bool isPerfectNow = await dbHelper.isDayPerfect();
-
-            // Calculate total consumed for the summary
-            // final double totalConsumed =
-            //     updatedEntries.fold(0.0, (sum, e) => sum + e.waterDrank);
-            // final double totalTarget =
-            //     updatedEntries.fold(0.0, (sum, e) => sum + e.amount);
-
-            // final todaySummary = HydrationDaySummary(
-            //   date: DateTime(DateTime.now().year, DateTime.now().month,
-            //       DateTime.now().day),
-            //   dayIndex: 0,
-            //   target: totalTarget,
-            //   consumed: totalConsumed,
-            //   isPerfect: isPerfectNow,
-            //   deviceId: savedDeviceId,
-            // );
-            // await dbHelper.bulkUpsert30Days([todaySummary]);
           }
 
           _sendAck(device);
@@ -441,7 +427,7 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
 
       emit(state.copyWith(
         status: BleStatus.connected,
-        message: "Connected to ${device.name}",
+        message: "Connected to ${device.platformName}",
       ));
 
       await _flushPendingSlots();
@@ -467,15 +453,20 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
     int? battery;
     double? volume;
     int? percent;
-
+    DateTime? ts;
     for (var p in parts) {
       if (p.contains('battery=')) battery = int.tryParse(p.split('=')[1]);
       if (p.contains('volume=')) volume = double.tryParse(p.split('=')[1]);
       if (p.contains('percent=')) percent = int.tryParse(p.split('=')[1]);
+      if (p.contains('ts=')) ts = DateTime.parse(p.split('=')[1]);
     }
 
     emit(state.copyWith(
-        battery: battery, volume: volume, percent: percent, bottleData: data));
+        battery: battery,
+        volume: volume,
+        percent: percent,
+        ts: ts,
+        bottleData: data));
   }
 
   List<HydrationEntry> _parseHydrationData(String payload) {
@@ -689,7 +680,7 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
         case BluetoothConnectionState.connected:
           emit(state.copyWith(
             status: BleStatus.connected,
-            message: "Connected to ${device.name}",
+            message: "Connected to ${device.platformName}",
           ));
           break;
         case BluetoothConnectionState.disconnected:
@@ -1149,5 +1140,9 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
     }
 
     return hydrationDataTemp.first.consumed;
+  }
+
+  void updateCurrentHydrationValue(double value) {
+    emit(state.copyWith(currentHydrationValue: value));
   }
 }

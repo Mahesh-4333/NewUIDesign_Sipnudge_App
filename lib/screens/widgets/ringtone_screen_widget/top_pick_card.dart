@@ -94,23 +94,8 @@ class TopPickCard extends StatelessWidget {
                   ),
                 ),
                 SizedBox(width: 8.w),
-                // Simplified waveform
-                Expanded(
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    children: List.generate(
-                      5,
-                      (index) => Container(
-                        width: 3.w,
-                        height: (10 + (index % 3) * 5).h,
-                        decoration: BoxDecoration(
-                          color: AppColors.blueWaterIntake.withOpacity(0.3),
-                          borderRadius: BorderRadius.circular(2.r),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
+                // Animated waveform
+                _AnimatedVisualizer(isPlaying: isPlaying),
                 SizedBox(width: 8.w),
                 GestureDetector(
                   onTap: () {
@@ -128,6 +113,104 @@ class TopPickCard extends StatelessWidget {
               ],
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _AnimatedVisualizer extends StatefulWidget {
+  final bool isPlaying;
+
+  const _AnimatedVisualizer({required this.isPlaying});
+
+  @override
+  State<_AnimatedVisualizer> createState() => _AnimatedVisualizerState();
+}
+
+class _AnimatedVisualizerState extends State<_AnimatedVisualizer>
+    with TickerProviderStateMixin {
+  late List<AnimationController> _controllers;
+
+  @override
+  void initState() {
+    super.initState();
+    final durations = [400, 300, 500, 350, 450];
+    _controllers = List.generate(
+      5,
+      (index) => AnimationController(
+        vsync: this,
+        duration: Duration(milliseconds: durations[index]),
+      ),
+    );
+
+    if (widget.isPlaying) {
+      _startAnimation();
+    }
+  }
+
+  void _startAnimation() {
+    for (var controller in _controllers) {
+      controller.repeat(reverse: true);
+    }
+  }
+
+  void _stopAnimation() {
+    for (var controller in _controllers) {
+      controller.animateTo(0, duration: const Duration(milliseconds: 200));
+    }
+  }
+
+  @override
+  void didUpdateWidget(_AnimatedVisualizer oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.isPlaying != oldWidget.isPlaying) {
+      if (widget.isPlaying) {
+        _startAnimation();
+      } else {
+        _stopAnimation();
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    for (var controller in _controllers) {
+      controller.dispose();
+    }
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: SizedBox(
+        height: 32.h,
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: List.generate(
+            5,
+            (index) => AnimatedBuilder(
+              animation: _controllers[index],
+              builder: (context, child) {
+                final baseHeight = (10 + (index % 3) * 5).h;
+                final currentHeight =
+                    baseHeight + (_controllers[index].value * 15).h;
+
+                return Container(
+                  width: 3.w,
+                  height: currentHeight,
+                  decoration: BoxDecoration(
+                    color: widget.isPlaying
+                        ? AppColors.blueWaterIntake
+                        : AppColors.blueWaterIntake.withOpacity(0.3),
+                    borderRadius: BorderRadius.circular(2.r),
+                  ),
+                );
+              },
+            ),
+          ),
         ),
       ),
     );

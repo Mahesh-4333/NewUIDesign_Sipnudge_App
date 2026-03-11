@@ -9,6 +9,8 @@ import 'package:hydrify/cubit/ble/ble_cubit.dart';
 import 'package:hydrify/cubit/bottle/bottle_data_cubit.dart';
 import 'package:hydrify/helpers/water_consumption_data_helper.dart';
 import 'package:hydrify/models/bottle_info.dart';
+import 'package:hydrify/providers/weather_provider.dart';
+import 'package:provider/provider.dart';
 
 class BottleInfoScreen extends StatefulWidget {
   final BottleInfo bottleInfo;
@@ -25,6 +27,11 @@ class BottleInfoScreen extends StatefulWidget {
 class _BottleInfoScreenState extends State<BottleInfoScreen> {
   bool _isGeneralExpanded = true;
   bool _isHardwareExpanded = true;
+
+  @override
+  void initState() {
+    super.initState();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -106,7 +113,7 @@ class _BottleInfoScreenState extends State<BottleInfoScreen> {
                 'Sipnudge Bottle',
                 style: TextStyle(
                   fontSize: 22.sp,
-                  fontVariations:[AppFontStyles.boldFontVariation,],
+                  fontVariations: [AppFontStyles.boldFontVariation,],
                   fontFamily: AppFontStyles.urbanistFontFamily,
                   color: Color(0xFF5D7B91),
                   letterSpacing: 0.5,
@@ -353,10 +360,26 @@ class _BottleInfoScreenState extends State<BottleInfoScreen> {
                   _buildSpecCard('VOLUME', '${BottleInfo.capacity.toInt()}',
                       'ml', AssetsPath.sVolume),
                   // Using Capacity as per screenshot example 650
-                  _buildSpecCard('BATTERY', '82', '%', AssetsPath.sBattery,
+                  _buildSpecCard('BATTERY', context
+                      .read<BottleDataCubit>()
+                      .state
+                      .battery
+                      .toString(), '%', AssetsPath.sBattery,
                       subtitle: '30 days Left'),
-                  _buildSpecCard('TEMP', '18', '°C', AssetsPath.sTemperature,
-                      subtitle: 'Range: 0-50°C'),
+                  Consumer<WeatherProvider>(
+                      builder: (context, weatherProvider, child) {
+                        if (weatherProvider.isLoading) {
+                          return _buildSpecCard(
+                              'TEMP', '18', '°C', AssetsPath.sTemperature,
+                              subtitle: 'Range: 0-50°C');
+                        }
+
+                        final weatherData = weatherProvider.weatherData;
+                        return _buildSpecCard(
+                            'TEMP', weatherData!.temperature.toString(), '°C', AssetsPath.sTemperature,
+                            subtitle: 'Range: 0-50°C');
+                      })
+                  ,
                   _buildSpecCard('MATERIAL', 'SS304', '', AssetsPath.sMaterial,
                       isTextValue: true),
                   _buildSpecCard('WEIGHT', '250', 'g', AssetsPath.sWeight),
@@ -404,7 +427,8 @@ class _BottleInfoScreenState extends State<BottleInfoScreen> {
                   snapshot.data ?? (0.0, 0.0);
 
               return _buildTopInfoItem('REMAINING',
-                  '${remainingIntakeWater.toStringAsFixed(0)}ml', Color(0xFF5D7B91));
+                  '${remainingIntakeWater.toStringAsFixed(0)}ml',
+                  Color(0xFF5D7B91));
             });
           }),
           Container(height: 30.h, width: 1, color: Color(0xFFE2E8F0)),
@@ -417,7 +441,7 @@ class _BottleInfoScreenState extends State<BottleInfoScreen> {
           }, builder: (context, state) {
             return FutureBuilder<(double, double)>(future: () async {
               final history =
-                  await context.read<BottleDataCubit>().getCurrentDayHistory();
+              await context.read<BottleDataCubit>().getCurrentDayHistory();
 
               double waterVolumeConsumed = history;
               double completionPercent = await WaterConsumptionCalculator
@@ -436,7 +460,8 @@ class _BottleInfoScreenState extends State<BottleInfoScreen> {
                 mainAxisSize: MainAxisSize.max,
                 children: [
                   _buildTopInfoItem(
-                      'CONSUMED', '${completionPercent.toStringAsFixed(0)}%', Color(0xFF5D7B91)),
+                      'CONSUMED', '${completionPercent.toStringAsFixed(0)}%',
+                      Color(0xFF5D7B91)),
                 ],
               );
             });

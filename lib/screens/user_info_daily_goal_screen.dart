@@ -310,21 +310,25 @@ class _UserInfoDailyGoalScreenState extends State<UserInfoDailyGoalScreen> {
 
                 final slots = generateHydrationSlots(convertedWaterGoal);
                 for (var slot in slots) {
-                  Console.log(tag: "APP", value: "Slot: ${slot.slot.label}, Water to drink: ${slot.amount} mL");
+                  Console.log(
+                      tag: "APP",
+                      value:
+                          "Slot: ${slot.slot.label}, Water to drink: ${slot.amount} mL");
                 }
 
                 final dbHelper = DatabaseHelper();
                 var isSlotAvailableInDb = await dbHelper.getAllSlots();
-                if(isSlotAvailableInDb.isEmpty){
-                  await dbHelper.clearHydrationSlots();
-                  for (var slot in slots) {
-                    await dbHelper.insertOrUpdateSlot(slot);
-                  }
+                //if(isSlotAvailableInDb.isEmpty){
+                await dbHelper.clearHydrationSlots();
+                for (var slot in slots) {
+                  await dbHelper.insertOrUpdateSlot(slot);
                 }
+                //}
 
                 await context.read<BleCubit>().queueHydrationSlots(slots);
                 await NotificationService().resetAllHydrationReminders(slots);
-                await NotificationService().scheduleHydrationRemindersForFuture(slots);
+                await NotificationService()
+                    .scheduleHydrationRemindersForFuture(slots);
                 UiUtilsService.dismissLoading(context);
                 setState(() {
                   isButtonClicked = false;

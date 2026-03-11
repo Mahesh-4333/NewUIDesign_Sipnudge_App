@@ -401,7 +401,7 @@ class _FlAreaChartWidgetState extends State<FlAreaChartWidget> {
           rightTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
         ),
         lineTouchData: LineTouchData(
-          touchSpotThreshold: 5,
+          touchSpotThreshold: 50,
           touchCallback: (event, response) {
             if (response != null &&
                 response.lineBarSpots != null &&
