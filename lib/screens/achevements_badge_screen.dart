@@ -41,12 +41,43 @@ class _AchievementsBadgeScreenState extends State<AchievementsBadgeScreen> {
   void initState() {
     super.initState();
     _checkGuestUser();
+    _loadHydrationData();
   }
 
   Future<void> _checkGuestUser() async {
     final userEmail = await SharedPrefsHelper.getUserEmail();
     setState(() {
       isGuest = userEmail == "guest_user";
+    });
+  }
+
+  Future<void> _loadHydrationData() async {
+    setState(() => _loading = true);
+
+    final userGoal = await SharedPrefsHelper.getUserGoal();
+    final dailyGoalMl = userGoal ?? 1400;
+
+    final fetchedAll = await _dbHelper.getHydrationSummariesForRange();
+
+    fetchedAll.sort((a, b) => a.date.compareTo(b.date));
+
+    int completedDays = 0;
+
+    for (final summary in fetchedAll) {
+      final target =
+          summary.target > 0 ? summary.target : dailyGoalMl.toDouble();
+      if ((summary.consumed / target) * 100 >= 100) {
+        completedDays++;
+      }
+    }
+
+    if (!mounted) return;
+
+    setState(() {
+      _hydrationData = fetchedAll;
+      _currentLevel = completedDays.clamp(0, 365);
+      _dailyWaterGoal = dailyGoalMl;
+      _loading = false;
     });
   }
 
@@ -72,6 +103,7 @@ class _AchievementsBadgeScreenState extends State<AchievementsBadgeScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!_didAutoRefresh) {
         _didAutoRefresh = true;
+        _loadHydrationData();
       }
     });
 
@@ -118,20 +150,20 @@ class _AchievementsBadgeScreenState extends State<AchievementsBadgeScreen> {
                           top: AppDimensions.dim380.h,
                           left: 0,
                           right: 0,
-                          child: state.currentLevel > 0
-                              ? getCongratulationsText(
-                                  state.currentLevel.toString())
-                              : const SizedBox.shrink(),
+                          child: getCongratulationsText(
+                            state.currentLevel.toString(),
+                          ),
                         ),
                       ],
                     ),
                   ),
                   Expanded(
                     child: Container(
-                      padding: EdgeInsets.symmetric(
-                        horizontal: AppDimensions.padding_20.w,
-                      ),
-                      decoration: BoxDecoration(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: AppDimensions.padding_20.w,
+                          //vertical: AppDimensions.padding_20.h,
+                        ),
+                        decoration: BoxDecoration(
                           color: Colors.white,
                           borderRadius: BorderRadius.vertical(
                             top: Radius.circular(
@@ -144,36 +176,41 @@ class _AchievementsBadgeScreenState extends State<AchievementsBadgeScreen> {
                               blurRadius: 10,
                               offset: Offset(0, -2),
                             ),
-                          ]),
-                      child: GridView.builder(
-                        itemCount: 52,
-                        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 3,
-                          childAspectRatio: 1.2.r,
-                          mainAxisSpacing: 24.h,
+                          ]
                         ),
-                        itemBuilder: (context, index) {
-                          final level = index + 1;
-                          final isUnlocked = level <= state.currentLevel;
-
-                          final intakeInfo =
-                              state.levelToIntakeMap[level] ?? '';
-
-                          return GestureDetector(
-                            onTap: () {
-                              if (isUnlocked && !isGuest!) {
-                                showLevelUpDialog(context, level, intakeInfo);
-                              }
-                            },
-                            child: getLevelBadges(
-                              level.toString(),
-                              isUnlocked,
-                              intakeInfo,
+                        child: BlocBuilder<HydrationCubit, HydrationState>(
+                            builder: (context, state) {
+                          return GridView.builder(
+                            itemCount: 52,
+                            gridDelegate:
+                                SliverGridDelegateWithFixedCrossAxisCount(
+                              crossAxisCount: 3,
+                              childAspectRatio: 1.2.r,
+                              mainAxisSpacing: 24.h,
                             ),
+                            itemBuilder: (context, index) {
+                              final level = index + 1;
+                              final isUnlocked = level <= state.currentLevel;
+
+                              final intakeInfo =
+                                  state.levelToIntakeMap[level] ?? '';
+
+                              return GestureDetector(
+                                onTap: () {
+                                  if (isUnlocked && !isGuest!) {
+                                    showLevelUpDialog(
+                                        context, level, intakeInfo);
+                                  }
+                                },
+                                child: getLevelBadges(
+                                  level.toString(),
+                                  isUnlocked,
+                                  intakeInfo,
+                                ),
+                              );
+                            },
                           );
-                        },
-                      ),
-                    ),
+                        })),
                   ),
                 ],
               ),
@@ -245,6 +282,7 @@ class _AchievementsBadgeScreenState extends State<AchievementsBadgeScreen> {
       height: AppDimensions.dim320.h,
       child: Stack(
         children: [
+          // Show different badge based on unlock status
           Positioned.fill(
             child: Align(
               alignment: Alignment.center,
@@ -265,6 +303,28 @@ class _AchievementsBadgeScreenState extends State<AchievementsBadgeScreen> {
               ),
             ),
           ),
+          // Positioned.fill(
+          //   child: Align(
+          //     alignment: Alignment.center,
+          //     child: Transform.translate(
+          //       offset: Offset(-16.w, 0),
+          //       child: Image.asset(
+          //         isCurrentLevelUnlocked
+          //             ? "assets/images/goals_new_img.png" // Unlocked - colored badge
+          //             : "assets/images/level_lock_img1.png", // Locked - grey badge
+          //         width: isCurrentLevelUnlocked
+          //             ? AppDimensions.dim330.w
+          //             : AppDimensions.dim280.w,
+          //         height: isCurrentLevelUnlocked
+          //             ? AppDimensions.dim320.h
+          //             : AppDimensions.dim280.h,
+          //         fit: BoxFit.contain,
+          //       ),
+          //     ),
+          //   ),
+          // ),
+
+          // Show level number only if unlocked
           if (hasAchievedAnyLevel)
             Positioned(
               left: AppDimensions.dim100.w,
@@ -308,6 +368,7 @@ class _AchievementsBadgeScreenState extends State<AchievementsBadgeScreen> {
       width: AppDimensions.dim115.w,
       child: Stack(
         children: [
+          // Badge image - locked or unlocked
           Align(
             alignment: Alignment.topCenter,
             child: isUnlocked
@@ -317,7 +378,8 @@ class _AchievementsBadgeScreenState extends State<AchievementsBadgeScreen> {
                     height: AppDimensions.dim111.h,
                   )
                 : Padding(
-                    padding: EdgeInsets.only(top: AppDimensions.dim22.h),
+                    padding: EdgeInsets.only(
+                        top: AppDimensions.dim22.h), // 🔽 shift down
                     child: Image.asset(
                       "assets/images/level_lock_img1.png",
                       width: AppDimensions.dim70.w,
@@ -325,6 +387,8 @@ class _AchievementsBadgeScreenState extends State<AchievementsBadgeScreen> {
                     ),
                   ),
           ),
+
+          // Level number - only show on unlocked badges
           if (isUnlocked)
             Positioned.fill(
               child: Align(
@@ -354,6 +418,8 @@ class _AchievementsBadgeScreenState extends State<AchievementsBadgeScreen> {
                 ),
               ),
             ),
+
+          // Level text and water intake
           Positioned(
             top: isUnlocked ? AppDimensions.dim74.h : AppDimensions.dim75.h,
             left: isUnlocked ? AppDimensions.dim5.w : 0.w,
