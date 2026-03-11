@@ -1,9 +1,9 @@
 class HydrationDaySummary {
   final int? id;
-  final DateTime date; // normalized to local midnight (start of day)
-  final int dayIndex; // 0..29 (optional but handy)
-  final double target; // ml
-  final double consumed; // ml
+  final DateTime date;
+  final int dayIndex;
+  final double target;
+  final double consumed;
   final String? deviceId;
   final DateTime createdAt;
   final DateTime? updatedAt;
@@ -24,8 +24,7 @@ class HydrationDaySummary {
   Map<String, dynamic> toMap() {
     return {
       'id': id,
-      'date':
-          date.millisecondsSinceEpoch, // store epoch millis for local midnight
+      'date': date.millisecondsSinceEpoch,
       'day_index': dayIndex,
       'target': target,
       'consumed': consumed,
@@ -37,14 +36,13 @@ class HydrationDaySummary {
   }
 
   factory HydrationDaySummary.fromMap(Map<String, dynamic> m) {
-    // Robust parsing for 'date' which might be stored as String or int
     DateTime parsedDate;
     var rawDate = m['date'];
     if (rawDate is int) {
       parsedDate = DateTime.fromMillisecondsSinceEpoch(rawDate).toLocal();
     } else if (rawDate is String) {
-      parsedDate = DateTime.tryParse(rawDate)?.toLocal() ?? 
-                   DateTime.fromMillisecondsSinceEpoch(0).toLocal();
+      parsedDate = DateTime.tryParse(rawDate)?.toLocal() ??
+          DateTime.fromMillisecondsSinceEpoch(0).toLocal();
     } else {
       parsedDate = DateTime.fromMillisecondsSinceEpoch(0).toLocal();
     }

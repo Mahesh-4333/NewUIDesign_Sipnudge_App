@@ -37,8 +37,6 @@ class HydrationCubit extends Cubit<HydrationState> {
         if (entries.isNotEmpty) {
           await markCompletedByEntries(entries);
         }
-
-        await refreshAchievementStats();
       });
 
       final dailyGoal = await SharedPrefsHelper.getUserGoal() ?? 0;
@@ -54,8 +52,6 @@ class HydrationCubit extends Cubit<HydrationState> {
         entries: slotsFromDb,
         goal: dailyGoal.round(),
         totalDrank: total.round(),
-        // currentLevel and levelToIntakeMap are already updated
-        // by the call to refreshAchievementStats() above
       ));
 
       _calculateCurrentSlotStatus();
@@ -254,53 +250,53 @@ class HydrationCubit extends Cubit<HydrationState> {
       }
     }
 
-    final double totalDrankToday =
-        currentEntries.fold(0.0, (sum, e) => sum + e.waterDrank);
-    final bool isPerfectNow =
-        currentEntries.every((e) => e.status == HydrationStatus.completed);
+    // final double totalDrankToday =
+    //     currentEntries.fold(0.0, (sum, e) => sum + e.waterDrank);
+    // final bool isPerfectNow =
+    //     currentEntries.every((e) => e.status == HydrationStatus.completed);
 
-    int updatedLevel = state.currentLevel;
-    int? newlyUnlocked;
-    if (isPerfectNow) {
-      final todayStr = DateFormat('yyyy-MM-dd').format(DateTime.now());
-      final lastLevelUpDate = await SharedPrefsHelper.getLastLevelUpDate();
+    // int updatedLevel = state.currentLevel;
+    // int? newlyUnlocked;
+    // if (isPerfectNow) {
+    //   final todayStr = DateFormat('yyyy-MM-dd').format(DateTime.now());
+    //   final lastLevelUpDate = await SharedPrefsHelper.getLastLevelUpDate();
 
-      if (lastLevelUpDate != todayStr) {
-        final todaySummary = HydrationDaySummary(
-          date: DateTime(
-              DateTime.now().year, DateTime.now().month, DateTime.now().day),
-          dayIndex: 0,
-          target: state.goal.toDouble(),
-          consumed: totalDrankToday,
-          isPerfect: true,
-        );
+    //   if (lastLevelUpDate != todayStr) {
+    //     final todaySummary = HydrationDaySummary(
+    //       date: DateTime(
+    //           DateTime.now().year, DateTime.now().month, DateTime.now().day),
+    //       dayIndex: 0,
+    //       target: state.goal.toDouble(),
+    //       consumed: totalDrankToday,
+    //       isPerfect: true,
+    //     );
 
-        await _dbHelper.bulkUpsert30Days([todaySummary]);
-        await SharedPrefsHelper.setLastLevelUpDate(todayStr);
-        await refreshAchievementStats();
+    //     await _dbHelper.bulkUpsert30Days([todaySummary]);
+    //     await SharedPrefsHelper.setLastLevelUpDate(todayStr);
+    //     await refreshAchievementStats();
 
-        if (state.currentLevel > updatedLevel) {
-          updatedLevel = state.currentLevel;
-          newlyUnlocked = updatedLevel;
-        }
-      }
-    }
+    //     if (state.currentLevel > updatedLevel) {
+    //       updatedLevel = state.currentLevel;
+    //       newlyUnlocked = updatedLevel;
+    //     }
+    //   }
+    // }
 
     // 4. Emit the updated state
     emit(state.copyWith(
       entries: currentEntries,
-      totalDrank: totalDrankToday.round(),
-      currentLevel: updatedLevel,
-      newlyUnlockedLevel: newlyUnlocked,
+      // totalDrank: totalDrankToday.round(),
+      // currentLevel: updatedLevel,
+      // newlyUnlockedLevel: newlyUnlocked,
     ));
 
     _calculateCurrentSlotStatus();
 
-    if (newlyUnlocked != null) {
-      Future.delayed(const Duration(seconds: 2), () {
-        if (!isClosed) emit(state.copyWith(newlyUnlockedLevel: null));
-      });
-    }
+    // if (newlyUnlocked != null) {
+    //   Future.delayed(const Duration(seconds: 2), () {
+    //     if (!isClosed) emit(state.copyWith(newlyUnlockedLevel: null));
+    //   });
+    // }
   }
 
   void subscribeToBleUpdates(BleCubit bleCubit) {
@@ -390,59 +386,47 @@ class HydrationCubit extends Cubit<HydrationState> {
     emit(state.copyWith(errorMessage: message, successMessage: null));
   }
 
-
   Future<void> refreshAchievementStats() async {
     try {
       final summaries = await _dbHelper.getHydrationSummariesForRange();
-      log("DEBUG: Total summaries found: ${summaries.length}");
-
       summaries.sort((a, b) => a.date.compareTo(b.date));
 
       int currentStreak = 0;
-      int badgesUnlocked = 0;
+      int totalPerfectDays = 0;
       Map<int, String> levelMap = {};
       DateTime? lastDate;
 
       for (var day in summaries) {
         if (day.isPerfect) {
+          totalPerfectDays++;
           if (lastDate != null) {
-            // Normalize both to midnight to be safe
             final d1 = DateTime(lastDate.year, lastDate.month, lastDate.day);
             final d2 = DateTime(day.date.year, day.date.month, day.date.day);
             final difference = d2.difference(d1).inDays;
 
-            log("DEBUG: Comparing ${d1.toIso8601String()} to ${d2.toIso8601String()} | Diff: $difference");
-
             if (difference == 1) {
               currentStreak++;
-            } else if (difference == 0) {
-              log("DEBUG: Duplicate date detected, skipping increment.");
-            } else {
-              log("DEBUG: GAP DETECTED! Streak reset to 1.");
+            } else if (difference > 1) {
               currentStreak = 1;
             }
           } else {
             currentStreak = 1;
-            log("DEBUG: Starting first streak day.");
           }
 
           lastDate = day.date;
-          log("DEBUG: Current Streak Count: $currentStreak");
-
-          if (currentStreak == 7) {
-            badgesUnlocked++;
-            levelMap[badgesUnlocked] = "Level $badgesUnlocked Unlocked";
-            log("DEBUG: 🏆 BADGE UNLOCKED! Total: $badgesUnlocked");
-            currentStreak = 0;
-            lastDate = null;
-          }
+          levelMap[totalPerfectDays] =
+              "Level $totalPerfectDays: Achieved on ${day.date.day}/${day.date.month}";
+        } else {
+          currentStreak = 0;
         }
       }
-
       emit(state.copyWith(
-        currentLevel: badgesUnlocked,
+        currentLevel: totalPerfectDays,
         levelToIntakeMap: levelMap,
       ));
+
+      log("POC Sync: Level $totalPerfectDays | Streak $currentStreak",
+          name: "Achievement_System");
     } catch (e) {
       log("ERROR in refreshAchievementStats: $e");
     }

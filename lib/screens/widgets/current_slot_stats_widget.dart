@@ -45,30 +45,33 @@ class _CurrentSlotStatsWidgetState extends State<CurrentSlotStatsWidget> {
       buildWhen: (previous, current) =>
           previous.volumePercent != current.volumePercent,
       builder: (context, state) {
-        return FutureBuilder(
-          future: () {
+        return FutureBuilder<(double, double)>(
+          future: () async {
             DateTime now = DateTime.now();
             DateTime startDate = DateTime(now.year, now.month, now.day);
             DateTime endDate = startDate
                 .add(const Duration(days: 1))
                 .subtract(const Duration(milliseconds: 1));
 
-            return context
+            final history = await context
                 .read<BottleDataCubit>()
                 .getHistoryForDateRange(startDate, endDate);
+            double volume =
+                WaterConsumptionCalculator.calculateDailyConsumption(history);
+
+            double percent =
+                await WaterConsumptionCalculator.calculateCompletionPercentage(
+                    volume);
+
+            return (volume, percent);
           }(),
           builder: (context, snapshot) {
             double waterVolumeConsumed = 0;
             double completionPercent = 0;
 
-            if (snapshot.hasData || snapshot.data?.isNotEmpty == true) {
-              waterVolumeConsumed =
-                  WaterConsumptionCalculator.calculateDailyConsumption(
-                      snapshot.data!);
-
-              completionPercent =
-                  WaterConsumptionCalculator.calculateCompletionPercentage(
-                      waterVolumeConsumed, waterGoal);
+            if (snapshot.hasData) {
+              waterVolumeConsumed = snapshot.data!.$1;
+              completionPercent = snapshot.data!.$2;
             }
 
             return _buildStatsCard(
