@@ -66,6 +66,7 @@ class _RingtoneScreenState extends State<RingtoneScreen> {
 
   Future<void> _onRingtoneTap(int index) async {
     setState(() => selectedIndex = index);
+    await _onPlayTap(index);
   }
 
   Future<void> _onPlayTap(int index) async {
@@ -105,6 +106,24 @@ class _RingtoneScreenState extends State<RingtoneScreen> {
       );
       Navigator.of(context).pop();
     }
+  }
+
+  Widget _buildTopPick(int index) {
+    final ringtone = mockRingtones[index];
+    return TopPickCard(
+      title: ringtone.title,
+      subTitle: ringtone.subTitle ?? "",
+      duration: ringtone.duration,
+      iconPath: selectedIndex == ringtone.id
+          ? ringtone.iconPath
+          : ringtone.iconPathUnselected,
+      isSelected: selectedIndex == ringtone.id,
+      isPlaying: playingIndex == ringtone.id,
+      isFavorite: favoriteIds.contains(ringtone.id),
+      onTap: () => _onRingtoneTap(ringtone.id),
+      onPlayTap: () => _onPlayTap(ringtone.id),
+      onFavoriteTap: () => _onFavoriteTap(ringtone.id),
+    );
   }
 
   @override
@@ -154,30 +173,13 @@ class _RingtoneScreenState extends State<RingtoneScreen> {
                           actionText: "",
                           titleSize: 17.sp,
                         ),
-                        SizedBox(
-                          height: 180.h,
-                          child: ListView.builder(
-                            scrollDirection: Axis.horizontal,
-                            itemCount: 2, // Just top 2 for picks
-                            itemBuilder: (context, index) {
-                              final ringtone = mockRingtones[index];
-                              return TopPickCard(
-                                title: ringtone.title,
-                                subTitle: ringtone.subTitle ?? "",
-                                duration: ringtone.duration,
-                                iconPath: selectedIndex == ringtone.id
-                                    ? ringtone.iconPath
-                                    : ringtone.iconPathUnselected,
-                                isSelected: selectedIndex == ringtone.id,
-                                isPlaying: playingIndex == ringtone.id,
-                                isFavorite: favoriteIds.contains(ringtone.id),
-                                onTap: () => _onRingtoneTap(ringtone.id),
-                                onPlayTap: () => _onPlayTap(ringtone.id),
-                                onFavoriteTap: () =>
-                                    _onFavoriteTap(ringtone.id),
-                              );
-                            },
-                          ),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            _buildTopPick(0),
+                            SizedBox(width: 16.w),
+                            _buildTopPick(1),
+                          ],
                         ),
                         CategoryHeader(
                           title: "NATURE",

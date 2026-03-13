@@ -447,6 +447,18 @@ class HydrationCubit extends Cubit<HydrationState> {
       log("ERROR in refreshAchievementStats: $e");
     }
   }
+
+
+  Future<void> resetUI() async {
+    emit(state.copyWith(
+      entries: [],
+      totalDrank: 0,
+      goal: 0,
+      currentSlotConsumption: 0,
+      currentSlotPercentage: 0,
+      currentSlotEntry: null,
+    ));
+  }
 }
 
 // Helper class

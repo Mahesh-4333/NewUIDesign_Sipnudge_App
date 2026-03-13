@@ -1,16 +1,19 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import 'package:hydrify/cubit/bottle/bottle_data_cubit.dart';
 import 'package:hydrify/cubit/drinkreminder/drink_reminder_state.dart';
 import 'package:hydrify/cubit/hydration/hydration_cubit.dart';
 import 'package:hydrify/helpers/shared_pref_helper.dart';
+import 'package:hydrify/helpers/water_consumption_data_helper.dart';
 import 'package:hydrify/models/hydration_entry.dart';
 import 'package:hydrify/services/notification/notification_service.dart';
 
 class DrinkReminderCubit extends Cubit<DrinkReminderState> {
   final HydrationCubit hydrationCubit;
+  final BottleDataCubit bottleDataCubit;
 
   final List<String> alarmRepeatOptions = ['1 Times', '3 Times', '5 Times', '10 Times'];
-  DrinkReminderCubit({required this.hydrationCubit}) : super(const DrinkReminderState()){
+  DrinkReminderCubit({required this.hydrationCubit, required this.bottleDataCubit}) : super(const DrinkReminderState()){
     _init();
     // _setupHydrationListener();
   }
@@ -81,10 +84,16 @@ class DrinkReminderCubit extends Cubit<DrinkReminderState> {
     final notificationService = NotificationService();
 
     if (value) {
-      // If enabled, check if current slot is already completed and cancel reminders
-      final currentSlot = hydrationCubit.state.currentSlotEntry;
-      if (currentSlot != null && currentSlot.status == HydrationStatus.completed) {
-        await notificationService.cancelSlotReminders(currentSlot.slot, 0); // 0 for today
+      final history = await bottleDataCubit.getCurrentDayHistory();
+      final completionPercent =
+          await WaterConsumptionCalculator.calculateCompletionPercentage(history);
+
+      if (completionPercent >= 100) {
+        // Daily target already achieved — cancel ALL today's notifications
+        for (final slot in HydrationSlot.values) {
+          await notificationService.cancelSlotReminders(slot, 0);
+        }
+        return; // No need to reschedule
       }
     }
 

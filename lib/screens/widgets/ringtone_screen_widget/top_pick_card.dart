@@ -37,8 +37,8 @@ class TopPickCard extends StatelessWidget {
       onTap: onTap,
       child: Container(
         width: 160.w,
+        height: 180.h,
         padding: EdgeInsets.all(16.w),
-        margin: EdgeInsets.only(right: 16.w),
         decoration: BoxDecoration(
           color: AppColors.white,
           borderRadius: BorderRadius.circular(24.r),
@@ -184,31 +184,33 @@ class _AnimatedVisualizerState extends State<_AnimatedVisualizer>
   @override
   Widget build(BuildContext context) {
     return Expanded(
-      child: SizedBox(
-        height: 32.h,
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: List.generate(
-            5,
-            (index) => AnimatedBuilder(
-              animation: _controllers[index],
-              builder: (context, child) {
-                final baseHeight = (10 + (index % 3) * 5).h;
-                final currentHeight =
-                    baseHeight + (_controllers[index].value * 15).h;
+      child: ExcludeSemantics(
+        child: SizedBox(
+          height: 32.h,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: List.generate(
+              5,
+              (index) => AnimatedBuilder(
+                animation: _controllers[index],
+                builder: (context, child) {
+                  final baseHeight = (10 + (index % 3) * 5).h;
+                  final currentHeight =
+                      baseHeight + (_controllers[index].value * 15).h;
 
-                return Container(
-                  width: 3.w,
-                  height: currentHeight,
-                  decoration: BoxDecoration(
-                    color: widget.isPlaying
-                        ? AppColors.blueWaterIntake
-                        : AppColors.blueWaterIntake.withOpacity(0.3),
-                    borderRadius: BorderRadius.circular(2.r),
-                  ),
-                );
-              },
+                  return Container(
+                    width: 3.w,
+                    height: currentHeight,
+                    decoration: BoxDecoration(
+                      color: widget.isPlaying
+                          ? AppColors.blueWaterIntake
+                          : AppColors.blueWaterIntake.withOpacity(0.3),
+                      borderRadius: BorderRadius.circular(2.r),
+                    ),
+                  );
+                },
+              ),
             ),
           ),
         ),

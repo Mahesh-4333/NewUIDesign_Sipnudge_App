@@ -33,6 +33,7 @@ class UserInfoDailyGoalScreen extends StatefulWidget {
 
   final double waterGoal;
   final bool isViaSettingsScreen;
+
   @override
   State<UserInfoDailyGoalScreen> createState() =>
       _UserInfoDailyGoalScreenState();
@@ -318,12 +319,12 @@ class _UserInfoDailyGoalScreenState extends State<UserInfoDailyGoalScreen> {
 
                 final dbHelper = DatabaseHelper();
                 var isSlotAvailableInDb = await dbHelper.getAllSlots();
-                //if(isSlotAvailableInDb.isEmpty){
-                await dbHelper.clearHydrationSlots();
-                for (var slot in slots) {
-                  await dbHelper.insertOrUpdateSlot(slot);
+                if (isSlotAvailableInDb.isEmpty) {
+                  await dbHelper.clearHydrationSlots();
+                  for (var slot in slots) {
+                    await dbHelper.insertOrUpdateSlot(slot);
+                  }
                 }
-                //}
 
                 await context.read<BleCubit>().queueHydrationSlots(slots);
                 await NotificationService().resetAllHydrationReminders(slots);
@@ -392,7 +393,8 @@ class _UserInfoDailyGoalScreenState extends State<UserInfoDailyGoalScreen> {
         startTime: times.start,
         endTime: times.end,
         amount: amount.round().toDouble(),
-        waterDrank: 0, // initially 0
+        waterDrank: 0,
+        // initially 0
         status: HydrationStatus.pending,
       ));
     });

@@ -106,7 +106,10 @@ class _Hydration30DayPageState extends State<Hydration30DayPage> {
                               style: TextStyle(fontWeight: FontWeight.w600),
                             ),
                             const SizedBox(height: 8),
-                            Text("UTC TS : ${state.ts == null ? "--"  :state.ts!.toUtc()}", style: TextStyle(fontWeight: FontWeight.w600),),
+                            Text(
+                              "Current TS : ${state.ts == null ? "--" : DateFormat('yyyy-MM-dd HH:mm:ss').format(state.ts!.toLocal())}",
+                              style: TextStyle(fontWeight: FontWeight.w600),
+                            ),
                             Text(
                               'Slot data: ${state.slotData}',
                               style: TextStyle(fontWeight: FontWeight.w600),

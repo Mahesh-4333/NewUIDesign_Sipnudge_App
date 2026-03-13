@@ -8,13 +8,10 @@ import 'package:hydrify/constants/app_colors.dart';
 import 'package:hydrify/constants/app_dimensions.dart';
 import 'package:hydrify/constants/app_font_styles.dart';
 import 'package:hydrify/constants/app_strings.dart';
-import 'package:hydrify/cubit/ble/ble_cubit.dart';
-import 'package:hydrify/cubit/bottle/bottle_data_cubit.dart';
 import 'package:hydrify/cubit/hydration/hydration_cubit.dart';
 import 'package:hydrify/cubit/hydration/hydration_state.dart';
 import 'package:hydrify/helpers/database_helper.dart';
 import 'package:hydrify/helpers/shared_pref_helper.dart';
-import 'package:hydrify/helpers/water_consumption_data_helper.dart';
 import 'package:hydrify/models/hydration_summary.dart';
 import 'package:hydrify/screens/levelreached.dart';
 import 'package:hydrify/screens/widgets/level_widgets/concentric_circles_animation.dart';
@@ -87,7 +84,7 @@ class _AchievementsBadgeScreenState extends State<AchievementsBadgeScreen> {
     int count = 0;
     for (final summary in _hydrationData) {
       final target =
-          summary.target > 0 ? summary.target : _dailyWaterGoal.toDouble();
+      summary.target > 0 ? summary.target : _dailyWaterGoal.toDouble();
       if ((summary.consumed / target) * 100 >= 100) {
         count++;
         if (count == level) {
@@ -103,7 +100,6 @@ class _AchievementsBadgeScreenState extends State<AchievementsBadgeScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!_didAutoRefresh) {
         _didAutoRefresh = true;
-        _loadHydrationData();
       }
     });
 
@@ -121,69 +117,65 @@ class _AchievementsBadgeScreenState extends State<AchievementsBadgeScreen> {
   Widget _buildRegularScreen() {
     return BlocBuilder<HydrationCubit, HydrationState>(
         builder: (context, state) {
-      return Scaffold(
-        extendBody: true,
-        extendBodyBehindAppBar: true,
-        body: Stack(
-          children: [
-            Container(
-              decoration: const BoxDecoration(
-                image: DecorationImage(
-                  image: AssetImage("assets/images/app_background.png"),
-                  fit: BoxFit.cover,
-                ),
-              ),
-              child: Column(
-                children: [
-                  Expanded(
-                    child: Stack(
-                      children: [
-                        const ConcentricCirclesAnimation(),
-                        Positioned(
-                          left: AppDimensions.dim75.w,
-                          top: AppDimensions.dim90.w,
-                          child: getCurrentLevelBadge(
-                            state.currentLevel.toString(),
-                          ),
-                        ),
-                        Positioned(
-                          top: AppDimensions.dim380.h,
-                          left: 0,
-                          right: 0,
-                          child: getCongratulationsText(
-                            state.currentLevel.toString(),
-                          ),
-                        ),
-                      ],
+          return Scaffold(
+            extendBody: true,
+            extendBodyBehindAppBar: true,
+            body: Stack(
+              children: [
+                Container(
+                  decoration: const BoxDecoration(
+                    image: DecorationImage(
+                      image: AssetImage("assets/images/app_background.png"),
+                      fit: BoxFit.cover,
                     ),
                   ),
-                  Expanded(
-                    child: Container(
-                        padding: EdgeInsets.symmetric(
-                          horizontal: AppDimensions.padding_20.w,
-                          //vertical: AppDimensions.padding_20.h,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.vertical(
-                            top: Radius.circular(
-                              AppDimensions.radius_24.r,
+                  child: Column(
+                    children: [
+                      Expanded(
+                        child: Stack(
+                          children: [
+                            const ConcentricCirclesAnimation(),
+                            Positioned(
+                              left: AppDimensions.dim75.w,
+                              top: AppDimensions.dim90.w,
+                              child: getCurrentLevelBadge(
+                                state.currentLevel.toString(),
+                              ),
                             ),
+                            Positioned(
+                              top: AppDimensions.dim380.h,
+                              left: 0,
+                              right: 0,
+                              child: state.currentLevel > 0
+                                  ? getCongratulationsText(
+                                  state.currentLevel.toString())
+                                  : const SizedBox.shrink(),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Expanded(
+                        child: Container(
+                          padding: EdgeInsets.symmetric(
+                            horizontal: AppDimensions.padding_20.w,
                           ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withValues(alpha: .1),
-                              blurRadius: 10,
-                              offset: Offset(0, -2),
-                            ),
-                          ]
-                        ),
-                        child: BlocBuilder<HydrationCubit, HydrationState>(
-                            builder: (context, state) {
-                          return GridView.builder(
+                          decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.vertical(
+                                top: Radius.circular(
+                                  AppDimensions.radius_24.r,
+                                ),
+                              ),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withValues(alpha: .1),
+                                  blurRadius: 10,
+                                  offset: Offset(0, -2),
+                                ),
+                              ]),
+                          child: GridView.builder(
                             itemCount: 52,
-                            gridDelegate:
-                                SliverGridDelegateWithFixedCrossAxisCount(
+                            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                               crossAxisCount: 3,
                               childAspectRatio: 1.2.r,
                               mainAxisSpacing: 24.h,
@@ -198,8 +190,7 @@ class _AchievementsBadgeScreenState extends State<AchievementsBadgeScreen> {
                               return GestureDetector(
                                 onTap: () {
                                   if (isUnlocked && !isGuest!) {
-                                    showLevelUpDialog(
-                                        context, level, intakeInfo);
+                                    showLevelUpDialog(context, level, intakeInfo);
                                   }
                                 },
                                 child: getLevelBadges(
@@ -209,69 +200,69 @@ class _AchievementsBadgeScreenState extends State<AchievementsBadgeScreen> {
                                 ),
                               );
                             },
-                          );
-                        })),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                // ---------------- GUEST BLUR + DIALOG ----------------
+                if (isGuest == true) ...[
+                  Positioned.fill(
+                    child: BackdropFilter(
+                      filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
+                      child: Container(
+                        color: Colors.white.withOpacity(0.35),
+                      ),
+                    ),
+                  ),
+                  Center(
+                    child: Container(
+                      width: Platform.isIOS
+                          ? AppDimensions.dim340.w
+                          : AppDimensions.dim380.w,
+                      height: Platform.isIOS
+                          ? AppDimensions.dim75.h
+                          : AppDimensions.dim75.h,
+                      margin:
+                      EdgeInsets.symmetric(horizontal: AppDimensions.dim20.w),
+                      padding: EdgeInsets.symmetric(
+                        horizontal: Platform.isIOS
+                            ? AppDimensions.dim20.w
+                            : AppDimensions.dim11.w,
+                        vertical: Platform.isIOS
+                            ? AppDimensions.dim16.h
+                            : AppDimensions.dim13.h,
+                      ),
+                      decoration: BoxDecoration(
+                        borderRadius:
+                        BorderRadius.circular(AppDimensions.radius_100.r),
+                        image: DecorationImage(
+                          image: AssetImage(
+                            "assets/images/guest_dialog.png",
+                          ),
+                          fit: BoxFit.cover,
+                        ),
+                      ),
+                      child: Text(
+                        "Connect to Sipnudge bottle to access analysis",
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: AppColors.bluegray,
+                          fontFamily: AppFontStyles.museoModernoFontFamily,
+                          fontSize: AppFontStyles.fontSize_16.sp,
+                          fontVariations: [AppFontStyles.fontWeightVariation600],
+                          height: 1.4,
+                        ),
+                      ),
+                    ),
                   ),
                 ],
-              ),
+              ],
             ),
-
-            // ---------------- GUEST BLUR + DIALOG ----------------
-            if (isGuest == true) ...[
-              Positioned.fill(
-                child: BackdropFilter(
-                  filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
-                  child: Container(
-                    color: Colors.white.withOpacity(0.35),
-                  ),
-                ),
-              ),
-              Center(
-                child: Container(
-                  width: Platform.isIOS
-                      ? AppDimensions.dim340.w
-                      : AppDimensions.dim380.w,
-                  height: Platform.isIOS
-                      ? AppDimensions.dim75.h
-                      : AppDimensions.dim75.h,
-                  margin:
-                      EdgeInsets.symmetric(horizontal: AppDimensions.dim20.w),
-                  padding: EdgeInsets.symmetric(
-                    horizontal: Platform.isIOS
-                        ? AppDimensions.dim20.w
-                        : AppDimensions.dim11.w,
-                    vertical: Platform.isIOS
-                        ? AppDimensions.dim16.h
-                        : AppDimensions.dim13.h,
-                  ),
-                  decoration: BoxDecoration(
-                    borderRadius:
-                        BorderRadius.circular(AppDimensions.radius_100.r),
-                    image: DecorationImage(
-                      image: AssetImage(
-                        "assets/images/guest_dialog.png",
-                      ),
-                      fit: BoxFit.cover,
-                    ),
-                  ),
-                  child: Text(
-                    "Connect to Sipnudge bottle to access analysis",
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      color: AppColors.bluegray,
-                      fontFamily: AppFontStyles.museoModernoFontFamily,
-                      fontSize: AppFontStyles.fontSize_16.sp,
-                      fontVariations: [AppFontStyles.fontWeightVariation600],
-                      height: 1.4,
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ],
-        ),
-      );
-    });
+          );
+        });
   }
 
   Widget getCurrentLevelBadge(String level) {
@@ -282,7 +273,6 @@ class _AchievementsBadgeScreenState extends State<AchievementsBadgeScreen> {
       height: AppDimensions.dim320.h,
       child: Stack(
         children: [
-          // Show different badge based on unlock status
           Positioned.fill(
             child: Align(
               alignment: Alignment.center,
@@ -303,28 +293,6 @@ class _AchievementsBadgeScreenState extends State<AchievementsBadgeScreen> {
               ),
             ),
           ),
-          // Positioned.fill(
-          //   child: Align(
-          //     alignment: Alignment.center,
-          //     child: Transform.translate(
-          //       offset: Offset(-16.w, 0),
-          //       child: Image.asset(
-          //         isCurrentLevelUnlocked
-          //             ? "assets/images/goals_new_img.png" // Unlocked - colored badge
-          //             : "assets/images/level_lock_img1.png", // Locked - grey badge
-          //         width: isCurrentLevelUnlocked
-          //             ? AppDimensions.dim330.w
-          //             : AppDimensions.dim280.w,
-          //         height: isCurrentLevelUnlocked
-          //             ? AppDimensions.dim320.h
-          //             : AppDimensions.dim280.h,
-          //         fit: BoxFit.contain,
-          //       ),
-          //     ),
-          //   ),
-          // ),
-
-          // Show level number only if unlocked
           if (hasAchievedAnyLevel)
             Positioned(
               left: AppDimensions.dim100.w,
@@ -368,27 +336,23 @@ class _AchievementsBadgeScreenState extends State<AchievementsBadgeScreen> {
       width: AppDimensions.dim115.w,
       child: Stack(
         children: [
-          // Badge image - locked or unlocked
           Align(
             alignment: Alignment.topCenter,
             child: isUnlocked
                 ? Image.asset(
-                    "assets/images/goals_levels_img.png",
-                    width: AppDimensions.dim107.w,
-                    height: AppDimensions.dim111.h,
-                  )
+              "assets/images/goals_levels_img.png",
+              width: AppDimensions.dim107.w,
+              height: AppDimensions.dim111.h,
+            )
                 : Padding(
-                    padding: EdgeInsets.only(
-                        top: AppDimensions.dim22.h), // 🔽 shift down
-                    child: Image.asset(
-                      "assets/images/level_lock_img1.png",
-                      width: AppDimensions.dim70.w,
-                      height: AppDimensions.dim70.h,
-                    ),
-                  ),
+              padding: EdgeInsets.only(top: AppDimensions.dim22.h),
+              child: Image.asset(
+                "assets/images/level_lock_img1.png",
+                width: AppDimensions.dim70.w,
+                height: AppDimensions.dim70.h,
+              ),
+            ),
           ),
-
-          // Level number - only show on unlocked badges
           if (isUnlocked)
             Positioned.fill(
               child: Align(
@@ -418,8 +382,6 @@ class _AchievementsBadgeScreenState extends State<AchievementsBadgeScreen> {
                 ),
               ),
             ),
-
-          // Level text and water intake
           Positioned(
             top: isUnlocked ? AppDimensions.dim74.h : AppDimensions.dim75.h,
             left: isUnlocked ? AppDimensions.dim5.w : 0.w,
@@ -475,40 +437,16 @@ class _AchievementsBadgeScreenState extends State<AchievementsBadgeScreen> {
             ),
           ),
           SizedBox(height: AppDimensions.dim10.h),
-          BlocBuilder<BleCubit, BleState>(buildWhen: (previous, current) {
-            if (previous.currentHydrationValue !=
-                current.currentHydrationValue) {
-              return true;
-            }
-            return false;
-          }, builder: (context, state) {
-            return FutureBuilder<(double, double)>(future: () async {
-              final history = await context
-                  .read<BottleDataCubit>()
-                  .getCurrentDayHistory();
-
-              double waterVolumeConsumed = history;
-              double remainingIntakeWater = await WaterConsumptionCalculator
-                  .calculateRemainingPercentage(waterVolumeConsumed);
-
-              return (remainingIntakeWater, waterVolumeConsumed);
-            }(), builder: (context, snapshot) {
-              final (remainingIntakeWater, waterVolumeConsumed) =
-                  snapshot.data ?? (0.0, 0.0);
-
-              return Text(
-                AppStrings.congratulations(waterVolumeConsumed.toStringAsFixed(0)),
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontFamily: AppFontStyles.urbanistFontFamily,
-                  fontVariations: [AppFontStyles.fontWeightVariation600],
-                  color: AppColors.bluegray,
-                  fontSize: AppFontStyles.fontSize_14.sp,
-                ),
-              );
-            });
-          }),
-
+          Text(
+            AppStrings.congratulations(_dailyWaterGoal.toString()),
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontFamily: AppFontStyles.urbanistFontFamily,
+              fontVariations: [AppFontStyles.fontWeightVariation600],
+              color: AppColors.bluegray,
+              fontSize: AppFontStyles.fontSize_14.sp,
+            ),
+          ),
         ],
       ),
     );

@@ -87,6 +87,22 @@ class _HomeScreenState extends State<HomeScreen> {
             await context.read<BottleDataCubit>().getCurrentDayHistory();
 
         context.read<BleCubit>().updateCurrentHydrationValue(history);
+
+        // Cancel all today's notifications if target already met on app open
+        final stopWhenFull = await SharedPrefsHelper.getStopWhenFull();
+        if (stopWhenFull) {
+          double completionPercent = await WaterConsumptionCalculator
+              .calculateCompletionPercentage(history);
+          Console.log(
+              tag: "initState_stopWhenFull",
+              value: "completionPercent: $completionPercent");
+          if (completionPercent >= 100) {
+            final notificationService = NotificationService();
+            for (final slot in HydrationSlot.values) {
+              await notificationService.cancelSlotReminders(slot, 0);
+            }
+          }
+        }
       } else {
         // if (currentVolume < 600) {
         _showStartJourneyDialog(context);
