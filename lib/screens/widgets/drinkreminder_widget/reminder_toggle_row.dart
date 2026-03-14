@@ -3,6 +3,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:hydrify/constants/app_colors.dart';
 import 'package:hydrify/constants/app_dimensions.dart';
 import 'package:hydrify/constants/app_font_styles.dart';
+import 'package:hydrify/screens/widgets/custom_anim_toggle.dart';
 import 'package:hydrify/screens/widgets/custom_toggle_switch.dart';
 
 class ReminderToggleRow extends StatelessWidget {
@@ -42,12 +43,12 @@ class ReminderToggleRow extends StatelessWidget {
                   fontVariations: [AppFontStyles.fontWeightVariation600],
                 ),
           ),
-          CustomToggleSwitch(
+          AnimatedToggle(
             value: value,
-            onChanged: onChanged,
-            activeTrackColor: activeTrackColor ?? AppColors.violetBlue,
-            inactiveTrackColor: AppColors.tuna,
-          )
+            onChanged: (bool value) {
+              onChanged(value);
+            },
+          ),
         ],
       ),
     );

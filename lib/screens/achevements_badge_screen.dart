@@ -8,10 +8,15 @@ import 'package:hydrify/constants/app_colors.dart';
 import 'package:hydrify/constants/app_dimensions.dart';
 import 'package:hydrify/constants/app_font_styles.dart';
 import 'package:hydrify/constants/app_strings.dart';
+import 'package:hydrify/cubit/ble/ble_cubit.dart';
+import 'package:hydrify/cubit/bottle/bottle_data_cubit.dart';
 import 'package:hydrify/cubit/hydration/hydration_cubit.dart';
 import 'package:hydrify/cubit/hydration/hydration_state.dart';
+import 'package:hydrify/cubit/level/achievement_cubit.dart';
+import 'package:hydrify/cubit/level/achievement_state.dart';
 import 'package:hydrify/helpers/database_helper.dart';
 import 'package:hydrify/helpers/shared_pref_helper.dart';
+import 'package:hydrify/helpers/water_consumption_data_helper.dart';
 import 'package:hydrify/models/hydration_summary.dart';
 import 'package:hydrify/screens/levelreached.dart';
 import 'package:hydrify/screens/widgets/level_widgets/concentric_circles_animation.dart';
@@ -26,18 +31,12 @@ class AchievementsBadgeScreen extends StatefulWidget {
 
 class _AchievementsBadgeScreenState extends State<AchievementsBadgeScreen> {
   bool? isGuest;
-  final DatabaseHelper _dbHelper = DatabaseHelper();
-  bool _loading = true;
-  List<HydrationDaySummary> _hydrationData = [];
-  int _currentLevel = 0;
-  int _dailyWaterGoal = 0;
-
-  bool _didAutoRefresh = false;
 
   @override
   void initState() {
     super.initState();
     _checkGuestUser();
+    context.read<AchievementCubit>().init();
   }
 
   Future<void> _checkGuestUser() async {
@@ -47,44 +46,37 @@ class _AchievementsBadgeScreenState extends State<AchievementsBadgeScreen> {
     });
   }
 
-  String _getWaterIntakeForLevel(int level) {
-    if (level <= 0 || _hydrationData.isEmpty) return '0.0L';
-
-    int count = 0;
-    for (final summary in _hydrationData) {
-      final target =
-          summary.target > 0 ? summary.target : _dailyWaterGoal.toDouble();
-      if ((summary.consumed / target) * 100 >= 100) {
-        count++;
-        if (count == level) {
-          return '${(summary.consumed / 1000).toStringAsFixed(1)}L';
-        }
-      }
-    }
-    return '0.0L';
-  }
+  // String _getWaterIntakeForLevel(int level) {
+  //   if (level <= 0 || _hydrationData.isEmpty) return '0.0L';
+  //
+  //   int count = 0;
+  //   for (final summary in _hydrationData) {
+  //     final target =
+  //         summary.target > 0 ? summary.target : _dailyWaterGoal.toDouble();
+  //     if ((summary.consumed / target) * 100 >= 100) {
+  //       count++;
+  //       if (count == level) {
+  //         return '${(summary.consumed / 1000).toStringAsFixed(1)}L';
+  //       }
+  //     }
+  //   }
+  //   return '0.0L';
+  // }
 
   @override
   Widget build(BuildContext context) {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!_didAutoRefresh) {
-        _didAutoRefresh = true;
-      }
-    });
-
-    if (isGuest == null || _loading) {
+    if (isGuest == null) {
       return const Scaffold(
         body: Center(child: CircularProgressIndicator()),
       );
     }
-
     return _buildRegularScreen();
   }
 
   // ===================== REGULAR SCREEN + GUEST OVERLAY =====================
 
   Widget _buildRegularScreen() {
-    return BlocBuilder<HydrationCubit, HydrationState>(
+    return BlocBuilder<AchievementCubit, AchievementState>(
         builder: (context, state) {
       return Scaffold(
         extendBody: true,
@@ -154,7 +146,7 @@ class _AchievementsBadgeScreenState extends State<AchievementsBadgeScreen> {
                           final isUnlocked = level <= state.currentLevel;
 
                           final intakeInfo =
-                              state.levelToIntakeMap[level] ?? '';
+                              (state.waterGoalDaily ?? 0.0).toString();
 
                           return GestureDetector(
                             onTap: () {
@@ -371,7 +363,9 @@ class _AchievementsBadgeScreenState extends State<AchievementsBadgeScreen> {
                 ),
                 SizedBox(height: AppDimensions.dim4.h),
                 Text(
-                  isUnlocked ? 'Water Intake: $waterIntake' : '0',
+                  isUnlocked
+                      ? 'Weekly Intake: $waterIntake'
+                      : 'Complete Next $level day${level != "1" ? "s" : ""}',
                   style: TextStyle(
                     color: isUnlocked
                         ? AppColors.bluegray
@@ -406,16 +400,40 @@ class _AchievementsBadgeScreenState extends State<AchievementsBadgeScreen> {
             ),
           ),
           SizedBox(height: AppDimensions.dim10.h),
-          Text(
-            AppStrings.congratulations(_dailyWaterGoal),
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontFamily: AppFontStyles.urbanistFontFamily,
-              fontVariations: [AppFontStyles.fontWeightVariation600],
-              color: AppColors.bluegray,
-              fontSize: AppFontStyles.fontSize_14.sp,
-            ),
-          ),
+          BlocBuilder<BleCubit, BleState>(buildWhen: (previous, current) {
+            if (previous.currentHydrationValue !=
+                current.currentHydrationValue) {
+              return true;
+            }
+            return false;
+          }, builder: (context, state) {
+            return FutureBuilder<(double, double)>(future: () async {
+              final history =
+                  await context.read<BottleDataCubit>().getCurrentDayHistory();
+
+              double waterVolumeConsumed = history;
+              double remainingIntakeWater =
+                  await WaterConsumptionCalculator.calculateRemainingPercentage(
+                      waterVolumeConsumed);
+
+              return (remainingIntakeWater, waterVolumeConsumed);
+            }(), builder: (context, snapshot) {
+              final (remainingIntakeWater, waterVolumeConsumed) =
+                  snapshot.data ?? (0.0, 0.0);
+
+              return Text(
+                AppStrings.congratulations(
+                    waterVolumeConsumed.toStringAsFixed(0)),
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontFamily: AppFontStyles.urbanistFontFamily,
+                  fontVariations: [AppFontStyles.fontWeightVariation600],
+                  color: AppColors.bluegray,
+                  fontSize: AppFontStyles.fontSize_14.sp,
+                ),
+              );
+            });
+          }),
         ],
       ),
     );

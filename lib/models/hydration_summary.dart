@@ -28,7 +28,7 @@ class HydrationDaySummary {
       'day_index': dayIndex,
       'target': target,
       'consumed': consumed,
-      'device_id': deviceId,
+      'device_id': deviceId ?? '',
       'created_at': createdAt.millisecondsSinceEpoch,
       'updated_at': updatedAt?.millisecondsSinceEpoch,
       'is_perfect': isPerfect ? 1 : 0,
@@ -53,7 +53,7 @@ class HydrationDaySummary {
       dayIndex: (m['day_index'] as int?) ?? 0,
       target: (m['target'] as num).toDouble(),
       consumed: (m['consumed'] as num).toDouble(),
-      deviceId: m['device_id'] as String?,
+      deviceId: (m['device_id'] as String?) ?? '',
       isPerfect: (m['is_perfect'] as int? ?? 0) == 1,
       createdAt:
           DateTime.fromMillisecondsSinceEpoch(m['created_at'] as int).toLocal(),

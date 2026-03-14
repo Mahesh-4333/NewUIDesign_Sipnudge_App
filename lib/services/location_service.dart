@@ -1,5 +1,5 @@
 // lib/services/location_service.dart
-import 'dart:developer';
+import 'package:hydrify/helpers/logger.dart';
 
 import 'package:geolocator/geolocator.dart';
 
@@ -43,17 +43,17 @@ class LocationService {
 
   Future<Position> getCurrentLocation() async {
     try {
-      log('Getting current location');
+      Console.log(tag: "APP", value: 'Getting current location');
 
       await handlePermission();
 
       final position = await Geolocator.getCurrentPosition(
           desiredAccuracy: LocationAccuracy.high);
 
-      log('Location obtained: ${position.latitude}, ${position.longitude}');
+      Console.log(tag: "APP", value: 'Location obtained: ${position.latitude}, ${position.longitude}');
       return position;
     } catch (e) {
-      log('Error getting location: $e');
+      Console.log(tag: "APP", value: 'Error getting location: $e');
       throw LocationException('Failed to get location: $e');
     }
   }

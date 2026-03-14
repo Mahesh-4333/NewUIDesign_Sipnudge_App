@@ -1,4 +1,4 @@
-import 'dart:developer';
+import 'package:hydrify/helpers/logger.dart';
 
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
@@ -9,6 +9,7 @@ import 'package:hydrify/constants/app_font_styles.dart';
 import 'package:hydrify/cubit/filter/filter_cubit.dart';
 import 'package:hydrify/models/chart_data.dart';
 import 'package:hydrify/models/hydration_summary.dart';
+import 'package:hydrify/helpers/shared_pref_helper.dart';
 import 'package:hydrify/screens/widgets/chart_widgets/tool_tip_widget.dart';
 
 class FlColumnChartWidget extends StatefulWidget {
@@ -29,7 +30,9 @@ class FlColumnChartWidget extends StatefulWidget {
 }
 
 class _FlColumnChartWidgetState extends State<FlColumnChartWidget> {
-  late List<ChartData> chartData;
+  List<ChartData> chartData = [];
+  double maxY = 100;
+  double? currentUserGoal;
   final ScrollController _scrollController = ScrollController();
 
   double barWidth = AppDimensions.dim35.w; // default bar width
@@ -67,7 +70,18 @@ class _FlColumnChartWidgetState extends State<FlColumnChartWidget> {
   @override
   void initState() {
     super.initState();
-    _updateChartData();
+    _updateChartData(); // Initialize sync first
+    _loadUserGoal().then((_) {
+      _updateChartData();
+      if (mounted) setState(() {});
+    });
+  }
+
+  Future<void> _loadUserGoal() async {
+    final goal = await SharedPrefsHelper.getUserGoal();
+    if (goal != null) {
+      currentUserGoal = goal.toDouble();
+    }
   }
 
   void _updateChartData() {
@@ -87,12 +101,14 @@ class _FlColumnChartWidgetState extends State<FlColumnChartWidget> {
       chartData = List.generate(7, (i) {
         final dayDate = weekStart.add(Duration(days: i));
 
-        final matches = sorted.where(
-          (x) =>
-              x.date.year == dayDate.year &&
-              x.date.month == dayDate.month &&
-              x.date.day == dayDate.day,
-        ).toList();
+        final matches = sorted
+            .where(
+              (x) =>
+                  x.date.year == dayDate.year &&
+                  x.date.month == dayDate.month &&
+                  x.date.day == dayDate.day,
+            )
+            .toList();
 
         double totalTarget = 0;
         double totalConsumed = 0;
@@ -104,10 +120,20 @@ class _FlColumnChartWidgetState extends State<FlColumnChartWidget> {
           }
         }
 
-        final double target = totalTarget;
+        final double target;
+        final now = DateTime.now();
+        final isToday = dayDate.year == now.year &&
+            dayDate.month == now.month &&
+            dayDate.day == now.day;
+
+        if (isToday && currentUserGoal != null) {
+          target = currentUserGoal!;
+        } else {
+          target = totalTarget;
+        }
+
         final double consumed = totalConsumed;
         double percent = target > 0 ? (consumed / target) * 100 : 0;
-        percent = percent.clamp(0, 100);
 
         return ChartData(weekLabels[i], percent, consumed, dayDate);
       });
@@ -123,12 +149,14 @@ class _FlColumnChartWidgetState extends State<FlColumnChartWidget> {
       chartData = List.generate(days, (i) {
         final dayDate = firstDay.add(Duration(days: i));
 
-        final matches = sorted.where(
-          (x) =>
-              x.date.year == dayDate.year &&
-              x.date.month == dayDate.month &&
-              x.date.day == dayDate.day,
-        ).toList();
+        final matches = sorted
+            .where(
+              (x) =>
+                  x.date.year == dayDate.year &&
+                  x.date.month == dayDate.month &&
+                  x.date.day == dayDate.day,
+            )
+            .toList();
 
         double totalTarget = 0;
         double totalConsumed = 0;
@@ -140,10 +168,20 @@ class _FlColumnChartWidgetState extends State<FlColumnChartWidget> {
           }
         }
 
-        final double target = totalTarget;
+        final double target;
+        final now = DateTime.now();
+        final isToday = dayDate.year == now.year &&
+            dayDate.month == now.month &&
+            dayDate.day == now.day;
+
+        if (isToday && currentUserGoal != null) {
+          target = currentUserGoal!;
+        } else {
+          target = totalTarget;
+        }
+
         final double consumed = totalConsumed;
         double percent = target > 0 ? (consumed / target) * 100 : 0;
-        percent = percent.clamp(0, 100);
 
         return ChartData(
             (i + 1).toString(), // 1,2,3,...
@@ -162,24 +200,35 @@ class _FlColumnChartWidgetState extends State<FlColumnChartWidget> {
 
         double target = 0;
         double consumed = 0;
+        final now = DateTime.now();
+
         for (var e in list) {
-          target += e.target;
+          if (e.date.year == now.year &&
+              e.date.month == now.month &&
+              e.date.day == now.day) {
+            target += currentUserGoal ?? e.target;
+          } else {
+            target += e.target;
+          }
           consumed += e.consumed;
         }
 
         double percent = target > 0 ? (consumed / target) * 100 : 0;
-        percent = percent.clamp(0, 100);
         final dateForPoint =
             list.isNotEmpty ? list.first.date : DateTime(year, monthIndex, 1);
-        return ChartData(
-            monthLabels[i], // Jan, Feb, ...
-            percent,
-            consumed,
-            dateForPoint);
+        return ChartData(monthLabels[i], percent, consumed, dateForPoint);
       });
     } else {
       chartData = [];
     }
+
+    double maxP = 0;
+    if (chartData.isNotEmpty) {
+      maxP = chartData
+          .map((e) => e.completionPercent)
+          .reduce((a, b) => a > b ? a : b);
+    }
+    maxY = maxP > 100 ? (maxP / 20).ceil() * 20.0 : 100.0;
 
     // ignore: avoid_print
     print(
@@ -192,8 +241,11 @@ class _FlColumnChartWidgetState extends State<FlColumnChartWidget> {
     if (oldWidget.interval != widget.interval ||
         oldWidget.currentDate != widget.currentDate ||
         oldWidget.bottleData != widget.bottleData) {
-      _updateChartData();
-      setState(() {});
+      _updateChartData(); // Update sync first
+      _loadUserGoal().then((_) {
+        _updateChartData();
+        setState(() {});
+      });
     }
   }
 
@@ -236,7 +288,7 @@ class _FlColumnChartWidgetState extends State<FlColumnChartWidget> {
                     SizedBox(
                       width: AppDimensions.dim40.w,
                       height: AppDimensions.dim265.h,
-                      child: const CustomYAxis(maxY: 100, divisions: 5),
+                      child: CustomYAxis(maxY: maxY, divisions: 5),
                     ),
                     Expanded(
                       child: isWeekly
@@ -269,7 +321,8 @@ class _FlColumnChartWidgetState extends State<FlColumnChartWidget> {
                     15,
                 top: (tappedIndexOffset?.dy ?? 0),
                 child: CustomChartToolTip(
-                  percent: tooltipData!.completionPercent.toInt(),
+                  percent: int.parse(
+                      tooltipData!.completionPercent.toStringAsFixed(0)),
                 ),
               ),
           ],
@@ -283,7 +336,7 @@ class _FlColumnChartWidgetState extends State<FlColumnChartWidget> {
       BarChartData(
         alignment: BarChartAlignment.spaceBetween,
         groupsSpace: barSpacing,
-        maxY: 100,
+        maxY: maxY,
         barTouchData: _buildBarTouchData(),
         titlesData: _buildTitles(),
         gridData: FlGridData(show: false),
@@ -331,8 +384,8 @@ class _FlColumnChartWidgetState extends State<FlColumnChartWidget> {
             tappedIndex = response.spot!.touchedBarGroupIndex;
             tappedIndexOffset = response.spot!.offset;
 
-            log("X - ${tappedIndexOffset?.dx}");
-            log("Y - ${tappedIndexOffset?.dy}");
+            Console.log(tag: "APP", value: "X - ${tappedIndexOffset?.dx}");
+            Console.log(tag: "APP", value: "Y - ${tappedIndexOffset?.dy}");
           });
         } else {
           setState(() {
@@ -357,7 +410,7 @@ class _FlColumnChartWidgetState extends State<FlColumnChartWidget> {
               return const SizedBox();
             }
 
-            final label = isWeekly ? weekLabels[index]  : chartData[index].x;
+            final label = isWeekly ? weekLabels[index] : chartData[index].x;
 
             return Padding(
               padding: EdgeInsets.only(top: AppDimensions.dim5.h),

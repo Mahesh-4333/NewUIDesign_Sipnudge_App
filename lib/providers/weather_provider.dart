@@ -1,4 +1,4 @@
-import 'dart:developer';
+import 'package:hydrify/helpers/logger.dart';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -73,7 +73,7 @@ class WeatherProvider extends ChangeNotifier {
         _currentLocation!.longitude,
       );
     } catch (e) {
-      log("Exception occurred in fetchingWeatherForCurrentLocation ${e.toString()}");
+      Console.log(tag: "APP", value: "Exception occurred in fetchingWeatherForCurrentLocation ${e.toString()}");
       _error = e.toString();
     } finally {
       _isLoading = false;

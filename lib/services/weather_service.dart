@@ -1,6 +1,6 @@
 // lib/services/weather_service.dart
 import 'dart:convert';
-import 'dart:developer';
+import 'package:hydrify/helpers/logger.dart';
 import 'package:http/http.dart' as http;
 
 /// Custom exception
@@ -69,15 +69,15 @@ class WeatherService {
   Future<WeatherData> getCurrentWeatherByCoordinates(
       double lat, double lon) async {
     try {
-      log('Fetching weather data for coordinates: $lat, $lon');
+      Console.log(tag: "APP", value: 'Fetching weather data for coordinates: $lat, $lon');
 
       final url = Uri.parse(
           '$baseUrl/weather?lat=$lat&lon=$lon&units=metric&appid=$apiKey');
 
       final response = await client.get(url);
 
-      log('Response status: ${response.statusCode}');
-      log('Response body: ${response.body}');
+      Console.log(tag: "APP", value: 'Response status: ${response.statusCode}');
+      Console.log(tag: "APP", value: 'Response body: ${response.body}');
 
       if (response.statusCode == 200) {
         final decoded = json.decode(response.body) as Map<String, dynamic>;
@@ -92,7 +92,7 @@ class WeatherService {
         throw WeatherApiException('Failed to fetch weather data: $message');
       }
     } catch (e) {
-      log('Error fetching weather data: $e');
+      Console.log(tag: "APP", value: 'Error fetching weather data: $e');
       throw WeatherApiException('Failed to fetch weather data: $e');
     }
   }

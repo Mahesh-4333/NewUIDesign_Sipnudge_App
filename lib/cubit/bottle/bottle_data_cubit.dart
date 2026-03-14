@@ -1,5 +1,5 @@
 import 'dart:async';
-import 'dart:developer';
+import 'package:hydrify/helpers/logger.dart';
 
 import 'package:bloc/bloc.dart';
 import 'package:equatable/equatable.dart';
@@ -7,6 +7,7 @@ import 'package:hydrify/cubit/ble/ble_cubit.dart';
 import 'package:hydrify/helpers/database_helper.dart';
 import 'package:hydrify/helpers/logger.dart';
 import 'package:hydrify/models/bottle_data.dart';
+import 'package:hydrify/models/hydration_entry.dart';
 import 'package:hydrify/models/hydration_summary.dart';
 import 'package:sqflite/sqflite.dart';
 
@@ -23,6 +24,7 @@ class BottleDataCubit extends Cubit<BottleDataState> {
     _restoreLastValues();
     _bleSub = _bleCubit.stream.listen(_handleBleStateChange);
   }
+
   Future<void> _restoreLastValues() async {
     final db = await _dbHelper.database;
     final List<Map<String, dynamic>> maps = await db.query(
@@ -31,15 +33,18 @@ class BottleDataCubit extends Cubit<BottleDataState> {
       limit: 1,
     );
 
-    print("🔍 Last record query result: $maps");
+    Console.log(
+        tag: "BottleDataCubit", value: "🔍 Last record query result: $maps");
 
     if (maps.isNotEmpty) {
       final lastData = BottleData.fromMap(maps.first);
-      print("✅ Restoring from last record: "
-          "volume=${lastData.liquidVolume}, "
-          "percent=${lastData.liquidPercent}, "
-          "battery=${lastData.battery}, "
-          "timestamp=${lastData.timestamp}");
+      Console.log(
+          tag: "BottleDataCubit",
+          value: "✅ Restoring from last record: "
+              "volume=${lastData.liquidVolume}, "
+              "percent=${lastData.liquidPercent}, "
+              "battery=${lastData.battery}, "
+              "timestamp=${lastData.timestamp}");
 
       emit(state.copyWith(
         volume: lastData.liquidVolume,
@@ -47,16 +52,23 @@ class BottleDataCubit extends Cubit<BottleDataState> {
         battery: lastData.battery,
       ));
     } else {
-      print("⚠️ No previous bottle data found in DB.");
+      Console.log(
+          tag: "BottleDataCubit",
+          value: "⚠️ No previous bottle data found in DB.");
     }
   }
 
   Future<void> _handleBleStateChange(BleState bleState) async {
-    print("30d -> connected");
-    if (bleState.status != BleStatus.connected) {
-      log("⚠️ Skipping DB insert — BLE not connected (state: ${bleState.status})");
-      return;
-    }
+    Console.log(
+        tag: "BottleDataCubit", value: "BLE state changed: ${bleState.status}");
+    // if (bleState.status != BleStatus.connected &&
+    //     bleState.status != BleStatus.ready) {
+    //   Console.log(
+    //       tag: "APP",
+    //       value:
+    //           "⚠️ Skipping DB insert — BLE not connected (state: ${bleState.status})");
+    //   return;
+    // }
 
     final newVolume = bleState.volume ?? 0.0;
     final newPercent = bleState.percent ?? 0;
@@ -126,8 +138,9 @@ class BottleDataCubit extends Cubit<BottleDataState> {
 
   Future<List<HydrationDaySummary>> getHydrationSummariesForRange(
       DateTime startDate, DateTime endDate) async {
-    print(startDate);
-    print(endDate);
+    Console.log(
+        tag: "BottleDataCubit",
+        value: "Fetching summaries from $startDate to $endDate");
     return await _dbHelper.getHydrationSummariesForRange(
       startDate: startDate,
       endDate: endDate,
@@ -153,6 +166,48 @@ class BottleDataCubit extends Cubit<BottleDataState> {
     );
   }
 
+  Future<double> getCurrentDayHistory() async {
+    final db = await _dbHelper.database;
+
+    final now = DateTime.now();
+    final startDate = DateTime(now.year, now.month, now.day, 00, 00, 00);
+    final endDate = DateTime(now.year, now.month, now.day, 23, 59, 59);
+
+    final List<Map<String, dynamic>> maps = await db.query(
+      DatabaseHelper.hydrationSummaryTableName,
+    );
+
+    Console.log(tag: "getCurrentDayHistory", value: maps.toString());
+
+    var hyderationData = List.generate(
+      maps.length,
+      (i) => HydrationDaySummary.fromMap(maps[i]),
+    );
+
+    // Normalize input range to start and end of day
+    final normalizedStart =
+        DateTime(startDate.year, startDate.month, startDate.day);
+    final normalizedEnd =
+        DateTime(endDate.year, endDate.month, endDate.day, 23, 59, 59, 999);
+
+    var hydrationDataTemp = hyderationData.where((s) {
+      if (s.date.isBefore(normalizedStart)) {
+        return false;
+      }
+      if (s.date.isAfter(normalizedEnd)) {
+        return false;
+      }
+      return true;
+    }).toList();
+    if (hydrationDataTemp.isEmpty) {
+      return 0;
+    }
+
+    Console.log(
+        tag: "consumedThings", value: "${hydrationDataTemp.first.toMap()}");
+    return hydrationDataTemp.first.consumed;
+  }
+
   Future<void> clearOldRecords(int daysToKeep) async {
     final db = await _dbHelper.database;
     final cutoffDate = DateTime.now().subtract(Duration(days: daysToKeep));
@@ -173,10 +228,27 @@ class BottleDataCubit extends Cubit<BottleDataState> {
       await db.delete(DatabaseHelper.tableName);
       await db.delete(DatabaseHelper.hydrationSummaryTableName);
 
+      // Ensure BleCubit's local state is cleared before emitting initial state
+      // to avoid re-insertion of old values in _handleBleStateChange
+      await _bleCubit.clearData();
+
+      await Future.delayed(
+          Duration(seconds: 1)); // Small delay for DB stability
+      // emit(_bleCubit.state.copyWith(currentHydrationValue: 0));
+
+      final dbEntry = await _dbHelper.getAllSlots();
+      for (final updatedEntry in dbEntry) {
+        await _dbHelper.insertOrUpdateSlot(updatedEntry.copyWith(
+            waterDrank: 0.0, status: HydrationStatus.pending));
+      }
+
       emit(BottleDataState.initial());
-      print("✅ All bottle tracking data cleared.");
+      Console.log(
+          tag: "BottleDataCubit",
+          value: "✅ All bottle tracking data cleared successfully.");
     } catch (e) {
-      print("❌ Error clearing bottle tracking data: $e");
+      Console.error(
+          "BottleDataCubit", "❌ Error clearing bottle tracking data: $e");
     }
   }
 

@@ -18,10 +18,12 @@ import 'package:hydrify/cubit/bottle/bottle_data_cubit.dart';
 import 'package:hydrify/cubit/bottom_nav/bottom_nav_cubit.dart';
 import 'package:hydrify/cubit/hydration/hydration_cubit.dart';
 import 'package:hydrify/cubit/hydration/hydration_state.dart';
+import 'package:hydrify/helpers/logger.dart';
 import 'package:hydrify/helpers/shared_pref_helper.dart';
 import 'package:hydrify/helpers/water_consumption_data_helper.dart';
 import 'package:hydrify/models/bottle_data.dart';
 import 'package:hydrify/models/hydration_entry.dart';
+import 'package:hydrify/models/hydration_summary.dart';
 import 'package:hydrify/screens/water_intake_timeline/widgets/dialy_target_widget.dart';
 import 'package:hydrify/screens/water_intake_timeline/widgets/inline_time_column_update_widget.dart';
 import 'package:hydrify/screens/widgets/custom_wheel_inline_time_widget.dart';
@@ -270,8 +272,7 @@ class _WaterIntakeTimelineState extends State<WaterIntakeTimelineScreen> {
       child: GestureDetector(
         onTap: () => setState(() => _activeTabIndex = index),
         child: Container(
-          margin: EdgeInsets.symmetric(
-              horizontal: 4.w, vertical: 6.h),
+          margin: EdgeInsets.symmetric(horizontal: 4.w, vertical: 6.h),
           decoration: isSelected
               ? BoxDecoration(
                   color: Colors.white,
@@ -311,16 +312,96 @@ class _WaterIntakeTimelineState extends State<WaterIntakeTimelineScreen> {
 
   Widget _getTabContent(HydrationState state) {
     if (_activeTabIndex == 0) {
-      return _buildActivityCompletedView(state);
+      // return _buildActivityCompletedView(state);
+      return Padding(
+        padding: EdgeInsets.only(bottom: 120.h),
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            SizedBox(
+              width: AppDimensions.dim600,
+            ),
+            // Blur overlay
+            Positioned.fill(
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(16), // match your card radius
+                child: BackdropFilter(
+                  filter: ImageFilter.blur(sigmaX: 6, sigmaY: 6),
+                  child: Container(
+                    color: Colors.black.withOpacity(0.2),
+                  ),
+                ),
+              ),
+            ),
+
+            // Center Text
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              decoration: BoxDecoration(
+                color: Colors.black.withOpacity(0.7),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: const Text(
+                "Coming Soon",
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
     } else if (_activeTabIndex == 1) {
-      return _buildActivityPendingView(state);
+      // return _buildActivityPendingView(state);
+      return Padding(
+        padding: EdgeInsets.only(bottom: 120.h),
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            SizedBox(
+              width: AppDimensions.dim600,
+            ),
+            // Blur overlay
+            Positioned.fill(
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(16), // match your card radius
+                child: BackdropFilter(
+                  filter: ImageFilter.blur(sigmaX: 6, sigmaY: 6),
+                  child: Container(
+                    color: Colors.black.withOpacity(0.2),
+                  ),
+                ),
+              ),
+            ),
+
+            // Center Text
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              decoration: BoxDecoration(
+                color: Colors.black.withOpacity(0.7),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: const Text(
+                "Coming Soon",
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
     } else {
       return _buildIntakeScheduleView(state);
     }
   }
 
   Widget _buildActivityCompletedView(HydrationState state) {
-    final entries = state.entries.where((e) => e.status == HydrationStatus.completed).toList();
+    final entries = state.entries
+        .where((e) => e.status == HydrationStatus.completed)
+        .toList();
 
     return Container(
       margin: EdgeInsets.only(bottom: 110.h),
@@ -394,7 +475,9 @@ class _WaterIntakeTimelineState extends State<WaterIntakeTimelineScreen> {
   }
 
   Widget _buildActivityPendingView(HydrationState state) {
-    final entries = state.entries.where((e) => e.status == HydrationStatus.pending).toList();
+    final entries = state.entries
+        .where((e) => e.status == HydrationStatus.pending)
+        .toList();
 
     return Container(
       margin: EdgeInsets.only(bottom: 110.h),
@@ -675,7 +758,6 @@ class _WaterIntakeTimelineState extends State<WaterIntakeTimelineScreen> {
 
   Widget _buildTimelineItem(HydrationEntry entry, bool isLast) {
     bool isCompleted = entry.waterDrank >= entry.amount;
-
     return IntrinsicHeight(
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -955,10 +1037,11 @@ class _WaterIntakeTimelineState extends State<WaterIntakeTimelineScreen> {
                   key: key,
                   children: [
                     ListTile(
-                      contentPadding:
-                          EdgeInsets.symmetric(horizontal: 19.w, vertical: 12.h),
+                      contentPadding: EdgeInsets.symmetric(
+                          horizontal: 19.w, vertical: 12.h),
                       leading: Image.asset(
-                        _getSlotIconPathForSchedule(entry.slot.label, isExpanded ? 1 : 2),
+                        _getSlotIconPathForSchedule(
+                            entry.slot.label, isExpanded ? 1 : 2),
                       ),
                       title: SizedBox(
                         child: Column(
@@ -971,7 +1054,9 @@ class _WaterIntakeTimelineState extends State<WaterIntakeTimelineScreen> {
                                 color: AppColors.bluegray,
                                 fontSize: AppFontStyles.fontSize_22,
                                 fontFamily: AppFontStyles.urbanistFontFamily,
-                                fontVariations: [AppFontStyles.boldFontVariation],
+                                fontVariations: [
+                                  AppFontStyles.boldFontVariation
+                                ],
                               ),
                             ),
                             Text(
@@ -979,7 +1064,9 @@ class _WaterIntakeTimelineState extends State<WaterIntakeTimelineScreen> {
                               style: TextStyle(
                                 color: AppColors.greyColorText1,
                                 fontSize: 12.sp,
-                                fontVariations: [AppFontStyles.boldFontVariation],
+                                fontVariations: [
+                                  AppFontStyles.boldFontVariation
+                                ],
                                 fontFamily: AppFontStyles.urbanistFontFamily,
                               ),
                             )
@@ -1244,8 +1331,7 @@ class _WaterIntakeTimelineState extends State<WaterIntakeTimelineScreen> {
       } else {
         return AssetsPath.midAfternoonSelected;
       }
-
-    } else{
+    } else {
       if (label.contains("Wakeup Time")) {
         return AssetsPath.wakeUpUnSelected;
       } else if (label.contains("Breakfast Time")) {
@@ -1321,9 +1407,16 @@ class ProgressCircle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<BottleDataCubit, BottleDataState>(
-      buildWhen: (previous, current) =>
-          previous.volumePercent != current.volumePercent,
+    return BlocBuilder<BleCubit, BleState>(
+      buildWhen: (previous, current) {
+        Console.log(tag: "home_Screen_biuld", value: "${previous.currentHydrationValue} : ${current.currentHydrationValue}");
+
+        if (previous.currentHydrationValue !=
+            current.currentHydrationValue) {
+          return true;
+        }
+        return false;
+      },
       builder: (context, state) {
         return FutureBuilder<Map<String, Object?>>(
           future: () async {
@@ -1334,9 +1427,8 @@ class ProgressCircle extends StatelessWidget {
                 .add(const Duration(days: 1))
                 .subtract(const Duration(milliseconds: 1));
 
-            final history = await context
-                .read<BottleDataCubit>()
-                .getHistoryForDateRange(startDate, endDate);
+            final history =
+                await context.read<BottleDataCubit>().getCurrentDayHistory();
 
             // 🔹 Fetch user goal (in mL) dynamically from SharedPreferences
             final userGoalMl = await SharedPrefsHelper.getUserGoal() ?? 2000;
@@ -1356,16 +1448,11 @@ class ProgressCircle extends StatelessWidget {
             }
 
             final history =
-                snapshot.data!['history'] as List<BottleData>? ?? [];
+                snapshot.data!['history'] as double ?? 0;
             final userGoalMl =
                 (snapshot.data!['userGoalLiters'] as double? ?? 2.0) * 1000;
 
-            double waterVolumeConsumed = 0; // drank in ml
-
-            if (history.isNotEmpty) {
-              waterVolumeConsumed =
-                  WaterConsumptionCalculator.calculateDailyConsumption(history);
-            }
+            double waterVolumeConsumed = history;
 
             double percent = (waterVolumeConsumed / userGoalMl).clamp(0.0, 1.0);
 
@@ -1470,7 +1557,7 @@ class GradientCirclePainter extends CustomPainter {
       progressPaint = Paint()
         ..shader = gradient.createShader(rect)
         ..style = PaintingStyle.stroke
-        ..strokeWidth = strokeWidth -1.5
+        ..strokeWidth = strokeWidth - 1.5
         ..strokeCap = StrokeCap.round;
     } else {
       progressPaint = Paint()

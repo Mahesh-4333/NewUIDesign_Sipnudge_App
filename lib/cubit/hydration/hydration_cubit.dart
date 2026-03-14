@@ -1,4 +1,6 @@
 import 'dart:developer';
+
+import 'package:hydrify/helpers/logger.dart';
 import 'dart:math' hide log;
 
 import 'package:flutter/material.dart';
@@ -33,7 +35,9 @@ class HydrationCubit extends Cubit<HydrationState> {
   Future<void> _init() async {
     try {
       ble.hydrationUpdates.listen((entries) async {
-        log("🔔 HydrationCubit received update signal", name: "CUBIT_DEBUG");
+        Console.log(
+            tag: "CUBIT_DEBUG",
+            value: "🔔 HydrationCubit received update signal");
         if (entries.isNotEmpty) {
           await markCompletedByEntries(entries);
         }
@@ -56,7 +60,8 @@ class HydrationCubit extends Cubit<HydrationState> {
 
       _calculateCurrentSlotStatus();
     } catch (e) {
-      log("[Cubit] Failed to load hydration data: $e");
+      Console.log(
+          tag: "APP", value: "[Cubit] Failed to load hydration data: $e");
     }
   }
 
@@ -130,7 +135,8 @@ class HydrationCubit extends Cubit<HydrationState> {
         emit(state.copyWith(entries: slotsFromDb, totalDrank: total.round()));
       }
     } catch (e) {
-      log("[Cubit] Failed to load slots from DB: $e");
+      Console.log(
+          tag: "APP", value: "[Cubit] Failed to load slots from DB: $e");
       emit(state.copyWith(errorMessage: "Failed to load slots from DB."));
     }
   }
@@ -389,6 +395,10 @@ class HydrationCubit extends Cubit<HydrationState> {
   Future<void> refreshAchievementStats() async {
     try {
       final summaries = await _dbHelper.getHydrationSummariesForRange();
+      Console.log(
+          tag: "APP",
+          value: "DEBUG: Total summaries found: ${summaries.length}");
+
       summaries.sort((a, b) => a.date.compareTo(b.date));
 
       int currentStreak = 0;
@@ -404,6 +414,11 @@ class HydrationCubit extends Cubit<HydrationState> {
             final d2 = DateTime(day.date.year, day.date.month, day.date.day);
             final difference = d2.difference(d1).inDays;
 
+            Console.log(
+                tag: "APP",
+                value:
+                    "DEBUG: Comparing ${d1.toIso8601String()} to ${d2.toIso8601String()} | Diff: $difference");
+
             if (difference == 1) {
               currentStreak++;
             } else if (difference > 1) {
@@ -411,6 +426,7 @@ class HydrationCubit extends Cubit<HydrationState> {
             }
           } else {
             currentStreak = 1;
+            Console.log(tag: "APP", value: "DEBUG: Starting first streak day.");
           }
 
           lastDate = day.date;
@@ -428,8 +444,19 @@ class HydrationCubit extends Cubit<HydrationState> {
       log("POC Sync: Level $totalPerfectDays | Streak $currentStreak",
           name: "Achievement_System");
     } catch (e) {
-      log("ERROR in refreshAchievementStats: $e");
+      Console.log(tag: "APP", value: "ERROR in refreshAchievementStats: $e");
     }
+  }
+
+  Future<void> resetUI() async {
+    emit(state.copyWith(
+      entries: [],
+      totalDrank: 0,
+      goal: 0,
+      currentSlotConsumption: 0,
+      currentSlotPercentage: 0,
+      currentSlotEntry: null,
+    ));
   }
 }
 

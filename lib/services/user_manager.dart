@@ -1,4 +1,4 @@
-import 'dart:developer';
+import 'package:hydrify/helpers/logger.dart';
 
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -25,7 +25,7 @@ class UserManager {
 
   // Update username
   Future<void> setUserName(String name) async {
-    log("Setting userName to ${name}");
+    Console.log(tag: "APP", value: "Setting userName to ${name}");
     _cachedUserName = name;
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_userNameKey, name);

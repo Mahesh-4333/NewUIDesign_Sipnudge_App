@@ -1,4 +1,4 @@
-import 'dart:developer';
+import 'package:hydrify/helpers/logger.dart';
 import 'dart:io';
 import 'dart:math' as math;
 
@@ -16,7 +16,7 @@ typedef NotificationTapCallback = void Function(HydrationSlot slot);
 @pragma('vm:entry-point')
 void notificationTapBackground(NotificationResponse details) {
   if (details.id != null) {
-    log("Notification tapped in background/killed state: ${details.id}");
+    Console.log(tag: "APP", value: "Notification tapped in background/killed state: ${details.id}");
   }
 }
 
@@ -129,7 +129,7 @@ class NotificationService {
       required bool isSilent}) async {
     final selected = await SharedPrefsHelper.getSelectedRingtone() ?? 0;
     final fileName = "ringtone${selected + 1}.caf";
-    log("=-=-=-=- IOS Reminder set ${fileName} isSilent ${isSilent}");
+    Console.log(tag: "APP", value: "=-=-=-=- IOS Reminder set ${fileName} isSilent ${isSilent}");
 
     await _plugin.zonedSchedule(
       id,
@@ -162,7 +162,7 @@ class NotificationService {
         notifyAt.add(const Duration(minutes: 5)),
       );
     } catch (e) {
-      log('[Calendar] Failed to check calendar: $e');
+      Console.log(tag: "APP", value: '[Calendar] Failed to check calendar: $e');
       return false; // fail-safe → normal reminder
     }
   }
@@ -257,7 +257,7 @@ class NotificationService {
       shouldSilence = !isRingtoneFeedbackEnabled;
     }
     if (Platform.isIOS) {
-      log("Should Silence ${shouldSilence}");
+      Console.log(tag: "APP", value: "Should Silence ${shouldSilence}");
       await _scheduleIOSHydrationNotification(
         id: id,
         notifyAt: notifyAt,

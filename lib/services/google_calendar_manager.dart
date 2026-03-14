@@ -1,6 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
-import 'dart:developer';
+import 'package:hydrify/helpers/logger.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:http/http.dart' as http;
 
@@ -85,7 +85,7 @@ class GoogleCalendarManager {
     debugPrint(
       '$_logTag Calendar API status: ${response.statusCode}',
     );
-    log("=-=-=-=-=-=-=-=-=-=-=- response is ${response.body} =-=-=-=-=-=-=-=-=-=-=-");
+    Console.log(tag: "APP", value: "=-=-=-=-=-=-=-=-=-=-=- response is ${response.body} =-=-=-=-=-=-=-=-=-=-=-");
 
     if (response.statusCode != 200) {
       debugPrint(
@@ -123,13 +123,13 @@ class GoogleCalendarManager {
     DateTime slotStart,
     DateTime slotEnd,
   ) async {
-    log("🟦 Checking slot:");
-    log("🟦 Slot start: $slotStart");
-    log("🟦 Slot end  : $slotEnd");
+    Console.log(tag: "APP", value: "🟦 Checking slot:");
+    Console.log(tag: "APP", value: "🟦 Slot start: $slotStart");
+    Console.log(tag: "APP", value: "🟦 Slot end  : $slotEnd");
 
     final signedIn = await ensureSignedIn();
     if (!signedIn) {
-      log("❌ User not signed in");
+      Console.log(tag: "APP", value: "❌ User not signed in");
       return false;
     }
 
@@ -143,24 +143,24 @@ class GoogleCalendarManager {
       '&orderBy=startTime',
     );
 
-    log("🌐 Request URL:");
-    log(uri.toString());
+    Console.log(tag: "APP", value: "🌐 Request URL:");
+    Console.log(tag: "APP", value: uri.toString());
 
     final response = await http.get(uri, headers: authHeaders);
 
-    log("📡 Response status: ${response.statusCode}");
-    log("📡 Raw response body:");
-    log(response.body);
+    Console.log(tag: "APP", value: "📡 Response status: ${response.statusCode}");
+    Console.log(tag: "APP", value: "📡 Raw response body:");
+    Console.log(tag: "APP", value: response.body);
 
     if (response.statusCode != 200) {
-      log("❌ Google Calendar API error");
+      Console.log(tag: "APP", value: "❌ Google Calendar API error");
       return false;
     }
 
     final data = json.decode(response.body);
     final List events = data['items'] ?? [];
 
-    log("📅 Total events fetched: ${events.length}");
+    Console.log(tag: "APP", value: "📅 Total events fetched: ${events.length}");
 
     for (int i = 0; i < events.length; i++) {
       final event = events[i];
@@ -182,27 +182,27 @@ class GoogleCalendarManager {
         eventEnd = DateTime.parse(endRaw['date']).toLocal();
       }
 
-      log("────────────────────────────");
-      log("📌 Event #$i");
-      log("📌 Title : ${event['summary']}");
-      log("📌 Start : $eventStart");
-      log("📌 End   : $eventEnd");
+      Console.log(tag: "APP", value: "────────────────────────────");
+      Console.log(tag: "APP", value: "📌 Event #$i");
+      Console.log(tag: "APP", value: "📌 Title : ${event['summary']}");
+      Console.log(tag: "APP", value: "📌 Start : $eventStart");
+      Console.log(tag: "APP", value: "📌 End   : $eventEnd");
 
       final overlaps =
           eventStart.isBefore(slotEnd) && eventEnd.isAfter(slotStart);
 
-      log("🔍 Overlap check:");
-      log("    eventStart < slotEnd  → ${eventStart.isBefore(slotEnd)}");
-      log("    eventEnd   > slotStart→ ${eventEnd.isAfter(slotStart)}");
-      log("    👉 OVERLAPS = $overlaps");
+      Console.log(tag: "APP", value: "🔍 Overlap check:");
+      Console.log(tag: "APP", value: "    eventStart < slotEnd  → ${eventStart.isBefore(slotEnd)}");
+      Console.log(tag: "APP", value: "    eventEnd   > slotStart→ ${eventEnd.isAfter(slotStart)}");
+      Console.log(tag: "APP", value: "    👉 OVERLAPS = $overlaps");
 
       if (overlaps) {
-        log("⚠️ CONFLICT FOUND with event: ${event['summary']}");
+        Console.log(tag: "APP", value: "⚠️ CONFLICT FOUND with event: ${event['summary']}");
         return true;
       }
     }
 
-    log("✅ No overlapping events found");
+    Console.log(tag: "APP", value: "✅ No overlapping events found");
     return false;
   }
 
@@ -229,7 +229,7 @@ class GoogleCalendarManager {
       final data = json.decode(response.body);
       return List<Map<String, dynamic>>.from(data['items'] ?? []);
     } catch (e) {
-      log("Exception occurred in fetchingEventsForRange ${e.toString()}");
+      Console.log(tag: "APP", value: "Exception occurred in fetchingEventsForRange ${e.toString()}");
       return [];
     }
   }
@@ -258,7 +258,7 @@ class GoogleCalendarManager {
           eventStart.isBefore(slotEnd) && eventEnd.isAfter(slotStart);
 
       if (overlaps) {
-        log("⚠️ Local Conflict: '${event['summary']}' overlaps with slot.");
+        Console.log(tag: "APP", value: "⚠️ Local Conflict: '${event['summary']}' overlaps with slot.");
         return true;
       }
     }
@@ -271,7 +271,7 @@ class GoogleCalendarManager {
       _currentUser = null;
       await _googleSignIn.signOut();
     } catch (e) {
-      log("Exception occurred in signOut ${e.toString()}");
+      Console.log(tag: "APP", value: "Exception occurred in signOut ${e.toString()}");
     }
   }
 }

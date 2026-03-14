@@ -17,7 +17,7 @@ import 'package:hydrify/cubit/drinkreminder/drink_reminder_cubit.dart';
 import 'package:hydrify/cubit/filter/filter_cubit.dart';
 import 'package:hydrify/cubit/help&support/help&support_cubil.dart';
 import 'package:hydrify/cubit/hydration/hydration_cubit.dart';
-import 'package:hydrify/cubit/level/level_cubit.dart';
+import 'package:hydrify/cubit/level/achievement_cubit.dart';
 import 'package:hydrify/cubit/linkaccounts/link_accounts_cubit.dart';
 import 'package:hydrify/cubit/personal_info_in_profile/personal_info_cubit.dart';
 import 'package:hydrify/cubit/profile_screen_in_setting/profile_cubit.dart';
@@ -86,6 +86,15 @@ Future<void> main() async {
 
   await UserManager().init();
 
+  FlutterError.onError = (FlutterErrorDetails details) {
+    //this line prints the default flutter gesture caught exception in console
+    //FlutterError.dumpErrorToConsole(details);
+    print("Error From INSIDE FRAME_WORK");
+    print("----------------------");
+    print("Error :  ${details.exception}");
+    print("StackTrace :  ${details.stack}");
+  };
+
   runApp(
     MyApp(
       notificationService: notificationService,
@@ -132,13 +141,17 @@ class MyApp extends StatelessWidget {
         BlocProvider(create: (context) => ReminderCubit()),
         BlocProvider(create: (context) => ReminderTimeCubit()),
         BlocProvider(create: (context) => ReminderIntervalCubit()),
-        BlocProvider(create: (context) => LevelCubit()),
+        BlocProvider(
+          create: (context) => AchievementCubit(dbHelper),
+        ),
         BlocProvider(create: (context) => ProfileCubit()),
         BlocProvider(create: (context) => LinkAccountsCubit()),
         BlocProvider(create: (context) => AccountSecurityCubit()),
         BlocProvider(create: (context) => HelpAndSupportCubit()),
         BlocProvider(create: (context) => PersonalInfoCubit()),
-        BlocProvider(create: (context) => DrinkReminderCubit(hydrationCubit: hydrationCubit)),
+        BlocProvider(
+            create: (context) =>
+                DrinkReminderCubit(hydrationCubit: hydrationCubit)),
         BlocProvider(create: (context) => PersonalInfoCubit()),
         BlocProvider(create: (context) => PreferencesCubit()),
         // BlocProvider(create: (Context) => NotificationCubit()),

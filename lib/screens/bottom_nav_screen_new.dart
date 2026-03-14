@@ -6,6 +6,8 @@ import 'package:hydrify/constants/app_dimensions.dart';
 import 'package:hydrify/cubit/bottom_nav/bottom_nav_cubit.dart';
 import 'package:hydrify/cubit/hydration/hydration_cubit.dart';
 import 'package:hydrify/cubit/hydration/hydration_state.dart';
+import 'package:hydrify/cubit/level/achievement_cubit.dart';
+import 'package:hydrify/cubit/level/achievement_state.dart';
 import 'package:hydrify/screens/achevements_badge_screen.dart';
 import 'package:hydrify/screens/analysis_screen.dart';
 import 'package:hydrify/screens/drink_reminder_page.dart';
@@ -68,33 +70,40 @@ class _BottomNavScreenNewState extends State<BottomNavScreenNew> {
           ),
         ),
         body: Container(
-          width: double.infinity,
-          height: double.infinity,
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [
-                AppColors.gradientStart,
-                AppColors.gradientEnd,
-              ],
+            width: double.infinity,
+            height: double.infinity,
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  AppColors.gradientStart,
+                  AppColors.gradientEnd,
+                ],
+              ),
             ),
-          ),
-          child: BlocBuilder<BottomNavCubit, BottomNavState>(
-            builder: (context, state) {
-              return BlocListener<HydrationCubit, HydrationState>(
-                listenWhen: (prev, curr) =>
-                    curr.newlyUnlockedLevel != null &&
-                    prev.newlyUnlockedLevel != curr.newlyUnlockedLevel,
-                listener: (context, hydrationState) {
-                  _showLevelUpSnackbar(
-                      context, hydrationState.newlyUnlockedLevel!);
-                },
-                child: _buildTabNavigators(state.selectedTab),
-              );
-            },
-          ),
-        ),
+            child: BlocBuilder<BottomNavCubit, BottomNavState>(
+              builder: (context, state) {
+                return BlocListener<AchievementCubit, AchievementState>(
+                  listenWhen: (prev, curr) {
+                    if (curr.isLoading) return false;
+
+                    if (prev.currentLevel == 0 &&
+                        curr.currentLevel == curr.lastNotifiedLevel) {
+                      return false;
+                    }
+
+                    return curr.currentLevel > prev.lastNotifiedLevel &&
+                        curr.currentLevel != prev.currentLevel;
+                  },
+                  listener: (context, state) {
+                    _showLevelUpSnackbar(context, state.currentLevel);
+                    context.read<AchievementCubit>().markLevelAsNotified();
+                  },
+                  child: _buildTabNavigators(state.selectedTab),
+                );
+              },
+            )),
       ),
     );
   }
@@ -145,7 +154,7 @@ class _BottomNavScreenNewState extends State<BottomNavScreenNew> {
                     Text(
                       "Congratulations! You've reached Level $level",
                       style: TextStyle(
-                        color: Colors.white70,
+                        color: Colors.white,
                         fontSize: 12.sp,
                       ),
                     ),

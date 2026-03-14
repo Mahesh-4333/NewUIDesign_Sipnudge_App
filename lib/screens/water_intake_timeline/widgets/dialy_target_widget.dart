@@ -13,36 +13,24 @@ class DailyTargetWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return BlocBuilder<BottleDataCubit, BottleDataState>(
-        buildWhen: (previous, current) =>
-        previous.volumePercent != current.volumePercent,
+        buildWhen: (previous, current) => previous.volume != current.volume,
         builder: (context, state) {
           return FutureBuilder<double>(
             future: () async {
-              DateTime now = DateTime.now();
-              DateTime startDate =
-              DateTime(now.year, now.month, now.day);
-              DateTime endDate = startDate
-                  .add(const Duration(days: 1))
-                  .subtract(const Duration(milliseconds: 1));
-
               final historyData = await context
                   .read<BottleDataCubit>()
-                  .getHistoryForDateRange(startDate, endDate);
+                  .getCurrentDayHistory();
 
-              double waterVolumeConsumed =
-              WaterConsumptionCalculator.calculateDailyConsumption(
-                  historyData);
+              double waterVolumeConsumed = historyData;
 
-              double completionPercent =
-              await WaterConsumptionCalculator
+              double completionPercent = await WaterConsumptionCalculator
                   .calculateCompletionPercentage(
                 waterVolumeConsumed,
               );
 
               return completionPercent;
             }(),
-            builder:
-                (BuildContext context, AsyncSnapshot<double> snapshot) {
+            builder: (BuildContext context, AsyncSnapshot<double> snapshot) {
               double completionPercent = snapshot.data ?? 0.0;
 
               if (snapshot.connectionState == ConnectionState.waiting) {
@@ -58,7 +46,7 @@ class DailyTargetWidget extends StatelessWidget {
                     text: TextSpan(
                       children: [
                         TextSpan(
-                          text: "${completionPercent.toInt()}%",
+                          text: "${completionPercent.toStringAsFixed(0)}%",
                           style: TextStyle(
                             color: AppColors.blueWaterIntake,
                             fontSize: 22.sp,
