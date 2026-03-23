@@ -1,5 +1,10 @@
 import 'dart:io';
 import 'dart:ui';
+import 'dart:typed_data';
+
+import 'package:screenshot/screenshot.dart';
+import 'package:share_plus/share_plus.dart';
+import 'package:path_provider/path_provider.dart';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -84,7 +89,7 @@ class _AchievementsBadgeScreenState extends State<AchievementsBadgeScreen> {
     int count = 0;
     for (final summary in _hydrationData) {
       final target =
-      summary.target > 0 ? summary.target : _dailyWaterGoal.toDouble();
+          summary.target > 0 ? summary.target : _dailyWaterGoal.toDouble();
       if ((summary.consumed / target) * 100 >= 100) {
         count++;
         if (count == level) {
@@ -117,152 +122,195 @@ class _AchievementsBadgeScreenState extends State<AchievementsBadgeScreen> {
   Widget _buildRegularScreen() {
     return BlocBuilder<HydrationCubit, HydrationState>(
         builder: (context, state) {
-          return Scaffold(
-            extendBody: true,
-            extendBodyBehindAppBar: true,
-            body: Stack(
-              children: [
-                Container(
-                  decoration: const BoxDecoration(
-                    image: DecorationImage(
-                      image: AssetImage("assets/images/app_background.png"),
-                      fit: BoxFit.cover,
-                    ),
-                  ),
-                  child: Column(
-                    children: [
-                      Expanded(
-                        child: Stack(
-                          children: [
-                            const ConcentricCirclesAnimation(),
-                            Positioned(
-                              left: AppDimensions.dim75.w,
-                              top: AppDimensions.dim90.w,
-                              child: getCurrentLevelBadge(
-                                state.currentLevel.toString(),
-                              ),
-                            ),
-                            Positioned(
-                              top: AppDimensions.dim380.h,
-                              left: 0,
-                              right: 0,
-                              child: state.currentLevel > 0
-                                  ? getCongratulationsText(
-                                  state.currentLevel.toString())
-                                  : const SizedBox.shrink(),
-                            ),
-                          ],
-                        ),
-                      ),
-                      Expanded(
-                        child: Container(
-                          padding: EdgeInsets.symmetric(
-                            horizontal: AppDimensions.padding_20.w,
-                          ),
-                          decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.vertical(
-                                top: Radius.circular(
-                                  AppDimensions.radius_24.r,
-                                ),
-                              ),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withValues(alpha: .1),
-                                  blurRadius: 10,
-                                  offset: Offset(0, -2),
-                                ),
-                              ]),
-                          child: GridView.builder(
-                            itemCount: 52,
-                            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                              crossAxisCount: 3,
-                              childAspectRatio: 1.2.r,
-                              mainAxisSpacing: 24.h,
-                            ),
-                            itemBuilder: (context, index) {
-                              final level = index + 1;
-                              final isUnlocked = level <= state.currentLevel;
-
-                              final intakeInfo =
-                                  state.levelToIntakeMap[level] ?? '';
-
-                              return GestureDetector(
-                                onTap: () {
-                                  if (isUnlocked && !isGuest!) {
-                                    showLevelUpDialog(context, level, intakeInfo);
-                                  }
-                                },
-                                child: getLevelBadges(
-                                  level.toString(),
-                                  isUnlocked,
-                                  intakeInfo,
-                                ),
-                              );
-                            },
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
+      return Scaffold(
+        extendBody: true,
+        extendBodyBehindAppBar: true,
+        body: Stack(
+          children: [
+            Container(
+              decoration: const BoxDecoration(
+                image: DecorationImage(
+                  image: AssetImage("assets/images/app_background.png"),
+                  fit: BoxFit.cover,
                 ),
-
-                // ---------------- GUEST BLUR + DIALOG ----------------
-                if (isGuest == true) ...[
-                  Positioned.fill(
-                    child: BackdropFilter(
-                      filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
-                      child: Container(
-                        color: Colors.white.withOpacity(0.35),
-                      ),
+              ),
+              child: Column(
+                children: [
+                  Expanded(
+                    child: Stack(
+                      children: [
+                        const ConcentricCirclesAnimation(),
+                        Positioned(
+                          left: AppDimensions.dim75.w,
+                          top: AppDimensions.dim90.w,
+                          child: getCurrentLevelBadge(
+                            state.currentLevel.toString(),
+                          ),
+                        ),
+                        Positioned(
+                            top: AppDimensions.dim380.h,
+                            left: 0,
+                            right: 0,
+                            child: getCongratulationsText(
+                                state.currentLevel.toString(),
+                                state.currentLevel)),
+                      ],
                     ),
                   ),
-                  Center(
+                  Expanded(
                     child: Container(
-                      width: Platform.isIOS
-                          ? AppDimensions.dim340.w
-                          : AppDimensions.dim380.w,
-                      height: Platform.isIOS
-                          ? AppDimensions.dim75.h
-                          : AppDimensions.dim75.h,
-                      margin:
-                      EdgeInsets.symmetric(horizontal: AppDimensions.dim20.w),
                       padding: EdgeInsets.symmetric(
-                        horizontal: Platform.isIOS
-                            ? AppDimensions.dim20.w
-                            : AppDimensions.dim11.w,
-                        vertical: Platform.isIOS
-                            ? AppDimensions.dim16.h
-                            : AppDimensions.dim13.h,
+                        horizontal: AppDimensions.padding_20.w,
                       ),
                       decoration: BoxDecoration(
-                        borderRadius:
-                        BorderRadius.circular(AppDimensions.radius_100.r),
-                        image: DecorationImage(
-                          image: AssetImage(
-                            "assets/images/guest_dialog.png",
+                          color: Colors.white,
+                          borderRadius: BorderRadius.vertical(
+                            top: Radius.circular(
+                              AppDimensions.radius_24.r,
+                            ),
                           ),
-                          fit: BoxFit.cover,
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: .1),
+                              blurRadius: 10,
+                              offset: Offset(0, -2),
+                            ),
+                          ]),
+                      child: GridView.builder(
+                        itemCount: 52,
+                        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 3,
+                          childAspectRatio: 1.2.r,
+                          mainAxisSpacing: 24.h,
                         ),
-                      ),
-                      child: Text(
-                        "Connect to Sipnudge bottle to access analysis",
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          color: AppColors.bluegray,
-                          fontFamily: AppFontStyles.museoModernoFontFamily,
-                          fontSize: AppFontStyles.fontSize_16.sp,
-                          fontVariations: [AppFontStyles.fontWeightVariation600],
-                          height: 1.4,
-                        ),
+                        itemBuilder: (context, index) {
+                          final level = index + 1;
+                          final isUnlocked = level <= state.currentLevel;
+
+                          final intakeInfo =
+                              state.levelToIntakeMap[level] ?? '';
+
+                          return GestureDetector(
+                            onTap: () {
+                              if (isUnlocked && !isGuest!) {
+                                final ScreenshotController
+                                    screenshotController =
+                                    ScreenshotController();
+
+                                showLevelUpDialog(context, level, intakeInfo,
+                                    screenshotController: screenshotController,
+                                    onShare: (dialogContext) async {
+                                  try {
+                                    // Capture the dialog as image bytes
+                                    final Uint8List? imageBytes =
+                                        await screenshotController.capture(
+                                      pixelRatio:
+                                          2.0, // adjust to improve resolution
+                                    );
+
+                                    if (imageBytes == null) {
+                                      debugPrint("Error: imageBytes is null");
+                                      return;
+                                    }
+
+                                    // Get a temporary directory
+                                    final tempDir =
+                                        await getTemporaryDirectory();
+                                    final String filePath =
+                                        '${tempDir.path}/level_up.png';
+
+                                    // Write the bytes to a file
+                                    final File file =
+                                        await File(filePath).create();
+                                    await file.writeAsBytes(imageBytes);
+
+                                    // Pop the dialog explicitly using its own context
+                                    Navigator.pop(dialogContext);
+
+                                    // Use share_plus to share this image file
+                                    await Share.shareXFiles(
+                                      [XFile(file.path)],
+                                      text:
+                                          "I've reached Level $level on Sipnudge! 💧",
+                                      subject: "My Hydration Achievement",
+                                    );
+                                  } catch (e) {
+                                    debugPrint(
+                                        "Error capturing or sharing: $e");
+                                  }
+                                });
+                              }
+                            },
+                            child: getLevelBadges(
+                              level.toString(),
+                              isUnlocked,
+                              intakeInfo,
+                            ),
+                          );
+                        },
                       ),
                     ),
                   ),
                 ],
-              ],
+              ),
             ),
-          );
-        });
+
+            // ---------------- GUEST BLUR + DIALOG ----------------
+            if (isGuest == true) ...[
+              Positioned.fill(
+                child: BackdropFilter(
+                  filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
+                  child: Container(
+                    color: Colors.white.withOpacity(0.35),
+                  ),
+                ),
+              ),
+              Center(
+                child: Container(
+                  width: Platform.isIOS
+                      ? AppDimensions.dim340.w
+                      : AppDimensions.dim380.w,
+                  height: Platform.isIOS
+                      ? AppDimensions.dim75.h
+                      : AppDimensions.dim75.h,
+                  margin:
+                      EdgeInsets.symmetric(horizontal: AppDimensions.dim20.w),
+                  padding: EdgeInsets.symmetric(
+                    horizontal: Platform.isIOS
+                        ? AppDimensions.dim20.w
+                        : AppDimensions.dim11.w,
+                    vertical: Platform.isIOS
+                        ? AppDimensions.dim16.h
+                        : AppDimensions.dim13.h,
+                  ),
+                  decoration: BoxDecoration(
+                    borderRadius:
+                        BorderRadius.circular(AppDimensions.radius_100.r),
+                    image: DecorationImage(
+                      image: AssetImage(
+                        "assets/images/guest_dialog.png",
+                      ),
+                      fit: BoxFit.cover,
+                    ),
+                  ),
+                  child: Text(
+                    "Connect to Sipnudge bottle to access analysis",
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: AppColors.bluegray,
+                      fontFamily: AppFontStyles.museoModernoFontFamily,
+                      fontSize: AppFontStyles.fontSize_16.sp,
+                      fontVariations: [AppFontStyles.fontWeightVariation600],
+                      height: 1.4,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ],
+        ),
+      );
+    });
   }
 
   Widget getCurrentLevelBadge(String level) {
@@ -340,18 +388,18 @@ class _AchievementsBadgeScreenState extends State<AchievementsBadgeScreen> {
             alignment: Alignment.topCenter,
             child: isUnlocked
                 ? Image.asset(
-              "assets/images/goals_levels_img.png",
-              width: AppDimensions.dim107.w,
-              height: AppDimensions.dim111.h,
-            )
+                    "assets/images/goals_levels_img.png",
+                    width: AppDimensions.dim107.w,
+                    height: AppDimensions.dim111.h,
+                  )
                 : Padding(
-              padding: EdgeInsets.only(top: AppDimensions.dim22.h),
-              child: Image.asset(
-                "assets/images/level_lock_img1.png",
-                width: AppDimensions.dim70.w,
-                height: AppDimensions.dim70.h,
-              ),
-            ),
+                    padding: EdgeInsets.only(top: AppDimensions.dim22.h),
+                    child: Image.asset(
+                      "assets/images/level_lock_img1.png",
+                      width: AppDimensions.dim70.w,
+                      height: AppDimensions.dim70.h,
+                    ),
+                  ),
           ),
           if (isUnlocked)
             Positioned.fill(
@@ -383,7 +431,7 @@ class _AchievementsBadgeScreenState extends State<AchievementsBadgeScreen> {
               ),
             ),
           Positioned(
-            top: isUnlocked ? AppDimensions.dim74.h : AppDimensions.dim75.h,
+            top: isUnlocked ? AppDimensions.dim80.h : AppDimensions.dim80.h,
             left: isUnlocked ? AppDimensions.dim5.w : 0.w,
             right: 0,
             child: Column(
@@ -402,7 +450,7 @@ class _AchievementsBadgeScreenState extends State<AchievementsBadgeScreen> {
                 ),
                 SizedBox(height: AppDimensions.dim4.h),
                 Text(
-                  isUnlocked ? 'Water Intake: $waterIntake' : '0',
+                  isUnlocked ? 'Intake: $waterIntake' : 'Intake : 0',
                   style: TextStyle(
                     color: isUnlocked
                         ? AppColors.bluegray
@@ -420,25 +468,29 @@ class _AchievementsBadgeScreenState extends State<AchievementsBadgeScreen> {
     );
   }
 
-  Widget getCongratulationsText(String level) {
+  Widget getCongratulationsText(String level, int currentLevel) {
     return Container(
       padding: EdgeInsets.symmetric(horizontal: AppDimensions.dim20.w),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Text(
-            '${AppStrings.levelreach} $level!',
-            style: TextStyle(
-              color: AppColors.bluegray,
-              fontFamily: AppFontStyles.urbanistFontFamily,
-              fontSize: AppFontStyles.fontSize_20.sp,
-              fontVariations: [AppFontStyles.boldFontVariation],
+          if (currentLevel != 0)
+            Text(
+              '${AppStrings.levelreach} $level!',
+              style: TextStyle(
+                color: AppColors.bluegray,
+                fontFamily: AppFontStyles.urbanistFontFamily,
+                fontSize: AppFontStyles.fontSize_20.sp,
+                fontVariations: [AppFontStyles.boldFontVariation],
+              ),
             ),
-          ),
           SizedBox(height: AppDimensions.dim10.h),
           Text(
-            AppStrings.congratulations(_dailyWaterGoal.toString()),
+            currentLevel > 0
+                ? AppStrings.congratulations(_dailyWaterGoal.toString())
+                : AppStrings.achievementMsgWhenNoGoalNotReached(
+                    _dailyWaterGoal.toString()),
             textAlign: TextAlign.center,
             style: TextStyle(
               fontFamily: AppFontStyles.urbanistFontFamily,

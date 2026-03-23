@@ -226,6 +226,7 @@ class PreferencesPage extends StatelessWidget {
                               final hydrationCubit =
                                   context.read<HydrationCubit>();
                               await hydrationCubit.resetUI();
+                              await hydrationCubit.refreshAchievementStats();
 
                               final bleCubit = context.read<BleCubit>();
                               await bleCubit.clearData();

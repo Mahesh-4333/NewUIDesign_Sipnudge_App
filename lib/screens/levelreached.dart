@@ -1,30 +1,25 @@
-import 'dart:typed_data';
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:hydrify/constants/app_colors.dart';
 import 'package:screenshot/screenshot.dart';
-import 'package:share_plus/share_plus.dart';
-import 'package:path_provider/path_provider.dart';
 
 import 'package:hydrify/constants/app_dimensions.dart';
 import 'package:hydrify/constants/app_font_styles.dart';
 
-void showLevelUpDialog(BuildContext context, int level, String totalLitres) {
-  // Create a ScreenshotController to capture the dialog widget
-  final ScreenshotController screenshotController = ScreenshotController();
-
+void showLevelUpDialog(BuildContext context, int level, String totalLitres,
+    {ScreenshotController? screenshotController, Function(BuildContext)? onShare}) {
   showDialog(
     context: context,
     barrierDismissible: true,
-    builder: (_) {
+    builder: (dialogContext) {
       return Dialog(
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(20.r),
         ),
         insetPadding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 80.h),
         child: Screenshot(
-          controller: screenshotController,
+          // If a controller is provided, use it, otherwise fall back (for safety)
+          controller: screenshotController ?? ScreenshotController(),
           child: Container(
             width: double.infinity,
             padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 20.h),
@@ -146,41 +141,7 @@ void showLevelUpDialog(BuildContext context, int level, String totalLitres) {
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton(
-                      onPressed: () async {
-                        try {
-                          // Capture the dialog as image bytes
-                          Uint8List? imageBytes =
-                              await screenshotController.capture(
-                            pixelRatio:
-                                2.0, // you can adjust to improve resolution
-                          );
-
-                          if (imageBytes == null) {
-                            print("Error: imageBytes is null");
-                            return;
-                          }
-
-                          // Get a temporary directory
-                          final tempDir = await getTemporaryDirectory();
-                          String filePath = '${tempDir.path}/level_up.png';
-
-                          // Write the bytes to a file
-                          File file = await File(filePath).create();
-                          await file.writeAsBytes(imageBytes);
-
-                          // Use share_plus to share this image file
-                          await Share.shareXFiles(
-                            [XFile(file.path)],
-                            text: "I've reached Level $level on Sipnudge! 💧",
-                            subject: "My Hydration Achievement",
-                          );
-
-                          // Optionally close the dialog
-                          Navigator.pop(context);
-                        } catch (e) {
-                          print("Error capturing or sharing: $e");
-                        }
-                      },
+                      onPressed: onShare != null ? () => onShare(dialogContext) : null,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFF369FFF),
                         minimumSize:

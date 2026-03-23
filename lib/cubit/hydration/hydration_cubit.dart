@@ -8,6 +8,7 @@ import 'package:hydrify/cubit/ble/ble_cubit.dart';
 import 'package:hydrify/cubit/hydration/hydration_state.dart';
 import 'package:hydrify/cubit/hydration/hydration_sync.dart';
 import 'package:hydrify/helpers/database_helper.dart';
+import 'package:hydrify/helpers/logger.dart';
 import 'package:hydrify/helpers/shared_pref_helper.dart';
 import 'package:hydrify/models/hydration_entry.dart';
 import 'package:hydrify/services/notification/notification_service.dart';
@@ -390,7 +391,6 @@ class HydrationCubit extends Cubit<HydrationState> {
     emit(state.copyWith(errorMessage: message, successMessage: null));
   }
 
-
   Future<void> refreshAchievementStats() async {
     try {
       final summaries = await _dbHelper.getHydrationSummariesForRange();
@@ -398,43 +398,24 @@ class HydrationCubit extends Cubit<HydrationState> {
 
       summaries.sort((a, b) => a.date.compareTo(b.date));
 
-      int currentStreak = 0;
       int badgesUnlocked = 0;
       Map<int, String> levelMap = {};
-      DateTime? lastDate;
+      // Use a set to de-duplicate same calendar day (handles DB duplicates)
+      final Set<String> seenDates = {};
 
       for (var day in summaries) {
         if (day.isPerfect) {
-          if (lastDate != null) {
-            // Normalize both to midnight to be safe
-            final d1 = DateTime(lastDate.year, lastDate.month, lastDate.day);
-            final d2 = DateTime(day.date.year, day.date.month, day.date.day);
-            final difference = d2.difference(d1).inDays;
-
-            log("DEBUG: Comparing ${d1.toIso8601String()} to ${d2.toIso8601String()} | Diff: $difference");
-
-            if (difference == 1) {
-              currentStreak++;
-            } else if (difference == 0) {
-              log("DEBUG: Duplicate date detected, skipping increment.");
-            } else {
-              log("DEBUG: GAP DETECTED! Streak reset to 1.");
-              currentStreak = 1;
-            }
-          } else {
-            currentStreak = 1;
-            log("DEBUG: Starting first streak day.");
-          }
-
-          lastDate = day.date;
-          log("DEBUG: Current Streak Count: $currentStreak");
-
-          if (currentStreak == 7) {
+          final dateKey = DateFormat('yyyy-MM-dd').format(day.date);
+          if (!seenDates.contains(dateKey)) {
+            seenDates.add(dateKey);
             badgesUnlocked++;
-            levelMap[badgesUnlocked] = "Level $badgesUnlocked Unlocked";
-            log("DEBUG: 🏆 BADGE UNLOCKED! Total: $badgesUnlocked");
-            currentStreak = 0;
-            lastDate = null;
+            final litres = (day.consumed / 1000).toStringAsFixed(1);
+            levelMap[badgesUnlocked] = '${litres}L';
+            Console.log(
+                tag: "DEBUG: 🏆 Level $badgesUnlocked unlocked! ",
+                value: "($dateKey, ${litres}L)");
+          } else {
+            log("DEBUG: Duplicate date $dateKey — skipping.");
           }
         }
       }
@@ -447,7 +428,6 @@ class HydrationCubit extends Cubit<HydrationState> {
       log("ERROR in refreshAchievementStats: $e");
     }
   }
-
 
   Future<void> resetUI() async {
     emit(state.copyWith(

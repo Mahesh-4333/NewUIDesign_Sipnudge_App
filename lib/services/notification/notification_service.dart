@@ -20,6 +20,22 @@ void notificationTapBackground(NotificationResponse details) {
   }
 }
 
+class ScheduledNotification {
+  final int id;
+  final DateTime dateTime;
+  final String title;
+  final String body;
+  final String? payload;
+
+  ScheduledNotification({
+    required this.id,
+    required this.dateTime,
+    required this.title,
+    required this.body,
+    this.payload,
+  });
+}
+
 class NotificationService {
   static final NotificationService _instance = NotificationService._internal();
   factory NotificationService() => _instance;
@@ -28,7 +44,10 @@ class NotificationService {
   final FlutterLocalNotificationsPlugin _plugin =
       FlutterLocalNotificationsPlugin();
 
-  static const int _scheduleDaysAheadRepeat = 2;
+  /// Used only for clean-up range (cancel loops).
+  /// Scheduling itself only needs dayOffset=0 because matchDateTimeComponents.time
+  /// repeats the notification daily forever.
+  static const int _scheduleDaysAheadRepeat = 7;
   NotificationTapCallback? onNotificationTap;
 
   Future<void> init({NotificationTapCallback? onTap}) async {
@@ -114,44 +133,96 @@ class NotificationService {
     }
   }
 
-  Future<String> _getSelectedRingtoneAssetPath() async {
-    final selected = await SharedPrefsHelper.getSelectedRingtone() ?? 0;
-    final fileName = "ringtone${selected + 1}";
-    return "assets/ringtones/$fileName.mp3";
-  }
 
-  Future<void> _scheduleIOSHydrationNotification(
-      {required int id,
-      required DateTime notifyAt,
-      required String title,
-      required String body,
-      required String payload,
-      required bool isSilent}) async {
-    final selected = await SharedPrefsHelper.getSelectedRingtone() ?? 0;
-    final fileName = "ringtone${selected + 1}.caf";
-    Console.log(tag: "APP", value: "=-=-=-=- IOS Reminder set ${fileName} isSilent ${isSilent}");
+  /// Schedules a notification that fires at [notifyAt] and then repeats
+  /// **every day at the same time forever** — no re-scheduling required.
+  ///
+  /// Uses [DateTimeComponents.time] so the OS handles the daily repetition
+  /// natively on both Android and iOS.
+  Future<void> _scheduleDailyRepeatingNotification({
+    required int id,
+    required DateTime notifyAt,
+    required String title,
+    required String body,
+    required String payload,
+    required bool isSilent,
+  }) async {
+    final tzNotifyAt = tz.TZDateTime.from(notifyAt, tz.local);
 
-    await _plugin.zonedSchedule(
-      id,
-      title,
-      body,
-      tz.TZDateTime.from(notifyAt, tz.local),
-      NotificationDetails(
-        iOS: DarwinNotificationDetails(
-          sound: fileName,
-          presentAlert: true,
-          presentSound: !isSilent,
-          subtitle: "Swipe to stop the reminder",
-          interruptionLevel: isSilent
-              ? InterruptionLevel.passive
-              : InterruptionLevel.critical,
-          categoryIdentifier: 'hydration_category',
-            criticalSoundVolume: 0.9, // 0.0 to 1.0
+    if (Platform.isIOS) {
+      final selected = await SharedPrefsHelper.getSelectedRingtone() ?? 0;
+      final fileName = "ringtone${selected + 1}.caf";
+      Console.log(
+          tag: "APP",
+          value: "[iOS] Daily repeat scheduled id=$id at $notifyAt sound=$fileName silent=$isSilent");
+
+      await _plugin.zonedSchedule(
+        id,
+        title,
+        body,
+        tzNotifyAt,
+        NotificationDetails(
+          iOS: DarwinNotificationDetails(
+            sound: fileName,
+            presentAlert: true,
+            presentSound: !isSilent,
+            subtitle: "Swipe to stop the reminder",
+            interruptionLevel: isSilent
+                ? InterruptionLevel.passive
+                : InterruptionLevel.critical,
+            categoryIdentifier: 'hydration_category',
+            criticalSoundVolume: 0.9,
+          ),
         ),
-      ),
-      payload: payload,
-      androidScheduleMode: AndroidScheduleMode.alarmClock,
-    );
+        payload: payload,
+        androidScheduleMode: AndroidScheduleMode.alarmClock,
+        // ✅ Repeats daily at the same time forever
+        matchDateTimeComponents: DateTimeComponents.time,
+      );
+    } else {
+      // Android — use flutter_local_notifications with daily repeat.
+      // Sound file must exist in android/app/src/main/res/raw/.
+      final selected = await SharedPrefsHelper.getSelectedRingtone() ?? 0;
+      final soundName = "ringtone${selected + 1}";
+      Console.log(
+          tag: "APP",
+          value: "[Android] Daily repeat scheduled id=$id at $notifyAt sound=$soundName silent=$isSilent");
+
+      await _plugin.zonedSchedule(
+        id,
+        title,
+        body,
+        tzNotifyAt,
+        NotificationDetails(
+          android: AndroidNotificationDetails(
+            // Unique channel per ringtone so Android picks the right sound.
+            'hydration_daily_$soundName',
+            'Hydration Reminders',
+            channelDescription: 'Daily hydration reminders',
+            importance: Importance.max,
+            priority: Priority.high,
+            playSound: !isSilent,
+            sound: isSilent
+                ? null
+                : RawResourceAndroidNotificationSound(soundName),
+            enableVibration: true,
+            category: AndroidNotificationCategory.reminder,
+            actions: [
+              const AndroidNotificationAction(
+                'STOP_ACTION',
+                'Drink Water \u0026 Stop',
+                cancelNotification: true,
+              ),
+            ],
+          ),
+        ),
+        payload: payload,
+        // ✅ exactAllowWhileIdle fires even in Doze mode
+        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+        // ✅ Repeats daily at the same time forever — no re-schedule needed!
+        matchDateTimeComponents: DateTimeComponents.time,
+      );
+    }
   }
 
   Future<bool> _shouldSilenceHydrationReminder(DateTime notifyAt) async {
@@ -167,61 +238,51 @@ class NotificationService {
     }
   }
 
+  /// Schedules hydration reminders that repeat **every day at the same time forever**.
+  ///
+  /// This replaces the old 2-day-ahead loop. A single [zonedSchedule] call with
+  /// [matchDateTimeComponents.time] handles indefinite daily repetition natively,
+  /// so there is no need to call this again on every app launch.
+  ///
+  /// Call [cancelAllHydrationReminders] first if you want to reset the schedule.
   Future<void> scheduleHydrationRemindersForFuture(
       List<HydrationEntry> entries) async {
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
 
-    final stopWhenFull = await SharedPrefsHelper.getStopWhenFull();
-
-    // Get settings
     final alarmRepeatIndex = await SharedPrefsHelper.getAlarmRepeatIndex();
-
-    // Map index to repeat counts (3, 5, 10 times)
     final alarmRepeatTimes = [1, 3, 5, 10][alarmRepeatIndex];
 
-    for (int dayOffset = 0; dayOffset < _scheduleDaysAheadRepeat; dayOffset++) {
-      final baseDay = today.add(Duration(days: dayOffset));
+    // ✅ No outer dayOffset loop — matchDateTimeComponents.time repeats daily forever.
+    for (final entry in entries) {
+      final endDateTime = today.add(Duration(
+        hours: entry.endTime.hour,
+        minutes: entry.endTime.minute,
+      ));
 
-      for (final entry in entries) {
-        final endDateTime = baseDay.add(Duration(
-          hours: entry.endTime.hour,
-          minutes: entry.endTime.minute,
+      // Start of the last-10-minutes window before the slot ends.
+      final baseAlarmTime = endDateTime.subtract(const Duration(minutes: 10));
+      final double intervalMinutes = 10.0 / alarmRepeatTimes;
+
+      for (int repeat = 0; repeat < alarmRepeatTimes; repeat++) {
+        var notifyAt = baseAlarmTime.add(Duration(
+          seconds: (repeat * intervalMinutes * 60).toInt(),
         ));
 
-        // Base 10-minute alarm point (Start of the last 10 minutes)
-        final baseAlarmTime =
-            endDateTime.subtract(const Duration(minutes: 10));
-
-        if (dayOffset == 0 &&
-            stopWhenFull &&
-            entry.status == HydrationStatus.completed) {
-          continue;
+        // If this fire-time has already passed today, advance to tomorrow so
+        // flutter_local_notifications picks the right first-fire date.
+        if (notifyAt.isBefore(now)) {
+          notifyAt = notifyAt.add(const Duration(days: 1));
         }
 
-        // Requirement: "when end time is 10:00Pm there is slot reminder set to 9:50 right 
-        // and reminder will repeat based on alarm repeat 3,5,10 times in last 10 min."
-        
-        // Calculate interval to spread repeats across 10 minutes
-        // For example, if alarmRepeatTimes is 5, reminders could be every 2 minutes.
-        // If 10, every 1 minute. If 3, approx every 3.3 minutes.
-        final double intervalMinutes = 10.0 / alarmRepeatTimes;
-
-        for (int repeat = 0; repeat < alarmRepeatTimes; repeat++) {
-          final notifyAt = baseAlarmTime.add(Duration(
-            seconds: (repeat * intervalMinutes * 60).toInt(),
-          ));
-
-          if (notifyAt.isBefore(now)) continue;
-
-          await _scheduleSingleReminder(
-            entry: entry,
-            notifyAt: notifyAt,
-            shouldSilence: false,
-            dayOffset: dayOffset,
-            repeatIndex: repeat,
-          );
-        }
+        // dayOffset=0 — ID encodes slot+repeat only; daily repeat handles the rest.
+        await _scheduleSingleReminder(
+          entry: entry,
+          notifyAt: notifyAt,
+          shouldSilence: false,
+          dayOffset: 0,
+          repeatIndex: repeat,
+        );
       }
     }
   }
@@ -231,67 +292,49 @@ class NotificationService {
     required DateTime notifyAt,
     required bool shouldSilence,
     required int dayOffset,
-    int repeatIndex = 1111,
+    int repeatIndex = 0,
   }) async {
     final id = _buildNotificationId(entry.slot, dayOffset, repeatIndex);
 
     final nowDate = DateTime.now();
     final today = DateTime(nowDate.year, nowDate.month, nowDate.day);
     final endDateTime = today.add(Duration(
-      days: dayOffset,
       hours: entry.endTime.hour,
       minutes: entry.endTime.minute,
     ));
 
     final remainingMinutes = endDateTime.difference(notifyAt).inMinutes;
-
     final title = "Hydration Reminder";
     final body =
-        "Only ${math.max(0, remainingMinutes)} minutes left for ${entry.slot.label} – Drink ${entry.amount} ml";
+        "Only ${math.max(0, remainingMinutes)} minutes left for ${entry.slot.label} – Drink ${entry.amount.toInt()} ml";
 
-    bool isRingtoneFeedbackEnabled =
+    final isRingtoneFeedbackEnabled =
         await SharedPrefsHelper.getRingtoneFeedBack();
 
-    if (shouldSilence == false) {
-      // Google says not to silence , then use the value of isRingtoneFeedbackEnabled
+    if (!shouldSilence) {
       shouldSilence = !isRingtoneFeedbackEnabled;
     }
-    if (Platform.isIOS) {
-      Console.log(tag: "APP", value: "Should Silence ${shouldSilence}");
-      await _scheduleIOSHydrationNotification(
-        id: id,
-        notifyAt: notifyAt,
-        title: title,
-        body: body,
-        payload: entry.slot.index.toString(),
-        isSilent: shouldSilence,
-      );
-    } else {
-      final assetPath = await _getSelectedRingtoneAssetPath();
 
-      await NotificationManager.instance.setReliableAlarm(
-        id: id,
-        dateTime: notifyAt,
-        assetAudioPath: assetPath,
-        title: title,
-        body: body,
-        stopButtonText: 'Drink Water & Stop',
-        isSilent: shouldSilence,
-      );
-    }
+    // ✅ Unified path: both iOS and Android use daily-repeating zonedSchedule.
+    await _scheduleDailyRepeatingNotification(
+      id: id,
+      notifyAt: notifyAt,
+      title: title,
+      body: body,
+      payload: entry.slot.index.toString(),
+      isSilent: shouldSilence,
+    );
   }
 
   Future<void> rescheduleSlotForFuture(
     HydrationEntry updatedEntry,
   ) async {
-    for (int dayOffset = 0; dayOffset < _scheduleDaysAheadRepeat; dayOffset++) {
-      final id = _buildNotificationId(updatedEntry.slot, dayOffset);
-
+    // With the daily-repeating system, all IDs use dayOffset=0.
+    // Cancel at most 10 repeat IDs (the maximum alarmRepeatTimes).
+    // No dayOffset loop needed — other day offsets don't exist anymore.
+    for (int repeat = 0; repeat < 10; repeat++) {
+      final id = _buildNotificationId(updatedEntry.slot, 0, repeat);
       await _plugin.cancel(id);
-
-      if (Platform.isAndroid) {
-        await NotificationManager.instance.stopAlarm(id);
-      }
     }
 
     await scheduleHydrationRemindersForFuture([updatedEntry]);
@@ -349,5 +392,60 @@ class NotificationService {
   HydrationSlot _slotFromNotificationId(int id) {
     final slotIndex = id % 100;
     return HydrationSlot.values[slotIndex];
+  }
+
+  /// Returns the next-7-days scheduled notifications for display purposes.
+  ///
+  /// Because the underlying triggers are daily-repeating, we compute the
+  /// upcoming occurrences across the next 7 days to give the user a meaningful
+  /// preview of when their reminders will fire.
+  Future<List<ScheduledNotification>> getCalculatedScheduledNotifications(
+    List<HydrationEntry> entries,
+  ) async {
+    final List<ScheduledNotification> scheduled = [];
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+
+    final alarmRepeatIndex = await SharedPrefsHelper.getAlarmRepeatIndex();
+    final alarmRepeatTimes = [1, 3, 5, 10][alarmRepeatIndex];
+    final double intervalMinutes = 10.0 / alarmRepeatTimes;
+
+    // Preview the next 7 days of occurrences for the list view.
+    for (int dayOffset = 0; dayOffset < 7; dayOffset++) {
+      final baseDay = today.add(Duration(days: dayOffset));
+
+      for (final entry in entries) {
+        final endDateTime = baseDay.add(Duration(
+          hours: entry.endTime.hour,
+          minutes: entry.endTime.minute,
+        ));
+
+        final baseAlarmTime = endDateTime.subtract(const Duration(minutes: 10));
+
+        for (int repeat = 0; repeat < alarmRepeatTimes; repeat++) {
+          final notifyAt = baseAlarmTime.add(Duration(
+            seconds: (repeat * intervalMinutes * 60).toInt(),
+          ));
+
+          if (notifyAt.isBefore(now)) continue;
+
+          // All daily-repeating notifications use dayOffset=0 in their actual ID.
+          final id = _buildNotificationId(entry.slot, 0, repeat);
+          final remainingMinutes = endDateTime.difference(notifyAt).inMinutes;
+
+          scheduled.add(ScheduledNotification(
+            id: id,
+            dateTime: notifyAt,
+            title: "Hydration Reminder",
+            body:
+                "Only ${math.max(0, remainingMinutes)} minutes left for ${entry.slot.label} – Drink ${entry.amount.toInt()} ml",
+            payload: entry.slot.index.toString(),
+          ));
+        }
+      }
+    }
+
+    scheduled.sort((a, b) => a.dateTime.compareTo(b.dateTime));
+    return scheduled;
   }
 }

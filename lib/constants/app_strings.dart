@@ -140,7 +140,13 @@ class AppStrings {
   static String congratulations(String waterGoalMl) {
     // final waterInLitres = (waterGoalMl / 1000).toStringAsFixed(1);
 
-    return "Congratulations! You've reached your goal of $waterGoalMl L water intake. Keep up the incredible effort!";
+    return "Congratulations! You've reached your goal of $waterGoalMl ml water intake. Keep up the incredible effort!";
+  }
+
+  static String achievementMsgWhenNoGoalNotReached(String waterGoalMl) {
+    // final waterInLitres = (waterGoalMl / 1000).toStringAsFixed(1);
+
+    return "Your daily intake is at 0- ${waterGoalMl} mL Grab your bottle and start drinking to stay hydrated and crush your goal today.";
   }
 
   static const congratulation =
