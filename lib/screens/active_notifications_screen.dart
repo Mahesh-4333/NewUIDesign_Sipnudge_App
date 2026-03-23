@@ -5,7 +5,6 @@ import 'package:hydrify/constants/app_colors.dart';
 import 'package:hydrify/constants/app_dimensions.dart';
 import 'package:hydrify/constants/app_font_styles.dart';
 import 'dart:io';
-import 'package:alarm/alarm.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:hydrify/cubit/hydration/hydration_cubit.dart';
 import 'package:hydrify/services/notification/notification_service.dart';
@@ -29,20 +28,15 @@ class _ActiveNotificationsScreenState extends State<ActiveNotificationsScreen> {
   }
 
   Future<void> _loadAlarms() async {
-    final now = DateTime.now();
-
     final hydrationCubit = context.read<HydrationCubit>();
     final entries = hydrationCubit.state.entries;
+    
+    // Fetch ONLY the effectively active scheduled notifications straight from the OS
     final notifications = await NotificationService()
-        .getCalculatedScheduledNotifications(entries);
+        .getActiveScheduledNotifications(entries);
 
     setState(() {
-      activeNotifications = notifications
-          .where((n) =>
-              n.dateTime.year == now.year &&
-              n.dateTime.month == now.month &&
-              n.dateTime.day == now.day)
-          .toList();
+      activeNotifications = notifications;
     });
   }
 

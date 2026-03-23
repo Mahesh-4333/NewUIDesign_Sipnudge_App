@@ -16,7 +16,9 @@ typedef NotificationTapCallback = void Function(HydrationSlot slot);
 @pragma('vm:entry-point')
 void notificationTapBackground(NotificationResponse details) {
   if (details.id != null) {
-    Console.log(tag: "APP", value: "Notification tapped in background/killed state: ${details.id}");
+    Console.log(
+        tag: "APP",
+        value: "Notification tapped in background/killed state: ${details.id}");
   }
 }
 
@@ -133,7 +135,6 @@ class NotificationService {
     }
   }
 
-
   /// Schedules a notification that fires at [notifyAt] and then repeats
   /// **every day at the same time forever** — no re-scheduling required.
   ///
@@ -154,7 +155,8 @@ class NotificationService {
       final fileName = "ringtone${selected + 1}.caf";
       Console.log(
           tag: "APP",
-          value: "[iOS] Daily repeat scheduled id=$id at $notifyAt sound=$fileName silent=$isSilent");
+          value:
+              "[iOS] Daily repeat scheduled id=$id at $notifyAt sound=$fileName silent=$isSilent");
 
       await _plugin.zonedSchedule(
         id,
@@ -186,7 +188,8 @@ class NotificationService {
       final soundName = "ringtone${selected + 1}";
       Console.log(
           tag: "APP",
-          value: "[Android] Daily repeat scheduled id=$id at $notifyAt sound=$soundName silent=$isSilent");
+          value:
+              "[Android] Daily repeat scheduled id=$id at $notifyAt sound=$soundName silent=$isSilent");
 
       await _plugin.zonedSchedule(
         id,
@@ -447,5 +450,33 @@ class NotificationService {
 
     scheduled.sort((a, b) => a.dateTime.compareTo(b.dateTime));
     return scheduled;
+  }
+
+  /// Retrieves the strictly active scheduled notifications currently registered in the OS.
+  /// Maps the pending IDs back to their next projected occurrence time.
+  Future<List<ScheduledNotification>> getActiveScheduledNotifications(
+    List<HydrationEntry> entries,
+  ) async {
+    // 1. Ask the OS what is actually scheduled right now
+    final pendingRequests = await _plugin.pendingNotificationRequests();
+    final activeIds = pendingRequests.map((e) => e.id).toSet();
+
+    // 2. Get the complete projection for the coming days
+    final calculated = await getCalculatedScheduledNotifications(entries);
+
+    // 3. Filter down to the first upcoming occurrence for each active ID
+    final List<ScheduledNotification> activeOccurrences = [];
+    final seenIds = <int>{};
+
+    for (final calc in calculated) {
+      if (activeIds.contains(calc.id) && !seenIds.contains(calc.id)) {
+        activeOccurrences.add(calc);
+        seenIds.add(calc.id);
+      }
+    }
+
+    // Sort by chronological firing order
+    activeOccurrences.sort((a, b) => a.dateTime.compareTo(b.dateTime));
+    return activeOccurrences;
   }
 }
