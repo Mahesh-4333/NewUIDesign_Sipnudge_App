@@ -190,62 +190,75 @@ class _AchievementsBadgeScreenState extends State<AchievementsBadgeScreen> {
                           final intakeInfo =
                               state.levelToIntakeMap[level] ?? '';
 
-                          return GestureDetector(
-                            onTap: () {
-                              if (isUnlocked && !isGuest!) {
-                                final ScreenshotController
-                                    screenshotController =
-                                    ScreenshotController();
+                          return Builder(
+                            builder: (itemContext) {
+                              return GestureDetector(
+                                onTap: () {
+                                  if (isUnlocked && !isGuest!) {
+                                    final ScreenshotController
+                                        screenshotController =
+                                        ScreenshotController();
 
-                                showLevelUpDialog(context, level, intakeInfo,
-                                    screenshotController: screenshotController,
-                                    onShare: (dialogContext) async {
-                                  try {
-                                    // Capture the dialog as image bytes
-                                    final Uint8List? imageBytes =
-                                        await screenshotController.capture(
-                                      pixelRatio:
-                                          2.0, // adjust to improve resolution
-                                    );
+                                    showLevelUpDialog(
+                                        context, level, intakeInfo,
+                                        screenshotController:
+                                            screenshotController,
+                                        onShare: (dialogContext) async {
+                                      try {
+                                        // Capture the dialog as image bytes
+                                        final Uint8List? imageBytes =
+                                            await screenshotController.capture(
+                                          pixelRatio:
+                                              2.0, // adjust to improve resolution
+                                        );
 
-                                    if (imageBytes == null) {
-                                      debugPrint("Error: imageBytes is null");
-                                      return;
-                                    }
+                                        if (imageBytes == null) {
+                                          debugPrint(
+                                              "Error: imageBytes is null");
+                                          return;
+                                        }
 
-                                    // Get a temporary directory
-                                    final tempDir =
-                                        await getTemporaryDirectory();
-                                    final String filePath =
-                                        '${tempDir.path}/level_up.png';
+                                        // Get a temporary directory
+                                        final tempDir =
+                                            await getTemporaryDirectory();
+                                        final String filePath =
+                                            '${tempDir.path}/level_up.png';
 
-                                    // Write the bytes to a file
-                                    final File file =
-                                        await File(filePath).create();
-                                    await file.writeAsBytes(imageBytes);
+                                        // Write the bytes to a file
+                                        final File file =
+                                            await File(filePath).create();
+                                        await file.writeAsBytes(imageBytes);
 
-                                    // Pop the dialog explicitly using its own context
-                                    Navigator.pop(dialogContext);
+                                        // Pop the dialog explicitly using its own context
+                                        Navigator.pop(dialogContext);
 
-                                    // Use share_plus to share this image file
-                                    await Share.shareXFiles(
-                                      [XFile(file.path)],
-                                      text:
-                                          "I've reached Level $level on Sipnudge! 💧",
-                                      subject: "My Hydration Achievement",
-                                    );
-                                  } catch (e) {
-                                    debugPrint(
-                                        "Error capturing or sharing: $e");
+                                        if (!itemContext.mounted) return;
+
+                                        // Use share_plus to share this image file
+                                        final box = itemContext
+                                            .findRenderObject() as RenderBox;
+                                        await Share.shareXFiles(
+                                            [XFile(file.path)],
+                                            text:
+                                                "I've reached Level $level on Sipnudge! 💧",
+                                            subject: "My Hydration Achievement",
+                                            sharePositionOrigin:
+                                                box.localToGlobal(Offset.zero) &
+                                                    box.size);
+                                      } catch (e) {
+                                        debugPrint(
+                                            "Error capturing or sharing: $e");
+                                      }
+                                    });
                                   }
-                                });
-                              }
+                                },
+                                child: getLevelBadges(
+                                  level.toString(),
+                                  isUnlocked,
+                                  intakeInfo,
+                                ),
+                              );
                             },
-                            child: getLevelBadges(
-                              level.toString(),
-                              isUnlocked,
-                              intakeInfo,
-                            ),
                           );
                         },
                       ),
