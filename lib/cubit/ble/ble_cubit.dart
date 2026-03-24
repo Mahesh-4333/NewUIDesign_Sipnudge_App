@@ -32,12 +32,14 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
 
   final Guid hydrationSlotsUUID = Guid("6E400005-B5A3-F393-E0A9-E50E24DCCA9E");
   final Guid water30DaysDataUUID = Guid("6E400006-B5A3-F393-E0A9-E50E24DCCA9E");
+  final Guid configUUID = Guid("6E400007-B5A3-F393-E0A9-E50E24DCCA9E");
 
   BluetoothCharacteristic? _dataChar;
   BluetoothCharacteristic? _ackChar;
   BluetoothCharacteristic? _hydrationGoalDataChar;
   BluetoothCharacteristic? _hydrationSlotsChar;
   BluetoothCharacteristic? _hydration30DaysChar;
+  BluetoothCharacteristic? _configChar;
 
   StreamSubscription<List<ScanResult>>? _scanSub;
   StreamSubscription<BluetoothConnectionState>? _connectionSub;
@@ -425,6 +427,7 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
             if (c.uuid == water30DaysDataUUID) {
               _hydration30DaysChar = c; // ✅ new
             }
+            if (c.uuid == configUUID) _configChar = c;
           }
         }
       }
@@ -842,6 +845,22 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
   // ---------------------------------------------------------------------------
   // Utilities + Hydration sync
   // ---------------------------------------------------------------------------
+
+  Future<void> sendConfigData(String payload) async {
+    if (_configChar == null) {
+      log("Config characterstic not found", name: "BLE_Cubit");
+      emit(state.copyWith(message: "Config characteristic not found"));
+      return;
+    }
+    try {
+      log("Sending config data: $payload", name: "BLE_Cubit");
+      await _configChar!.write(payload.codeUnits, withoutResponse: false);
+      emit(state.copyWith(message: "Config data sent successfully"));
+    } catch (e) {
+      log("Failed to send config data: $e", name: "BLE_Cubit");
+      emit(state.copyWith(message: "Failed to send config data"));
+    }
+  }
 
   void _listenToConnection(BluetoothDevice device) {
     _connectionSub?.cancel();

@@ -36,6 +36,10 @@ class ProfileCubit extends Cubit<ProfileState> {
                 title: "Active Notifications",
               ),
               ProfileMenuItem(
+                iconPath: "assets/performance.png",
+                title: "Config Test",
+              ),
+              ProfileMenuItem(
                 iconPath: "assets/logout.png",
                 title: "Logout",
                 isRed: true,
