@@ -80,6 +80,8 @@ class AssetsPath {
   static const String dropUnselected = "assets/ringtone_icons/drop_unselected.png";
   static const String playUnselected = "assets/ringtone_icons/play_unselected.png";
 
+  static const String alertIcon = "assets/alert_icon.png";
+  static const String sliderIcon = "assets/slider_icon.png";
 
 
 }

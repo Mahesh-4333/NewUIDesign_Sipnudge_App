@@ -8,7 +8,6 @@ import 'package:hydrify/constants/app_colors.dart';
 import 'package:hydrify/constants/app_dimensions.dart';
 import 'package:hydrify/constants/app_font_styles.dart';
 import 'package:hydrify/constants/app_strings.dart';
-import 'package:hydrify/constants/app_style.dart';
 import 'package:hydrify/cubit/Preferences/preferences_cubit.dart';
 import 'package:hydrify/cubit/ble/ble_cubit.dart';
 import 'package:hydrify/cubit/bottle/bottle_data_cubit.dart';
@@ -24,6 +23,7 @@ import 'package:hydrify/screens/widgets/preferences_widgets/custom_toggle_tile.d
 import 'package:hydrify/screens/widgets/preferences_widgets/menu_item_tile.dart';
 import 'package:hydrify/screens/widgets/preferences_widgets/preference_card.dart';
 import 'package:hydrify/screens/widgets/preferences_widgets/section_header.dart';
+import 'package:hydrify/screens/widgets/preferences_widgets/erase_data_dialog.dart';
 import 'package:hydrify/services/notification/notification_service.dart';
 import 'package:intl/intl.dart';
 
@@ -209,61 +209,94 @@ class PreferencesPage extends StatelessWidget {
                         ],
                       ),
                       SizedBox(height: 32.h),
-                      Container(
-                        width: double.infinity,
-                        height: 54.h,
-                        decoration: BoxDecoration(
-                            color: AppColors.white,
-                            borderRadius: BorderRadius.circular(27.r),
-                            boxShadow: AppStyle.boxShadowVariation1),
-                        child: TextButton(
-                          onPressed: () async {
-                            try {
-                              final bottleDataCubit =
-                                  context.read<BottleDataCubit>();
-                              await bottleDataCubit.clearAllBottleData();
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Container(
+                            padding: EdgeInsets.symmetric(horizontal: 25.w),
+                            height: 54.h,
+                            decoration: BoxDecoration(
+                              color: AppColors.white,
+                              borderRadius: BorderRadius.circular(27.r),
+                              border: Border.all(
+                                color: const Color(0xffE53935),
+                                width: 1.5,
+                              ),
+                              boxShadow: [
+                                BoxShadow(
+                                  color:
+                                      const Color(0xffE53935).withOpacity(0.3),
+                                  blurRadius: 15,
+                                  spreadRadius: 1,
+                                  offset: const Offset(0, 0),
+                                ),
+                              ],
+                            ),
+                            child: TextButton(
+                              onPressed: () {
+                                showDialog(
+                                  context: context,
+                                  barrierDismissible: false,
+                                  builder: (innerContext) {
+                                    return EraseDataDialog(
+                                      onErase: () async {
+                                        try {
+                                          final bottleDataCubit =
+                                              context.read<BottleDataCubit>();
+                                          await bottleDataCubit
+                                              .clearAllBottleData();
 
-                              final hydrationCubit =
-                                  context.read<HydrationCubit>();
-                              await hydrationCubit.resetUI();
-                              await hydrationCubit.refreshAchievementStats();
+                                          final hydrationCubit =
+                                              context.read<HydrationCubit>();
+                                          await hydrationCubit.resetUI();
+                                          await hydrationCubit
+                                              .refreshAchievementStats();
 
-                              final bleCubit = context.read<BleCubit>();
-                              await bleCubit.clearData();
+                                          final bleCubit =
+                                              context.read<BleCubit>();
+                                          await bleCubit.clearData();
 
-                              Fluttertoast.showToast(
-                                  msg: "Local data cleared.");
-                            } catch (e) {
-                              Fluttertoast.showToast(
-                                  msg: "Error clearing local data: $e");
-                              return;
-                            }
+                                          Fluttertoast.showToast(
+                                              msg: "Local data cleared.");
+                                        } catch (e) {
+                                          Fluttertoast.showToast(
+                                              msg:
+                                                  "Error clearing local data: $e");
+                                          return;
+                                        }
 
-                            final bleCubit = context.read<BleCubit>();
-                            await bleCubit.forgetDevice();
+                                        final bleCubit =
+                                            context.read<BleCubit>();
+                                        await bleCubit.forgetDevice();
 
-                            Fluttertoast.showToast(
-                                msg:
-                                    "Tracking restarted. Connect your device again.");
-                          },
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(Icons.refresh,
-                                  color: Color(0xffB91C1C), size: 22.sp),
-                              SizedBox(width: 8.w),
-                              Text(
-                                AppStrings.restartalltracking,
-                                style: TextStyle(
-                                  color: Color(0xffB91C1C),
-                                  fontSize: 18.sp,
-                                  fontFamily: AppFontStyles.urbanistFontFamily,
-                                  fontWeight: FontWeight.w600,
+                                        Fluttertoast.showToast(
+                                            msg:
+                                                "Tracking restarted. Connect your device again.");
+                                      },
+                                    );
+                                  },
+                                );
+                              },
+                              style: TextButton.styleFrom(
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(27.r),
                                 ),
                               ),
-                            ],
+                              child: Text(
+                                "RESET ALL TRACKINGS",
+                                style: TextStyle(
+                                    color: const Color(0xffE53935),
+                                    fontSize: 16.sp,
+                                    fontFamily:
+                                        AppFontStyles.urbanistFontFamily,
+                                    fontWeight: FontWeight.w500,
+                                    fontVariations: [
+                                      AppFontStyles.boldFontVariation
+                                    ]),
+                              ),
+                            ),
                           ),
-                        ),
+                        ],
                       ),
                       SizedBox(height: 16.h),
                       Center(

@@ -93,11 +93,11 @@ class _AchievementsBadgeScreenState extends State<AchievementsBadgeScreen> {
       if ((summary.consumed / target) * 100 >= 100) {
         count++;
         if (count == level) {
-          return '${(summary.consumed / 1000).toStringAsFixed(1)}L';
+          return '${(summary.consumed).toStringAsFixed(0)}';
         }
       }
     }
-    return '0.0L';
+    return '0';
   }
 
   @override
@@ -200,7 +200,7 @@ class _AchievementsBadgeScreenState extends State<AchievementsBadgeScreen> {
                                         ScreenshotController();
 
                                     showLevelUpDialog(
-                                        context, level, intakeInfo,
+                                        context, level, _getWaterIntakeForLevel(level),
                                         screenshotController:
                                             screenshotController,
                                         onShare: (dialogContext) async {
@@ -501,7 +501,9 @@ class _AchievementsBadgeScreenState extends State<AchievementsBadgeScreen> {
           SizedBox(height: AppDimensions.dim10.h),
           Text(
             currentLevel > 0
-                ? AppStrings.congratulations(_dailyWaterGoal.toString())
+                ? AppStrings.congratulations(
+                    _getWaterIntakeForLevel(currentLevel),
+                    _dailyWaterGoal.toString())
                 : AppStrings.achievementMsgWhenNoGoalNotReached(
                     _dailyWaterGoal.toString()),
             textAlign: TextAlign.center,

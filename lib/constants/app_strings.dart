@@ -137,10 +137,10 @@ class AppStrings {
   static const accountremove =
       "Permanently remove your account and data. Proceed with caution.";
   static const deleteaccount = "Delete Account";
-  static String congratulations(String waterGoalMl) {
+  static String congratulations(String totalConsumed, String waterGoalMl) {
     // final waterInLitres = (waterGoalMl / 1000).toStringAsFixed(1);
 
-    return "Congratulations! You've reached your goal of $waterGoalMl ml water intake. Keep up the incredible effort!";
+    return "Congratulations! You've reached your goal of ${totalConsumed}/${waterGoalMl} ml water intake. Keep up the incredible effort!";
   }
 
   static String achievementMsgWhenNoGoalNotReached(String waterGoalMl) {

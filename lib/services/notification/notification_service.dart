@@ -46,10 +46,6 @@ class NotificationService {
   final FlutterLocalNotificationsPlugin _plugin =
       FlutterLocalNotificationsPlugin();
 
-  /// Used only for clean-up range (cancel loops).
-  /// Scheduling itself only needs dayOffset=0 because matchDateTimeComponents.time
-  /// repeats the notification daily forever.
-  static const int _scheduleDaysAheadRepeat = 7;
   NotificationTapCallback? onNotificationTap;
 
   Future<void> init({NotificationTapCallback? onTap}) async {
@@ -272,9 +268,9 @@ class NotificationService {
           seconds: (repeat * intervalMinutes * 60).toInt(),
         ));
 
-        // If this fire-time has already passed today, advance to tomorrow so
-        // flutter_local_notifications picks the right first-fire date.
-        if (notifyAt.isBefore(now)) {
+        // Robustly advance past any already-elapsed time (handles DST edges too).
+        while (
+            notifyAt.isBefore(now) || notifyAt.difference(now).inSeconds < 5) {
           notifyAt = notifyAt.add(const Duration(days: 1));
         }
 
@@ -357,18 +353,24 @@ class NotificationService {
     List<HydrationEntry> newEntries,
   ) async {
     await cancelAllHydrationReminders();
+    // Small delay so the Android OS fully processes cancelAll() before
+    // new zonedSchedule() calls are issued, preventing race-condition skips.
+    await Future.delayed(const Duration(milliseconds: 300));
   }
 
   Future<void> cancelAllHydrationReminders() async {
     await _plugin.cancelAll();
 
-    for (int dayOffset = 0; dayOffset < _scheduleDaysAheadRepeat; dayOffset++) {
-      for (final slot in HydrationSlot.values) {
-        for (int repeat = 0; repeat < 10; repeat++) {
-          final id = _buildNotificationId(slot, dayOffset, repeat);
-          if (Platform.isAndroid) {
-            await NotificationManager.instance.stopAlarm(id);
-          }
+    // Only dayOffset=0 IDs exist in the daily-repeat system.
+    // Use the actual repeat count from prefs so we cancel exactly the IDs that were scheduled.
+    final alarmRepeatIndex = await SharedPrefsHelper.getAlarmRepeatIndex();
+    final alarmRepeatTimes = [1, 3, 5, 10][alarmRepeatIndex];
+
+    for (final slot in HydrationSlot.values) {
+      for (int repeat = 0; repeat < alarmRepeatTimes; repeat++) {
+        final id = _buildNotificationId(slot, 0, repeat);
+        if (Platform.isAndroid) {
+          await NotificationManager.instance.stopAlarm(id);
         }
       }
     }
@@ -382,8 +384,11 @@ class NotificationService {
       await NotificationManager.instance.stopAlarm(baseId);
     }
 
-    // Cancel all repeat reminders (up to 10)
-    for (int repeat = 0; repeat < 10; repeat++) {
+    // Cancel only the repeat IDs that were actually scheduled.
+    final alarmRepeatIndex = await SharedPrefsHelper.getAlarmRepeatIndex();
+    final alarmRepeatTimes = [1, 3, 5, 10][alarmRepeatIndex];
+
+    for (int repeat = 0; repeat < alarmRepeatTimes; repeat++) {
       final repeatId = _buildNotificationId(slot, dayOffset, repeat);
       await _plugin.cancel(repeatId);
       if (Platform.isAndroid) {

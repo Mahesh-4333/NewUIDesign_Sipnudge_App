@@ -8,7 +8,9 @@ import 'package:hydrify/constants/app_dimensions.dart';
 import 'package:hydrify/constants/app_font_styles.dart';
 import 'package:hydrify/constants/app_strings.dart';
 import 'package:hydrify/cubit/Preferences/preferences_cubit.dart';
+import 'package:hydrify/helpers/database_helper.dart';
 import 'package:hydrify/helpers/shared_pref_helper.dart';
+import 'package:hydrify/services/notification/notification_service.dart';
 import 'package:hydrify/helpers/vibration_helper.dart';
 import 'package:hydrify/models/ringtone_model.dart';
 import 'package:hydrify/screens/widgets/ringtone_screen_widget/category_header.dart';
@@ -100,6 +102,16 @@ class _RingtoneScreenState extends State<RingtoneScreen> {
 
   Future<void> _saveChanges() async {
     await SharedPrefsHelper.setSelectedRingtone(selectedIndex);
+
+    // Reschedule all notifications so they use the newly selected ringtone.
+    // The sound is baked into the notification at schedule time (Android uses
+    // it as part of the channel ID), so we must cancel and re-schedule.
+    final slots = await DatabaseHelper().getAllSlots();
+    if (slots.isNotEmpty) {
+      await NotificationService().resetAllHydrationReminders(slots);
+      await NotificationService().scheduleHydrationRemindersForFuture(slots);
+    }
+
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Ringtone saved successfully!")),

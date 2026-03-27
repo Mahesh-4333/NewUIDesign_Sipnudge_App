@@ -70,9 +70,11 @@ class BottleDataCubit extends Cubit<BottleDataState> {
     //   return;
     // }
 
-    final newVolume = bleState.volume ?? 0.0;
-    final newPercent = bleState.percent ?? 0;
-    final newBattery = bleState.battery ?? 0;
+    // Fall back to the last known value when the BLE packet omits a field.
+    // This prevents a null battery/volume from resetting the UI and DB to 0.
+    final newVolume = bleState.volume ?? state.volume;
+    final newPercent = bleState.percent ?? state.volumePercent;
+    final newBattery = bleState.battery ?? state.battery;
 
     final newData = BottleData(
       liquidVolume: newVolume,

@@ -167,7 +167,8 @@ class NotificationManager {
     debugPrint('Simple notification ID $id fired.');
   }
 
-  /// Schedules a reliable, looping alarm that rings for a maximum of 5 seconds.
+  /// Schedules a reliable, looping alarm that rings for a minimum of [maxDurationSeconds] seconds.
+  /// The audio loops continuously until the user stops it or [maxDurationSeconds] elapses.
 
   Future<bool> setReliableAlarm({
     required int id,
@@ -177,7 +178,7 @@ class NotificationManager {
     required String body,
     required bool isSilent,
     String stopButtonText = 'Stop Alarm',
-    int maxDurationSeconds = 5,
+    int maxDurationSeconds = 10,
   }) async {
     final notificationSettings = NotificationSettings(
       title: title,
@@ -195,7 +196,7 @@ class NotificationManager {
       id: id,
       dateTime: dateTime,
       assetAudioPath: assetAudioPath,
-      loopAudio: false,
+      loopAudio: true,
       vibrate: true,
       notificationSettings: notificationSettings,
       volumeSettings: volumeSettings,
@@ -207,6 +208,21 @@ class NotificationManager {
       final result = await Alarm.set(alarmSettings: alarmSettings);
 
       Console.log(tag: "APP", value: 'Alarm ID $id set for $dateTime. Success: $result');
+
+      if (result) {
+        // Auto-stop the looping alarm after maxDurationSeconds so it doesn't
+        // ring forever if the user misses the notification.
+        Future.delayed(Duration(seconds: maxDurationSeconds), () async {
+          final activeAlarms = await Alarm.getAlarms();
+          final stillActive = activeAlarms.any((a) => a.id == id);
+          if (stillActive) {
+            await Alarm.stop(id);
+            Console.log(
+                tag: "APP",
+                value: 'Alarm ID $id auto-stopped after $maxDurationSeconds seconds.');
+          }
+        });
+      }
 
       return result;
     } catch (e) {
