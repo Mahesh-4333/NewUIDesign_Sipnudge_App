@@ -15,9 +15,7 @@ import 'package:hydrify/constants/app_font_styles.dart';
 import 'package:hydrify/constants/app_strings.dart';
 import 'package:hydrify/cubit/hydration/hydration_cubit.dart';
 import 'package:hydrify/cubit/hydration/hydration_state.dart';
-import 'package:hydrify/helpers/database_helper.dart';
 import 'package:hydrify/helpers/shared_pref_helper.dart';
-import 'package:hydrify/models/hydration_summary.dart';
 import 'package:hydrify/screens/levelreached.dart';
 import 'package:hydrify/screens/widgets/level_widgets/concentric_circles_animation.dart';
 
@@ -31,11 +29,12 @@ class AchievementsBadgeScreen extends StatefulWidget {
 
 class _AchievementsBadgeScreenState extends State<AchievementsBadgeScreen> {
   bool? isGuest;
-  final DatabaseHelper _dbHelper = DatabaseHelper();
   bool _loading = true;
-  List<HydrationDaySummary> _hydrationData = [];
   int _currentLevel = 0;
   int _dailyWaterGoal = 0;
+  Map<int, String> _levelToIntakeMap = {};
+  Map<int, double> _levelToMlMap = {};
+  Map<int, double> _levelToExactMlMap = {};
 
   bool _didAutoRefresh = false;
 
@@ -43,7 +42,11 @@ class _AchievementsBadgeScreenState extends State<AchievementsBadgeScreen> {
   void initState() {
     super.initState();
     _checkGuestUser();
-    _loadHydrationData();
+    final liveTotalDrank =
+        BlocProvider.of<HydrationCubit>(context, listen: false)
+            .state
+            .totalDrank;
+    _loadHydrationData(liveTotalDrank: liveTotalDrank);
   }
 
   Future<void> _checkGuestUser() async {
@@ -53,51 +56,54 @@ class _AchievementsBadgeScreenState extends State<AchievementsBadgeScreen> {
     });
   }
 
-  Future<void> _loadHydrationData() async {
-    setState(() => _loading = true);
+  Future<void> _loadHydrationData(
+      {int? liveTotalDrank, bool silent = false}) async {
+    if (!silent) {
+      setState(() => _loading = true);
+    }
 
     final userGoal = await SharedPrefsHelper.getUserGoal();
     final dailyGoalMl = userGoal ?? 1400;
 
-    final fetchedAll = await _dbHelper.getHydrationSummariesForRange();
+    // Use the cubit's already-computed level data — refreshAchievementStats()
+    // keeps this authoritative and up-to-date (including today).
+    final hydrationState =
+        BlocProvider.of<HydrationCubit>(context, listen: false).state;
 
-    fetchedAll.sort((a, b) => a.date.compareTo(b.date));
+    final int cubitLevel = hydrationState.currentLevel;
+    final Map<int, String> cubitLevelMap = hydrationState.levelToIntakeMap;
+    final Map<int, String> cubitExactLevelMap = hydrationState.exactLevelToIntakeMap;
 
-    int completedDays = 0;
-
-    for (final summary in fetchedAll) {
-      final target =
-          summary.target > 0 ? summary.target : dailyGoalMl.toDouble();
-      if ((summary.consumed / target) * 100 >= 100) {
-        completedDays++;
+    // Build the ml map from the string map (e.g. "2.2L" → 2200.0)
+    final Map<int, double> localMlMap = {};
+    final Map<int, double> localExactMlMap = {};
+    cubitLevelMap.forEach((level, litresStr) {
+      final parsed = double.tryParse(litresStr.replaceAll('L', ''));
+      if (parsed != null) {
+        localMlMap[level] = parsed * 1000;
       }
-    }
+    });
+
+    cubitExactLevelMap.forEach((level, litresStr) {
+      final parsed = double.tryParse(litresStr.replaceAll('L', ''));
+      localExactMlMap[level] = parsed!;
+    });
 
     if (!mounted) return;
 
     setState(() {
-      _hydrationData = fetchedAll;
-      _currentLevel = completedDays.clamp(0, 365);
+      _currentLevel = cubitLevel.clamp(0, 365);
+      _levelToIntakeMap = cubitLevelMap;
+      _levelToMlMap = localMlMap;
+      _levelToExactMlMap  = localExactMlMap;
       _dailyWaterGoal = dailyGoalMl;
       _loading = false;
     });
   }
 
   String _getWaterIntakeForLevel(int level) {
-    if (level <= 0 || _hydrationData.isEmpty) return '0.0L';
-
-    int count = 0;
-    for (final summary in _hydrationData) {
-      final target =
-          summary.target > 0 ? summary.target : _dailyWaterGoal.toDouble();
-      if ((summary.consumed / target) * 100 >= 100) {
-        count++;
-        if (count == level) {
-          return '${(summary.consumed).toStringAsFixed(0)}';
-        }
-      }
-    }
-    return '0';
+    if (level <= 0 || !_levelToExactMlMap.containsKey(level)) return '0';
+    return _levelToExactMlMap[level]!.toStringAsFixed(0);
   }
 
   @override
@@ -120,8 +126,10 @@ class _AchievementsBadgeScreenState extends State<AchievementsBadgeScreen> {
   // ===================== REGULAR SCREEN + GUEST OVERLAY =====================
 
   Widget _buildRegularScreen() {
-    return BlocBuilder<HydrationCubit, HydrationState>(
-        builder: (context, state) {
+    return BlocConsumer<HydrationCubit, HydrationState>(
+        listener: (context, state) {
+      _loadHydrationData(liveTotalDrank: state.totalDrank, silent: true);
+    }, builder: (context, state) {
       return Scaffold(
         extendBody: true,
         extendBodyBehindAppBar: true,
@@ -144,7 +152,7 @@ class _AchievementsBadgeScreenState extends State<AchievementsBadgeScreen> {
                           left: AppDimensions.dim75.w,
                           top: AppDimensions.dim90.w,
                           child: getCurrentLevelBadge(
-                            state.currentLevel.toString(),
+                            _currentLevel.toString(),
                           ),
                         ),
                         Positioned(
@@ -152,8 +160,7 @@ class _AchievementsBadgeScreenState extends State<AchievementsBadgeScreen> {
                             left: 0,
                             right: 0,
                             child: getCongratulationsText(
-                                state.currentLevel.toString(),
-                                state.currentLevel)),
+                                _currentLevel.toString(), _currentLevel)),
                       ],
                     ),
                   ),
@@ -185,10 +192,9 @@ class _AchievementsBadgeScreenState extends State<AchievementsBadgeScreen> {
                         ),
                         itemBuilder: (context, index) {
                           final level = index + 1;
-                          final isUnlocked = level <= state.currentLevel;
+                          final isUnlocked = level <= _currentLevel;
 
-                          final intakeInfo =
-                              state.levelToIntakeMap[level] ?? '';
+                          final intakeInfo = _levelToIntakeMap[level] ?? '';
 
                           return Builder(
                             builder: (itemContext) {
@@ -199,8 +205,8 @@ class _AchievementsBadgeScreenState extends State<AchievementsBadgeScreen> {
                                         screenshotController =
                                         ScreenshotController();
 
-                                    showLevelUpDialog(
-                                        context, level, _getWaterIntakeForLevel(level),
+                                    showLevelUpDialog(context, level,
+                                        _getWaterIntakeForLevel(level),
                                         screenshotController:
                                             screenshotController,
                                         onShare: (dialogContext) async {

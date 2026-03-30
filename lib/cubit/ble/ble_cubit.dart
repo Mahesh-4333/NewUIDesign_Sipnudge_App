@@ -60,9 +60,16 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
   final List<HydrationEntry> _pendingSlots = [];
 
   int _investorDayIncrement = 0;
+
+  /// Implements [HydrationSync.currentHydrationValue].
+  /// Returns the latest total hydration consumed today (ml) from BLE state.
+  @override
+  double get currentHydrationValue => state.currentHydrationValue;
+
   // ---------------------------------------------------------------------------
   // BLE initialization and scanning
   // ---------------------------------------------------------------------------
+
 
   // investor bottle 3 day before
   // new bottle 1 day before

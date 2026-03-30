@@ -91,8 +91,9 @@ class _HomeScreenState extends State<HomeScreen> {
         // Cancel all today's notifications if target already met on app open
         final stopWhenFull = await SharedPrefsHelper.getStopWhenFull();
         if (stopWhenFull) {
-          double completionPercent = await WaterConsumptionCalculator
-              .calculateCompletionPercentage(history);
+          double completionPercent =
+              await WaterConsumptionCalculator.calculateCompletionPercentage(
+                  history);
           Console.log(
               tag: "initState_stopWhenFull",
               value: "completionPercent: $completionPercent");
@@ -444,7 +445,7 @@ class _HomeScreenState extends State<HomeScreen> {
             ],
           ),
         ),
-        // floatingActionButton: Padding(f
+        // floatingActionButton: Padding(
         //   padding: EdgeInsets.only(bottom: 100.h),
         //   child: FloatingActionButton(
         //     onPressed: () => _showMockBottomSheet(context),

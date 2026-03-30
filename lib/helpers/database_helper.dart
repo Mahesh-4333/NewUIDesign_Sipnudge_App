@@ -399,6 +399,24 @@ CREATE TABLE IF NOT EXISTS app_metadata (
     }).toList();
   }
 
+  /// Returns the stored [HydrationDaySummary] for [date] (matched by local
+  /// midnight epoch), or `null` if no record exists yet.
+  Future<HydrationDaySummary?> getSummaryForDate(DateTime date) async {
+    final db = await database;
+    final midnight =
+        DateTime(date.year, date.month, date.day).millisecondsSinceEpoch;
+
+    final result = await db.query(
+      hydrationSummaryTableName,
+      where: 'date = ?',
+      whereArgs: [midnight],
+      limit: 1,
+    );
+
+    if (result.isEmpty) return null;
+    return HydrationDaySummary.fromMap(result.first);
+  }
+
   Future<void> clearHydrationDaySummaries() async {
     final db = await database;
 

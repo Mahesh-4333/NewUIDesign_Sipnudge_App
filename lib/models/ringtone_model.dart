@@ -27,7 +27,7 @@ class Ringtone {
 
 final List<Ringtone> mockRingtones = [
   Ringtone(
-    id: 0,
+    id: 1,
     title: "Morning Dew",
     category: "Nature",
     duration: "0:15",
@@ -37,7 +37,7 @@ final List<Ringtone> mockRingtones = [
     iconPathUnselected: AssetsPath.songUnselected,
   ),
   Ringtone(
-    id: 1,
+    id: 3,
     title: "Crystal Clear",
     category: "Nature",
     duration: "0:12",
@@ -47,7 +47,7 @@ final List<Ringtone> mockRingtones = [
     iconPathUnselected: AssetsPath.forestUnselected,
   ),
   Ringtone(
-    id: 2,
+    id: 4,
     title: "Ocean Mist",
     category: "Nature",
     duration: "0:12",
@@ -57,7 +57,7 @@ final List<Ringtone> mockRingtones = [
     iconPathUnselected: AssetsPath.oceanMistUnselected,
   ),
   Ringtone(
-    id: 3,
+    id: 5,
     title: "Breeze",
     category: "Nature",
     duration: "0:12",
@@ -67,7 +67,7 @@ final List<Ringtone> mockRingtones = [
     iconPathUnselected: AssetsPath.forestUnselected,
   ),
   Ringtone(
-    id: 4,
+    id: 6,
     title: "Forest Stream",
     category: "Nature",
     duration: "0:12",
@@ -77,7 +77,7 @@ final List<Ringtone> mockRingtones = [
     iconPathUnselected: AssetsPath.forestUnselected,
   ),
   Ringtone(
-    id: 5,
+    id: 7,
     title: "Midnight Forest",
     category: "Nature",
     duration: "0:12",
@@ -87,7 +87,7 @@ final List<Ringtone> mockRingtones = [
     iconPathUnselected: AssetsPath.forestUnselected,
   ),
   Ringtone(
-    id: 6,
+    id: 8,
     title: "Crystal Clear",
     category: "Electronic",
     duration: "0:12",
@@ -97,10 +97,10 @@ final List<Ringtone> mockRingtones = [
     iconPathUnselected: AssetsPath.dotcircleUnselected,
   ),
   Ringtone(
-    id: 7,
+    id: 9,
     title: "Pulse Wave",
     category: "Electronic",
-    duration: "0:10",
+    duration: "0:12",
     assetPath: "ringtones/ringtone9.mp3",
     subTitle: "Rhythmic",
     iconPath: AssetsPath.phoneWave,

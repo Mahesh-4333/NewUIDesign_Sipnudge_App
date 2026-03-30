@@ -19,6 +19,10 @@ class UserInfoCubit extends Cubit<UserInfoState> {
     emit(state.copyWith(gender: gender));
   }
 
+  void setAchievmentSnackbarStatus(bool status) {
+    emit(state.copyWith(hideAchievement: status));
+  }
+
   void setHeight(double height, String unit, {int? inches}) {
     double heightInCm;
 

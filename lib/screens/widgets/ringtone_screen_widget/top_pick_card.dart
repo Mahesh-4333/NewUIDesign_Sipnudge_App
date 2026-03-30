@@ -37,7 +37,7 @@ class TopPickCard extends StatelessWidget {
       onTap: onTap,
       child: Container(
         width: 160.w,
-        height: 180.h,
+        height: 190.h,
         padding: EdgeInsets.all(16.w),
         decoration: BoxDecoration(
           color: AppColors.white,

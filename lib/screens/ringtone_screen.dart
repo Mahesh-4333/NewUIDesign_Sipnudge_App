@@ -9,6 +9,7 @@ import 'package:hydrify/constants/app_font_styles.dart';
 import 'package:hydrify/constants/app_strings.dart';
 import 'package:hydrify/cubit/Preferences/preferences_cubit.dart';
 import 'package:hydrify/helpers/database_helper.dart';
+import 'package:hydrify/helpers/logger.dart';
 import 'package:hydrify/helpers/shared_pref_helper.dart';
 import 'package:hydrify/services/notification/notification_service.dart';
 import 'package:hydrify/helpers/vibration_helper.dart';
@@ -67,6 +68,7 @@ class _RingtoneScreenState extends State<RingtoneScreen> {
   }
 
   Future<void> _onRingtoneTap(int index) async {
+    Console.log(tag: "_onRingtoneTap", value: index.toString());
     setState(() => selectedIndex = index);
     await _onPlayTap(index);
   }
@@ -86,7 +88,8 @@ class _RingtoneScreenState extends State<RingtoneScreen> {
       await _audioPlayer.setReleaseMode(ReleaseMode.stop);
       await _audioPlayer.setVolume(1.0);
 
-      final assetPath = mockRingtones[index].assetPath;
+      final assetPath =
+          mockRingtones.firstWhere((r) => r.id == index).assetPath;
       await _audioPlayer.play(AssetSource(assetPath));
 
       _audioPlayer.onPlayerComplete.listen((event) {
@@ -101,6 +104,7 @@ class _RingtoneScreenState extends State<RingtoneScreen> {
   }
 
   Future<void> _saveChanges() async {
+    Console.log(tag: "ringtoneIndex", value: selectedIndex.toString());
     await SharedPrefsHelper.setSelectedRingtone(selectedIndex);
 
     // Reschedule all notifications so they use the newly selected ringtone.
@@ -121,7 +125,7 @@ class _RingtoneScreenState extends State<RingtoneScreen> {
   }
 
   Widget _buildTopPick(int index) {
-    final ringtone = mockRingtones[index];
+    final ringtone = mockRingtones.firstWhere((r) => r.id == index);
     return TopPickCard(
       title: ringtone.title,
       subTitle: ringtone.subTitle ?? "",
@@ -188,9 +192,9 @@ class _RingtoneScreenState extends State<RingtoneScreen> {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            _buildTopPick(0),
-                            SizedBox(width: 16.w),
                             _buildTopPick(1),
+                            SizedBox(width: 16.w),
+                            _buildTopPick(3),
                           ],
                         ),
                         CategoryHeader(
@@ -200,7 +204,10 @@ class _RingtoneScreenState extends State<RingtoneScreen> {
                           color: AppColors.greyColorText1,
                         ),
                         ...mockRingtones
-                            .where((r) => r.category == "Nature")
+                            .where((r) =>
+                                r.category == "Nature" &&
+                                r.id != 1 &&
+                                r.id != 3)
                             .map((ringtone) => RingtoneListItem(
                                   title: ringtone.title,
                                   subTitle: ringtone.subTitle ?? "",

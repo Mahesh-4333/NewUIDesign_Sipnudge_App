@@ -108,6 +108,21 @@ class NotificationService {
       onDidReceiveBackgroundNotificationResponse: notificationTapBackground,
     );
 
+    // Request iOS permissions including Critical Alerts (bypasses DND + mute).
+    // Critical Alerts only work if the entitlement is enabled in the
+    // provisioning profile (com.apple.developer.usernotifications.critical-alerts).
+    if (Platform.isIOS) {
+      await _plugin
+          .resolvePlatformSpecificImplementation<
+              IOSFlutterLocalNotificationsPlugin>()
+          ?.requestPermissions(
+            alert: true,
+            sound: true,
+            badge: true,
+            critical: true,
+          );
+    }
+
     final NotificationAppLaunchDetails? launchDetails =
         await _plugin.getNotificationAppLaunchDetails();
 
@@ -147,8 +162,8 @@ class NotificationService {
     final tzNotifyAt = tz.TZDateTime.from(notifyAt, tz.local);
 
     if (Platform.isIOS) {
-      final selected = await SharedPrefsHelper.getSelectedRingtone() ?? 0;
-      final fileName = "ringtone${selected + 1}.caf";
+      final selected = await SharedPrefsHelper.getSelectedRingtone() ?? 1;
+      final fileName = "ringtone${selected}.caf";
       Console.log(
           tag: "APP",
           value:
@@ -180,8 +195,8 @@ class NotificationService {
     } else {
       // Android — use flutter_local_notifications with daily repeat.
       // Sound file must exist in android/app/src/main/res/raw/.
-      final selected = await SharedPrefsHelper.getSelectedRingtone() ?? 0;
-      final soundName = "ringtone${selected + 1}";
+      final selected = await SharedPrefsHelper.getSelectedRingtone() ?? 1;
+      final soundName = "ringtone${selected}";
       Console.log(
           tag: "APP",
           value:
@@ -205,7 +220,14 @@ class NotificationService {
                 ? null
                 : RawResourceAndroidNotificationSound(soundName),
             enableVibration: true,
-            category: AndroidNotificationCategory.reminder,
+            // ✅ Use the ALARM audio stream so the sound plays at alarm
+            // volume (not the quieter notification stream volume).
+            audioAttributesUsage: AudioAttributesUsage.alarm,
+            // ✅ Force the channel to be recreated with updated settings
+            // if it already exists (e.g. after a ringtone change).
+            channelAction: AndroidNotificationChannelAction.update,
+            category: AndroidNotificationCategory.alarm,
+            fullScreenIntent: true,
             actions: [
               const AndroidNotificationAction(
                 'STOP_ACTION',

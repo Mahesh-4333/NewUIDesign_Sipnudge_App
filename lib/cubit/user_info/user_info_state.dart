@@ -24,23 +24,24 @@ class UserInfoState extends Equatable {
 
   final ActivityLevel? activityLevel;
   final DietType? dietType;
+  final bool hideAchievement;
 
-  const UserInfoState({
-    this.gender = Gender.male,
-    this.height,
-    this.heightUnit,
-    this.weight,
-    this.weightUnit,
-    this.age,
-    this.wakeupHour,
-    this.wakeupMinute,
-    this.wakeupPeriod,
-    this.bedtimeHour,
-    this.bedtimeMinute,
-    this.bedtimePeriod,
-    this.activityLevel = ActivityLevel.lightActivity,
-    this.dietType = DietType.balanced,
-  });
+  const UserInfoState(
+      {this.gender = Gender.male,
+      this.height,
+      this.heightUnit,
+      this.weight,
+      this.weightUnit,
+      this.age,
+      this.wakeupHour,
+      this.wakeupMinute,
+      this.wakeupPeriod,
+      this.bedtimeHour,
+      this.bedtimeMinute,
+      this.bedtimePeriod,
+      this.activityLevel = ActivityLevel.lightActivity,
+      this.dietType = DietType.balanced,
+      this.hideAchievement = false});
 
   UserInfoState copyWith({
     Gender? gender,
@@ -57,6 +58,7 @@ class UserInfoState extends Equatable {
     String? bedtimePeriod,
     ActivityLevel? activityLevel,
     DietType? dietType,
+    bool? hideAchievement,
   }) {
     return UserInfoState(
       gender: gender ?? this.gender,
@@ -73,6 +75,7 @@ class UserInfoState extends Equatable {
       bedtimePeriod: bedtimePeriod ?? this.bedtimePeriod,
       activityLevel: activityLevel ?? this.activityLevel,
       dietType: dietType ?? this.dietType,
+      hideAchievement: hideAchievement ?? this.hideAchievement,
     );
   }
 

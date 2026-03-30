@@ -255,34 +255,42 @@ class HydrationCubit extends Cubit<HydrationState> {
       }
     }
 
-    final double totalDrankToday =
+    // Use the BLE-reported live total if available; fall back to summing entries.
+    final double slotSum =
         currentEntries.fold(0.0, (sum, e) => sum + e.waterDrank);
-    final bool isPerfectNow =
-        currentEntries.every((e) => e.status == HydrationStatus.completed);
+    final double totalDrankToday =
+        ble.currentHydrationValue > 0 ? ble.currentHydrationValue : slotSum;
 
-    int updatedLevel = state.currentLevel;
+    final int waterGoal = await SharedPrefsHelper.getUserGoal() ?? 0;
+    final bool hasMetGoal =
+        waterGoal > 0 && totalDrankToday >= waterGoal.toDouble();
+
+    final int oldLevel = state.currentLevel;
     int? newlyUnlocked;
-    if (isPerfectNow) {
+    if (hasMetGoal) {
       final todayStr = DateFormat('yyyy-MM-dd').format(DateTime.now());
       final lastLevelUpDate = await SharedPrefsHelper.getLastLevelUpDate();
 
       if (lastLevelUpDate != todayStr) {
+        final today = DateTime.now();
+        final existingSummary = await _dbHelper.getSummaryForDate(today);
+        final int todayDayIndex = existingSummary?.dayIndex ?? 0;
+
         final todaySummary = HydrationDaySummary(
-          date: DateTime(
-              DateTime.now().year, DateTime.now().month, DateTime.now().day),
-          dayIndex: 0,
-          target: state.goal.toDouble(),
+          date: DateTime(today.year, today.month, today.day),
+          dayIndex: todayDayIndex,
+          target: waterGoal.toDouble(),
           consumed: totalDrankToday,
           isPerfect: true,
         );
 
         await _dbHelper.bulkUpsert30Days([todaySummary]);
         await SharedPrefsHelper.setLastLevelUpDate(todayStr);
-        await refreshAchievementStats();
+        // await refreshAchievementStats(); // state.currentLevel is updated here
 
-        if (state.currentLevel > updatedLevel) {
-          updatedLevel = state.currentLevel;
-          newlyUnlocked = updatedLevel;
+        if (state.currentLevel > oldLevel) {
+          // Use state.currentLevel — the latest level after refresh
+          newlyUnlocked = state.currentLevel;
         }
       }
     }
@@ -291,17 +299,17 @@ class HydrationCubit extends Cubit<HydrationState> {
     emit(state.copyWith(
       entries: currentEntries,
       totalDrank: totalDrankToday.round(),
-      currentLevel: updatedLevel,
       newlyUnlockedLevel: newlyUnlocked,
     ));
 
     _calculateCurrentSlotStatus();
 
-    if (newlyUnlocked != null) {
-      Future.delayed(const Duration(seconds: 2), () {
-        if (!isClosed) emit(state.copyWith(newlyUnlockedLevel: null));
-      });
-    }
+    // if (newlyUnlocked != null) {
+    //   // Reset after snackbar is shown so listenWhen can fire again next time
+    //   Future.delayed(const Duration(seconds: 5), () {
+    //     if (!isClosed) emit(state.copyWith(clearNewlyUnlockedLevel: true));
+    //   });
+    // }
   }
 
   void subscribeToBleUpdates(BleCubit bleCubit) {
@@ -391,7 +399,11 @@ class HydrationCubit extends Cubit<HydrationState> {
     emit(state.copyWith(errorMessage: message, successMessage: null));
   }
 
-  Future<void> refreshAchievementStats() async {
+  void setNewlyUnlockedLevelToNull(){
+    emit(state.copyWith(newlyUnlockedLevel: null));
+  }
+
+  Future<void> refreshAchievementStats({bool updateUnlock = true}) async {
     try {
       final summaries = await _dbHelper.getHydrationSummariesForRange();
       log("DEBUG: Total summaries found: ${summaries.length}");
@@ -400,6 +412,7 @@ class HydrationCubit extends Cubit<HydrationState> {
 
       int badgesUnlocked = 0;
       Map<int, String> levelMap = {};
+      Map<int, String> exactLevelMap = {};
       // Use a set to de-duplicate same calendar day (handles DB duplicates)
       final Set<String> seenDates = {};
 
@@ -411,19 +424,29 @@ class HydrationCubit extends Cubit<HydrationState> {
             badgesUnlocked++;
             final litres = (day.consumed / 1000).toStringAsFixed(1);
             levelMap[badgesUnlocked] = '${litres}L';
+            exactLevelMap[badgesUnlocked] = day.consumed.toStringAsFixed(0);
             Console.log(
                 tag: "DEBUG: 🏆 Level $badgesUnlocked unlocked! ",
-                value: "($dateKey, ${litres}L)");
+                value: "($dateKey, ${day.consumed.toStringAsFixed(0)}L)");
           } else {
             log("DEBUG: Duplicate date $dateKey — skipping.");
           }
         }
       }
 
-      emit(state.copyWith(
-        currentLevel: badgesUnlocked,
-        levelToIntakeMap: levelMap,
-      ));
+      if(updateUnlock){
+        emit(state.copyWith(
+            currentLevel: badgesUnlocked,
+            newlyUnlockedLevel: badgesUnlocked,
+            levelToIntakeMap: levelMap,
+            exactLevelToIntakeMap: exactLevelMap));
+      }else{
+        emit(state.copyWith(
+            currentLevel: badgesUnlocked,
+            levelToIntakeMap: levelMap,
+            exactLevelToIntakeMap: exactLevelMap));
+      }
+
     } catch (e) {
       log("ERROR in refreshAchievementStats: $e");
     }
@@ -431,13 +454,16 @@ class HydrationCubit extends Cubit<HydrationState> {
 
   Future<void> resetUI() async {
     emit(state.copyWith(
-      entries: [],
-      totalDrank: 0,
-      goal: 0,
-      currentSlotConsumption: 0,
-      currentSlotPercentage: 0,
-      currentSlotEntry: null,
-    ));
+        entries: [],
+        totalDrank: 0,
+        goal: 0,
+        currentSlotConsumption: 0,
+        currentSlotPercentage: 0,
+        currentSlotEntry: null,
+        newlyUnlockedLevel: null,
+        levelToIntakeMap: {},
+        exactLevelToIntakeMap: {},
+        clearNewlyUnlockedLevel: true));
   }
 }
 

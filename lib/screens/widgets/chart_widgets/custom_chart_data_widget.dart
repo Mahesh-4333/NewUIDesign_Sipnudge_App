@@ -12,6 +12,7 @@ import 'package:hydrify/constants/app_strings.dart';
 import 'package:hydrify/cubit/ble/ble_cubit.dart';
 import 'package:hydrify/cubit/bottle/bottle_data_cubit.dart';
 import 'package:hydrify/cubit/filter/filter_cubit.dart';
+import 'package:hydrify/helpers/shared_pref_helper.dart';
 import 'package:hydrify/models/hydration_summary.dart';
 import 'package:hydrify/screens/widgets/chart_widgets/area_chart_widget.dart';
 import 'package:hydrify/screens/widgets/chart_widgets/column_chart_widget.dart';
@@ -203,10 +204,13 @@ class _CustomChartDataWidgetState extends State<CustomChartDataWidget> {
 
                   Console.log(tag: "APP", value: "Start date is $startDate , end date is $endDate");
 
-                  return FutureBuilder<List<HydrationDaySummary>>(
-                    future: context
-                        .read<BottleDataCubit>()
-                        .getHydrationSummariesForRange(startDate, endDate),
+                  return FutureBuilder<List<dynamic>>(
+                    future: Future.wait([
+                      context
+                          .read<BottleDataCubit>()
+                          .getHydrationSummariesForRange(startDate, endDate),
+                      SharedPrefsHelper.getUserGoal(),
+                    ]),
                     builder: (context, snapshot) {
                       if (snapshot.hasError) {
                         return Center(
@@ -222,7 +226,7 @@ class _CustomChartDataWidgetState extends State<CustomChartDataWidget> {
                         );
                       }
 
-                      if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                      if (!snapshot.hasData || (snapshot.data![0] as List<HydrationDaySummary>).isEmpty) {
                         return Center(
                           child: Text(
                             AppStrings.noDataAvailable,
@@ -236,17 +240,22 @@ class _CustomChartDataWidgetState extends State<CustomChartDataWidget> {
                         );
                       }
 
+                      final bottleData = snapshot.data![0] as List<HydrationDaySummary>;
+                      final userGoal = snapshot.data![1] as int?;
+
                       return Visibility(
                         visible: _isColumnChartSelected,
                         replacement: FlAreaChartWidget(
+                          key: ValueKey('area_${userGoal}_${filterState.currentInterval}'),
                           interval: filterState.currentInterval,
                           currentDate: filterState.currentDate,
-                          bottleData: snapshot.data ?? [],
+                          bottleData: bottleData,
                         ),
                         child: FlColumnChartWidget(
+                          key: ValueKey('col_${userGoal}_${filterState.currentInterval}'),
                           interval: filterState.currentInterval,
                           currentDate: filterState.currentDate,
-                          bottleData: snapshot.data ?? [],
+                          bottleData: bottleData,
                         ),
                       );
                     },

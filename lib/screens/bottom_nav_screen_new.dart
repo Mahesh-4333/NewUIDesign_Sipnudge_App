@@ -6,6 +6,7 @@ import 'package:hydrify/constants/app_dimensions.dart';
 import 'package:hydrify/cubit/bottom_nav/bottom_nav_cubit.dart';
 import 'package:hydrify/cubit/hydration/hydration_cubit.dart';
 import 'package:hydrify/cubit/hydration/hydration_state.dart';
+import 'package:hydrify/helpers/logger.dart';
 import 'package:hydrify/screens/achevements_badge_screen.dart';
 import 'package:hydrify/screens/analysis_screen.dart';
 import 'package:hydrify/screens/drink_reminder_page.dart';
@@ -80,19 +81,26 @@ class _BottomNavScreenNewState extends State<BottomNavScreenNew> {
               ],
             ),
           ),
-          child: BlocBuilder<BottomNavCubit, BottomNavState>(
-            builder: (context, state) {
-              return BlocListener<HydrationCubit, HydrationState>(
-                listenWhen: (prev, curr) =>
-                    curr.newlyUnlockedLevel != null &&
-                    prev.newlyUnlockedLevel != curr.newlyUnlockedLevel,
-                listener: (context, hydrationState) {
-                  _showLevelUpSnackbar(
-                      context, hydrationState.newlyUnlockedLevel!);
-                },
-                child: _buildTabNavigators(state.selectedTab),
-              );
+          child: BlocListener<HydrationCubit, HydrationState>(
+            listenWhen: (prev, curr) {
+              Console.log(
+                  tag: "newlyUnlockedLevel123",
+                  value:
+                      "${curr.newlyUnlockedLevel} :: ${prev.newlyUnlockedLevel}");
+              if (curr.newlyUnlockedLevel != null &&
+                  prev.newlyUnlockedLevel != curr.newlyUnlockedLevel) {
+                return true;
+              }
+              return false;
             },
+            listener: (context, hydrationState) {
+              _showLevelUpSnackbar(context, hydrationState.newlyUnlockedLevel!);
+            },
+            child: BlocBuilder<BottomNavCubit, BottomNavState>(
+              builder: (context, state) {
+                return _buildTabNavigators(state.selectedTab);
+              },
+            ),
           ),
         ),
       ),

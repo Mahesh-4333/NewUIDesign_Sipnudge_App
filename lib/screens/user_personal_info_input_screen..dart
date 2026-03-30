@@ -33,6 +33,7 @@ class _UserInfoInputScreenState extends State<UserInfoInputScreen> {
   void initState() {
     super.initState();
     context.read<UserInfoCubit>().loadUser();
+    context.read<UserInfoCubit>().setAchievmentSnackbarStatus(!widget.fromSettings);
   }
 
   @override

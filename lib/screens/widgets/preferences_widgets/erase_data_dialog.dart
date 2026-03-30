@@ -139,9 +139,7 @@ class _EraseDataDialogState extends State<EraseDataDialog> {
 
             // Swipe to Erase Button
             Container(
-              width: _buttonWidth,
-              padding: EdgeInsets.symmetric(horizontal: 2.w),
-              height: 56.h,
+              padding: EdgeInsets.symmetric(horizontal: 4.w),
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(28.r),
                 color: Colors.white,
@@ -158,73 +156,78 @@ class _EraseDataDialogState extends State<EraseDataDialog> {
                   ),
                 ],
               ),
-              child: Stack(
-                clipBehavior: Clip.none,
-                children: [
-                  Center(
-                    child: Padding(
-                      padding: EdgeInsets.only(left: 30.w),
-                      child: Text(
-                        _isSwiped
-                            ? "ERASING IN $_secondsRemaining..."
-                            : "SLIDE TO EARSE ALL DATA",
-                        style: TextStyle(
-                          color: const Color(0xffB91C1C),
-                          fontSize: 15.sp,
-                          fontFamily: AppFontStyles.urbanistFontFamily,
-                          fontWeight: FontWeight.w600,
+              child: Container(
+                width: _buttonWidth,
+                padding: EdgeInsets.symmetric(horizontal: 0.w),
+                height: 56.h,
+                child: Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    Center(
+                      child: Padding(
+                        padding: EdgeInsets.only(left: 30.w),
+                        child: Text(
+                          _isSwiped
+                              ? "ERASING IN $_secondsRemaining..."
+                              : "SLIDE TO EARSE ALL DATA",
+                          style: TextStyle(
+                            color: const Color(0xffB91C1C),
+                            fontSize: 15.sp,
+                            fontFamily: AppFontStyles.urbanistFontFamily,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
                       ),
                     ),
-                  ),
-                  Positioned(
-                    left: _dragPosition,
-                    top: 2.h,
-                    bottom: 2.h,
-                    child: GestureDetector(
-                      onHorizontalDragUpdate: (details) {
-                        if (_isSwiped) return;
-                        setState(() {
-                          _dragPosition += details.delta.dx;
-                          if (_dragPosition < 0) _dragPosition = 0;
-                          // Adjust the max position so it doesn't cut off at the right edge
-                          final maxDrag = _buttonWidth - _sliderWidth - 10.w;
-                          if (_dragPosition > maxDrag) {
-                            _dragPosition = maxDrag;
-                            _startTimer();
-                          }
-                        });
-                      },
-                      onHorizontalDragEnd: (details) {
-                        if (!_isSwiped) {
+                    Positioned(
+                      left: _dragPosition,
+                      top: 2.h,
+                      bottom: 2.h,
+                      child: GestureDetector(
+                        onHorizontalDragUpdate: (details) {
+                          if (_isSwiped) return;
                           setState(() {
-                            _dragPosition = 0;
+                            _dragPosition += details.delta.dx;
+                            if (_dragPosition < 0) _dragPosition = 0;
+                            // Adjust the max position so it doesn't cut off at the right edge
+                            final maxDrag = _buttonWidth - (_sliderWidth - 10.w);
+                            if (_dragPosition > maxDrag) {
+                              _dragPosition = maxDrag;
+                              _startTimer();
+                            }
                           });
-                        }
-                      },
-                      child: Container(
-                        width: _sliderWidth,
-                        margin: EdgeInsets.symmetric(
-                            horizontal: 4.w, vertical: 2.w),
-                        decoration: BoxDecoration(
-                          color: const Color(0xffB91C1C),
-                          shape: BoxShape.circle,
-                          boxShadow: [
-                            BoxShadow(
-                              color: const Color(0xffB91C1C).withOpacity(0.4),
-                              blurRadius: 8,
-                              spreadRadius: 1,
-                              offset: const Offset(0, 0),
-                            ),
-                          ],
-                        ),
-                        child: Center(
-                          child: Image.asset(AssetsPath.sliderIcon),
+                        },
+                        onHorizontalDragEnd: (details) {
+                          if (!_isSwiped) {
+                            setState(() {
+                              _dragPosition = 0;
+                            });
+                          }
+                        },
+                        child: Container(
+                          width: _sliderWidth,
+                          margin: EdgeInsets.only(
+                              left: 0.w, right: 100.w, top: 2.w, bottom: 2.w),
+                          decoration: BoxDecoration(
+                            color: const Color(0xffB91C1C),
+                            shape: BoxShape.circle,
+                            boxShadow: [
+                              BoxShadow(
+                                color: const Color(0xffB91C1C).withOpacity(0.4),
+                                blurRadius: 8,
+                                spreadRadius: 1,
+                                offset: const Offset(0, 0),
+                              ),
+                            ],
+                          ),
+                          child: Center(
+                            child: Image.asset(AssetsPath.sliderIcon),
+                          ),
                         ),
                       ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
             SizedBox(height: 20.h),

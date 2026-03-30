@@ -96,16 +96,10 @@ class RingtoneListItem extends StatelessWidget {
               ),
             ),
             SizedBox(width: 12.w),
-            GestureDetector(
-              onTap: () {
-                if (onPlayTap != null) onPlayTap!();
-              },
-              behavior: HitTestBehavior.opaque,
-              child: Image.asset(
-                isPlaying ? AssetsPath.play : AssetsPath.playUnselected,
-                width: 40.w,
-                height: 40.w,
-              ),
+            Image.asset(
+              isPlaying ? AssetsPath.play : AssetsPath.playUnselected,
+              width: 40.w,
+              height: 40.w,
             ),
             SizedBox(width: 25.w),
           ],

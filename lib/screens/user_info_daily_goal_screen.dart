@@ -1,3 +1,4 @@
+import 'package:hydrify/cubit/hydration/hydration_cubit.dart';
 import 'package:hydrify/helpers/logger.dart';
 
 import 'package:flutter/material.dart';
@@ -13,6 +14,7 @@ import 'package:hydrify/cubit/user_info/user_info_cubit.dart';
 import 'package:hydrify/helpers/database_helper.dart';
 import 'package:hydrify/helpers/shared_pref_helper.dart';
 import 'package:hydrify/models/hydration_entry.dart';
+import 'package:hydrify/models/hydration_summary.dart';
 import 'package:hydrify/screens/bottom_nav_screen_new.dart';
 import 'package:hydrify/screens/qr_scanning.dart';
 import 'package:hydrify/screens/widgets/auth_button_widget.dart';
@@ -326,6 +328,7 @@ class _UserInfoDailyGoalScreenState extends State<UserInfoDailyGoalScreen> {
                   }
                 }
 
+                await SharedPrefsHelper.setLastLevelUpDate("");
                 await context.read<BleCubit>().queueHydrationSlots(slots);
                 await NotificationService().resetAllHydrationReminders(slots);
                 await NotificationService()
@@ -334,6 +337,29 @@ class _UserInfoDailyGoalScreenState extends State<UserInfoDailyGoalScreen> {
                 setState(() {
                   isButtonClicked = false;
                 });
+
+                // Update entire 30-day historical DB to recalculate 'isPerfect' retroactively
+                final existingSummaries =
+                    await dbHelper.getHydrationSummariesForRange();
+                final List<HydrationDaySummary> updatedSummaries = [];
+
+                for (final summary in existingSummaries) {
+                  final bool isPerfectNow =
+                      summary.consumed >= convertedWaterGoal;
+                  updatedSummaries.add(HydrationDaySummary(
+                    date: summary.date,
+                    dayIndex: summary.dayIndex,
+                    target: convertedWaterGoal,
+                    consumed: summary.consumed,
+                    isPerfect: isPerfectNow,
+                  ));
+                }
+
+                await dbHelper.clearHydrationDaySummaries();
+
+                await dbHelper.bulkUpsert30Days(updatedSummaries);
+
+                await context.read<HydrationCubit>().refreshAchievementStats(updateUnlock: context.read<UserInfoCubit>().state.hideAchievement);
                 context.read<BottomNavCubit>().showBar();
                 Navigator.of(context, rootNavigator: true).pushAndRemoveUntil(
                     MaterialPageRoute(
