@@ -108,20 +108,20 @@ class NotificationService {
       onDidReceiveBackgroundNotificationResponse: notificationTapBackground,
     );
 
-    // Request iOS permissions including Critical Alerts (bypasses DND + mute).
-    // Critical Alerts only work if the entitlement is enabled in the
-    // provisioning profile (com.apple.developer.usernotifications.critical-alerts).
-    if (Platform.isIOS) {
-      await _plugin
-          .resolvePlatformSpecificImplementation<
-              IOSFlutterLocalNotificationsPlugin>()
-          ?.requestPermissions(
-            alert: true,
-            sound: true,
-            badge: true,
-            critical: true,
-          );
-    }
+    // // Request iOS permissions including Critical Alerts (bypasses DND + mute).
+    // // Critical Alerts only work if the entitlement is enabled in the
+    // // provisioning profile (com.apple.developer.usernotifications.critical-alerts).
+    // if (Platform.isIOS) {
+    //   await _plugin
+    //       .resolvePlatformSpecificImplementation<
+    //           IOSFlutterLocalNotificationsPlugin>()
+    //       ?.requestPermissions(
+    //         alert: true,
+    //         sound: true,
+    //         badge: true,
+    //         critical: true,
+    //       );
+    // }
 
     final NotificationAppLaunchDetails? launchDetails =
         await _plugin.getNotificationAppLaunchDetails();
@@ -182,9 +182,8 @@ class NotificationService {
             subtitle: "Swipe to stop the reminder",
             interruptionLevel: isSilent
                 ? InterruptionLevel.passive
-                : InterruptionLevel.critical,
+                : InterruptionLevel.timeSensitive,
             categoryIdentifier: 'hydration_category',
-            criticalSoundVolume: 0.9,
           ),
         ),
         payload: payload,

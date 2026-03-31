@@ -94,7 +94,7 @@ class _BottomNavScreenNewState extends State<BottomNavScreenNew> {
               return false;
             },
             listener: (context, hydrationState) {
-              _showLevelUpSnackbar(context, hydrationState.newlyUnlockedLevel!);
+              // _showLevelUpSnackbar(context, hydrationState.newlyUnlockedLevel!);
             },
             child: BlocBuilder<BottomNavCubit, BottomNavState>(
               builder: (context, state) {

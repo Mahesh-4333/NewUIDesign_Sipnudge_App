@@ -12,7 +12,7 @@ class DrinkReminderCubit extends Cubit<DrinkReminderState> {
   final HydrationCubit hydrationCubit;
   final BottleDataCubit bottleDataCubit;
 
-  final List<String> alarmRepeatOptions = ['1 Times', '3 Times', '5 Times', '10 Times'];
+  final List<String> alarmRepeatOptions = ['1 Times', '3 Times', '5 Times'];
   DrinkReminderCubit({required this.hydrationCubit, required this.bottleDataCubit}) : super(const DrinkReminderState()){
     _init();
     // _setupHydrationListener();

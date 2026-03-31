@@ -325,12 +325,12 @@ class _QrScannerState extends State<QrScanner>
                                   text: "Continuing as Guest",
                                 );
 
-                                Navigator.pushAndRemoveUntil(
+                                Navigator.push(
                                   context,
                                   MaterialPageRoute(
-                                    builder: (context) => UserInfoInputScreen(),
+                                    builder: (context) => UserInfoInputScreen(fromSettings: true,),
                                   ),
-                                  (route) => false,
+                                  // (route) => false,
                                 );
                               },
                             ),
