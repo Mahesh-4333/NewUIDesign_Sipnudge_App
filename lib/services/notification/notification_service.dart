@@ -208,6 +208,7 @@ class NotificationService {
         tzNotifyAt,
         NotificationDetails(
           android: AndroidNotificationDetails(
+
             // Unique channel per ringtone so Android picks the right sound.
             'hydration_daily_$soundName',
             'Hydration Reminders',
@@ -234,6 +235,7 @@ class NotificationService {
                 cancelNotification: true,
               ),
             ],
+
           ),
         ),
         payload: payload,
@@ -325,8 +327,10 @@ class NotificationService {
 
     final remainingMinutes = endDateTime.difference(notifyAt).inMinutes;
     final title = "Hydration Reminder";
+    final ringtoneName =
+        await SharedPrefsHelper.getSelectedRingtoneName() ?? "Morning Dew";
     final body =
-        "Only ${math.max(0, remainingMinutes)} minutes left for ${entry.slot.label} – Drink ${entry.amount.toInt()} ml";
+        "Only ${math.max(0, remainingMinutes)} minutes left for ${entry.slot.label} – Drink ${entry.amount.toInt()} ml – $ringtoneName";
 
     final isRingtoneFeedbackEnabled =
         await SharedPrefsHelper.getRingtoneFeedBack();
@@ -438,6 +442,8 @@ class NotificationService {
     final alarmRepeatIndex = await SharedPrefsHelper.getAlarmRepeatIndex();
     final alarmRepeatTimes = [1, 3, 5, 10][alarmRepeatIndex];
     final double intervalMinutes = 10.0 / alarmRepeatTimes;
+    final ringtoneName =
+        await SharedPrefsHelper.getSelectedRingtoneName() ?? "Morning Dew";
 
     // Preview the next 7 days of occurrences for the list view.
     for (int dayOffset = 0; dayOffset < 7; dayOffset++) {
@@ -467,7 +473,7 @@ class NotificationService {
             dateTime: notifyAt,
             title: "Hydration Reminder",
             body:
-                "Only ${math.max(0, remainingMinutes)} minutes left for ${entry.slot.label} – Drink ${entry.amount.toInt()} ml",
+                "Only ${math.max(0, remainingMinutes)} minutes left for ${entry.slot.label} – Drink ${entry.amount.toInt()} ml – $ringtoneName",
             payload: entry.slot.index.toString(),
           ));
         }

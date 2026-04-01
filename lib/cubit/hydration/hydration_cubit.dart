@@ -276,15 +276,15 @@ class HydrationCubit extends Cubit<HydrationState> {
         final existingSummary = await _dbHelper.getSummaryForDate(today);
         final int todayDayIndex = existingSummary?.dayIndex ?? 0;
 
-        final todaySummary = HydrationDaySummary(
-          date: DateTime(today.year, today.month, today.day),
-          dayIndex: todayDayIndex,
-          target: waterGoal.toDouble(),
-          consumed: totalDrankToday,
-          isPerfect: true,
-        );
-
-        await _dbHelper.bulkUpsert30Days([todaySummary]);
+        // final todaySummary = HydrationDaySummary(
+        //   date: DateTime(today.year, today.month, today.day),
+        //   dayIndex: todayDayIndex,
+        //   target: waterGoal.toDouble(),
+        //   consumed: totalDrankToday,
+        //   isPerfect: true,
+        // );
+        //
+        // await _dbHelper.bulkUpsert30Days([todaySummary]);
         await SharedPrefsHelper.setLastLevelUpDate(todayStr);
         // await refreshAchievementStats(); // state.currentLevel is updated here
 

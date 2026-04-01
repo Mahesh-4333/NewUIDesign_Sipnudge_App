@@ -107,6 +107,12 @@ class _RingtoneScreenState extends State<RingtoneScreen> {
     Console.log(tag: "ringtoneIndex", value: selectedIndex.toString());
     await SharedPrefsHelper.setSelectedRingtone(selectedIndex);
 
+    final selectedRingtone = mockRingtones.firstWhere(
+      (r) => r.id == selectedIndex,
+      orElse: () => mockRingtones.first,
+    );
+    await SharedPrefsHelper.setSelectedRingtoneName(selectedRingtone.title);
+
     // Reschedule all notifications so they use the newly selected ringtone.
     // The sound is baked into the notification at schedule time (Android uses
     // it as part of the channel ID), so we must cancel and re-schedule.
