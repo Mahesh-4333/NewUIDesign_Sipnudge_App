@@ -1,3 +1,4 @@
+import 'dart:typed_data';
 import 'package:hydrify/helpers/logger.dart';
 import 'dart:io';
 import 'dart:math' as math;
@@ -208,7 +209,6 @@ class NotificationService {
         tzNotifyAt,
         NotificationDetails(
           android: AndroidNotificationDetails(
-
             // Unique channel per ringtone so Android picks the right sound.
             'hydration_daily_$soundName',
             'Hydration Reminders',
@@ -220,6 +220,7 @@ class NotificationService {
                 ? null
                 : RawResourceAndroidNotificationSound(soundName),
             enableVibration: true,
+            vibrationPattern: Int64List.fromList([0, 500, 250, 500]),
             // ✅ Use the ALARM audio stream so the sound plays at alarm
             // volume (not the quieter notification stream volume).
             audioAttributesUsage: AudioAttributesUsage.alarm,
@@ -235,7 +236,6 @@ class NotificationService {
                 cancelNotification: true,
               ),
             ],
-
           ),
         ),
         payload: payload,

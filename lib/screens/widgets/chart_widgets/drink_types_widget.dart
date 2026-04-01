@@ -1,15 +1,45 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:hydrify/constants/app_colors.dart';
 import 'package:hydrify/constants/app_font_styles.dart';
+import 'package:hydrify/cubit/bottle/bottle_data_cubit.dart';
 
 import '../../../constants/app_dimensions.dart';
 
-class DrinkTypesWidget extends StatelessWidget {
-  DrinkTypesWidget({super.key});
+class DrinkTypesWidget extends StatefulWidget {
+  const DrinkTypesWidget({super.key});
 
-  double waterIntakePercent = .0;
-  double waterVolumeConsumed = 0.0;
+  @override
+  State<DrinkTypesWidget> createState() => _DrinkTypesWidgetState();
+}
+
+class _DrinkTypesWidgetState extends State<DrinkTypesWidget> {
+  double _waterIntake = 0.0;
+  int _stepCount = 0;
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchWaterIntake();
+  }
+
+  Future<void> _fetchWaterIntake() async {
+    try {
+      final history =
+          await context.read<BottleDataCubit>().getCurrentDayHistory();
+      setState(() {
+        _waterIntake = history;
+        _isLoading = false;
+      });
+    } catch (e) {
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -72,7 +102,7 @@ class DrinkTypesWidget extends StatelessWidget {
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Text(
-                            "100%",
+                            "${_waterIntake.toStringAsFixed(0)} ml",
                             style: TextStyle(
                               color: Colors.black,
                               fontSize: AppFontStyles.fontSize_24,
@@ -131,7 +161,7 @@ class DrinkTypesWidget extends StatelessWidget {
                           width: AppDimensions.dim8.w,
                         ),
                         Text(
-                          "Water(80%)",
+                          "Water",
                           style: TextStyle(
                             color: Colors.black,
                             fontSize: AppFontStyles.fontSize_16,
@@ -172,17 +202,27 @@ class DrinkTypesWidget extends StatelessWidget {
                         SizedBox(
                           width: AppDimensions.dim8.w,
                         ),
-                        Text(
-                          "Food  (20%)",
-                          style: TextStyle(
-                            color: Colors.black,
-                            fontSize: AppFontStyles.fontSize_16,
-                            fontFamily: AppFontStyles.urbanistFontFamily,
-                            fontVariations: [
-                              AppFontStyles.fontWeightVariation600
-                            ],
-                          ),
-                        ),
+                        _isLoading
+                            ? SizedBox(
+                                width: AppDimensions.dim16.w,
+                                height: AppDimensions.dim16.w,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  valueColor: AlwaysStoppedAnimation<Color>(
+                                      AppColors.bluegray),
+                                ),
+                              )
+                            : Text(
+                                "Steps: $_stepCount",
+                                style: TextStyle(
+                                  color: Colors.black,
+                                  fontSize: AppFontStyles.fontSize_16,
+                                  fontFamily: AppFontStyles.urbanistFontFamily,
+                                  fontVariations: [
+                                    AppFontStyles.fontWeightVariation600
+                                  ],
+                                ),
+                              ),
                       ],
                     )
                   ],

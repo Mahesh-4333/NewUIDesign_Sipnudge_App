@@ -58,6 +58,7 @@ dependencies:
   http: ^1.6.0
   vibration: ^3.1.5
   marquee: ^2.2.3
+  health: ^13.3.1
 
 
 dev_dependencies:
