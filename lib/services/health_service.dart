@@ -1,5 +1,6 @@
 import 'package:health/health.dart';
 import 'package:hydrify/helpers/logger.dart';
+import 'package:hydrify/helpers/shared_pref_helper.dart';
 
 class HealthService {
   final Health _health = Health();
@@ -9,8 +10,27 @@ class HealthService {
   }
 
   Future<bool> requestAuthorization() async {
-    final types = [HealthDataType.WATER, HealthDataType.STEPS];
-    return await _health.requestAuthorization(types);
+    try{
+      final types = [HealthDataType.WATER, HealthDataType.STEPS];
+      return await _health.requestAuthorization(types);
+    }catch(e){
+     Console.log(tag: "request Authorization Error", value: e.toString());
+     return false;
+    }
+  }
+
+  Future<bool> _ensurePermissions(List<HealthDataType> types) async {
+    bool? hasPermission = await _health.hasPermissions(types);
+    if (hasPermission == true) return true;
+
+    bool alreadyRequested = await SharedPrefsHelper.getHasRequestedHealthPermission();
+    if (alreadyRequested) return true;
+
+    bool authorized = await requestAuthorization();
+    if (authorized) {
+      await SharedPrefsHelper.setHasRequestedHealthPermission(true);
+    }
+    return authorized;
   }
 
   Future<double> getWaterIntakeLiters({DateTime? start, DateTime? end}) async {
@@ -19,14 +39,8 @@ class HealthService {
 
     final types = [HealthDataType.WATER];
 
-    bool? hasPermission = await _health.hasPermissions(types);
-    Console.log(tag: "apple step permission", value: hasPermission);
-    if (hasPermission != true) {
-      bool authorized = await requestAuthorization();
-      if (!authorized) {
-        return 0.0;
-      }
-    }
+    bool authorized = await _ensurePermissions(types);
+    if (!authorized) return 0.0;
 
     final healthData = await _health.getHealthDataFromTypes(
       types: types,
@@ -52,13 +66,8 @@ class HealthService {
 
     final types = [HealthDataType.STEPS];
 
-    bool? hasPermission = await _health.hasPermissions(types);
-    if (hasPermission != true) {
-      bool authorized = await requestAuthorization();
-      if (!authorized) {
-        return 0;
-      }
-    }
+    bool authorized = await _ensurePermissions(types);
+    if (!authorized) return 0;
 
     final steps = await _health.getTotalStepsInInterval(startOfDay, now);
     return steps ?? 0;

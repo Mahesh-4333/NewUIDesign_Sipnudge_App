@@ -37,6 +37,7 @@ class SharedPrefsHelper {
   static const String _keyLedColor = "led_color";
   static const String _keyUvCleaning = "uv_cleaning";
   static const String _keyFavoriteRingtones = 'favorite_ringtones';
+  static const String _keyHasRequestedHealthPermission = 'has_requested_health_permission';
 
   // ----------------------------
   // RINGTONE METHODS (NEW)
@@ -82,6 +83,19 @@ class SharedPrefsHelper {
     final list = prefs.getStringList(_keyFavoriteRingtones);
     if (list == null) return [];
     return list.map((id) => int.parse(id)).toList();
+  }
+
+  // ----------------------------
+  // HEALTH PERMISSION METHODS
+  // ----------------------------
+  static Future<void> setHasRequestedHealthPermission(bool requested) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_keyHasRequestedHealthPermission, requested);
+  }
+
+  static Future<bool> getHasRequestedHealthPermission() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool(_keyHasRequestedHealthPermission) ?? false;
   }
 
   // ----------------------------
