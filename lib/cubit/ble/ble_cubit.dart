@@ -35,6 +35,8 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
   final Guid configUUID = Guid("6E400007-B5A3-F393-E0A9-E50E24DCCA9E");
   final Guid resetUUID = Guid("6E400008-B5A3-F393-E0A9-E50E24DCCA9E");
 
+  final Guid rtcSyncUUID = Guid("6E400004-B5A3-F393-E0A9-E50E24DCCA9E");
+
   BluetoothCharacteristic? _dataChar;
   BluetoothCharacteristic? _ackChar;
   BluetoothCharacteristic? _hydrationGoalDataChar;
@@ -42,6 +44,7 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
   BluetoothCharacteristic? _hydration30DaysChar;
   BluetoothCharacteristic? _configChar;
   BluetoothCharacteristic? _resetChar;
+  BluetoothCharacteristic? _rtcSyncChar;
 
   StreamSubscription<List<ScanResult>>? _scanSub;
   StreamSubscription<BluetoothConnectionState>? _connectionSub;
@@ -437,6 +440,7 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
             }
             if (c.uuid == configUUID) _configChar = c;
             if (c.uuid == resetUUID) _resetChar = c;
+            if (c.uuid == rtcSyncUUID) _rtcSyncChar = c;
           }
         }
       }
@@ -629,12 +633,22 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
         if (!tsStr.contains('+') &&
             !tsStr.contains('-') &&
             !tsStr.endsWith('Z')) {
-          tsStr = '$tsStr+05:30';
+          // tsStr = '$tsStr+05:30';
         }
 
         try {
           ts = DateTime.parse(tsStr).toUtc();
           log("Parsed UTC TS: ${ts.toIso8601String()}", name: "BLE_Cubit");
+
+          final nowUtc = DateTime.now().toUtc();
+
+          final difference = nowUtc.difference(ts).inMinutes.abs();
+
+          if (difference >= 1) {
+            log("Time drift detected ($difference min). Syncing RTC...",
+                name: "BLE_Cubit");
+            sendRtcSyncCommand();
+          }
         } catch (e) {
           log("Failed to parse TS: $tsStr", name: "BLE_Cubit", error: e);
         }
@@ -966,9 +980,46 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
     }
   }
 
-  Future<void> sendResetCommand() async {
+  Future<bool> sendResetCommand() async {
     final payload = "0/reset/true";
-    await SharedPrefsHelper.setPendingResetCommand(payload);
+
+    try {
+      await _resetChar?.write(payload.codeUnits,
+          timeout: 10, withoutResponse: true);
+
+      return true;
+    } catch (e) {
+      log("Exception occurred in sending Reset All Tracking ${e.toString()}",
+          name: "BLE_CUBIT");
+      return false;
+    }
+  }
+
+  Future<bool> sendRtcSyncCommand() async {
+    try {
+      final now = DateTime.now();
+
+      // Format: YYYY-MM-DD HH:MM:SS
+      final timestamp = "${now.year}-"
+          "${now.month.toString().padLeft(2, '0')}-"
+          "${now.day.toString().padLeft(2, '0')} "
+          "${now.hour.toString().padLeft(2, '0')}:"
+          "${now.minute.toString().padLeft(2, '0')}:"
+          "${now.second.toString().padLeft(2, '0')}";
+
+      log("Syncing RTC with: $timestamp", name: "BLE_CUBIT");
+
+      await _rtcSyncChar?.write(
+        timestamp.codeUnits,
+        timeout: 10,
+        withoutResponse: true,
+      );
+
+      return true;
+    } catch (e) {
+      log("Exception occurred in RTC Sync: ${e.toString()}", name: "BLE_CUBIT");
+      return false;
+    }
   }
 
   int _timeOfDayToEpoch(TimeOfDay tod) {
