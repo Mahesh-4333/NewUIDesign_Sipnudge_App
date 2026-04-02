@@ -38,6 +38,9 @@ android/**/errors/*.log
 *.iml
 *.log
 
+# macOS
+macos/Pods/
+macos/.symlinks/
 
 # Flutter generated
 
