@@ -83,5 +83,8 @@ class AssetsPath {
   static const String alertIcon = "assets/alert_icon.png";
   static const String sliderIcon = "assets/slider_icon.png";
 
+  static const String goalWaterIcon = "assets/water.png";
+  static const String goalStepsIcon = "assets/steps.png";
+
 
 }

@@ -31,10 +31,10 @@ class ProfileCubit extends Cubit<ProfileState> {
                 iconPath: "assets/data_analytics_icon.png",
                 title: "Export Log",
               ),
-              // ProfileMenuItem(
-              //   iconPath: "assets/drink_rem.png",
-              //   title: "Active Notifications",
-              // ),
+              ProfileMenuItem(
+                iconPath: "assets/drink_rem.png",
+                title: "Active Notifications",
+              ),
               ProfileMenuItem(
                 iconPath: "assets/logout.png",
                 title: "Logout",

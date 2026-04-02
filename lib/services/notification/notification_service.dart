@@ -50,6 +50,7 @@ class NotificationService {
   NotificationTapCallback? onNotificationTap;
 
   Future<void> init({NotificationTapCallback? onTap}) async {
+
     tz.initializeTimeZones();
 
     await NotificationManager.instance.initialize();
@@ -296,6 +297,8 @@ class NotificationService {
             notifyAt.isBefore(now) || notifyAt.difference(now).inSeconds < 5) {
           notifyAt = notifyAt.add(const Duration(days: 1));
         }
+
+        await Future.delayed(Duration(milliseconds: 400));
 
         // dayOffset=0 — ID encodes slot+repeat only; daily repeat handles the rest.
         await _scheduleSingleReminder(
