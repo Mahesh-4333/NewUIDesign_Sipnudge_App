@@ -255,6 +255,7 @@ class PreferencesPage extends StatelessWidget {
                                           final bleCubit =
                                               context.read<BleCubit>();
                                           await bleCubit.clearData();
+                                          await bleCubit.sendResetCommand();
 
                                           Fluttertoast.showToast(
                                               msg: "Local data cleared.");

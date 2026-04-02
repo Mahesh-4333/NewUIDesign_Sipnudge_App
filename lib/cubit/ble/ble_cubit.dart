@@ -32,12 +32,16 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
 
   final Guid hydrationSlotsUUID = Guid("6E400005-B5A3-F393-E0A9-E50E24DCCA9E");
   final Guid water30DaysDataUUID = Guid("6E400006-B5A3-F393-E0A9-E50E24DCCA9E");
+  final Guid configUUID = Guid("6E400007-B5A3-F393-E0A9-E50E24DCCA9E");
+  final Guid resetUUID = Guid("6E400008-B5A3-F393-E0A9-E50E24DCCA9E");
 
   BluetoothCharacteristic? _dataChar;
   BluetoothCharacteristic? _ackChar;
   BluetoothCharacteristic? _hydrationGoalDataChar;
   BluetoothCharacteristic? _hydrationSlotsChar;
   BluetoothCharacteristic? _hydration30DaysChar;
+  BluetoothCharacteristic? _configChar;
+  BluetoothCharacteristic? _resetChar;
 
   StreamSubscription<List<ScanResult>>? _scanSub;
   StreamSubscription<BluetoothConnectionState>? _connectionSub;
@@ -69,7 +73,6 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
   // ---------------------------------------------------------------------------
   // BLE initialization and scanning
   // ---------------------------------------------------------------------------
-
 
   // investor bottle 3 day before
   // new bottle 1 day before
@@ -432,6 +435,8 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
             if (c.uuid == water30DaysDataUUID) {
               _hydration30DaysChar = c; // ✅ new
             }
+            if (c.uuid == configUUID) _configChar = c;
+            if (c.uuid == resetUUID) _resetChar = c;
           }
         }
       }
@@ -850,6 +855,22 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
   // Utilities + Hydration sync
   // ---------------------------------------------------------------------------
 
+  Future<void> sendConfigData(String payload) async {
+    if (_configChar == null) {
+      log("Config characterstic not found", name: "BLE_Cubit");
+      emit(state.copyWith(message: "Config characteristic not found"));
+      return;
+    }
+    try {
+      log("Sending config data: $payload", name: "BLE_Cubit");
+      await _configChar!.write(payload.codeUnits, withoutResponse: true);
+      emit(state.copyWith(message: "Config data sent successfully"));
+    } catch (e) {
+      log("Failed to send config data: $e", name: "BLE_Cubit");
+      emit(state.copyWith(message: "Failed to send config data"));
+    }
+  }
+
   void _listenToConnection(BluetoothDevice device) {
     _connectionSub?.cancel();
     _connectionSub = device.connectionState.listen((stateChange) {
@@ -882,6 +903,7 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
   Future<void> _flushPendingSlots() async {
     print("============> $_ackChar");
     print('============> ${_pendingSlots.isEmpty}');
+
     if (_ackChar == null || _pendingSlots.isEmpty) return;
 
     try {
@@ -904,12 +926,49 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
         status: BleStatus.connected,
         message: "Hydration slots synced",
       ));
+
+      // config data command
+      final pendingConfig = await SharedPrefsHelper.getPendingConfigData();
+      if (pendingConfig != null &&
+          pendingConfig.isNotEmpty &&
+          _configChar != null) {
+        try {
+          log("Sending pending config data: $pendingConfig", name: "BLE_Cubit");
+          await _configChar!
+              .write(pendingConfig.codeUnits, withoutResponse: true);
+          await SharedPrefsHelper.clearPendingConfigData();
+        } catch (e) {
+          log("Failed to send pending config data: $e", name: "BLE_Cubit");
+        }
+      }
+
+      // reset command
+      final pendingResetCommand =
+          await SharedPrefsHelper.getPendingResetCommand();
+      if (pendingResetCommand != null &&
+          pendingResetCommand.isNotEmpty &&
+          _resetChar != null) {
+        try {
+          log("Sending pending reset command: $pendingResetCommand",
+              name: "BLE_Cubit");
+          await _resetChar!
+              .write(pendingResetCommand.codeUnits, withoutResponse: true);
+          await SharedPrefsHelper.clearPendingResetCommand();
+        } catch (e) {
+          log("Failed to send pending reset command: $e", name: "BLE_Cubit");
+        }
+      }
     } catch (e) {
       print('============> error ${e.toString()}');
 
       emit(
           state.copyWith(status: BleStatus.error, message: "Flush failed: $e"));
     }
+  }
+
+  Future<void> sendResetCommand() async {
+    final payload = "0/reset/true";
+    await SharedPrefsHelper.setPendingResetCommand(payload);
   }
 
   int _timeOfDayToEpoch(TimeOfDay tod) {

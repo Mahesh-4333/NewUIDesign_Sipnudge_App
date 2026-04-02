@@ -45,17 +45,17 @@ class PreferencesCubit extends Cubit<PreferencesState> {
       emit(state.copyWith(wakeUpAlarm: value));
 
   void toggleLedFeedback(bool value) {
-    SharedPrefsHelper.setStopWhenFull(value);
+    SharedPrefsHelper.updateAndSaveDeviceConfig(stopWhenFull: value);
     emit(state.copyWith(ledFeedback: value));
   }
 
   void updateVibrationStrength(double value) {
-    SharedPrefsHelper.setVibrationStrength(value);
+    SharedPrefsHelper.updateAndSaveDeviceConfig(vibrationStrength: value);
     emit(state.copyWith(vibrationStrength: value));
   }
 
   void updateLedIntensity(double value) {
-    SharedPrefsHelper.setLedIntensity(value);
+    SharedPrefsHelper.updateAndSaveDeviceConfig(ledIntensity: value);
     emit(state.copyWith(ledIntensity: value));
   }
 
@@ -72,7 +72,7 @@ class PreferencesCubit extends Cubit<PreferencesState> {
   void toggleRingtoneFeedback(bool value) async {
     var allSlots = await DatabaseHelper().getAllSlots();
     NotificationService().resetAllHydrationReminders(allSlots);
-    SharedPrefsHelper.setRingtoneFeedBack(value);
+    SharedPrefsHelper.updateAndSaveDeviceConfig(ringtoneFeedback: value);
     emit(state.copyWith(ringtoneFeedback: value));
   }
 

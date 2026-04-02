@@ -1,3 +1,4 @@
+import 'package:hydrify/helpers/database_helper.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class SharedPrefsHelper {
@@ -24,6 +25,8 @@ class SharedPrefsHelper {
   static const String _keySelectedRingtone = 'selected_ringtone';
   static const String _keySelectedRingtoneName = 'selected_ringtone_name';
   static const String _keyRingtoneFeedback = 'ringtone_feedback';
+  static const String _keyPendingConfigData = 'pending_config_data';
+  static const String _keyPendingResetCommand = 'pending_reset_command';
 
   static const String _keyReminderMode = "reminder_mode";
   static const String _keyAlarmRepeatIndex = "alarm_repeat_index";
@@ -283,6 +286,38 @@ class SharedPrefsHelper {
     return prefs.getBool(_keyUvCleaning) ?? false;
   }
 
+  // Pending Config Data
+  static Future<void> setPendingConfigData(String data) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_keyPendingConfigData, data);
+  }
+
+  static Future<String?> getPendingConfigData() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_keyPendingConfigData);
+  }
+
+  static Future<void> clearPendingConfigData() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_keyPendingConfigData);
+  }
+
+  // Pending Reset Command
+  static Future<void> setPendingResetCommand(String data) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_keyPendingResetCommand, data);
+  }
+
+  static Future<String?> getPendingResetCommand() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_keyPendingResetCommand);
+  }
+
+  static Future<void> clearPendingResetCommand() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_keyPendingResetCommand);
+  }
+
 // =======================================================================
 
 // import 'package:shared_preferences/shared_preferences.dart';
@@ -296,5 +331,70 @@ class SharedPrefsHelper {
   static Future<String?> getLastLevelUpDate() async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getString(_keyLastLevelUpDate);
+  }
+
+  /// NEW: Common helper to construct and set the device pending config payload.
+  /// It updates preferences if new values are passed, grabs existing values,
+  /// constructs the correct payload, and saves it.
+  static Future<void> updateAndSaveDeviceConfig({
+    int? waterGoal,
+    double? vibrationStrength,
+    double? ledIntensity,
+    bool? ringtoneFeedback, // Maps to reminderState
+    bool? stopWhenFull, // Maps to stopOnCompletion
+    int? alarmRepeatIndex,
+  }) async {
+    // 1. Update preferences if new values are provided
+    if (waterGoal != null) await setWaterGoal(waterGoal);
+    if (ledIntensity != null) await setLedIntensity(ledIntensity);
+    if (vibrationStrength != null)
+      await setVibrationStrength(vibrationStrength);
+    if (stopWhenFull != null) await setStopWhenFull(stopWhenFull);
+    if (alarmRepeatIndex != null) await setAlarmRepeatIndex(alarmRepeatIndex);
+    if (ringtoneFeedback != null) await setRingtoneFeedBack(ringtoneFeedback);
+
+    // 2. Fetch all values (defaults handle fallbacks)
+    final targetWater = await getWaterGoal() ?? 2500;
+    final lIntensity = await getLedIntensity();
+    final vStrength = await getVibrationStrength();
+    final stopOnCompletion = await getStopWhenFull();
+    final repIndex = await getAlarmRepeatIndex();
+    final rFeedback = await getRingtoneFeedBack();
+
+    // 3. Resolve time (Active time range strictly from Database)
+    final dbHelper = DatabaseHelper();
+    final user = await dbHelper.getUserInfo();
+
+    int wakeHour = user?.wakeupHour ?? 8;
+    int wakeMinute = user?.wakeupMinute ?? 0;
+    int bedHour = user?.bedtimeHour ?? 22;
+    int bedMinute = user?.bedtimeMinute ?? 0;
+
+    final now = DateTime.now();
+    // Quiet time starts at bedtime
+    DateTime quietStart =
+        DateTime(now.year, now.month, now.day, bedHour, bedMinute);
+    // Quiet time ends at waketime
+    DateTime quietEnd =
+        DateTime(now.year, now.month, now.day, wakeHour, wakeMinute);
+
+    // If quiet time ends before it starts (e.g., bedtime 22:00, waketime 08:00), it ends the next day
+    if (quietEnd.isBefore(quietStart)) {
+      quietEnd = quietEnd.add(const Duration(days: 1));
+    }
+
+    final startEpoch = quietStart.millisecondsSinceEpoch ~/ 1000;
+    final endEpoch = quietEnd.millisecondsSinceEpoch ~/ 1000;
+
+    // 4. Construct Payload
+    final payload = '0/$startEpoch/$endEpoch|'
+        '1/$targetWater|'
+        '2/${(lIntensity * 100).toInt()}|'
+        '3/${(vStrength * 100).toInt()}|'
+        '4/${rFeedback ? 1 : 0}|'
+        '5/${stopOnCompletion ? 1 : 0}|'
+        '6/$repIndex';
+
+    await setPendingConfigData(payload);
   }
 }
