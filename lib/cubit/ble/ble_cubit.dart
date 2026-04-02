@@ -33,11 +33,18 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
   final Guid hydrationSlotsUUID = Guid("6E400005-B5A3-F393-E0A9-E50E24DCCA9E");
   final Guid water30DaysDataUUID = Guid("6E400006-B5A3-F393-E0A9-E50E24DCCA9E");
 
+  final Guid resetAllTrackingUUID =
+      Guid("6E400008-B5A3-F393-E0A9-E50E24DCCA9E");
+
+  final Guid rtcSyncUUID = Guid("6E400004-B5A3-F393-E0A9-E50E24DCCA9E");
+
   BluetoothCharacteristic? _dataChar;
   BluetoothCharacteristic? _ackChar;
   BluetoothCharacteristic? _hydrationGoalDataChar;
   BluetoothCharacteristic? _hydrationSlotsChar;
   BluetoothCharacteristic? _hydration30DaysChar;
+  BluetoothCharacteristic? _resetAllTrackingChar;
+  BluetoothCharacteristic? _rtcSyncChar;
 
   StreamSubscription<List<ScanResult>>? _scanSub;
   StreamSubscription<BluetoothConnectionState>? _connectionSub;
@@ -69,7 +76,6 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
   // ---------------------------------------------------------------------------
   // BLE initialization and scanning
   // ---------------------------------------------------------------------------
-
 
   // investor bottle 3 day before
   // new bottle 1 day before
@@ -430,8 +436,10 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
             if (c.uuid == hydrationGoalDataUUID) _hydrationGoalDataChar = c;
             if (c.uuid == hydrationSlotsUUID) _hydrationSlotsChar = c; // ✅ new
             if (c.uuid == water30DaysDataUUID) {
-              _hydration30DaysChar = c; // ✅ new
+              _hydration30DaysChar = c;
             }
+            if (c.uuid == rtcSyncUUID) _rtcSyncChar = c;
+            if (c.uuid == resetAllTrackingUUID) _resetAllTrackingChar = c;
           }
         }
       }
@@ -844,6 +852,26 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
     // } catch (e) {
     //   log("ACK failed: $e", name: "BLE_Cubit");
     // }
+  }
+
+  Future<void> sendResetTrackingCommand() async {
+    try {
+      await _resetAllTrackingChar?.write("0/reset/true".codeUnits,
+          timeout: 10, withoutResponse: true);
+    } catch (e) {
+      log("Exception occurred in sending Reset All Tracking ${e.toString()}",
+          name: "BLE_CUBIT");
+    }
+  }
+
+  Future<void> sendRtcSyncCommand({required String formattedTime}) async {
+    try {
+      await _rtcSyncChar?.write(formattedTime.codeUnits,
+          withoutResponse: true, timeout: 10);
+    } catch (e) {
+      log("Exception occurred in sending rtcSyncCommand ${e.toString()}",
+          name: "BLE_CUBIT");
+    }
   }
 
   // ---------------------------------------------------------------------------

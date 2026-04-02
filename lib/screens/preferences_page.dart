@@ -243,18 +243,21 @@ class PreferencesPage extends StatelessWidget {
                                         try {
                                           final bottleDataCubit =
                                               context.read<BottleDataCubit>();
+                                          final bleCubit =
+                                              context.read<BleCubit>();
+                                          final hydrationCubit =
+                                              context.read<HydrationCubit>();
                                           await bottleDataCubit
                                               .clearAllBottleData();
 
-                                          final hydrationCubit =
-                                              context.read<HydrationCubit>();
                                           await hydrationCubit.resetUI();
                                           await hydrationCubit
-                                              .refreshAchievementStats(updateUnlock: false);
+                                              .refreshAchievementStats(
+                                                  updateUnlock: false);
 
-                                          final bleCubit =
-                                              context.read<BleCubit>();
                                           await bleCubit.clearData();
+                                          await bleCubit
+                                              .sendResetTrackingCommand();
 
                                           Fluttertoast.showToast(
                                               msg: "Local data cleared.");

@@ -230,10 +230,6 @@ class BottleDataCubit extends Cubit<BottleDataState> {
       await db.delete(DatabaseHelper.tableName);
       await db.delete(DatabaseHelper.hydrationSummaryTableName);
 
-      // Ensure BleCubit's local state is cleared before emitting initial state
-      // to avoid re-insertion of old values in _handleBleStateChange
-      await _bleCubit.clearData();
-
       await Future.delayed(
           Duration(seconds: 1)); // Small delay for DB stability
       // emit(_bleCubit.state.copyWith(currentHydrationValue: 0));
