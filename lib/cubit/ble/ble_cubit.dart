@@ -980,17 +980,67 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
     }
   }
 
-  Future<bool> sendResetCommand() async {
-    final payload = "0/reset/true";
+  Future<bool> _waitForConnectedState() async {
+    log("[WAIT] Listening to Cubit stream for CONNECTED (10s)",
+        name: "BLE_CUBIT");
+
+    // ✅ Fast path (already connected)
+    if (state.status == BleStatus.connected) {
+      log("[FAST-PATH] Already connected", name: "BLE_CUBIT");
+      return true;
+    }
 
     try {
-      await _resetChar?.write(payload.codeUnits,
-          timeout: 10, withoutResponse: true);
+      final result = await stream.map((s) {
+        log("[STREAM] Cubit state update: ${s.status}", name: "BLE_CUBIT");
+        return s.status;
+      }).firstWhere(
+        (status) {
+          final isConnected = status == BleStatus.connected;
 
-      return true;
+          if (isConnected) {
+            log("[MATCH] Found CONNECTED state", name: "BLE_CUBIT");
+          }
+
+          return isConnected;
+        },
+      ).timeout(const Duration(seconds: 10), onTimeout: () {
+        log("[TIMEOUT] Did not reach CONNECTED in 10 seconds",
+            name: "BLE_CUBIT");
+        throw TimeoutException("Cubit state timeout");
+      });
+
+      log("[SUCCESS] State reached: $result", name: "BLE_CUBIT");
+
+      return result == BleStatus.connected;
     } catch (e) {
-      log("Exception occurred in sending Reset All Tracking ${e.toString()}",
+      log("[ERROR] Waiting for state failed: ${e.toString()}",
           name: "BLE_CUBIT");
+      return false;
+    }
+  }
+
+  Future<bool> sendResetCommandWithStateCheck() async {
+    final payload = "0/reset/true";
+
+    final isConnected = await _waitForConnectedState();
+
+    if (isConnected) {
+      try {
+        await _resetChar?.write(payload.codeUnits, withoutResponse: true);
+
+        log("[WRITE] Reset command sent successfully", name: "BLE_CUBIT");
+
+        return true;
+      } catch (e) {
+        log("[ERROR] Write failed: ${e.toString()}", name: "BLE_CUBIT");
+        return false;
+      }
+    } else {
+      await SharedPrefsHelper.setPendingResetCommand(payload);
+
+      log("[FALLBACK] Saved command to prefs", name: "BLE_CUBIT");
+
       return false;
     }
   }
@@ -1011,7 +1061,6 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
 
       await _rtcSyncChar?.write(
         timestamp.codeUnits,
-        timeout: 10,
         withoutResponse: true,
       );
 
