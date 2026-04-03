@@ -297,6 +297,8 @@ class NotificationService {
           notifyAt = notifyAt.add(const Duration(days: 1));
         }
 
+        await Future.delayed(Duration(milliseconds: 400));
+
         // dayOffset=0 — ID encodes slot+repeat only; daily repeat handles the rest.
         await _scheduleSingleReminder(
           entry: entry,

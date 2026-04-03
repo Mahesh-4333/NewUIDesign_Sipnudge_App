@@ -330,6 +330,9 @@ class _UserInfoDailyGoalScreenState extends State<UserInfoDailyGoalScreen> {
 
                 await SharedPrefsHelper.setLastLevelUpDate("");
                 await context.read<BleCubit>().queueHydrationSlots(slots);
+                
+                // Initialize notification service before scheduling, to ensure plugin is ready and permissions are requested on first launch
+                await NotificationService().init();
                 await NotificationService().resetAllHydrationReminders(slots);
                 await NotificationService()
                     .scheduleHydrationRemindersForFuture(slots);
