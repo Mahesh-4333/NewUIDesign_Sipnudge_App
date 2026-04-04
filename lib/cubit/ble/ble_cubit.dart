@@ -37,6 +37,8 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
   final Guid configUUID = Guid("6E400007-B5A3-F393-E0A9-E50E24DCCA9E");
   final Guid resetUUID = Guid("6E400008-B5A3-F393-E0A9-E50E24DCCA9E");
 
+  final Guid rtcSyncUUID = Guid("6E400004-B5A3-F393-E0A9-E50E24DCCA9E");
+
   BluetoothCharacteristic? _dataChar;
   BluetoothCharacteristic? _ackChar;
   BluetoothCharacteristic? _hydrationGoalDataChar;
@@ -44,6 +46,7 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
   BluetoothCharacteristic? _hydration30DaysChar;
   BluetoothCharacteristic? _configChar;
   BluetoothCharacteristic? _resetChar;
+  BluetoothCharacteristic? _rtcSyncChar;
 
   StreamSubscription<List<ScanResult>>? _scanSub;
   StreamSubscription<BluetoothConnectionState>? _connectionSub;
@@ -445,6 +448,7 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
             }
             if (c.uuid == configUUID) _configChar = c;
             if (c.uuid == resetUUID) _resetChar = c;
+            if (c.uuid == rtcSyncUUID) _rtcSyncChar = c;
           }
         }
       }
@@ -654,12 +658,22 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
         if (!tsStr.contains('+') &&
             !tsStr.contains('-') &&
             !tsStr.endsWith('Z')) {
-          tsStr = '$tsStr+05:30';
+          // tsStr = '$tsStr+05:30';
         }
 
         try {
           ts = DateTime.parse(tsStr).toUtc();
           log("Parsed UTC TS: ${ts.toIso8601String()}", name: "BLE_Cubit");
+
+          final nowUtc = DateTime.now().toUtc();
+
+          final difference = nowUtc.difference(ts).inMinutes.abs();
+
+          if (difference >= 1) {
+            log("Time drift detected ($difference min). Syncing RTC...",
+                name: "BLE_Cubit");
+            sendRtcSyncCommand();
+          }
         } catch (e) {
           log("Failed to parse TS: $tsStr", name: "BLE_Cubit", error: e);
         }
@@ -992,9 +1006,95 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
     }
   }
 
-  Future<void> sendResetCommand() async {
+  Future<bool> _waitForConnectedState() async {
+    log("[WAIT] Listening to Cubit stream for CONNECTED (10s)",
+        name: "BLE_CUBIT");
+
+    // ✅ Fast path (already connected)
+    if (state.status == BleStatus.connected) {
+      log("[FAST-PATH] Already connected", name: "BLE_CUBIT");
+      return true;
+    }
+
+    try {
+      final result = await stream.map((s) {
+        log("[STREAM] Cubit state update: ${s.status}", name: "BLE_CUBIT");
+        return s.status;
+      }).firstWhere(
+        (status) {
+          final isConnected = status == BleStatus.connected;
+
+          if (isConnected) {
+            log("[MATCH] Found CONNECTED state", name: "BLE_CUBIT");
+          }
+
+          return isConnected;
+        },
+      ).timeout(const Duration(seconds: 10), onTimeout: () {
+        log("[TIMEOUT] Did not reach CONNECTED in 10 seconds",
+            name: "BLE_CUBIT");
+        throw TimeoutException("Cubit state timeout");
+      });
+
+      log("[SUCCESS] State reached: $result", name: "BLE_CUBIT");
+
+      return result == BleStatus.connected;
+    } catch (e) {
+      log("[ERROR] Waiting for state failed: ${e.toString()}",
+          name: "BLE_CUBIT");
+      return false;
+    }
+  }
+
+  Future<bool> sendResetCommandWithStateCheck() async {
     final payload = "0/reset/true";
-    await SharedPrefsHelper.setPendingResetCommand(payload);
+
+    final isConnected = await _waitForConnectedState();
+
+    if (isConnected) {
+      try {
+        await _resetChar?.write(payload.codeUnits, withoutResponse: true);
+
+        log("[WRITE] Reset command sent successfully", name: "BLE_CUBIT");
+
+        return true;
+      } catch (e) {
+        log("[ERROR] Write failed: ${e.toString()}", name: "BLE_CUBIT");
+        return false;
+      }
+    } else {
+      await SharedPrefsHelper.setPendingResetCommand(payload);
+
+      log("[FALLBACK] Saved command to prefs", name: "BLE_CUBIT");
+
+      return false;
+    }
+  }
+
+  Future<bool> sendRtcSyncCommand() async {
+    try {
+      final now = DateTime.now();
+
+      // Format: YYYY-MM-DD HH:MM:SS
+      final timestamp = "${now.year}-"
+          "${now.month.toString().padLeft(2, '0')}-"
+          "${now.day.toString().padLeft(2, '0')} "
+          "${now.hour.toString().padLeft(2, '0')}:"
+          "${now.minute.toString().padLeft(2, '0')}:"
+          "${now.second.toString().padLeft(2, '0')}";
+
+      log("Syncing RTC with: $timestamp", name: "BLE_CUBIT");
+
+      await _rtcSyncChar?.write(
+        timestamp.codeUnits,
+        withoutResponse: true,
+      );
+
+      return true;
+    } catch (e) {
+      log("Exception occurred in RTC Sync: ${e.toString()}", name: "BLE_CUBIT");
+      return false;
+    }
   }
 
   int _timeOfDayToEpoch(TimeOfDay tod) {
