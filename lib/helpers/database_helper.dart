@@ -52,7 +52,12 @@ class DatabaseHelper {
     String finalPath = path.join(await getDatabasesPath(), 'bottle_history.db');
     return await openDatabase(
       finalPath,
-      version: 1,
+      version: 2,
+      onUpgrade: (db, oldVersion, newVersion) async {
+        if (oldVersion < 2) {
+          await db.execute('ALTER TABLE user ADD COLUMN stepGoal INTEGER');
+        }
+      },
       onCreate: (Database db, int version) async {
         await db.execute('''
          CREATE TABLE $tableName(
@@ -92,7 +97,8 @@ CREATE TABLE user (
   bedtimeMinute INTEGER,
   bedtimePeriod TEXT,
   activityLevel TEXT,
-  dietType TEXT
+  dietType TEXT,
+  stepGoal INTEGER
 )
 ''');
 
@@ -243,6 +249,7 @@ CREATE TABLE IF NOT EXISTS app_metadata (
       'bedtimePeriod': state.bedtimePeriod,
       'activityLevel': state.activityLevel?.toString().split('.').last,
       'dietType': state.dietType?.toString().split('.').last,
+      'stepGoal': state.stepGoal,
     };
 
     // Ensure only one user row
@@ -272,6 +279,7 @@ CREATE TABLE IF NOT EXISTS app_metadata (
       bedtimePeriod: row['bedtimePeriod'] as String?,
       activityLevel: _parseActivityLevel(row['activityLevel'] as String?),
       dietType: _parseDietType(row['dietType'] as String?),
+      stepGoal: row['stepGoal'] as int?,
     );
   }
 
@@ -433,27 +441,58 @@ CREATE TABLE IF NOT EXISTS app_metadata (
     }
   }
 
-  Future<bool> isDayPerfect() async {
+  Future<int> getConsistencyStreak() async {
     try {
       final db = await database;
+      final now = DateTime.now();
+      final firstDayOfMonth = DateTime(now.year, now.month, 1);
+      final midnightToday = DateTime(now.year, now.month, now.day);
 
-      final List<Map<String, dynamic>> maps = await db.query('hydration_slots');
+      // Fetch all summaries for the current month
+      final result = await db.query(
+        hydrationSummaryTableName,
+        where: 'date >= ? AND date <= ?',
+        whereArgs: [firstDayOfMonth.millisecondsSinceEpoch, midnightToday.millisecondsSinceEpoch],
+        orderBy: 'date DESC',
+      );
 
-      if (maps.isEmpty) return false;
+      if (result.isEmpty) return 0;
 
-      for (var row in maps) {
-        final double consumed = (row['waterDrank'] as num?)?.toDouble() ?? 0.0;
-        final double target = (row['waterGoal'] as num?)?.toDouble() ?? 0.0;
-        final String status = row['status'] as String? ?? 'pending';
+      final summaries = result.map((r) => HydrationDaySummary.fromMap(r)).toList();
+      int currentStreak = 0;
+      DateTime checkDate = midnightToday;
 
-        if (status != 'completed' || consumed < target) {
-          return false;
+      // Special handling for today: if goal is met today, it starts/continues the streak.
+      // If not met today, we check if yesterday was met.
+      for (var summary in summaries) {
+        final normalizedSummaryDate = DateTime(summary.date.year, summary.date.month, summary.date.day);
+        
+        if (normalizedSummaryDate.isAtSameMomentAs(midnightToday)) {
+          if (summary.consumed >= summary.target) {
+            currentStreak++;
+          }
+          checkDate = checkDate.subtract(const Duration(days: 1));
+          continue;
+        }
+
+        // If there's a gap in days (missing record for a day), the streak breaks.
+        while (checkDate.isAfter(normalizedSummaryDate)) {
+           return currentStreak;
+        }
+
+        if (summary.consumed >= summary.target) {
+          currentStreak++;
+          checkDate = checkDate.subtract(const Duration(days: 1));
+        } else {
+          // Streak broken
+          break;
         }
       }
-      return true;
+
+      return currentStreak;
     } catch (e) {
-      Console.log(tag: "APP", value: "[DB] Error checking perfect day: $e");
-      return false;
+      Console.log(tag: "APP", value: "[DB] Error calculating consistency streak: $e");
+      return 0;
     }
   }
 }

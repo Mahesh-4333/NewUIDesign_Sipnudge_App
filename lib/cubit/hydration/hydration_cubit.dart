@@ -51,12 +51,13 @@ class HydrationCubit extends Cubit<HydrationState> {
           .where((e) => e.status == HydrationStatus.completed)
           .fold(0.0, (sum, e) => sum + e.amount);
 
+      final streak = await _dbHelper.getConsistencyStreak();
+      
       emit(state.copyWith(
         entries: slotsFromDb,
         goal: dailyGoal.round(),
         totalDrank: total.round(),
-        // currentLevel and levelToIntakeMap are already updated
-        // by the call to refreshAchievementStats() above
+        consistencyStreak: streak,
       ));
 
       _calculateCurrentSlotStatus();
@@ -249,7 +250,17 @@ class HydrationCubit extends Cubit<HydrationState> {
               ? HydrationStatus.completed
               : HydrationStatus.pending,
         );
-        currentEntries[index] = updatedEntry;
+
+        // final randomOffslot = Random().nextDouble() * 100;
+        // final randomOffslot1 = Random().nextDouble() * 100;
+        // final updatedEntry = currentEntries[index].copyWith(
+        //   waterDrank: randomOffslot1,
+        //   offslot: currentEntries[index].offslot + randomOffslot,
+        //   status: randomOffslot >= currentEntries[index].amount
+        //       ? HydrationStatus.completed
+        //       : HydrationStatus.pending,
+        // );
+        // currentEntries[index] = updatedEntry;
 
         await _dbHelper.insertOrUpdateSlot(updatedEntry);
       }
@@ -295,11 +306,14 @@ class HydrationCubit extends Cubit<HydrationState> {
       }
     }
 
+    final int streak = await _dbHelper.getConsistencyStreak();
+
     // 4. Emit the updated state
     emit(state.copyWith(
       entries: currentEntries,
       totalDrank: totalDrankToday.round(),
       newlyUnlockedLevel: newlyUnlocked,
+      consistencyStreak: streak,
     ));
 
     _calculateCurrentSlotStatus();
@@ -399,7 +413,7 @@ class HydrationCubit extends Cubit<HydrationState> {
     emit(state.copyWith(errorMessage: message, successMessage: null));
   }
 
-  void setNewlyUnlockedLevelToNull(){
+  void setNewlyUnlockedLevelToNull() {
     emit(state.copyWith(newlyUnlockedLevel: null));
   }
 
@@ -434,19 +448,22 @@ class HydrationCubit extends Cubit<HydrationState> {
         }
       }
 
-      if(updateUnlock){
+      final streak = await _dbHelper.getConsistencyStreak();
+
+      if (updateUnlock) {
         emit(state.copyWith(
             currentLevel: badgesUnlocked,
             newlyUnlockedLevel: badgesUnlocked,
+            consistencyStreak: streak,
             levelToIntakeMap: levelMap,
             exactLevelToIntakeMap: exactLevelMap));
-      }else{
+      } else {
         emit(state.copyWith(
             currentLevel: badgesUnlocked,
+            consistencyStreak: streak,
             levelToIntakeMap: levelMap,
             exactLevelToIntakeMap: exactLevelMap));
       }
-
     } catch (e) {
       log("ERROR in refreshAchievementStats: $e");
     }

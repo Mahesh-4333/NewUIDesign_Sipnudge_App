@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -11,6 +12,7 @@ import 'package:hydrify/cubit/hydration/hydration_state.dart';
 import 'package:hydrify/services/health_service.dart';
 import 'package:hydrify/helpers/shared_pref_helper.dart';
 
+import 'package:hydrify/cubit/user_info/user_info_cubit.dart';
 import '../../../constants/app_dimensions.dart';
 
 class DrinkTypesWidget extends StatefulWidget {
@@ -26,11 +28,21 @@ class _DrinkTypesWidgetState extends State<DrinkTypesWidget> {
   int _stepCount = 0;
   int _stepGoal = 1000;
   bool _isLoading = true;
+  StreamSubscription? _permissionSubscription;
 
   @override
   void initState() {
     super.initState();
     _fetchWaterIntake();
+    _permissionSubscription = HealthService.onPermissionUpdate.listen((_) {
+      _fetchWaterIntake();
+    });
+  }
+
+  @override
+  void dispose() {
+    _permissionSubscription?.cancel();
+    super.dispose();
   }
 
   Future<void> _fetchWaterIntake() async {
@@ -39,13 +51,23 @@ class _DrinkTypesWidgetState extends State<DrinkTypesWidget> {
       final history =
           await context.read<BottleDataCubit>().getCurrentDayHistory();
 
-      final steps = await HealthService().getStepCount();
-      setState(() {
-        _waterIntake = history;
-        _waterGoal = waterGoalParams;
-        _stepCount = steps;
-        _isLoading = false;
-      });
+      int steps = 0;
+      final hasPermission =
+          await SharedPrefsHelper.getHasRequestedHealthPermission();
+      if (hasPermission) {
+        steps = await HealthService().getStepCount();
+      }
+
+      final userInfo = context.read<UserInfoCubit>().state;
+      if (mounted) {
+        setState(() {
+          _waterIntake = history;
+          _waterGoal = waterGoalParams;
+          _stepCount = steps;
+          _stepGoal = userInfo.stepGoal ?? 1000;
+          _isLoading = false;
+        });
+      }
     } catch (e) {
       if (mounted) {
         setState(() {
@@ -65,9 +87,16 @@ class _DrinkTypesWidgetState extends State<DrinkTypesWidget> {
       listener: (context, state) {
         _fetchWaterIntake();
       },
-      child: Container(
+      child: BlocListener<UserInfoCubit, UserInfoState>(
+        listenWhen: (previous, current) =>
+            previous.stepGoal != current.stepGoal ||
+            previous.activityLevel != current.activityLevel,
+        listener: (context, state) {
+          _fetchWaterIntake();
+        },
+        child: Container(
         width: double.maxFinite,
-        padding: EdgeInsets.all(AppDimensions.defaultPadding.w),
+        padding: EdgeInsets.only(left: 10.w , right: 10.w, top: 10.h, bottom: 35.h),
         margin: EdgeInsets.only(
             left: AppDimensions.defaultPadding.w,
             right: AppDimensions.defaultPadding.w,
@@ -92,20 +121,34 @@ class _DrinkTypesWidgetState extends State<DrinkTypesWidget> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
-              children: [
-                Text(
-                  "Goal Tracking",
-                  style: TextStyle(
-                    color: AppColors.bluegray,
-                    fontSize: AppFontStyles.fontSize_20,
-                    fontFamily: AppFontStyles.urbanistFontFamily,
-                    fontVariations: [AppFontStyles.boldFontVariation],
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    "Goal Tracking",
+                    style: TextStyle(
+                      color: AppColors.bluegray,
+                      fontSize: AppFontStyles.fontSize_20,
+                      fontFamily: AppFontStyles.urbanistFontFamily,
+                      fontVariations: [AppFontStyles.boldFontVariation],
+                    ),
                   ),
-                ),
-              ],
-            ),
+                  InkWell(
+                    onTap: () async {
+                      await _fetchWaterIntake();
+                    },
+                    child: Padding(
+                      padding: const EdgeInsets.all(8.0),
+                      child: Image.asset(
+                        AssetsPath.refreshIcon,
+                        width: 20.w,
+                        height: 20.w,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             SizedBox(
-              height: AppDimensions.dim20.h,
+              height: 5.h,
             ),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -122,15 +165,15 @@ class _DrinkTypesWidgetState extends State<DrinkTypesWidget> {
                         painter: _DoubleProgressPainter(
                           outerProgress: _waterGoal > 0 ? (_waterIntake / _waterGoal).clamp(0.0, 1.0) : 0,
                           innerProgress: _stepGoal > 0 ? (_stepCount / _stepGoal).clamp(0.0, 1.0) : 0,
-                          outerTrackColor: Color(0xFFE2EFFD),
+                          outerTrackColor: Color(0xFFECECEC),
                           outerGradient: LinearGradient(
-                            colors: [Color(0xFF1F76C3) , Color(0xFFC1E2FF)],
+                            colors: [Color(0xFF369FFF) , Color(0xFFC8E2FB)],
                             begin: Alignment.topCenter,
                             end: Alignment.bottomCenter,
                           ),
-                          innerTrackColor: Color(0xFFFEE2E2),
+                          innerTrackColor: Color(0xFFECECEC),
                           innerGradient: LinearGradient(
-                            colors: [Color(0xFFDC2626) , Color(0xFFF87171)],
+                            colors: [Color(0xFF00BA88) , Color(0xFFFFFFFF)],
                             begin: Alignment.topCenter,
                             end: Alignment.bottomCenter,
                           ),
@@ -158,13 +201,13 @@ class _DrinkTypesWidgetState extends State<DrinkTypesWidget> {
                                   width: AppDimensions.dim8.w,
                                 ),
                                 Text(
-                                  "Water",
+                                  "Goal",
                                   style: TextStyle(
-                                    color: Colors.black,
-                                    fontSize: AppFontStyles.fontSize_16,
+                                    color: AppColors.switchReminderColor,
+                                    fontSize: 18.sp,
                                     fontFamily: AppFontStyles.urbanistFontFamily,
                                     fontVariations: [
-                                      AppFontStyles.fontWeightVariation600
+                                      AppFontStyles.boldFontVariation
                                     ],
                                   ),
                                 ),
@@ -173,11 +216,11 @@ class _DrinkTypesWidgetState extends State<DrinkTypesWidget> {
                             Text(
                               "${(_waterIntake / 1000).toStringAsFixed(1)}L/${(_waterGoal / 1000).toStringAsFixed(1)}L",
                               style: TextStyle(
-                                color: Colors.black,
+                                color: AppColors.switchReminderColor,
                                 fontSize: AppFontStyles.fontSize_16,
                                 fontFamily: AppFontStyles.urbanistFontFamily,
                                 fontVariations: [
-                                  AppFontStyles.fontWeightVariation600
+                                  AppFontStyles.semiBoldFontVariation
                                 ],
                               ),
                             ),
@@ -199,11 +242,11 @@ class _DrinkTypesWidgetState extends State<DrinkTypesWidget> {
                                 Text(
                                   "Steps",
                                   style: TextStyle(
-                                    color: Colors.black,
-                                    fontSize: AppFontStyles.fontSize_16,
+                                    color: AppColors.switchReminderColor,
+                                    fontSize: 18.sp,
                                     fontFamily: AppFontStyles.urbanistFontFamily,
                                     fontVariations: [
-                                      AppFontStyles.fontWeightVariation600
+                                      AppFontStyles.boldFontVariation
                                     ],
                                   ),
                                 ),
@@ -222,11 +265,11 @@ class _DrinkTypesWidgetState extends State<DrinkTypesWidget> {
                                 : Text(
                                     "$_stepCount/$_stepGoal",
                                     style: TextStyle(
-                                      color: Colors.black,
+                                      color: AppColors.switchReminderColor,
                                       fontSize: AppFontStyles.fontSize_16,
                                       fontFamily: AppFontStyles.urbanistFontFamily,
                                       fontVariations: [
-                                        AppFontStyles.fontWeightVariation600
+                                        AppFontStyles.semiBoldFontVariation
                                       ],
                                     ),
                                   ),
@@ -239,6 +282,7 @@ class _DrinkTypesWidgetState extends State<DrinkTypesWidget> {
               ],
             )
           ],
+        ),
         ),
       ),
     );
@@ -269,7 +313,7 @@ class _DoubleProgressPainter extends CustomPainter {
     final center = Offset(size.width / 2, size.height / 2);
     final outerRadius = size.width / 2 - strokeWidth / 2;
     // Spacing between inner and outer ring
-    final innerRadius = outerRadius - strokeWidth - 6.0;
+    final innerRadius = outerRadius - strokeWidth - 8.0;
 
     final Paint trackPaint = Paint()
       ..style = PaintingStyle.stroke
@@ -308,7 +352,7 @@ class _DoubleProgressPainter extends CustomPainter {
         //if (hasBorder) {
           final borderPaint = Paint()
             ..style = PaintingStyle.stroke
-            ..strokeWidth = strokeWidth + 3.0 // Thicker to create border effect
+            ..strokeWidth = strokeWidth + 2.0 // Thicker to create border effect
             ..strokeCap = StrokeCap.round
             ..color = Colors.white;
           canvas.drawArc(rect, -pi / 2, sweepAngle, false, borderPaint);

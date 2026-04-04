@@ -24,6 +24,7 @@ class UserInfoState extends Equatable {
 
   final ActivityLevel? activityLevel;
   final DietType? dietType;
+  final int? stepGoal;
   final bool hideAchievement;
 
   const UserInfoState(
@@ -41,6 +42,7 @@ class UserInfoState extends Equatable {
       this.bedtimePeriod,
       this.activityLevel = ActivityLevel.lightActivity,
       this.dietType = DietType.balanced,
+      this.stepGoal = 7000,
       this.hideAchievement = false});
 
   UserInfoState copyWith({
@@ -58,6 +60,7 @@ class UserInfoState extends Equatable {
     String? bedtimePeriod,
     ActivityLevel? activityLevel,
     DietType? dietType,
+    int? stepGoal,
     bool? hideAchievement,
   }) {
     return UserInfoState(
@@ -75,6 +78,7 @@ class UserInfoState extends Equatable {
       bedtimePeriod: bedtimePeriod ?? this.bedtimePeriod,
       activityLevel: activityLevel ?? this.activityLevel,
       dietType: dietType ?? this.dietType,
+      stepGoal: stepGoal ?? this.stepGoal,
       hideAchievement: hideAchievement ?? this.hideAchievement,
     );
   }
@@ -95,6 +99,7 @@ class UserInfoState extends Equatable {
         bedtimePeriod,
         activityLevel,
         dietType,
+        stepGoal,
       ];
 }
 

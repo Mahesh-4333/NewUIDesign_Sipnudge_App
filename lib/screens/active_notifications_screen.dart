@@ -4,7 +4,6 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:hydrify/constants/app_colors.dart';
 import 'package:hydrify/constants/app_dimensions.dart';
 import 'package:hydrify/constants/app_font_styles.dart';
-import 'dart:io';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:hydrify/cubit/hydration/hydration_cubit.dart';
 import 'package:hydrify/services/notification/notification_service.dart';
@@ -100,7 +99,7 @@ class _ActiveNotificationsScreenState extends State<ActiveNotificationsScreen> {
                     itemCount: activeNotifications.length,
                     itemBuilder: (context, index) {
                       final notification = activeNotifications[index];
-                      final dateString = DateFormat('MMM dd, yyyy - hh:mm a')
+                      final dateString = DateFormat('EEE, MMM dd - hh:mm a')
                           .format(notification.dateTime);
 
                       return Card(
@@ -117,24 +116,38 @@ class _ActiveNotificationsScreenState extends State<ActiveNotificationsScreen> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(
-                                notification.title,
-                                style: TextStyle(
-                                  color: AppColors.bluegray,
-                                  fontSize: AppFontStyles.fontSize_18.sp,
-                                  fontFamily: AppFontStyles.urbanistFontFamily,
-                                  fontVariations: [
-                                    AppFontStyles.boldFontVariation,
-                                  ],
-                                ),
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(
+                                    notification.title,
+                                    style: TextStyle(
+                                      color: AppColors.bluegray,
+                                      fontSize: AppFontStyles.fontSize_18.sp,
+                                      fontFamily: AppFontStyles.urbanistFontFamily,
+                                      fontVariations: [
+                                        AppFontStyles.boldFontVariation,
+                                      ],
+                                    ),
+                                  ),
+                                  Text(
+                                    "#${notification.id}",
+                                    style: TextStyle(
+                                      color: AppColors.bluegray.withValues(alpha: 0.5),
+                                      fontSize: AppFontStyles.fontSize_12.sp,
+                                      fontFamily: AppFontStyles.urbanistFontFamily,
+                                    ),
+                                  ),
+                                ],
                               ),
-                              SizedBox(height: AppDimensions.dim8.h),
+                              SizedBox(height: AppDimensions.dim4.h),
                               Text(
                                 dateString,
                                 style: TextStyle(
                                   color: AppColors.bluegray,
-                                  fontSize: AppFontStyles.fontSize_14.sp,
+                                  fontSize: AppFontStyles.fontSize_16.sp,
                                   fontFamily: AppFontStyles.urbanistFontFamily,
+                                  fontWeight: FontWeight.w600,
                                 ),
                               ),
                               if (notification.body.isNotEmpty) ...[
@@ -142,10 +155,9 @@ class _ActiveNotificationsScreenState extends State<ActiveNotificationsScreen> {
                                 Text(
                                   notification.body,
                                   style: TextStyle(
-                                    color: AppColors.bluegray,
+                                    color: AppColors.bluegray.withValues(alpha: 0.7),
                                     fontSize: AppFontStyles.fontSize_14.sp,
-                                    fontFamily:
-                                        AppFontStyles.urbanistFontFamily,
+                                    fontFamily: AppFontStyles.urbanistFontFamily,
                                   ),
                                 ),
                               ]

@@ -95,7 +95,22 @@ class UserInfoCubit extends Cubit<UserInfoState> {
   }
 
   void setActivityLevel(ActivityLevel level) {
-    emit(state.copyWith(activityLevel: level));
+    int steps;
+    switch (level) {
+      case ActivityLevel.sedentary:
+        steps = 5000;
+        break;
+      case ActivityLevel.lightActivity:
+        steps = 7000;
+        break;
+      case ActivityLevel.midActive:
+        steps = 10000;
+        break;
+      case ActivityLevel.veryActive:
+        steps = 15000;
+        break;
+    }
+    emit(state.copyWith(activityLevel: level, stepGoal: steps));
   }
 
   void setDietType(DietType type) {
