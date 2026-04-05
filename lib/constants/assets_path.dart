@@ -86,5 +86,10 @@ class AssetsPath {
   static const String goalWaterIcon = "assets/water.png";
   static const String goalStepsIcon = "assets/steps.png";
 
+  static const String doneAnaIcon = "assets/done_ana.png";
+  static const String timeAnaIcon = "assets/time_ana.png";
+
+  static const String refreshIcon = "assets/refresh.png";
+
 
 }

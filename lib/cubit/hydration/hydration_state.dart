@@ -11,6 +11,7 @@ class HydrationState {
   final HydrationEntry? currentSlotEntry;
   final double currentSlotConsumption; // Water Drank in this slot (in mL)
   final double currentSlotPercentage;
+  final int consistencyStreak;
 
   final int currentLevel;
   final int? newlyUnlockedLevel;
@@ -29,6 +30,7 @@ class HydrationState {
       this.currentSlotPercentage = 0.0,
       this.currentLevel = 0,
       this.newlyUnlockedLevel = 0,
+      this.consistencyStreak = 0,
       this.levelToIntakeMap = const {},
       this.exactLevelToIntakeMap = const {}});
 
@@ -44,6 +46,7 @@ class HydrationState {
       double? currentSlotPercentage,
       int? currentLevel,
       int? newlyUnlockedLevel,
+      int? consistencyStreak,
       bool clearNewlyUnlockedLevel = false,
       Map<int, String>? levelToIntakeMap,
       Map<int, String>? exactLevelToIntakeMap}) {
@@ -65,6 +68,7 @@ class HydrationState {
       newlyUnlockedLevel: clearNewlyUnlockedLevel
           ? null
           : (newlyUnlockedLevel ?? this.newlyUnlockedLevel),
+      consistencyStreak: consistencyStreak ?? this.consistencyStreak,
       levelToIntakeMap: levelToIntakeMap ?? this.levelToIntakeMap,
       exactLevelToIntakeMap: exactLevelToIntakeMap ?? this.exactLevelToIntakeMap,
     );
@@ -79,6 +83,7 @@ class HydrationState {
       selectedDate: DateTime.now(),
       currentSlotConsumption: 0.0,
       currentSlotPercentage: 0.0,
+      consistencyStreak: 0,
     );
   }
 }

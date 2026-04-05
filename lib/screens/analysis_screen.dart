@@ -23,6 +23,7 @@ class AnalysisScreen extends StatefulWidget {
 class _AnalysisScreenState extends State<AnalysisScreen> {
   bool? isGuest;
 
+  
   @override
   void initState() {
     super.initState();
@@ -36,6 +37,7 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
     });
     print('🔍 DEBUG Analysis: isGuest = $isGuest, email = $userEmail');
   }
+
 
   @override
   Widget build(BuildContext context) {
