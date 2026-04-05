@@ -257,13 +257,13 @@ class PreferencesPage extends StatelessWidget {
                                               .refreshAchievementStats(
                                                   updateUnlock: false);
 
-                                          await bleCubit.clearData();
-                                          await bleCubit.forgetDevice();
                                           log("-=-=-=-=-=-=-=- Sending Commnand =-=-=-=-=-=-=-");
                                           var commandSent = await bleCubit
                                               .sendResetCommandWithStateCheck();
 
                                           if (commandSent) {
+                                            await bleCubit.clearData();
+                                            await bleCubit.forgetDevice();
                                             Fluttertoast.showToast(
                                                 msg: "Local data cleared.");
                                             Fluttertoast.showToast(
@@ -275,9 +275,10 @@ class PreferencesPage extends StatelessWidget {
                                                     "Error clearing local data");
                                           }
                                         } catch (e) {
+                                          log("Unexpected error clearing local data: $e");
                                           Fluttertoast.showToast(
                                               msg:
-                                                  "Error clearing local data: $e");
+                                                  "Unexpected error clearing local data: $e");
                                           return;
                                         }
                                       },

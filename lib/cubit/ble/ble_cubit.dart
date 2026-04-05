@@ -393,17 +393,19 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
 
       final prefs = await SharedPreferences.getInstance();
       final wasFirst = (savedDeviceId == null || savedDeviceName == null);
+      log("=-=-=-=-=-=-=-=-=- Was first ${wasFirst} -=-=-=-=-=-=-=-=-=-=-=-=-=-=-");
       await prefs.setString('last_device_id', device.remoteId.str);
-      await prefs.setString('last_device_name', device.platformName);
+      await prefs.setString('last_device_name', device.advName);
 
       savedDeviceId = device.remoteId.str;
       savedDeviceName = device.platformName;
 
       Console.log(
           tag: "device.remoteId.str_123",
-          value: "${device.remoteId.str} ${device.platformName}");
+          value: "${device.remoteId.str} ${device.advName}");
       if (wasFirst) emit(state.copyWith(isFirstConnection: false));
 
+      log('[BLE_Cubit] Connection SUCCESS', name: 'BLE_Cubit');
       await _discoverServices(device);
       await prefs.setBool('ble_connected_once', true);
     } catch (e) {
@@ -463,9 +465,10 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
         _rescan(lastDeviceOnly: false);
         return;
       }
+      emit(state.copyWith(isServiceDiscoveryDone: true));
 
       if (_hydration30DaysChar != null) {
-        await _hydration30DaysChar!.setNotifyValue(true);
+        //await _hydration30DaysChar!.setNotifyValue(true);
         _hydration30DaysChar!.onValueReceived.listen((value) async {
           try {
             await dbHelper.clearHydrationDaySummaries();
@@ -595,15 +598,16 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
       ));
 
       await _flushPendingSlots();
-    } catch (e) {
+    } catch (e, st) {
+      log("=-=-=-=-=-=- Exception occurred =-=-=-=-=-= ${e.toString()} \n$st");
       try {
         await device.disconnect();
       } catch (_) {}
 
       emit(state.copyWith(
-        status: BleStatus.error,
-        message: "Service discovery failed: $e",
-      ));
+          status: BleStatus.error,
+          message: "Service discovery failed: $e",
+          isServiceDiscoveryDone: false));
       _rescan(lastDeviceOnly: savedDeviceId != null || savedDeviceName != null);
     }
   }
@@ -900,6 +904,7 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
           _isConnecting = false;
           emit(state.copyWith(
             status: BleStatus.disconnected,
+            isServiceDiscoveryDone: false,
             message: "Device disconnected",
           ));
           log('[BLE_Cubit] Device disconnected — triggering reconnect scan',
@@ -981,41 +986,45 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
   }
 
   Future<bool> _waitForConnectedState() async {
-    log("[WAIT] Listening to Cubit stream for CONNECTED (10s)",
-        name: "BLE_CUBIT");
+    log("[WAIT] Waiting for CONNECTED + SERVICE_DISCOVERED (20s)",
+        name: "BLE_CUBIT_CONNECTED_STATE");
 
-    // ✅ Fast path (already connected)
-    if (state.status == BleStatus.connected) {
-      log("[FAST-PATH] Already connected", name: "BLE_CUBIT");
+    // ✅ Fast path
+    if (state.status == BleStatus.connected &&
+        state.isServiceDiscoveryDone == true) {
+      log("[FAST-PATH] Already ready", name: "BLE_CUBIT_CONNECTED_STATE");
       return true;
     }
 
     try {
       final result = await stream.map((s) {
-        log("[STREAM] Cubit state update: ${s.status}", name: "BLE_CUBIT");
-        return s.status;
-      }).firstWhere(
-        (status) {
-          final isConnected = status == BleStatus.connected;
+        log(
+          "[STREAM] status=${s.status} | serviceDiscovered=${s.isServiceDiscoveryDone}",
+          name: "BLE_CUBIT_CONNECTED_STATE",
+        );
+        return s;
+      }).firstWhere((s) {
+        final isReady =
+            s.status == BleStatus.connected && s.isServiceDiscoveryDone == true;
 
-          if (isConnected) {
-            log("[MATCH] Found CONNECTED state", name: "BLE_CUBIT");
-          }
+        if (isReady) {
+          log("[MATCH] Device FULLY READY (connected + services)",
+              name: "BLE_CUBIT_CONNECTED_STATE");
+        }
 
-          return isConnected;
-        },
-      ).timeout(const Duration(seconds: 10), onTimeout: () {
-        log("[TIMEOUT] Did not reach CONNECTED in 10 seconds",
-            name: "BLE_CUBIT");
-        throw TimeoutException("Cubit state timeout");
+        return isReady;
+      }).timeout(const Duration(seconds: 20), onTimeout: () {
+        log("[TIMEOUT] Device not ready within 20s",
+            name: "BLE_CUBIT_CONNECTED_STATE");
+        throw TimeoutException("Device not ready");
       });
 
-      log("[SUCCESS] State reached: $result", name: "BLE_CUBIT");
+      log("[SUCCESS] Ready state achieved", name: "BLE_CUBIT_CONNECTED_STATE");
 
-      return result == BleStatus.connected;
+      return true;
     } catch (e) {
-      log("[ERROR] Waiting for state failed: ${e.toString()}",
-          name: "BLE_CUBIT");
+      log("[ERROR] Wait failed: ${e.toString()}",
+          name: "BLE_CUBIT_CONNECTED_STATE");
       return false;
     }
   }
@@ -1028,9 +1037,7 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
     if (isConnected) {
       try {
         await _resetChar?.write(payload.codeUnits, withoutResponse: true);
-
         log("[WRITE] Reset command sent successfully", name: "BLE_CUBIT");
-
         return true;
       } catch (e) {
         log("[ERROR] Write failed: ${e.toString()}", name: "BLE_CUBIT");
@@ -1038,9 +1045,7 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
       }
     } else {
       await SharedPrefsHelper.setPendingResetCommand(payload);
-
       log("[FALLBACK] Saved command to prefs", name: "BLE_CUBIT");
-
       return false;
     }
   }

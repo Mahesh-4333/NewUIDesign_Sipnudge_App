@@ -26,36 +26,41 @@ class BleState {
   final dynamic slotData;
   final double currentHydrationValue;
   final DateTime? ts;
+  final bool? isServiceDiscoveryDone;
 
-  const BleState(
-      {this.status = BleStatus.idle,
-      this.message = '',
-      this.battery,
-      this.volume,
-      this.percent,
-      this.scannedDevices = const [],
-      this.isFirstConnection = true,
-      this.isHydration30DaysDataSync = false,
-      this.bottleData,
-      this.historyData,
-      this.slotData,
-      this.currentHydrationValue = 0,
-      this.ts});
+  const BleState({
+    this.status = BleStatus.idle,
+    this.message = '',
+    this.battery,
+    this.volume,
+    this.percent,
+    this.scannedDevices = const [],
+    this.isFirstConnection = true,
+    this.isHydration30DaysDataSync = false,
+    this.bottleData,
+    this.historyData,
+    this.slotData,
+    this.currentHydrationValue = 0,
+    this.ts,
+    this.isServiceDiscoveryDone,
+  });
 
-  BleState copyWith(
-      {BleStatus? status,
-      String? message,
-      final int? battery,
-      final double? volume,
-      final int? percent,
-      final DateTime? ts,
-      List<ScanResult>? scannedDevices,
-      bool? isFirstConnection,
-      bool? isHydration30DaysDataSync,
-      dynamic bottleData,
-      dynamic historyData,
-      dynamic slotData,
-      double? currentHydrationValue}) {
+  BleState copyWith({
+    BleStatus? status,
+    String? message,
+    final int? battery,
+    final double? volume,
+    final int? percent,
+    final DateTime? ts,
+    List<ScanResult>? scannedDevices,
+    bool? isFirstConnection,
+    bool? isHydration30DaysDataSync,
+    dynamic bottleData,
+    dynamic historyData,
+    dynamic slotData,
+    double? currentHydrationValue,
+    bool? isServiceDiscoveryDone,
+  }) {
     return BleState(
         status: status ?? this.status,
         message: message ?? this.message,
@@ -71,6 +76,8 @@ class BleState {
         historyData: historyData ?? this.historyData,
         slotData: slotData ?? this.slotData,
         currentHydrationValue:
-            currentHydrationValue ?? this.currentHydrationValue);
+            currentHydrationValue ?? this.currentHydrationValue,
+        isServiceDiscoveryDone:
+            isServiceDiscoveryDone ?? this.isServiceDiscoveryDone);
   }
 }
