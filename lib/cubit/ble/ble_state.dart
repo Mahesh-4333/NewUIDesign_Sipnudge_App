@@ -28,6 +28,7 @@ class BleState {
   final DateTime? ts;
   final int commandSentTimestamp;
   final String? lastCommandSent;
+  final bool? isServiceDiscoveryDone;
 
   const BleState({
     this.status = BleStatus.idle,
@@ -45,6 +46,7 @@ class BleState {
     this.ts,
     this.commandSentTimestamp = 0,
     this.lastCommandSent,
+    this.isServiceDiscoveryDone,
   });
 
   BleState copyWith({
@@ -63,6 +65,7 @@ class BleState {
     double? currentHydrationValue,
     int? commandSentTimestamp,
     String? lastCommandSent,
+    bool? isServiceDiscoveryDone,
   }) {
     return BleState(
       status: status ?? this.status,
@@ -82,6 +85,8 @@ class BleState {
           currentHydrationValue ?? this.currentHydrationValue,
       commandSentTimestamp: commandSentTimestamp ?? this.commandSentTimestamp,
       lastCommandSent: lastCommandSent ?? this.lastCommandSent,
+        isServiceDiscoveryDone:
+        isServiceDiscoveryDone ?? this.isServiceDiscoveryDone
     );
   }
 }
