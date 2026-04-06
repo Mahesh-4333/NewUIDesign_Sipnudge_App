@@ -51,7 +51,7 @@ class NotificationService {
   Future<void> init({NotificationTapCallback? onTap}) async {
 
     tz.initializeTimeZones();
-    final String timeZoneName = await FlutterTimezone.getLocalTimezone();
+    final String timeZoneName = (await FlutterTimezone.getLocalTimezone()).identifier;
     tz.setLocalLocation(tz.getLocation(timeZoneName));
     Console.log(tag: "Notifications", value: "Timezone set to $timeZoneName");
 
@@ -84,16 +84,16 @@ class NotificationService {
     onNotificationTap = onTap;
 
     await _plugin.initialize(
-      initSettings,
+      settings: initSettings,
       onDidReceiveNotificationResponse: (details) async {
         final payload = details.payload;
         final actionId = details.actionId;
         final notificationId = details.id;
 
         if (notificationId != null) {
-          await NotificationManager.instance.stopAlarm(notificationId);
+          // await NotificationManager.instance.stopAlarm(notificationId);
 
-          await _plugin.cancel(notificationId);
+          await _plugin.cancel(id : notificationId);
         }
         if (actionId == 'STOP_ACTION' ||
             (actionId != null && actionId.startsWith("STOP"))) {
@@ -133,8 +133,8 @@ class NotificationService {
 
   void _handleTapLogic(NotificationResponse details) async {
     if (details.id != null) {
-      await NotificationManager.instance.stopAlarm(details.id!);
-      await _plugin.cancel(details.id!);
+      // await NotificationManager.instance.stopAlarm(details.id!);
+      await _plugin.cancel(id : details.id!);
     }
 
     final payload = details.payload;
@@ -170,11 +170,11 @@ class NotificationService {
               "[iOS] Daily repeat scheduled id=$id at $notifyAt sound=$fileName silent=$isSilent");
 
       await _plugin.zonedSchedule(
-        id,
-        title,
-        body,
-        tzNotifyAt,
-        NotificationDetails(
+        id: id,
+        title : title,
+        body : body,
+        scheduledDate: tzNotifyAt,
+        notificationDetails: NotificationDetails(
           iOS: DarwinNotificationDetails(
             sound: fileName,
             presentAlert: true,
@@ -202,11 +202,11 @@ class NotificationService {
               "[Android] Daily repeat scheduled id=$id at $notifyAt sound=$soundName silent=$isSilent");
 
       await _plugin.zonedSchedule(
-        id,
-        title,
-        body,
-        tzNotifyAt,
-        NotificationDetails(
+        id : id,
+        title : title,
+        body : body,
+        scheduledDate: tzNotifyAt,
+        notificationDetails: NotificationDetails(
           android: AndroidNotificationDetails(
             // Unique channel per ringtone so Android picks the right sound.
             'hydration_daily_$soundName',
@@ -289,6 +289,7 @@ class NotificationService {
           notifyAt = notifyAt.add(const Duration(days: 1));
         }
 
+        await Future.delayed(const Duration(milliseconds: 300));
         // dayOffset=0 — ID encodes slot+repeat only; daily repeat handles the rest.
         await _scheduleSingleReminder(
           entry: entry,
@@ -350,7 +351,7 @@ class NotificationService {
     // No dayOffset loop needed — other day offsets don't exist anymore.
     for (int repeat = 0; repeat < 10; repeat++) {
       final id = _buildNotificationId(updatedEntry.slot, 0, repeat);
-      await _plugin.cancel(id);
+      await _plugin.cancel(id : id);
     }
 
     await scheduleHydrationRemindersForFuture([updatedEntry]);
@@ -380,26 +381,26 @@ class NotificationService {
 
     // Only dayOffset=0 IDs exist in the daily-repeat system.
     // Use the actual repeat count from prefs so we cancel exactly the IDs that were scheduled.
-    final alarmRepeatIndex = await SharedPrefsHelper.getAlarmRepeatIndex();
-    final alarmRepeatTimes = [1, 3, 5, 10][alarmRepeatIndex];
+    // final alarmRepeatIndex = await SharedPrefsHelper.getAlarmRepeatIndex();
+    // final alarmRepeatTimes = [1, 3, 5, 10][alarmRepeatIndex];
 
-    for (final slot in HydrationSlot.values) {
-      for (int repeat = 0; repeat < alarmRepeatTimes; repeat++) {
-        final id = _buildNotificationId(slot, 0, repeat);
-        if (Platform.isAndroid) {
-          await NotificationManager.instance.stopAlarm(id);
-        }
-      }
-    }
+    // for (final slot in HydrationSlot.values) {
+    //   for (int repeat = 0; repeat < alarmRepeatTimes; repeat++) {
+    //     final id = _buildNotificationId(slot, 0, repeat);
+    //     if (Platform.isAndroid) {
+    //       await NotificationManager.instance.stopAlarm(id);
+    //     }
+    //   }
+    // }
   }
 
   Future<void> cancelSlotReminders(HydrationSlot slot, int dayOffset) async {
     // Cancel the base reminder
     final baseId = _buildNotificationId(slot, dayOffset);
-    await _plugin.cancel(baseId);
-    if (Platform.isAndroid) {
-      await NotificationManager.instance.stopAlarm(baseId);
-    }
+    await _plugin.cancel(id : baseId);
+    // if (Platform.isAndroid) {
+    //   await NotificationManager.instance.stopAlarm(baseId);
+    // }
 
     // Cancel only the repeat IDs that were actually scheduled.
     final alarmRepeatIndex = await SharedPrefsHelper.getAlarmRepeatIndex();
@@ -407,9 +408,9 @@ class NotificationService {
 
     for (int repeat = 0; repeat < alarmRepeatTimes; repeat++) {
       final repeatId = _buildNotificationId(slot, dayOffset, repeat);
-      await _plugin.cancel(repeatId);
+      await _plugin.cancel(id : repeatId);
       if (Platform.isAndroid) {
-        await NotificationManager.instance.stopAlarm(repeatId);
+        // await NotificationManager.instance.stopAlarm(repeatId);
       }
     }
   }
@@ -500,5 +501,10 @@ class NotificationService {
     // Sort by chronological firing order
     activeOccurrences.sort((a, b) => a.dateTime.compareTo(b.dateTime));
     return activeOccurrences;
+  }
+
+  Future<bool> hasScheduledNotifications() async {
+    final pendingRequests = await _plugin.pendingNotificationRequests();
+    return pendingRequests.isNotEmpty;
   }
 }

@@ -26,6 +26,7 @@ import 'package:hydrify/screens/preferences_page.dart';
 import 'package:hydrify/screens/user_personal_info_input_screen..dart';
 import 'package:hydrify/screens/widgets/logout_widgets/logout_bottom_sheet.dart';
 import 'package:hydrify/screens/active_notifications_screen.dart';
+import 'package:hydrify/screens/data_and_analytics_screen.dart';
 import 'package:hydrify/screens/widgets/setting_screen_widget/editableProfileAvatar.dart';
 import 'package:hydrify/screens/widgets/setting_screen_widget/profile_menu_item.dart';
 import 'package:hydrify/screens/widgets/setting_screen_widget/sipnudgeshopwidget.dart';
@@ -119,13 +120,13 @@ class _SettingScreenState extends State<SettingScreen> {
           );
           break;
 
-        // case AppStrings.dataAnalytics:
-        //   navigator.push(
-        //     MaterialPageRoute(
-        //       builder: (_) => const DataAnalyticsScreen(),
-        //     ),
-        //   );
-        //   break;
+        case AppStrings.dataAnalytics:
+          navigator.push(
+            MaterialPageRoute(
+              builder: (_) => const DataAndAnalyticsPage(),
+            ),
+          );
+          break;
 
         // case AppStrings.linkaccounts:
         //   navigator.push(

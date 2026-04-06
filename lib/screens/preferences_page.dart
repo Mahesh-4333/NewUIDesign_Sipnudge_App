@@ -263,17 +263,11 @@ class PreferencesPage extends StatelessWidget {
                                           var commandSent = await bleCubit
                                               .sendResetCommandWithStateCheck();
 
-                                          if (commandSent) {
-                                            Fluttertoast.showToast(
-                                                msg: "Local data cleared.");
-                                            Fluttertoast.showToast(
-                                                msg:
-                                                    "Tracking restarted. Connect your device again.");
-                                          } else {
-                                            Fluttertoast.showToast(
-                                                msg:
-                                                    "Error clearing local data");
-                                          }
+                                          Fluttertoast.showToast(
+                                              msg: "Local data cleared.");
+                                          Fluttertoast.showToast(
+                                              msg:
+                                              "Tracking restarted. Connect your device again.");
                                         } catch (e) {
                                           Fluttertoast.showToast(
                                               msg:

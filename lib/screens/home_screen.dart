@@ -19,6 +19,7 @@ import 'package:hydrify/helpers/logger.dart';
 import 'package:hydrify/helpers/shared_pref_helper.dart';
 import 'package:hydrify/helpers/water_consumption_data_helper.dart';
 import 'package:hydrify/models/bottle_info.dart';
+import 'package:hydrify/helpers/hydration_helper.dart';
 import 'package:hydrify/models/hydration_entry.dart';
 import 'package:hydrify/models/hydration_summary.dart';
 import 'package:hydrify/providers/weather_provider.dart';
@@ -111,10 +112,51 @@ class _HomeScreenState extends State<HomeScreen> {
 
         // Removing dialog as it causes bottle data to not come
         context.read<BleCubit>().start();
-        await prefs.setBool('ble_connected_once', true);
         // }
       }
+
+      // Check and schedule notifications if not already scheduled
+      await _checkAndScheduleHydrationReminders();
     });
+  }
+
+  Future<void> _checkAndScheduleHydrationReminders() async {
+    final notificationService = NotificationService();
+    final bool alreadyScheduled =
+        await notificationService.hasScheduledNotifications();
+
+    if (!alreadyScheduled) {
+      Console.log(
+          tag: "Notifications",
+          value: "No notifications scheduled. Checking database for slots...");
+      final dbHelper = DatabaseHelper();
+      var slots = await dbHelper.getAllSlots();
+
+      if (slots.isEmpty) {
+        Console.log(
+            tag: "Notifications",
+            value: "Database slots empty. Generating from water goal...");
+        final waterGoal = await SharedPrefsHelper.getWaterGoal();
+        if (waterGoal != null && waterGoal > 0) {
+          slots = HydrationHelper.generateHydrationSlots(waterGoal.toDouble());
+          for (var slot in slots) {
+            await dbHelper.insertOrUpdateSlot(slot);
+          }
+        }
+      }
+
+      if (slots.isNotEmpty) {
+        Console.log(
+            tag: "Notifications",
+            value: "Scheduling hydration reminders for ${slots.length} slots.");
+        await notificationService.resetAllHydrationReminders(slots);
+        await notificationService.scheduleHydrationRemindersForFuture(slots);
+      }
+    } else {
+      Console.log(
+          tag: "Notifications",
+          value: "Notifications already scheduled. Skipping.");
+    }
   }
 
   Future<void> _loadBottle() async {

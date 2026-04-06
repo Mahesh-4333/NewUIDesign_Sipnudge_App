@@ -27,6 +27,10 @@ class ProfileCubit extends Cubit<ProfileState> {
                 iconPath: "assets/bottle_icon11.png",
                 title: "Sipnudge Bottle",
               ),
+              // ProfileMenuItem(
+              //   iconPath: "assets/data_analytics_icon.png",
+              //   title: "Data & Analytics",
+              // ),
               ProfileMenuItem(
                 iconPath: "assets/data_analytics_icon.png",
                 title: "Export Log",

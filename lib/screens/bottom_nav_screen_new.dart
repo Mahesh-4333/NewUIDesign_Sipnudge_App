@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:hydrify/constants/app_colors.dart';
 import 'package:hydrify/constants/app_dimensions.dart';
+import 'package:hydrify/cubit/ble/ble_cubit.dart';
 import 'package:hydrify/cubit/bottom_nav/bottom_nav_cubit.dart';
 import 'package:hydrify/cubit/hydration/hydration_cubit.dart';
 import 'package:hydrify/cubit/hydration/hydration_state.dart';
@@ -103,12 +104,28 @@ class _BottomNavScreenNewState extends State<BottomNavScreenNew> {
                 },
               ),
               BlocListener<BottomNavCubit, BottomNavState>(
-                listenWhen: (prev, curr) => prev.selectedTab != curr.selectedTab,
+                listenWhen: (prev, curr) =>
+                    prev.selectedTab != curr.selectedTab,
                 listener: (context, state) {
-                  Console.log(tag: "_currentTabSelected", value: state.selectedTab);
+                  Console.log(
+                      tag: "_currentTabSelected", value: state.selectedTab);
                   if (state.selectedTab == BottomNavTab.analysis) {
                     _checkAndShowHealthDialog(context);
                   }
+                },
+              ),
+              BlocListener<BleCubit, BleState>(
+                listenWhen: (prev, curr) =>
+                    curr.commandSentTimestamp != prev.commandSentTimestamp &&
+                    curr.lastCommandSent != null,
+                listener: (context, state) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(state.message),
+                      behavior: SnackBarBehavior.floating,
+                      backgroundColor: Colors.green.shade700,
+                    ),
+                  );
                 },
               ),
             ],

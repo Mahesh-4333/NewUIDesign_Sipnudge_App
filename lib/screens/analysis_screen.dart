@@ -188,6 +188,7 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
               bottom: AppDimensions.dim20.w,
             ),
             child: ListView(
+              cacheExtent: 1000,
               children: [
                 DateFilterWidget(),
                 SizedBox(

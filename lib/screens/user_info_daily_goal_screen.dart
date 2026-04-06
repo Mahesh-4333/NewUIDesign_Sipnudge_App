@@ -1,3 +1,4 @@
+import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:hydrify/cubit/hydration/hydration_cubit.dart';
 import 'package:hydrify/helpers/logger.dart';
 
@@ -20,6 +21,7 @@ import 'package:hydrify/screens/qr_scanning.dart';
 import 'package:hydrify/screens/widgets/auth_button_widget.dart';
 import 'package:hydrify/screens/widgets/user_info_input_widgets/custom_gradient_slider_widget.dart';
 import 'package:hydrify/screens/widgets/water_wave_widget.dart';
+import 'package:hydrify/helpers/hydration_helper.dart';
 import 'package:hydrify/services/notification/notification_service.dart';
 import 'package:hydrify/services/ui_utils_service.dart';
 import 'package:provider/provider.dart';
@@ -311,7 +313,7 @@ class _UserInfoDailyGoalScreenState extends State<UserInfoDailyGoalScreen> {
                 await SharedPrefsHelper.setWaterGoal(
                     convertedWaterGoal.toInt());
 
-                final slots = generateHydrationSlots(convertedWaterGoal);
+                final slots = HydrationHelper.generateHydrationSlots(convertedWaterGoal);
                 for (var slot in slots) {
                   Console.log(
                       tag: "APP",
@@ -330,13 +332,10 @@ class _UserInfoDailyGoalScreenState extends State<UserInfoDailyGoalScreen> {
 
                 await SharedPrefsHelper.setLastLevelUpDate("");
                 await context.read<BleCubit>().queueHydrationSlots(slots);
-                
+
                 // Initialize notification service before scheduling, to ensure plugin is ready and permissions are requested on first launch
                 await NotificationService().init();
-                
-                await NotificationService().resetAllHydrationReminders(slots);
-                await NotificationService()
-                    .scheduleHydrationRemindersForFuture(slots);
+
                 UiUtilsService.dismissLoading(context);
                 setState(() {
                   isButtonClicked = false;
@@ -363,7 +362,11 @@ class _UserInfoDailyGoalScreenState extends State<UserInfoDailyGoalScreen> {
 
                 await dbHelper.bulkUpsert30Days(updatedSummaries);
 
-                await context.read<HydrationCubit>().refreshAchievementStats(updateUnlock: context.read<UserInfoCubit>().state.hideAchievement);
+                await context.read<HydrationCubit>().refreshAchievementStats(
+                    updateUnlock:
+                        context.read<UserInfoCubit>().state.hideAchievement);
+                SharedPrefsHelper.updateAndSaveDeviceConfig(
+                    waterGoal: convertedWaterGoal.toInt());
                 context.read<BottomNavCubit>().showBar();
                 Navigator.of(context, rootNavigator: true).pushAndRemoveUntil(
                     MaterialPageRoute(
@@ -378,59 +381,6 @@ class _UserInfoDailyGoalScreenState extends State<UserInfoDailyGoalScreen> {
     );
   }
 
-  List<HydrationEntry> generateHydrationSlots(double dailyGoal) {
-    final slotPercentages = {
-      HydrationSlot.wakeup: 0.25,
-      HydrationSlot.breakfast: 0.125,
-      HydrationSlot.midMorning: 0.125,
-      HydrationSlot.lunch: 0.125,
-      HydrationSlot.midAfternoon: 0.125,
-      HydrationSlot.evening: 0.125,
-      HydrationSlot.afterDinner: 0.125,
-    };
-
-    final slotTimes = {
-      HydrationSlot.wakeup: TimeOfDayRange(
-          start: TimeOfDay(hour: 7, minute: 0),
-          end: TimeOfDay(hour: 8, minute: 0)),
-      HydrationSlot.breakfast: TimeOfDayRange(
-          start: TimeOfDay(hour: 8, minute: 30),
-          end: TimeOfDay(hour: 9, minute: 30)),
-      HydrationSlot.midMorning: TimeOfDayRange(
-          start: TimeOfDay(hour: 11, minute: 0),
-          end: TimeOfDay(hour: 11, minute: 30)),
-      HydrationSlot.lunch: TimeOfDayRange(
-          start: TimeOfDay(hour: 13, minute: 0),
-          end: TimeOfDay(hour: 14, minute: 0)),
-      HydrationSlot.midAfternoon: TimeOfDayRange(
-          start: TimeOfDay(hour: 16, minute: 0),
-          end: TimeOfDay(hour: 16, minute: 30)),
-      HydrationSlot.evening: TimeOfDayRange(
-          start: TimeOfDay(hour: 18, minute: 0),
-          end: TimeOfDay(hour: 19, minute: 0)),
-      HydrationSlot.afterDinner: TimeOfDayRange(
-          start: TimeOfDay(hour: 20, minute: 30),
-          end: TimeOfDay(hour: 21, minute: 30)),
-    };
-
-    List<HydrationEntry> slots = [];
-
-    slotPercentages.forEach((slot, percent) {
-      final amount = (dailyGoal * percent).round();
-      final times = slotTimes[slot]!;
-      slots.add(HydrationEntry(
-        slot: slot,
-        startTime: times.start,
-        endTime: times.end,
-        amount: amount.round().toDouble(),
-        waterDrank: 0,
-        // initially 0
-        status: HydrationStatus.pending,
-      ));
-    });
-
-    return slots;
-  }
 
   Future<bool?> showGoogleCalendarDialog() async {
     return await showDialog<bool>(

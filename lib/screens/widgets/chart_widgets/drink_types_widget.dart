@@ -9,8 +9,10 @@ import 'package:hydrify/constants/assets_path.dart';
 import 'package:hydrify/cubit/bottle/bottle_data_cubit.dart';
 import 'package:hydrify/cubit/hydration/hydration_cubit.dart';
 import 'package:hydrify/cubit/hydration/hydration_state.dart';
+import 'package:hydrify/helpers/vibration_helper.dart';
 import 'package:hydrify/services/health_service.dart';
 import 'package:hydrify/helpers/shared_pref_helper.dart';
+import 'package:hydrify/screens/widgets/common/animated_refresh_icon.dart';
 
 import 'package:hydrify/cubit/user_info/user_info_cubit.dart';
 import '../../../constants/app_dimensions.dart';
@@ -22,13 +24,17 @@ class DrinkTypesWidget extends StatefulWidget {
   State<DrinkTypesWidget> createState() => _DrinkTypesWidgetState();
 }
 
-class _DrinkTypesWidgetState extends State<DrinkTypesWidget> {
+class _DrinkTypesWidgetState extends State<DrinkTypesWidget>
+    with AutomaticKeepAliveClientMixin {
   double _waterIntake = 0.0;
   int _waterGoal = 1;
   int _stepCount = 0;
   int _stepGoal = 1000;
   bool _isLoading = true;
   StreamSubscription? _permissionSubscription;
+
+  @override
+  bool get wantKeepAlive => true;
 
   @override
   void initState() {
@@ -79,6 +85,7 @@ class _DrinkTypesWidgetState extends State<DrinkTypesWidget> {
 
   @override
   Widget build(BuildContext context) {
+    super.build(context);
     // Refresh water/steps when HydrationCubit receives updates from BLE
     return BlocListener<HydrationCubit, HydrationState>(
       listenWhen: (previous, current) =>
@@ -132,18 +139,11 @@ class _DrinkTypesWidgetState extends State<DrinkTypesWidget> {
                       fontVariations: [AppFontStyles.boldFontVariation],
                     ),
                   ),
-                  InkWell(
-                    onTap: () async {
+                  AnimatedRefreshIcon(
+                    onRefresh: () async {
+                      VibrationHelper.lightTap();
                       await _fetchWaterIntake();
                     },
-                    child: Padding(
-                      padding: const EdgeInsets.all(8.0),
-                      child: Image.asset(
-                        AssetsPath.refreshIcon,
-                        width: 20.w,
-                        height: 20.w,
-                      ),
-                    ),
                   ),
                 ],
               ),

@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
-import 'package:alarm/alarm.dart';
+// import 'package:alarm/alarm.dart';
 import 'package:hydrify/helpers/shared_pref_helper.dart';
 
 import 'package:permission_handler/permission_handler.dart';
@@ -67,7 +67,7 @@ class NotificationManager {
     await _requestRequiredPermissions();
 
     if (Platform.isAndroid) {
-      await Alarm.init();
+      // await Alarm.init();
     }
 
     const AndroidInitializationSettings initializationSettingsAndroid =
@@ -83,7 +83,7 @@ class NotificationManager {
     );
 
     await _flutterLocalNotificationsPlugin.initialize(
-      initializationSettings,
+      settings: initializationSettings,
       onDidReceiveNotificationResponse: onDidReceiveNotificationResponse,
       onDidReceiveBackgroundNotificationResponse:
           onDidReceiveNotificationResponse,
@@ -157,10 +157,10 @@ class NotificationManager {
         NotificationDetails(android: androidDetails);
 
     await _flutterLocalNotificationsPlugin.show(
-      id,
-      title,
-      body,
-      platformDetails,
+      id : id,
+      title : title,
+      body : body,
+      notificationDetails:  platformDetails,
       payload: 'simple_payload_$id',
     );
 
@@ -170,81 +170,81 @@ class NotificationManager {
   /// Schedules a reliable, looping alarm that rings for a minimum of [maxDurationSeconds] seconds.
   /// The audio loops continuously until the user stops it or [maxDurationSeconds] elapses.
 
-  Future<bool> setReliableAlarm({
-    required int id,
-    required DateTime dateTime,
-    required String assetAudioPath,
-    required String title,
-    required String body,
-    required bool isSilent,
-    String stopButtonText = 'Stop Alarm',
-    int maxDurationSeconds = 10,
-  }) async {
-    final notificationSettings = NotificationSettings(
-      title: title,
-      body: body,
-      stopButton: stopButtonText,
-    );
+  // Future<bool> setReliableAlarm({
+  //   required int id,
+  //   required DateTime dateTime,
+  //   required String assetAudioPath,
+  //   required String title,
+  //   required String body,
+  //   required bool isSilent,
+  //   String stopButtonText = 'Stop Alarm',
+  //   int maxDurationSeconds = 10,
+  // }) async {
+    // final notificationSettings = NotificationSettings(
+    //   title: title,
+    //   body: body,
+    //   stopButton: stopButtonText,
+    // );
+    //
+    // var volumeSettings = VolumeSettings.fade(
+    //   volume: isSilent ? 0.0 : 0.3,
+    //   fadeDuration: const Duration(seconds: 3),
+    //   volumeEnforced: true,
+    // );
+    //
+    // final alarmSettings = AlarmSettings(
+    //   id: id,
+    //   dateTime: dateTime,
+    //   assetAudioPath: assetAudioPath,
+    //   loopAudio: true,
+    //   vibrate: true,
+    //   notificationSettings: notificationSettings,
+    //   volumeSettings: volumeSettings,
+    //   androidFullScreenIntent: false,
+    //   warningNotificationOnKill: false,
+    // );
+    //
+    // try {
+    //   final result = await Alarm.set(alarmSettings: alarmSettings);
+    //
+    //   Console.log(tag: "APP", value: 'Alarm ID $id set for $dateTime. Success: $result');
+    //
+    //   if (result) {
+    //     // Auto-stop the looping alarm after maxDurationSeconds so it doesn't
+    //     // ring forever if the user misses the notification.
+    //     Future.delayed(Duration(seconds: maxDurationSeconds), () async {
+    //       final activeAlarms = await Alarm.getAlarms();
+    //       final stillActive = activeAlarms.any((a) => a.id == id);
+    //       if (stillActive) {
+    //         await Alarm.stop(id);
+    //         Console.log(
+    //             tag: "APP",
+    //             value: 'Alarm ID $id auto-stopped after $maxDurationSeconds seconds.');
+    //       }
+    //     });
+    //   }
+    //
+    //   return result;
+    // } catch (e) {
+    //   Console.log(tag: "APP", value: 'Error setting reliable alarm: $e');
+    //
+    //   return false;
+    // }
+  // }
 
-    var volumeSettings = VolumeSettings.fade(
-      volume: isSilent ? 0.0 : 0.3,
-      fadeDuration: const Duration(seconds: 3),
-      volumeEnforced: true,
-    );
-
-    final alarmSettings = AlarmSettings(
-      id: id,
-      dateTime: dateTime,
-      assetAudioPath: assetAudioPath,
-      loopAudio: true,
-      vibrate: true,
-      notificationSettings: notificationSettings,
-      volumeSettings: volumeSettings,
-      androidFullScreenIntent: false,
-      warningNotificationOnKill: false,
-    );
-
-    try {
-      final result = await Alarm.set(alarmSettings: alarmSettings);
-
-      Console.log(tag: "APP", value: 'Alarm ID $id set for $dateTime. Success: $result');
-
-      if (result) {
-        // Auto-stop the looping alarm after maxDurationSeconds so it doesn't
-        // ring forever if the user misses the notification.
-        Future.delayed(Duration(seconds: maxDurationSeconds), () async {
-          final activeAlarms = await Alarm.getAlarms();
-          final stillActive = activeAlarms.any((a) => a.id == id);
-          if (stillActive) {
-            await Alarm.stop(id);
-            Console.log(
-                tag: "APP",
-                value: 'Alarm ID $id auto-stopped after $maxDurationSeconds seconds.');
-          }
-        });
-      }
-
-      return result;
-    } catch (e) {
-      Console.log(tag: "APP", value: 'Error setting reliable alarm: $e');
-
-      return false;
-    }
-  }
-
-  Future<bool> stopAlarm(int id) async {
-    final success = await Alarm.stop(id);
-
-    debugPrint('Alarm ID $id stopped. Success: $success');
-
-    return success;
-  }
+  // Future<bool> stopAlarm(int id) async {
+    // final success = await Alarm.stop(id);
+    //
+    // debugPrint('Alarm ID $id stopped. Success: $success');
+    //
+    // return success;
+  // }
 
   /// Checks if any alarm is currently scheduled.
 
-  Future<bool> isAlarmScheduled() async {
-    final alarms = await Alarm.getAlarms();
-
-    return alarms.isNotEmpty;
-  }
+  // Future<bool> isAlarmScheduled() async {
+    // final alarms = await Alarm.getAlarms();
+    //
+    // return alarms.isNotEmpty;
+  // }
 }

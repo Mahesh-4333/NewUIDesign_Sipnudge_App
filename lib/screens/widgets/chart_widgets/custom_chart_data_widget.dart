@@ -24,11 +24,16 @@ class CustomChartDataWidget extends StatefulWidget {
   State<CustomChartDataWidget> createState() => _CustomChartDataWidgetState();
 }
 
-class _CustomChartDataWidgetState extends State<CustomChartDataWidget> {
+class _CustomChartDataWidgetState extends State<CustomChartDataWidget>
+    with AutomaticKeepAliveClientMixin {
   bool _isColumnChartSelected = true;
 
   @override
+  bool get wantKeepAlive => true;
+
+  @override
   Widget build(BuildContext context) {
+    super.build(context);
     return Container(
       width: double.maxFinite,
       padding: EdgeInsets.only(

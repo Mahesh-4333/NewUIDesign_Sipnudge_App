@@ -10,11 +10,21 @@ import 'package:hydrify/cubit/hydration/hydration_cubit.dart';
 import 'package:hydrify/cubit/hydration/hydration_state.dart';
 import 'package:hydrify/helpers/shared_pref_helper.dart';
 
-class TodayGoalWidget extends StatelessWidget {
+class TodayGoalWidget extends StatefulWidget {
   const TodayGoalWidget({super.key});
 
   @override
+  State<TodayGoalWidget> createState() => _TodayGoalWidgetState();
+}
+
+class _TodayGoalWidgetState extends State<TodayGoalWidget>
+    with AutomaticKeepAliveClientMixin {
+  @override
+  bool get wantKeepAlive => true;
+
+  @override
   Widget build(BuildContext context) {
+    super.build(context);
     return BlocBuilder<HydrationCubit, HydrationState>(
       builder: (context, state) {
         return FutureBuilder<List<dynamic>>(
@@ -24,7 +34,8 @@ class TodayGoalWidget extends StatelessWidget {
           ]),
           builder: (context, snapshot) {
             if (!snapshot.hasData) {
-              return const SizedBox.shrink();
+              // Using a placeholder SizedBox to prevent layout jump when data loads
+              return SizedBox(height: 410.h);
             }
             final double waterGoalFromPrefs =
                 (snapshot.data![0] ?? 2500).toDouble();

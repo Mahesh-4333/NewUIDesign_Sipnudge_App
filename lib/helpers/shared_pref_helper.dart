@@ -1,4 +1,5 @@
 import 'package:hydrify/helpers/database_helper.dart';
+import 'package:hydrify/helpers/logger.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class SharedPrefsHelper {
@@ -37,7 +38,8 @@ class SharedPrefsHelper {
   static const String _keyLedColor = "led_color";
   static const String _keyUvCleaning = "uv_cleaning";
   static const String _keyFavoriteRingtones = 'favorite_ringtones';
-  static const String _keyHasRequestedHealthPermission = 'has_requested_health_permission';
+  static const String _keyHasRequestedHealthPermission =
+      'has_requested_health_permission';
 
   // ----------------------------
   // RINGTONE METHODS (NEW)
@@ -409,6 +411,7 @@ class SharedPrefsHelper {
         '5/${stopOnCompletion ? 1 : 0}|'
         '6/$repIndex';
 
+    Console.log(tag: "pendingConfig_ld", value: payload.toString());
     await setPendingConfigData(payload);
   }
 }

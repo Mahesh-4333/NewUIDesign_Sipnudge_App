@@ -5,7 +5,6 @@ import 'package:bloc/bloc.dart';
 import 'package:equatable/equatable.dart';
 import 'package:hydrify/cubit/ble/ble_cubit.dart';
 import 'package:hydrify/helpers/database_helper.dart';
-import 'package:hydrify/helpers/logger.dart';
 import 'package:hydrify/models/bottle_data.dart';
 import 'package:hydrify/models/hydration_entry.dart';
 import 'package:hydrify/models/hydration_summary.dart';

@@ -10,7 +10,6 @@ import 'package:hydrify/helpers/database_helper.dart';
 import 'package:hydrify/helpers/logger.dart';
 import 'package:hydrify/helpers/shared_pref_helper.dart';
 import 'package:hydrify/helpers/water_consumption_data_helper.dart';
-import 'package:hydrify/models/bottle_data.dart';
 import 'package:hydrify/models/hydration_entry.dart';
 import 'package:hydrify/models/hydration_summary.dart';
 import 'package:hydrify/services/notification/notification_service.dart';
@@ -903,7 +902,11 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
     try {
       log("Sending config data: $payload", name: "BLE_Cubit");
       await _configChar!.write(payload.codeUnits, withoutResponse: true);
-      emit(state.copyWith(message: "Config data sent successfully"));
+      emit(state.copyWith(
+        message: "Config data sent successfully",
+        commandSentTimestamp: DateTime.now().millisecondsSinceEpoch,
+        lastCommandSent: 'config',
+      ));
     } catch (e) {
       log("Failed to send config data: $e", name: "BLE_Cubit");
       emit(state.copyWith(message: "Failed to send config data"));
@@ -944,45 +947,58 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
     print("============> $_ackChar");
     print('============> ${_pendingSlots.isEmpty}');
 
-    if (_ackChar == null || _pendingSlots.isEmpty) return;
-
     try {
-      final payload = _pendingSlots.map((slot) {
-        final start = _timeOfDayToEpoch(slot.startTime);
-        final end = _timeOfDayToEpoch(slot.endTime);
-        return "${slot.slot.label}/${slot.slot.index}/$start/$end/${slot.amount.toInt()}";
-      }).join("|");
+      // 1. Sync Hydration Slots
+      if (_ackChar != null && _pendingSlots.isNotEmpty) {
+        final payload = _pendingSlots.map((slot) {
+          final start = _timeOfDayToEpoch(slot.startTime);
+          final end = _timeOfDayToEpoch(slot.endTime);
+          return "${slot.slot.label}/${slot.slot.index}/$start/$end/${slot.amount.toInt()}";
+        }).join("|");
 
-      log("Flushing hydration slots: ${"$payload|End/7/${_timeOfDayToEpoch(TimeOfDay(hour: 23, minute: 55))}/${_timeOfDayToEpoch(TimeOfDay(hour: 23, minute: 56))}/0"}");
-      await _ackChar!.write(
-          "$payload|End/7/${_timeOfDayToEpoch(TimeOfDay(hour: 23, minute: 55))}/${_timeOfDayToEpoch(TimeOfDay(hour: 23, minute: 56))}/0"
-              .codeUnits,
-          withoutResponse: true);
-      _pendingSlots.clear();
-      print(
-          '============> success  $payload   =====> unit ${payload.codeUnits}');
+        log("Flushing hydration slots: ${"$payload|End/7/${_timeOfDayToEpoch(TimeOfDay(hour: 23, minute: 55))}/${_timeOfDayToEpoch(TimeOfDay(hour: 23, minute: 56))}/0"}");
+        await _ackChar!.write(
+            "$payload|End/7/${_timeOfDayToEpoch(TimeOfDay(hour: 23, minute: 55))}/${_timeOfDayToEpoch(TimeOfDay(hour: 23, minute: 56))}/0"
+                .codeUnits,
+            withoutResponse: true);
+        _pendingSlots.clear();
+        print(
+            '============> success  $payload   =====> unit ${payload.codeUnits}');
 
-      emit(state.copyWith(
-        status: BleStatus.connected,
-        message: "Hydration slots synced",
-      ));
+        emit(state.copyWith(
+          status: BleStatus.connected,
+          message: "Hydration slots synced",
+          commandSentTimestamp: DateTime.now().millisecondsSinceEpoch,
+          lastCommandSent: 'hydrationSlots',
+        ));
+      }
 
-      // config data command
+      // 2. Sync Pending Config Data
       final pendingConfig = await SharedPrefsHelper.getPendingConfigData();
+      Console.log(
+          tag: "BLE_Cubit", value: "Sending pending config data: $_configChar");
       if (pendingConfig != null &&
           pendingConfig.isNotEmpty &&
           _configChar != null) {
         try {
-          log("Sending pending config data: $pendingConfig", name: "BLE_Cubit");
+          Console.log(
+              tag: "BLE_Cubit",
+              value: "Sending pending config data: $pendingConfig");
           await _configChar!
               .write(pendingConfig.codeUnits, withoutResponse: true);
+          emit(state.copyWith(
+            status: BleStatus.connected,
+            message: "Config data sent successfully $pendingConfig",
+            commandSentTimestamp: DateTime.now().millisecondsSinceEpoch,
+            lastCommandSent: 'pendingConfig',
+          ));
           await SharedPrefsHelper.clearPendingConfigData();
         } catch (e) {
           log("Failed to send pending config data: $e", name: "BLE_Cubit");
         }
       }
 
-      // reset command
+      // 3. Sync Pending Reset Command
       final pendingResetCommand =
           await SharedPrefsHelper.getPendingResetCommand();
       if (pendingResetCommand != null &&
@@ -993,6 +1009,12 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
               name: "BLE_Cubit");
           await _resetChar!
               .write(pendingResetCommand.codeUnits, withoutResponse: true);
+          emit(state.copyWith(
+            status: BleStatus.connected,
+            message: "Reset command sent successfully $pendingResetCommand",
+            commandSentTimestamp: DateTime.now().millisecondsSinceEpoch,
+            lastCommandSent: 'pendingResetCommand',
+          ));
           await SharedPrefsHelper.clearPendingResetCommand();
         } catch (e) {
           log("Failed to send pending reset command: $e", name: "BLE_Cubit");
@@ -1046,27 +1068,27 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
     }
   }
 
-  Future<bool> sendResetCommandWithStateCheck() async {
+  Future sendResetCommandWithStateCheck() async {
     final payload = "0/reset/true";
 
-    final isConnected = await _waitForConnectedState();
-
-    if (isConnected) {
-      try {
+    try {
+      if (_resetChar != null) {
         await _resetChar?.write(payload.codeUnits, withoutResponse: true);
-
         log("[WRITE] Reset command sent successfully", name: "BLE_CUBIT");
 
         return true;
-      } catch (e) {
-        log("[ERROR] Write failed: ${e.toString()}", name: "BLE_CUBIT");
-        return false;
+      } else {
+        await SharedPrefsHelper.setPendingResetCommand(payload);
+        log("[FALLBACK] Saved command to prefs", name: "BLE_CUBIT");
       }
-    } else {
-      await SharedPrefsHelper.setPendingResetCommand(payload);
 
-      log("[FALLBACK] Saved command to prefs", name: "BLE_CUBIT");
-
+      emit(state.copyWith(
+        message: "Reset command sent successfully",
+        commandSentTimestamp: DateTime.now().millisecondsSinceEpoch,
+        lastCommandSent: 'reset',
+      ));
+    } catch (e) {
+      log("[ERROR] Write failed: ${e.toString()}", name: "BLE_CUBIT");
       return false;
     }
   }
@@ -1234,7 +1256,8 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
       // 3. We only sync the difference if current bottle data is greater
       final diff = currentTotalL - healthTotal;
 
-      log("[HealthSync] Sync log: Bottle=$currentTotalL L, Health=$healthTotal L, Diff=$diff L", name: "BLE_Cubit");
+      log("[HealthSync] Sync log: Bottle=$currentTotalL L, Health=$healthTotal L, Diff=$diff L",
+          name: "BLE_Cubit");
       // Sync if more than 0.001L (approx 1ml)
       if (diff >= 0.001) {
         log("[HealthSync] Syncing $diff L to Health", name: "BLE_Cubit");

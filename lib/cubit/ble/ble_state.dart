@@ -26,51 +26,62 @@ class BleState {
   final dynamic slotData;
   final double currentHydrationValue;
   final DateTime? ts;
+  final int commandSentTimestamp;
+  final String? lastCommandSent;
 
-  const BleState(
-      {this.status = BleStatus.idle,
-      this.message = '',
-      this.battery,
-      this.volume,
-      this.percent,
-      this.scannedDevices = const [],
-      this.isFirstConnection = true,
-      this.isHydration30DaysDataSync = false,
-      this.bottleData,
-      this.historyData,
-      this.slotData,
-      this.currentHydrationValue = 0,
-      this.ts});
+  const BleState({
+    this.status = BleStatus.idle,
+    this.message = '',
+    this.battery,
+    this.volume,
+    this.percent,
+    this.scannedDevices = const [],
+    this.isFirstConnection = true,
+    this.isHydration30DaysDataSync = false,
+    this.bottleData,
+    this.historyData,
+    this.slotData,
+    this.currentHydrationValue = 0,
+    this.ts,
+    this.commandSentTimestamp = 0,
+    this.lastCommandSent,
+  });
 
-  BleState copyWith(
-      {BleStatus? status,
-      String? message,
-      final int? battery,
-      final double? volume,
-      final int? percent,
-      final DateTime? ts,
-      List<ScanResult>? scannedDevices,
-      bool? isFirstConnection,
-      bool? isHydration30DaysDataSync,
-      dynamic bottleData,
-      dynamic historyData,
-      dynamic slotData,
-      double? currentHydrationValue}) {
+  BleState copyWith({
+    BleStatus? status,
+    String? message,
+    int? battery,
+    double? volume,
+    int? percent,
+    DateTime? ts,
+    List<ScanResult>? scannedDevices,
+    bool? isFirstConnection,
+    bool? isHydration30DaysDataSync,
+    dynamic bottleData,
+    dynamic historyData,
+    dynamic slotData,
+    double? currentHydrationValue,
+    int? commandSentTimestamp,
+    String? lastCommandSent,
+  }) {
     return BleState(
-        status: status ?? this.status,
-        message: message ?? this.message,
-        battery: battery ?? this.battery,
-        volume: volume ?? this.volume,
-        percent: percent ?? this.percent,
-        ts: ts ?? this.ts,
-        scannedDevices: scannedDevices ?? this.scannedDevices,
-        isFirstConnection: isFirstConnection ?? this.isFirstConnection,
-        isHydration30DaysDataSync:
-            isHydration30DaysDataSync ?? this.isHydration30DaysDataSync,
-        bottleData: bottleData ?? this.bottleData,
-        historyData: historyData ?? this.historyData,
-        slotData: slotData ?? this.slotData,
-        currentHydrationValue:
-            currentHydrationValue ?? this.currentHydrationValue);
+      status: status ?? this.status,
+      message: message ?? this.message,
+      battery: battery ?? this.battery,
+      volume: volume ?? this.volume,
+      percent: percent ?? this.percent,
+      ts: ts ?? this.ts,
+      scannedDevices: scannedDevices ?? this.scannedDevices,
+      isFirstConnection: isFirstConnection ?? this.isFirstConnection,
+      isHydration30DaysDataSync:
+          isHydration30DaysDataSync ?? this.isHydration30DaysDataSync,
+      bottleData: bottleData ?? this.bottleData,
+      historyData: historyData ?? this.historyData,
+      slotData: slotData ?? this.slotData,
+      currentHydrationValue:
+          currentHydrationValue ?? this.currentHydrationValue,
+      commandSentTimestamp: commandSentTimestamp ?? this.commandSentTimestamp,
+      lastCommandSent: lastCommandSent ?? this.lastCommandSent,
+    );
   }
 }

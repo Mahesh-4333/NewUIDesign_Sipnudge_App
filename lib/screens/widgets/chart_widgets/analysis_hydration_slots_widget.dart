@@ -1,4 +1,5 @@
 import 'dart:ui';
+import 'dart:developer';
 import 'dart:math' as math;
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
@@ -7,7 +8,6 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:hydrify/constants/app_colors.dart';
 import 'package:hydrify/constants/app_dimensions.dart';
 import 'package:hydrify/constants/app_font_styles.dart';
-import 'package:hydrify/constants/app_style.dart';
 import 'package:hydrify/constants/assets_path.dart';
 import 'package:hydrify/cubit/hydration/hydration_cubit.dart';
 import 'package:hydrify/cubit/hydration/hydration_state.dart';
@@ -22,13 +22,20 @@ class AnalysisHydrationSlotsWidget extends StatefulWidget {
 }
 
 class _AnalysisHydrationSlotsWidgetState
-    extends State<AnalysisHydrationSlotsWidget> {
+    extends State<AnalysisHydrationSlotsWidget>
+    with AutomaticKeepAliveClientMixin {
   int _activeTabIndex = 0; // 0: Scheduled, 1: All, 2: Off-Slot
 
   @override
+  bool get wantKeepAlive => true;
+
+  @override
   Widget build(BuildContext context) {
+    super.build(context);
     return BlocBuilder<HydrationCubit, HydrationState>(
       builder: (context, state) {
+        log("[AnalysisWidget] Building AnalysisHydrationSlotsWidget with ${state.entries.length} entries",
+            name: "UI_DEBUG");
         return Container(
           margin:
               EdgeInsets.symmetric(horizontal: AppDimensions.defaultPadding.w),
@@ -51,7 +58,7 @@ class _AnalysisHydrationSlotsWidgetState
             children: [
               _buildTabBar(),
               SizedBox(height: 80.h),
-              _buildChart(),
+              _buildChart(state),
               SizedBox(height: AppDimensions.dim30.h),
               _buildListContent(state),
             ],
@@ -139,17 +146,20 @@ class _AnalysisHydrationSlotsWidgetState
     );
   }
 
-  Widget _buildChart() {
-    return BlocBuilder<HydrationCubit, HydrationState>(
-      builder: (context, state) {
-        final entries = state.entries;
-        final amountSpots = <FlSpot>[];
-        final offslotSpots = <FlSpot>[];
+  Widget _buildChart(HydrationState state) {
+    final entries = state.entries;
+    final amountSpots = <FlSpot>[];
+    final offslotSpots = <FlSpot>[];
 
-        for (int i = 0; i < entries.length; i++) {
-          amountSpots.add(FlSpot(i.toDouble(), entries[i].waterDrank));
-          offslotSpots.add(FlSpot(i.toDouble(), entries[i].offslot));
-        }
+    log("[AnalysisWidget] Building Chart with ${entries.length} entries",
+        name: "UI_DEBUG");
+
+    for (int i = 0; i < entries.length; i++) {
+      log("[AnalysisWidget] Slot $i: waterDrank=${entries[i].waterDrank}, offslot=${entries[i].offslot}",
+          name: "UI_DEBUG");
+      amountSpots.add(FlSpot(i.toDouble(), entries[i].waterDrank));
+      offslotSpots.add(FlSpot(i.toDouble(), entries[i].offslot));
+    }
 
         double maxVal = 0;
         if (entries.isNotEmpty) {
@@ -257,11 +267,8 @@ class _AnalysisHydrationSlotsWidgetState
                         MediaQuery.of(context).size.width - 80.w,
                         entries.length * 60.w,
                       ),
-                      margin: EdgeInsets.only(top: 10.h),
-                      padding: EdgeInsets.only(
-                        right: 20.w,
-                        left: 10.w,
-                      ),
+                      margin: EdgeInsets.only(top: 0.h),
+                      padding: EdgeInsets.only(right: 20.w, left: 10.w),
                       child: LineChart(
                         LineChartData(
                           minX: -0.2, // Add padding on the left
@@ -315,6 +322,8 @@ class _AnalysisHydrationSlotsWidgetState
                           ),
                           lineTouchData: LineTouchData(
                             touchTooltipData: LineTouchTooltipData(
+                              fitInsideHorizontally: true,
+                              fitInsideVertically: true,
                               getTooltipColor: (spot) =>
                                   Colors.black.withOpacity(0.8),
                               getTooltipItems: (touchedSpots) {
@@ -346,11 +355,14 @@ class _AnalysisHydrationSlotsWidgetState
                                     : [const FlSpot(0, 0)],
                                 isCurved: true,
                                 curveSmoothness: 0.3, // Smoother curve
+                                preventCurveOverShooting: true,
                                 color: topLineColor,
                                 barWidth: 3.w,
                                 isStrokeCapRound: true,
                                 dotData: FlDotData(
                                   show: true,
+                                  checkToShowDot: (spot, barData) =>
+                                      spot.y != 0,
                                   getDotPainter:
                                       (spot, percent, barData, index) {
                                     return FlDotCirclePainter(
@@ -379,11 +391,14 @@ class _AnalysisHydrationSlotsWidgetState
                                     : [const FlSpot(0, 0)],
                                 isCurved: true,
                                 curveSmoothness: 0.3, // Smoother curve
+                                preventCurveOverShooting: true,
                                 color: bottomLineColor,
                                 barWidth: 3.w,
                                 isStrokeCapRound: true,
                                 dotData: FlDotData(
                                   show: true,
+                                  checkToShowDot: (spot, barData) =>
+                                      spot.y != 0,
                                   getDotPainter:
                                       (spot, percent, barData, index) {
                                     return FlDotCirclePainter(
@@ -415,8 +430,6 @@ class _AnalysisHydrationSlotsWidgetState
             ),
           ),
         );
-      },
-    );
   }
 
   Widget _buildListContent(HydrationState state) {
@@ -455,12 +468,12 @@ class _AnalysisHydrationSlotsWidgetState
               ],
             ),
             SizedBox(height: AppDimensions.dim16.h),
-            if (offslotEntries.isEmpty)
+            if (scheduledEntries.isEmpty)
               _buildSlotItemIndicator("No Schedule Records",
                   "No Schedule consumption logged", "0 ml", false)
             else
               ...scheduledEntries
-                  .where((e) => e.status == HydrationStatus.completed)
+                  .where((e) => e.waterDrank.toInt() >= e.amount.toInt())
                   .map((e) => _buildSlotItemIndicator(
                       e.slot.label,
                       e.formattedRange,
@@ -572,10 +585,13 @@ class _AnalysisHydrationSlotsWidgetState
           ),
           SizedBox(width: AppDimensions.dim8.w),
           if (isCompleted)
-            Image.asset(
-              AssetsPath.doneAnaIcon,
-              width: 25.w,
-              height: 25.w,
+            Padding(
+              padding: EdgeInsets.only(right: 15.w),
+              child: Image.asset(
+                AssetsPath.doneAnaIcon,
+                width: 25.w,
+                height: 25.w,
+              ),
             ),
         ],
       ),

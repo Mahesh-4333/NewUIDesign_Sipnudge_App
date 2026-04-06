@@ -238,33 +238,40 @@ class HydrationCubit extends Cubit<HydrationState> {
   // -------------------- BLE ENTRIES UPDATE --------------------
 // -------------------- BLE ENTRIES UPDATE --------------------
   Future<void> markCompletedByEntries(List<HydrationEntry> newEntries) async {
-    final currentEntries = List<HydrationEntry>.from(state.entries);
+    // If state.entries is empty, it means initialization is still in progress
+    // or we have no slots. We should fetch them from DB to avoid ignoring updates.
+    List<HydrationEntry> currentEntries =
+        List<HydrationEntry>.from(state.entries);
+    if (currentEntries.isEmpty) {
+      log("[HydrationCubit] State entries empty during sync. Fetching from DB...",
+          name: "CUBIT_DEBUG");
+      currentEntries = await _dbHelper.getAllSlots();
+    }
+
+    final waterGoal = await SharedPrefsHelper.getUserGoal() ?? 0;
+    int updateCount = 0;
 
     for (final incoming in newEntries) {
       final index = currentEntries.indexWhere((e) => e.slot == incoming.slot);
 
       if (index >= 0) {
-        final updatedEntry = currentEntries[index].copyWith(
+        final existing = currentEntries[index];
+        final updatedEntry = existing.copyWith(
           waterDrank: incoming.waterDrank,
-          status: incoming.waterDrank >= currentEntries[index].amount
+          offslot: incoming.offslot,
+          status: incoming.waterDrank >= incoming.amount
               ? HydrationStatus.completed
               : HydrationStatus.pending,
         );
 
-        // final randomOffslot = Random().nextDouble() * 100;
-        // final randomOffslot1 = Random().nextDouble() * 100;
-        // final updatedEntry = currentEntries[index].copyWith(
-        //   waterDrank: randomOffslot1,
-        //   offslot: currentEntries[index].offslot + randomOffslot,
-        //   status: randomOffslot >= currentEntries[index].amount
-        //       ? HydrationStatus.completed
-        //       : HydrationStatus.pending,
-        // );
-        // currentEntries[index] = updatedEntry;
-
+        currentEntries[index] = updatedEntry;
         await _dbHelper.insertOrUpdateSlot(updatedEntry);
+        updateCount++;
       }
     }
+
+    log("[HydrationCubit] Finished processing sync. Updated $updateCount/${newEntries.length} entries.",
+        name: "CUBIT_DEBUG");
 
     // Use the BLE-reported live total if available; fall back to summing entries.
     final double slotSum =
@@ -272,7 +279,6 @@ class HydrationCubit extends Cubit<HydrationState> {
     final double totalDrankToday =
         ble.currentHydrationValue > 0 ? ble.currentHydrationValue : slotSum;
 
-    final int waterGoal = await SharedPrefsHelper.getUserGoal() ?? 0;
     final bool hasMetGoal =
         waterGoal > 0 && totalDrankToday >= waterGoal.toDouble();
 
@@ -283,24 +289,9 @@ class HydrationCubit extends Cubit<HydrationState> {
       final lastLevelUpDate = await SharedPrefsHelper.getLastLevelUpDate();
 
       if (lastLevelUpDate != todayStr) {
-        final today = DateTime.now();
-        final existingSummary = await _dbHelper.getSummaryForDate(today);
-        final int todayDayIndex = existingSummary?.dayIndex ?? 0;
-
-        // final todaySummary = HydrationDaySummary(
-        //   date: DateTime(today.year, today.month, today.day),
-        //   dayIndex: todayDayIndex,
-        //   target: waterGoal.toDouble(),
-        //   consumed: totalDrankToday,
-        //   isPerfect: true,
-        // );
-        //
-        // await _dbHelper.bulkUpsert30Days([todaySummary]);
         await SharedPrefsHelper.setLastLevelUpDate(todayStr);
-        // await refreshAchievementStats(); // state.currentLevel is updated here
 
         if (state.currentLevel > oldLevel) {
-          // Use state.currentLevel — the latest level after refresh
           newlyUnlocked = state.currentLevel;
         }
       }
@@ -309,6 +300,8 @@ class HydrationCubit extends Cubit<HydrationState> {
     final int streak = await _dbHelper.getConsistencyStreak();
 
     // 4. Emit the updated state
+    log("[HydrationCubit] Emitting state with ${currentEntries.length} entries and totalDrank $totalDrankToday",
+        name: "CUBIT_DEBUG");
     emit(state.copyWith(
       entries: currentEntries,
       totalDrank: totalDrankToday.round(),
@@ -317,13 +310,6 @@ class HydrationCubit extends Cubit<HydrationState> {
     ));
 
     _calculateCurrentSlotStatus();
-
-    // if (newlyUnlocked != null) {
-    //   // Reset after snackbar is shown so listenWhen can fire again next time
-    //   Future.delayed(const Duration(seconds: 5), () {
-    //     if (!isClosed) emit(state.copyWith(clearNewlyUnlockedLevel: true));
-    //   });
-    // }
   }
 
   void subscribeToBleUpdates(BleCubit bleCubit) {
