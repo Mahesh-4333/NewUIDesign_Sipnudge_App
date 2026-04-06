@@ -1093,7 +1093,7 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
       }
 
       emit(state.copyWith(
-        message: "Reset command sent successfully",
+        message: "Reset command ready to sent",
         commandSentTimestamp: DateTime.now().millisecondsSinceEpoch,
         lastCommandSent: 'reset',
       ));

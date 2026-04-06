@@ -34,8 +34,10 @@ class _AnimatedBottomNavBarState extends State<AnimatedBottomNavBar>
   late AnimationController _slideController;
   late Animation<double> _slideAnimation;
   late AnimationController _dragScaleController;
+  late AnimationController _bounceController;
   double? _startLeft;
   double? _targetLeft;
+  double? _initialDragLeft;
 
   static const List<dynamic> _icons = [
     "assets/images/home_ic.svg",
@@ -91,6 +93,11 @@ class _AnimatedBottomNavBarState extends State<AnimatedBottomNavBar>
     _dragScaleController = AnimationController(
       vsync: this,
     );
+
+    _bounceController = AnimationController(
+      duration: const Duration(milliseconds: 400),
+      vsync: this,
+    );
   }
 
   @override
@@ -100,6 +107,7 @@ class _AnimatedBottomNavBarState extends State<AnimatedBottomNavBar>
     }
     _slideController.dispose();
     _dragScaleController.dispose();
+    _bounceController.dispose();
     super.dispose();
   }
 
@@ -139,11 +147,13 @@ class _AnimatedBottomNavBarState extends State<AnimatedBottomNavBar>
   void _onDragStart(int index) {
     if (index != _currentIndex) return;
     _dragScaleController.animateTo(1.0,
-        duration: const Duration(milliseconds: 800),
+        duration: const Duration(milliseconds: 400),
         curve: const ElasticOutCurve(0.6));
+    _bounceController.repeat(reverse: true);
     setState(() {
       _isDragging = true;
       _dragLeft = _getGlassLeftOffset(_currentIndex!);
+      _initialDragLeft = _dragLeft;
       _slideController.stop(); // Intercept any ongoing slide
     });
   }
@@ -161,8 +171,10 @@ class _AnimatedBottomNavBarState extends State<AnimatedBottomNavBar>
   void _onDragEnd(DragEndDetails details, BottomNavCubit cubit) {
     if (!_isDragging) return;
     _dragScaleController.animateTo(0.0,
-        duration: const Duration(milliseconds: 800),
+        duration: const Duration(milliseconds: 400),
         curve: const ElasticOutCurve(0.6));
+    _bounceController.stop();
+    _bounceController.reset();
 
     // Nearest neighbour algorithm to find dropped tab
     int nearestIndex = 0;
@@ -243,13 +255,16 @@ class _AnimatedBottomNavBarState extends State<AnimatedBottomNavBar>
         return !state.isVisible
             ? SizedBox.shrink()
             : AnimatedBuilder(
-                animation:
-                    Listenable.merge([_slideAnimation, _dragScaleController]),
+                animation: Listenable.merge(
+                    [_slideAnimation, _dragScaleController, _bounceController]),
                 builder: (context, child) {
                   double slideProgress = _slideAnimation.value;
-                  double dragScale = 1.0 -
+                  double bounceValue =
+                      _isDragging ? _bounceController.value : 0.0;
+                  // shrinks to 0.85 when grabbed, with a +/- 0.05 bounce
+                  double dragScale = 1.3 -
                       (_dragScaleController.value *
-                          -0.11); // shrinks to 0.85 when grabbed
+                          (0.04 + (bounceValue * 0.06)));
                   double currentLeft = _isDragging
                       ? _dragLeft!
                       : _startLeft! +
@@ -266,49 +281,131 @@ class _AnimatedBottomNavBarState extends State<AnimatedBottomNavBar>
                       ? 1.2
                       : 1.0 + (sin(clampedProgress * 3.14159) * 0.4);
 
-                  return Container(
-                    width: AppDimensions.dim408.w,
-                    height: AppDimensions.dim88.h,
-                    decoration: BoxDecoration(
-                      boxShadow: [
-                        BoxShadow(
-                          blurRadius: AppDimensions.dim30.r,
-                          spreadRadius: AppDimensions.dim2.r,
-                          color: Colors.white.withOpacity(.09),
-                          offset: Offset(
-                              AppDimensions.dim4.w, AppDimensions.dim4.h),
-                        )
-                      ],
-                      borderRadius:
-                          BorderRadius.circular(AppDimensions.dim90.r),
-                      border: GradientBoxBorder(
-                        gradient: LinearGradient(
-                          begin: Alignment.topCenter,
-                          end: Alignment.bottomCenter,
-                          colors: [AppColors.greywith80, Color(0xFF3F3F3F)],
+                  double barScale = 1.0 - (_dragScaleController.value * 0.05);
+
+                  return Transform.scale(
+                    scale: barScale,
+                    child: Container(
+                      width: AppDimensions.dim408.w,
+                      height: AppDimensions.dim88.h,
+                      decoration: BoxDecoration(
+                        boxShadow: [
+                          BoxShadow(
+                            blurRadius: AppDimensions.dim30.r,
+                            spreadRadius: AppDimensions.dim2.r,
+                            color: Colors.white.withOpacity(.09),
+                            offset: Offset(
+                                AppDimensions.dim4.w, AppDimensions.dim4.h),
+                          )
+                        ],
+                        borderRadius:
+                            BorderRadius.circular(AppDimensions.dim90.r),
+                        border: GradientBoxBorder(
+                          gradient: LinearGradient(
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                            colors: [AppColors.greywith80, Color(0xFF3F3F3F)],
+                          ),
+                          width: AppDimensions.dim1.w,
                         ),
-                        width: AppDimensions.dim1.w,
                       ),
-                    ),
-                    child: ClipRRect(
-                      borderRadius:
-                          BorderRadius.circular(AppDimensions.dim90.r),
-                      child: Stack(
-                        children: [
-                          LiquidGlassView(
-                            useSync: false,
-                            pixelRatio: 1.7,
-                            backgroundWidget: Container(
-                              decoration: BoxDecoration(
-                                gradient: LinearGradient(
-                                  begin: Alignment.topCenter,
-                                  end: Alignment.bottomCenter,
-                                  colors: [
-                                    AppColors.white,
-                                    AppColors.bottomnavbar
-                                  ],
+                      child: ClipRRect(
+                        borderRadius:
+                            BorderRadius.circular(AppDimensions.dim90.r),
+                        child: Stack(
+                          children: [
+                            LiquidGlassView(
+                              useSync: false,
+                              pixelRatio: 1.7,
+                              backgroundWidget: Container(
+                                decoration: BoxDecoration(
+                                  gradient: LinearGradient(
+                                    begin: Alignment.topCenter,
+                                    end: Alignment.bottomCenter,
+                                    colors: [
+                                      AppColors.white,
+                                      AppColors.bottomnavbar
+                                    ],
+                                  ),
+                                ),
+                                padding: EdgeInsets.symmetric(
+                                  vertical: AppDimensions.dim14.h,
+                                  horizontal: AppDimensions.dim20.w,
+                                ),
+                                child: Row(
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
+                                  children: List.generate(
+                                    _icons.length,
+                                    (index) {
+                                      return Container(
+                                        width: AppDimensions.dim82.w,
+                                        height: AppDimensions.dim60.h,
+                                        alignment: Alignment.center,
+                                        child: AnimatedBuilder(
+                                          animation: _pressControllers[index],
+                                          builder: (context, child) {
+                                            return Transform.scale(
+                                              scale:
+                                                  _scaleAnimations[index].value,
+                                              child: Stack(
+                                                alignment: Alignment.center,
+                                                children: [
+                                                  // Always render the unselected base component
+                                                  _buildNavBarItem(
+                                                      index, false),
+                                                  // Fade the original selected button over top seamlessly
+                                                  Opacity(
+                                                    opacity: _getButtonOpacity(
+                                                        index, slideProgress),
+                                                    child:
+                                                        _buildSelectedOriginal(
+                                                            index),
+                                                  ),
+                                                ],
+                                              ),
+                                            );
+                                          },
+                                        ),
+                                      );
+                                    },
+                                  ),
                                 ),
                               ),
+                              children: [
+                                // Mount the liquid chunk into UI tree primarily when transitioning
+                                if (_isDragging ||
+                                    (slideProgress > 0.0 &&
+                                        slideProgress < 1.0))
+                                  LiquidGlass(
+                                    width: AppDimensions.dim82.w * dragScale,
+                                    height: AppDimensions.dim60.h * dragScale,
+                                    magnification: currentMagnification,
+                                    distortion: 0.1,
+                                    position: LiquidGlassOffsetPosition(
+                                      left: currentLeft +
+                                          AppDimensions.dim20.w +
+                                          ((AppDimensions.dim82.w -
+                                                  (AppDimensions.dim82.w *
+                                                      dragScale)) /
+                                              2),
+                                      top: AppDimensions.dim14.h +
+                                          ((AppDimensions.dim60.h -
+                                                  (AppDimensions.dim60.h *
+                                                      dragScale)) /
+                                              2),
+                                    ),
+                                    child: Container(
+                                      decoration: BoxDecoration(
+                                        borderRadius: BorderRadius.circular(
+                                            AppDimensions.dim48.r),
+                                      ),
+                                    ),
+                                  ),
+                              ],
+                            ),
+                            // Transparent touch interception layer over the view
+                            Padding(
                               padding: EdgeInsets.symmetric(
                                 vertical: AppDimensions.dim14.h,
                                 horizontal: AppDimensions.dim20.w,
@@ -318,102 +415,49 @@ class _AnimatedBottomNavBarState extends State<AnimatedBottomNavBar>
                                     MainAxisAlignment.spaceBetween,
                                 children: List.generate(
                                   _icons.length,
-                                  (index) {
-                                    return Container(
+                                  (index) => GestureDetector(
+                                    behavior: HitTestBehavior.opaque,
+                                    onTapDown: (_) => _onTapDown(index),
+                                    onTapUp: (_) => _onTapUp(index),
+                                    onTapCancel: _onTapCancel,
+                                    onTap: () =>
+                                        _onTap(index, cubit, _currentIndex!),
+                                    onLongPress: () => _onDragStart(index),
+                                    onLongPressMoveUpdate: (details) {
+                                      if (_isDragging) {
+                                        setState(() {
+                                          _dragLeft = (_initialDragLeft ??
+                                                  0.0) +
+                                              details.localOffsetFromOrigin.dx;
+                                          double minLeft =
+                                              _getGlassLeftOffset(0);
+                                          double maxLeft = _getGlassLeftOffset(
+                                              _icons.length - 1);
+                                          _dragLeft = _dragLeft!
+                                              .clamp(minLeft, maxLeft);
+                                        });
+                                      }
+                                    },
+                                    onLongPressEnd: (details) =>
+                                        _onDragEnd(DragEndDetails(), cubit),
+                                    onLongPressUp: () =>
+                                        _onDragEnd(DragEndDetails(), cubit),
+                                    onHorizontalDragStart: (_) =>
+                                        _onDragStart(index),
+                                    onHorizontalDragUpdate: (details) =>
+                                        _onDragUpdate(details),
+                                    onHorizontalDragEnd: (details) =>
+                                        _onDragEnd(details, cubit),
+                                    child: SizedBox(
                                       width: AppDimensions.dim82.w,
                                       height: AppDimensions.dim60.h,
-                                      alignment: Alignment.center,
-                                      child: AnimatedBuilder(
-                                        animation: _pressControllers[index],
-                                        builder: (context, child) {
-                                          return Transform.scale(
-                                            scale:
-                                                _scaleAnimations[index].value,
-                                            child: Stack(
-                                              alignment: Alignment.center,
-                                              children: [
-                                                // Always render the unselected base component
-                                                _buildNavBarItem(index, false),
-                                                // Fade the original selected button over top seamlessly
-                                                Opacity(
-                                                  opacity: _getButtonOpacity(
-                                                      index, slideProgress),
-                                                  child: _buildSelectedOriginal(
-                                                      index),
-                                                ),
-                                              ],
-                                            ),
-                                          );
-                                        },
-                                      ),
-                                    );
-                                  },
-                                ),
-                              ),
-                            ),
-                            children: [
-                              // Mount the liquid chunk into UI tree primarily when transitioning
-                              if (_isDragging ||
-                                  (slideProgress > 0.0 && slideProgress < 1.0))
-                                LiquidGlass(
-                                  width: AppDimensions.dim82.w * dragScale,
-                                  height: AppDimensions.dim60.h * dragScale,
-                                  magnification: currentMagnification,
-                                  distortion: 0.1,
-                                  position: LiquidGlassOffsetPosition(
-                                    left: currentLeft +
-                                        AppDimensions.dim20.w +
-                                        ((AppDimensions.dim82.w -
-                                                (AppDimensions.dim82.w *
-                                                    dragScale)) /
-                                            2),
-                                    top: AppDimensions.dim14.h +
-                                        ((AppDimensions.dim60.h -
-                                                (AppDimensions.dim60.h *
-                                                    dragScale)) /
-                                            2),
-                                  ),
-                                  child: Container(
-                                    decoration: BoxDecoration(
-                                      borderRadius: BorderRadius.circular(
-                                          AppDimensions.dim48.r),
                                     ),
                                   ),
                                 ),
-                            ],
-                          ),
-                          // Transparent touch interception layer over the view
-                          Padding(
-                            padding: EdgeInsets.symmetric(
-                              vertical: AppDimensions.dim14.h,
-                              horizontal: AppDimensions.dim20.w,
-                            ),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: List.generate(
-                                _icons.length,
-                                (index) => GestureDetector(
-                                  behavior: HitTestBehavior.opaque,
-                                  onTapDown: (_) => _onTapDown(index),
-                                  onTapUp: (_) => _onTapUp(index),
-                                  onTapCancel: _onTapCancel,
-                                  onTap: () =>
-                                      _onTap(index, cubit, _currentIndex!),
-                                  onHorizontalDragStart: (_) =>
-                                      _onDragStart(index),
-                                  onHorizontalDragUpdate: (details) =>
-                                      _onDragUpdate(details),
-                                  onHorizontalDragEnd: (details) =>
-                                      _onDragEnd(details, cubit),
-                                  child: SizedBox(
-                                    width: AppDimensions.dim82.w,
-                                    height: AppDimensions.dim60.h,
-                                  ),
-                                ),
                               ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
                     ),
                   );
