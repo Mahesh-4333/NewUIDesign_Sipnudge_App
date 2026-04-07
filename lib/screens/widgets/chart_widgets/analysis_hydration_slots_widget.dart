@@ -179,9 +179,15 @@ class _AnalysisHydrationSlotsWidgetState
 
         // Calculate chartMaxY based on max value, rounding up to nearest 100
         double chartMaxY = ((maxVal / 100).ceil() * 100).toDouble();
-        if (chartMaxY < 200)
+        if (chartMaxY < 200) {
           chartMaxY = 200; // Lower minimum floor to be more responsive
+        }
         chartMaxY += 100; // Add one extra interval for padding at the top
+
+        double yInterval = (chartMaxY / 5).ceilToDouble();
+        if (yInterval < 50) {
+          yInterval = 50;
+        }
 
         final Color topLineColor = const Color(0xFFA8D59D); // Light green
         final Color topDotColor = const Color(0xFF2C5E1A); // Dark green
@@ -226,7 +232,7 @@ class _AnalysisHydrationSlotsWidgetState
                             sideTitles: SideTitles(
                               showTitles: true,
                               reservedSize: 35.w,
-                              interval: 50,
+                              interval: yInterval,
                               getTitlesWidget: (value, meta) {
                                 return Padding(
                                   padding: EdgeInsets.only(right: 6.w),

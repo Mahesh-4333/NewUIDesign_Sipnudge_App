@@ -381,18 +381,41 @@ class SharedPrefsHelper {
     final dbHelper = DatabaseHelper();
     final user = await dbHelper.getUserInfo();
 
-    int wakeHour = user?.wakeupHour ?? 8;
+    int rawWakeHour = user?.wakeupHour ?? 8;
     int wakeMinute = user?.wakeupMinute ?? 0;
-    int bedHour = user?.bedtimeHour ?? 22;
+    String wakePeriod = user?.wakeupPeriod ?? "AM";
+
+    int rawBedHour = user?.bedtimeHour ?? 10;
     int bedMinute = user?.bedtimeMinute ?? 0;
+    String bedPeriod = user?.bedtimePeriod ?? "PM";
+
+    // 12h to 24h conversion for Wakeup
+    int wakeHour24 = rawWakeHour;
+    if (wakePeriod == "PM" && rawWakeHour != 12) wakeHour24 += 12;
+    if (wakePeriod == "AM" && rawWakeHour == 12) wakeHour24 = 0;
+
+    // 12h to 24h conversion for Bedtime
+    int bedHour24 = rawBedHour;
+    if (bedPeriod == "PM" && rawBedHour != 12) bedHour24 += 12;
+    if (bedPeriod == "AM" && rawBedHour == 12) bedHour24 = 0;
 
     final now = DateTime.now();
     // Quiet time starts at bedtime
-    DateTime quietStart =
-        DateTime(now.year, now.month, now.day, bedHour, bedMinute);
+    DateTime quietStart = DateTime(
+      now.year,
+      now.month,
+      now.day,
+      bedHour24,
+      bedMinute,
+    );
     // Quiet time ends at waketime
-    DateTime quietEnd =
-        DateTime(now.year, now.month, now.day, wakeHour, wakeMinute);
+    DateTime quietEnd = DateTime(
+      now.year,
+      now.month,
+      now.day,
+      wakeHour24,
+      wakeMinute,
+    );
 
     // If quiet time ends before it starts (e.g., bedtime 22:00, waketime 08:00), it ends the next day
     if (quietEnd.isBefore(quietStart)) {

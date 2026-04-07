@@ -7,7 +7,7 @@ import 'package:hydrify/constants/app_colors.dart';
 import 'package:hydrify/constants/app_font_styles.dart';
 
 class EraseDataDialog extends StatefulWidget {
-  final VoidCallback onErase;
+  final Future<void> Function() onErase;
 
   const EraseDataDialog({Key? key, required this.onErase}) : super(key: key);
 
@@ -17,7 +17,7 @@ class EraseDataDialog extends StatefulWidget {
 
 class _EraseDataDialogState extends State<EraseDataDialog> {
   bool _isSwiped = false;
-  int _secondsRemaining = 10;
+  int _secondsRemaining = 5;
   Timer? _timer;
   double _dragPosition = 0;
   final double _buttonWidth = 280.w;
@@ -36,15 +36,15 @@ class _EraseDataDialogState extends State<EraseDataDialog> {
       _dragPosition = _buttonWidth - _sliderWidth;
     });
 
-    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
+    _timer = Timer.periodic(const Duration(seconds: 1), (timer) async {
       if (_secondsRemaining > 0) {
         setState(() {
           _secondsRemaining--;
         });
       } else {
         timer.cancel();
-        Navigator.pop(context);
-        widget.onErase();
+        await widget.onErase();
+        if (mounted) Navigator.pop(context);
       }
     });
   }
@@ -114,7 +114,7 @@ class _EraseDataDialogState extends State<EraseDataDialog> {
               CircularPercentIndicator(
                 radius: 65.r,
                 lineWidth: 8.w,
-                percent: _secondsRemaining / 10,
+                percent: _secondsRemaining / 5,
                 center: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [

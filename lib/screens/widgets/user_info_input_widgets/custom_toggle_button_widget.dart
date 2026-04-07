@@ -34,6 +34,16 @@ class _CustomToggleButtonWidgetState extends State<CustomToggleButtonWidget> {
     _selectedValue = widget.initialValue;
   }
 
+  @override
+  void didUpdateWidget(covariant CustomToggleButtonWidget oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.initialValue != widget.initialValue) {
+      setState(() {
+        _selectedValue = widget.initialValue;
+      });
+    }
+  }
+
   void _toggleValue() {
     setState(() {
       _selectedValue = _selectedValue == widget.leftLabel
