@@ -127,6 +127,25 @@ class AppColors {
 
   // ignore: constant_identifier_names
   static const color_A084A5 = Color(0xFFA084A5);
+  static const color_136DEC0D = Color(0XFF136DEC0D);
+  static const color_0083FF = Color(0XFF0083FF);
+  static const color_F1F5F9 = Color(0XFFF1F5F9);
+  static const color_9CCEFD = Color(0XFF9CCEFD);
+  static const color_E7E7E7 = Color(0XFFE7E7E7);
+  static const color_00050C = Color(0XFF00050C);
+  static const color_136DEC = Color(0XFF136DEC);
+  static const color_D0E2FB = Color(0XFFD0E2FB);
+  static const color_64748B = Color(0XFF64748B);
+  static const color_F0FDF4 = Color(0XFFF0FDF4);
+  static const color_16A34A = Color(0XFF16A34A);
+  static const color_136DEC4D = Color(0XFF136DEC4D);
+  static const color_4C6C9A = Color(0XFF4C6C9A);
+  static const color_4D758B = Color(0XFF4D758B);
+  static const color_0F172A = Color(0XFF0F172A);
+  static const color_22C55E = Color(0XFF22C55E);
+  static const color_F97316 = Color(0XFFF97316);
+  static const color_F8FAFC = Color(0XFFF8FAFC);
+  static const color_EFF6FF = Color(0xFFEFF6FF);
 
   static const LinearGradient guestButtonColor = LinearGradient(
     begin: Alignment.centerLeft,

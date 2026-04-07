@@ -5,7 +5,9 @@ import 'package:hydrify/constants/app_colors.dart';
 import 'package:hydrify/constants/app_dimensions.dart';
 import 'package:hydrify/constants/app_font_styles.dart';
 import 'package:hydrify/constants/app_strings.dart';
+import 'package:hydrify/screens/widgets/chart_widgets/custom_stacked_bar_chart.dart';
 import 'package:percent_indicator/percent_indicator.dart';
+import 'package:syncfusion_flutter_charts/charts.dart';
 
 enum MonthGoalCompletionStatus { Completed, Partial, NotFinished }
 
@@ -57,7 +59,11 @@ class _DataNAnalyticsScreenState extends State<DataNAnalyticsScreen> {
                 SizedBox(
                   height: 16.h,
                 ),
-                buildDistributionCard()
+                buildDistributionCard(),
+                SizedBox(
+                  height: 16.h,
+                ),
+                buildHabitConsistencyCard()
               ],
             ),
           ),
@@ -442,6 +448,12 @@ class _DataNAnalyticsScreenState extends State<DataNAnalyticsScreen> {
   }
 
   Widget buildDistributionCard() {
+    final List<ChartData> myData = [
+      ChartData(backgroundValue: 100, foregroundValue: 50, label: "W - 1"),
+      ChartData(backgroundValue: 95, foregroundValue: 30, label: "W - 2"),
+      ChartData(backgroundValue: 80, foregroundValue: 60, label: "W - 3"),
+      ChartData(backgroundValue: 85, foregroundValue: 40, label: "W - 4"),
+    ];
     return Container(
         decoration: BoxDecoration(
           color: AppColors.white,
@@ -460,9 +472,11 @@ class _DataNAnalyticsScreenState extends State<DataNAnalyticsScreen> {
             vertical: AppDimensions.dim16.h, horizontal: AppDimensions.dim24.w),
         child: Column(crossAxisAlignment: CrossAxisAlignment.center, children: [
           Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.start,
                 children: [
                   Container(
                     alignment: Alignment.topLeft,
@@ -492,12 +506,260 @@ class _DataNAnalyticsScreenState extends State<DataNAnalyticsScreen> {
                   ),
                 ],
               ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                mainAxisAlignment: MainAxisAlignment.start,
+                children: [
+                  Container(
+                    alignment: Alignment.topLeft,
+                    child: Text(
+                      "6.2L",
+                      style: TextStyle(
+                        color: AppColors.color_136DEC,
+                        fontSize: AppFontStyles.fontSize_24,
+                        fontFamily: AppFontStyles.urbanistFontFamily,
+                        fontVariations: [
+                          AppFontStyles.lightFontWeightVariation
+                        ],
+                      ),
+                    ),
+                  ),
+                  Container(
+                    padding:
+                        EdgeInsets.symmetric(horizontal: 8.w, vertical: 2.h),
+                    decoration: BoxDecoration(
+                        color: AppColors.color_F0FDF4,
+                        borderRadius: BorderRadius.circular(360)),
+                    child: Text(
+                      "+12% vs last month",
+                      style: TextStyle(
+                        color: AppColors.color_16A34A,
+                        fontSize: AppFontStyles.fontSize_10,
+                        fontFamily: AppFontStyles.urbanistFontFamily,
+                        fontVariations: [AppFontStyles.boldFontVariation],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ],
           ),
           SizedBox(
             height: 29.h,
           ),
+          CustomStackedBarChart(
+            data: myData,
+            chartHeight: 192.h,
+            barWidth: 60.w,
+            maxValue: 100,
+          ),
+          SizedBox(
+            height: 16.h,
+          ),
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            spacing: AppDimensions.dim16.w,
+            children: [
+              buildLegendItem(AppColors.lightBlue400, "SCHEDULED"),
+              buildLegendItem(AppColors.color_136DEC0D, "OFF-SLOT")
+            ],
+          )
         ]));
+  }
+
+  Widget buildHabitConsistencyCard() {
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.white,
+        borderRadius: BorderRadius.circular(AppDimensions.dim12.r),
+        border: Border.all(color: AppColors.color_136DEC0D),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.black40,
+            offset: const Offset(0, 1),
+            blurRadius: 10,
+            spreadRadius: 0,
+          ),
+        ],
+      ),
+      padding: EdgeInsets.symmetric(
+          vertical: AppDimensions.dim16.h, horizontal: AppDimensions.dim24.w),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Container(
+                alignment: Alignment.topLeft,
+                child: Text(
+                  "Habit Consistency",
+                  style: TextStyle(
+                    color: AppColors.bluegray,
+                    fontSize: AppFontStyles.fontSize_18,
+                    fontFamily: AppFontStyles.urbanistFontFamily,
+                    fontVariations: [AppFontStyles.boldFontVariation],
+                  ),
+                ),
+              ),
+              Container(
+                padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 2.h),
+                decoration: BoxDecoration(
+                    color: AppColors.color_136DEC.withOpacity(.1),
+                    borderRadius: BorderRadius.circular(4)),
+                child: Text(
+                  "Elite Tier",
+                  style: TextStyle(
+                    color: AppColors.color_136DEC,
+                    fontSize: AppFontStyles.fontSize_10,
+                    fontFamily: AppFontStyles.urbanistFontFamily,
+                    fontVariations: [AppFontStyles.boldFontVariation],
+                  ),
+                ),
+              ),
+            ],
+          ),
+          SizedBox(
+            height: 16.h,
+          ),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: buildConsistencyWidget(isStreak: false, value: "92"),
+              ),
+              SizedBox(width: 16.w),
+              Expanded(
+                child: buildConsistencyWidget(isStreak: true, value: "18"),
+              ),
+            ],
+          ),
+          SizedBox(
+            height: 8.h,
+          ),
+          Divider(
+            color: AppColors.color_F8FAFC,
+          ),
+          SizedBox(
+            height: 8.h,
+          ),
+          Row(
+            children: [
+              Container(
+                decoration: BoxDecoration(
+                    shape: BoxShape.circle, color: AppColors.color_EFF6FF),
+                width: 32.w,
+                height: 32.h,
+                child: Icon(
+                  Icons.lightbulb_rounded,
+                  color: AppColors.color_136DEC,
+                  size: 18,
+                ),
+              ),
+              SizedBox(
+                width: 12.w,
+              ),
+              Expanded(
+                child: Text(
+                  "Most off-slot drinking happens at 11PM. Try hydrating more during dinner.",
+                  style: TextStyle(
+                    color: AppColors.color_4D758B,
+                    fontSize: AppFontStyles.fontSize_12,
+                    fontFamily: AppFontStyles.urbanistFontFamily,
+                    fontVariations: [AppFontStyles.regularFontVariation],
+                  ),
+                ),
+              )
+            ],
+          )
+        ],
+      ),
+    );
+  }
+
+  Widget buildConsistencyWidget({
+    required String value,
+    required bool isStreak,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          isStreak ? "Streak" : "Consistency",
+          style: TextStyle(
+            color: AppColors.color_4D758B,
+            fontSize: AppFontStyles.fontSize_14,
+            fontFamily: AppFontStyles.urbanistFontFamily,
+            fontVariations: [AppFontStyles.regularFontVariation],
+          ),
+        ),
+        SizedBox(
+          height: 4.h,
+        ),
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Text(
+              "$value${isStreak ? "" : "%"}",
+              style: TextStyle(
+                color: AppColors.color_0F172A,
+                fontSize: AppFontStyles.fontSize_24,
+                fontFamily: AppFontStyles.urbanistFontFamily,
+                fontVariations: [AppFontStyles.semiBoldFontVariation],
+              ),
+            ),
+            SizedBox(
+              width: 8.h,
+            ),
+            Visibility(
+              visible: isStreak,
+              replacement: Icon(
+                Icons.verified_outlined,
+                size: 20.w,
+                color: AppColors.color_22C55E,
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(
+                    "days",
+                    style: TextStyle(
+                      color: AppColors.color_64748B,
+                      fontSize: AppFontStyles.fontSize_12,
+                      fontFamily: AppFontStyles.urbanistFontFamily,
+                      fontVariations: [AppFontStyles.boldFontVariation],
+                    ),
+                  ),
+                  SizedBox(
+                    width: 8.h,
+                  ),
+                  Icon(
+                    Icons.local_fire_department_rounded,
+                    size: 24.w,
+                    color: AppColors.color_F97316,
+                  )
+                ],
+              ),
+            ),
+          ],
+        ),
+        SizedBox(
+          height: 4.h,
+        ),
+        Text(
+          isStreak
+              ? "Consecutive days reaching daily goal"
+              : "Following schedule vs off-slot drinking",
+          style: TextStyle(
+            color: AppColors.color_4D758B,
+            fontSize: AppFontStyles.fontSize_10,
+            fontFamily: AppFontStyles.urbanistFontFamily,
+            fontVariations: [AppFontStyles.semiBoldFontVariation],
+          ),
+        ),
+      ],
+    );
   }
 
   Widget buildLegendItem(Color color, String text) {
@@ -518,7 +780,7 @@ class _DataNAnalyticsScreenState extends State<DataNAnalyticsScreen> {
               color: AppColors.color_64748B,
               fontSize: AppFontStyles.fontSize_12,
               fontFamily: AppFontStyles.urbanistFontFamily,
-              fontVariations: [AppFontStyles.lightFontWeightVariation],
+              fontVariations: [AppFontStyles.boldFontVariation],
             ),
           )
         ],

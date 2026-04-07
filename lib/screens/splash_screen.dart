@@ -3,6 +3,8 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:hydrify/constants/app_colors.dart';
 import 'package:hydrify/constants/app_dimensions.dart';
 import 'package:hydrify/screens/auth/local_auth_screen.dart';
+import 'package:hydrify/screens/data_and_analytics_screen.dart';
+import 'package:hydrify/screens/data_n_analytics/data_n_analytics.dart';
 import 'package:hydrify/services/location_service.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -30,7 +32,7 @@ class _SplashScreenState extends State<SplashScreen> {
         Navigator.of(context).pushReplacement(
           PageRouteBuilder(
             transitionDuration: const Duration(milliseconds: 650), // smoother
-            pageBuilder: (_, animation, __) => const LocalAuthScreen(),
+            pageBuilder: (_, animation, __) => const DataNAnalyticsScreen(),
             transitionsBuilder: (_, animation, __, child) {
               final curved = CurvedAnimation(
                 parent: animation,
