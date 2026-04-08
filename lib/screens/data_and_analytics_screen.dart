@@ -4,6 +4,7 @@ import 'package:hydrify/constants/app_colors.dart';
 import 'package:hydrify/constants/app_dimensions.dart';
 import 'package:hydrify/constants/app_font_styles.dart';
 import 'package:fl_chart/fl_chart.dart';
+import 'package:hydrify/constants/app_style.dart';
 import 'package:syncfusion_flutter_gauges/gauges.dart';
 
 class DataAndAnalyticsPage extends StatefulWidget {
@@ -111,7 +112,7 @@ class _DataAndAnalyticsPageState extends State<DataAndAnalyticsPage> {
             style: TextStyle(
               color: AppColors.raisinblack,
               fontSize: 22.sp,
-              fontFamily: AppFontStyles.lexendFontFamily,
+              fontFamily: AppFontStyles.urbanistFontFamily,
               fontWeight: FontWeight.bold,
             ),
           ),
@@ -168,6 +169,7 @@ class _DataAndAnalyticsPageState extends State<DataAndAnalyticsPage> {
                 child: Text(
                   'Monthly',
                   style: TextStyle(
+                    fontFamily: AppFontStyles.urbanistFontFamily,
                     color: !isYearly ? Colors.white : AppColors.greyColor,
                     fontWeight: FontWeight.w600,
                   ),
@@ -187,6 +189,7 @@ class _DataAndAnalyticsPageState extends State<DataAndAnalyticsPage> {
                 child: Text(
                   'Yearly',
                   style: TextStyle(
+                    fontFamily: AppFontStyles.urbanistFontFamily,
                     color: isYearly ? Colors.white : AppColors.greyColor,
                     fontWeight: FontWeight.w600,
                   ),
@@ -205,13 +208,7 @@ class _DataAndAnalyticsPageState extends State<DataAndAnalyticsPage> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20.r),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.03),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
+        boxShadow: AppStyle.boxShadowVariation3,
       ),
       child: Column(
         children: [
@@ -222,6 +219,7 @@ class _DataAndAnalyticsPageState extends State<DataAndAnalyticsPage> {
               Text(
                 isYearly ? selectedYear.toString() : selectedMonth,
                 style: TextStyle(
+                  fontFamily: AppFontStyles.urbanistFontFamily,
                   color: AppColors.raisinblack,
                   fontSize: 16.sp,
                   fontWeight: FontWeight.bold,
@@ -252,21 +250,21 @@ class _DataAndAnalyticsPageState extends State<DataAndAnalyticsPage> {
                   width: (MediaQuery.of(context).size.width - 100.w) / 4,
                   padding: EdgeInsets.symmetric(vertical: 8.h),
                   decoration: BoxDecoration(
-                    color: isSelected
-                        ? AppColors.lightSkyBlue.withOpacity(0.1)
-                        : const Color(0xFFF2F4F7),
-                    borderRadius: BorderRadius.circular(10.r),
-                    border: isSelected
-                        ? Border.all(color: AppColors.lightSkyBlue, width: 1)
-                        : null,
-                  ),
+                      color: isSelected
+                          ? AppColors.blueWaterIntake
+                          : const Color(0xFFF2F4F7),
+                      borderRadius: BorderRadius.circular(40.r),
+                      border: isSelected
+                          ? Border.all(color: AppColors.lightSkyBlue, width: 1)
+                          : null,
+                      boxShadow: AppStyle.boxShadowVariation3),
                   child: Center(
                     child: Text(
                       item.toString(),
                       style: TextStyle(
-                        color: isSelected
-                            ? AppColors.lightSkyBlue
-                            : AppColors.greyColor,
+                        fontFamily: AppFontStyles.urbanistFontFamily,
+                        color:
+                            isSelected ? AppColors.white : AppColors.greyColor,
                         fontWeight:
                             isSelected ? FontWeight.bold : FontWeight.normal,
                         fontSize: 12.sp,
@@ -302,7 +300,10 @@ class _DataAndAnalyticsPageState extends State<DataAndAnalyticsPage> {
         ),
         SizedBox(width: 5.w),
         Text(label,
-            style: TextStyle(color: AppColors.greyColor, fontSize: 10.sp)),
+            style: TextStyle(
+                fontFamily: AppFontStyles.urbanistFontFamily,
+                color: AppColors.greyColor,
+                fontSize: 10.sp)),
       ],
     );
   }
@@ -313,13 +314,7 @@ class _DataAndAnalyticsPageState extends State<DataAndAnalyticsPage> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20.r),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.03),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
+        boxShadow: AppStyle.boxShadowVariation3,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -327,6 +322,7 @@ class _DataAndAnalyticsPageState extends State<DataAndAnalyticsPage> {
           Text(
             isYearly ? 'Yearly Intake: 2025' : 'Monthly Intake: $selectedMonth',
             style: TextStyle(
+              fontFamily: AppFontStyles.urbanistFontFamily,
               color: AppColors.raisinblack,
               fontSize: 16.sp,
               fontWeight: FontWeight.bold,
@@ -369,6 +365,7 @@ class _DataAndAnalyticsPageState extends State<DataAndAnalyticsPage> {
                             Text(
                               '82%',
                               style: TextStyle(
+                                fontFamily: AppFontStyles.urbanistFontFamily,
                                 fontSize: 32.sp,
                                 fontWeight: FontWeight.bold,
                                 color: AppColors.raisinblack,
@@ -380,6 +377,7 @@ class _DataAndAnalyticsPageState extends State<DataAndAnalyticsPage> {
                                   : 'MONTHLY\nPERFORMANCE',
                               textAlign: TextAlign.center,
                               style: TextStyle(
+                                fontFamily: AppFontStyles.urbanistFontFamily,
                                 fontSize: 10.sp,
                                 color: AppColors.greyColor,
                                 fontWeight: FontWeight.w500,
@@ -413,12 +411,14 @@ class _DataAndAnalyticsPageState extends State<DataAndAnalyticsPage> {
       children: [
         Text(label,
             style: TextStyle(
+                fontFamily: AppFontStyles.urbanistFontFamily,
                 color: AppColors.greyColor,
                 fontSize: 10.sp,
                 fontWeight: FontWeight.w500)),
         SizedBox(height: 4.h),
         Text(value,
             style: TextStyle(
+                fontFamily: AppFontStyles.urbanistFontFamily,
                 color: AppColors.raisinblack,
                 fontSize: 16.sp,
                 fontWeight: FontWeight.bold)),
@@ -432,13 +432,7 @@ class _DataAndAnalyticsPageState extends State<DataAndAnalyticsPage> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20.r),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.03),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
+        boxShadow: AppStyle.boxShadowVariation3,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -452,6 +446,7 @@ class _DataAndAnalyticsPageState extends State<DataAndAnalyticsPage> {
                   Text(
                     isYearly ? 'Quarterly Distribution' : 'Weekly Distribution',
                     style: TextStyle(
+                      fontFamily: AppFontStyles.urbanistFontFamily,
                       color: AppColors.raisinblack,
                       fontSize: 16.sp,
                       fontWeight: FontWeight.bold,
@@ -460,6 +455,7 @@ class _DataAndAnalyticsPageState extends State<DataAndAnalyticsPage> {
                   Text(
                     'Scheduled vs Off-slot',
                     style: TextStyle(
+                      fontFamily: AppFontStyles.urbanistFontFamily,
                       color: AppColors.greyColor,
                       fontSize: 12.sp,
                     ),
@@ -472,6 +468,7 @@ class _DataAndAnalyticsPageState extends State<DataAndAnalyticsPage> {
                   Text(
                     '6.2L',
                     style: TextStyle(
+                      fontFamily: AppFontStyles.urbanistFontFamily,
                       color: AppColors.lightSkyBlue,
                       fontSize: 18.sp,
                       fontWeight: FontWeight.bold,
@@ -487,6 +484,7 @@ class _DataAndAnalyticsPageState extends State<DataAndAnalyticsPage> {
                     child: Text(
                       '+12% vs last month',
                       style: TextStyle(
+                          fontFamily: AppFontStyles.urbanistFontFamily,
                           color: Colors.green,
                           fontSize: 8.sp,
                           fontWeight: FontWeight.bold),
@@ -523,6 +521,8 @@ class _DataAndAnalyticsPageState extends State<DataAndAnalyticsPage> {
                             padding: EdgeInsets.only(top: 8.h),
                             child: Text(labels[value.toInt()],
                                 style: TextStyle(
+                                    fontFamily:
+                                        AppFontStyles.urbanistFontFamily,
                                     color: AppColors.greyColor,
                                     fontSize: 10.sp)),
                           );
@@ -594,13 +594,7 @@ class _DataAndAnalyticsPageState extends State<DataAndAnalyticsPage> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20.r),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.03),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
+        boxShadow: AppStyle.boxShadowVariation3,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -611,6 +605,7 @@ class _DataAndAnalyticsPageState extends State<DataAndAnalyticsPage> {
               Text(
                 'Habit Consistency',
                 style: TextStyle(
+                  fontFamily: AppFontStyles.urbanistFontFamily,
                   color: AppColors.raisinblack,
                   fontSize: 16.sp,
                   fontWeight: FontWeight.bold,
@@ -625,6 +620,7 @@ class _DataAndAnalyticsPageState extends State<DataAndAnalyticsPage> {
                 child: Text(
                   'ELITE TIER',
                   style: TextStyle(
+                      fontFamily: AppFontStyles.urbanistFontFamily,
                       color: AppColors.lightSkyBlue,
                       fontSize: 10.sp,
                       fontWeight: FontWeight.bold),
@@ -641,12 +637,15 @@ class _DataAndAnalyticsPageState extends State<DataAndAnalyticsPage> {
                   children: [
                     Text("Consistency",
                         style: TextStyle(
-                            color: AppColors.greyColor, fontSize: 12.sp)),
+                            fontFamily: AppFontStyles.urbanistFontFamily,
+                            color: AppColors.greyColor,
+                            fontSize: 12.sp)),
                     SizedBox(height: 5.h),
                     Row(
                       children: [
                         Text("92%",
                             style: TextStyle(
+                                fontFamily: AppFontStyles.urbanistFontFamily,
                                 color: AppColors.raisinblack,
                                 fontSize: 24.sp,
                                 fontWeight: FontWeight.bold)),
@@ -657,7 +656,9 @@ class _DataAndAnalyticsPageState extends State<DataAndAnalyticsPage> {
                     ),
                     Text("Following schedule on-slot drinking",
                         style: TextStyle(
-                            color: AppColors.greyColor, fontSize: 10.sp)),
+                            fontFamily: AppFontStyles.urbanistFontFamily,
+                            color: AppColors.greyColor,
+                            fontSize: 10.sp)),
                   ],
                 ),
               ),
@@ -670,19 +671,24 @@ class _DataAndAnalyticsPageState extends State<DataAndAnalyticsPage> {
                   children: [
                     Text("Streak",
                         style: TextStyle(
-                            color: AppColors.greyColor, fontSize: 12.sp)),
+                            fontFamily: AppFontStyles.urbanistFontFamily,
+                            color: AppColors.greyColor,
+                            fontSize: 12.sp)),
                     SizedBox(height: 5.h),
                     Row(
                       children: [
                         Text("352",
                             style: TextStyle(
+                                fontFamily: AppFontStyles.urbanistFontFamily,
                                 color: AppColors.raisinblack,
                                 fontSize: 24.sp,
                                 fontWeight: FontWeight.bold)),
                         SizedBox(width: 5.w),
                         Text("days",
                             style: TextStyle(
-                                color: AppColors.greyColor, fontSize: 14.sp)),
+                                fontFamily: AppFontStyles.urbanistFontFamily,
+                                color: AppColors.greyColor,
+                                fontSize: 14.sp)),
                         SizedBox(width: 5.w),
                         Icon(Icons.local_fire_department,
                             color: Colors.orange, size: 18.sp),
@@ -690,7 +696,9 @@ class _DataAndAnalyticsPageState extends State<DataAndAnalyticsPage> {
                     ),
                     Text("Consecutive days reaching daily goal",
                         style: TextStyle(
-                            color: AppColors.greyColor, fontSize: 10.sp)),
+                            fontFamily: AppFontStyles.urbanistFontFamily,
+                            color: AppColors.greyColor,
+                            fontSize: 10.sp)),
                   ],
                 ),
               ),
@@ -712,6 +720,7 @@ class _DataAndAnalyticsPageState extends State<DataAndAnalyticsPage> {
                   child: Text(
                     "\"Most off-slot drinking happens at 11 PM. Try hydrating more during the day.\"",
                     style: TextStyle(
+                        fontFamily: AppFontStyles.urbanistFontFamily,
                         color: AppColors.raisinblack,
                         fontSize: 11.sp,
                         fontStyle: FontStyle.italic),
@@ -736,13 +745,7 @@ class _DataAndAnalyticsPageState extends State<DataAndAnalyticsPage> {
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(20.r),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.lightSkyBlue.withOpacity(0.3),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
+        boxShadow: AppStyle.boxShadowVariation3,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -754,6 +757,7 @@ class _DataAndAnalyticsPageState extends State<DataAndAnalyticsPage> {
               Text(
                 'Elite Smart Insights',
                 style: TextStyle(
+                    fontFamily: AppFontStyles.urbanistFontFamily,
                     color: Colors.white,
                     fontSize: 16.sp,
                     fontWeight: FontWeight.bold),
@@ -764,6 +768,7 @@ class _DataAndAnalyticsPageState extends State<DataAndAnalyticsPage> {
           Text(
             'Your hydration consistency is Peak Performing. Morning intake is up by 14%, significantly reducing mid-day fatigue markers.',
             style: TextStyle(
+                fontFamily: AppFontStyles.urbanistFontFamily,
                 color: Colors.white.withOpacity(0.9),
                 fontSize: 12.sp,
                 height: 1.5),
@@ -781,6 +786,7 @@ class _DataAndAnalyticsPageState extends State<DataAndAnalyticsPage> {
                 Text(
                   'Optimal Window: 08:00 - 11:30',
                   style: TextStyle(
+                      fontFamily: AppFontStyles.urbanistFontFamily,
                       color: Colors.white,
                       fontSize: 12.sp,
                       fontWeight: FontWeight.bold),
@@ -801,6 +807,7 @@ class _DataAndAnalyticsPageState extends State<DataAndAnalyticsPage> {
         Text(
           isYearly ? 'Quarterly Breakdown' : 'Monthly Breakdown',
           style: TextStyle(
+              fontFamily: AppFontStyles.urbanistFontFamily,
               color: AppColors.raisinblack,
               fontSize: 18.sp,
               fontWeight: FontWeight.bold),
@@ -855,6 +862,7 @@ class _DataAndAnalyticsPageState extends State<DataAndAnalyticsPage> {
                       child: Text(
                         "${(index + 1) * 25}%",
                         style: TextStyle(
+                            fontFamily: AppFontStyles.urbanistFontFamily,
                             color: AppColors.lightSkyBlue,
                             fontSize: 10.sp,
                             fontWeight: FontWeight.bold),
@@ -868,12 +876,15 @@ class _DataAndAnalyticsPageState extends State<DataAndAnalyticsPage> {
                       children: [
                         Text(titles[index],
                             style: TextStyle(
+                                fontFamily: AppFontStyles.urbanistFontFamily,
                                 color: AppColors.raisinblack,
                                 fontSize: 14.sp,
                                 fontWeight: FontWeight.bold)),
                         Text(subTitles[index],
                             style: TextStyle(
-                                color: AppColors.greyColor, fontSize: 11.sp)),
+                                fontFamily: AppFontStyles.urbanistFontFamily,
+                                color: AppColors.greyColor,
+                                fontSize: 11.sp)),
                       ],
                     ),
                   ),
@@ -882,11 +893,13 @@ class _DataAndAnalyticsPageState extends State<DataAndAnalyticsPage> {
                     children: [
                       Text(values[index],
                           style: TextStyle(
+                              fontFamily: AppFontStyles.urbanistFontFamily,
                               color: AppColors.raisinblack,
                               fontSize: 16.sp,
                               fontWeight: FontWeight.bold)),
                       Text("Goal Met",
                           style: TextStyle(
+                              fontFamily: AppFontStyles.urbanistFontFamily,
                               color: Colors.green,
                               fontSize: 9.sp,
                               fontWeight: FontWeight.bold)),

@@ -69,8 +69,8 @@ class _LocalAuthScreenState extends State<LocalAuthScreen> {
                 }
               } else {
                 // If logged out, send to QR Scanner or Auth Options
-                // return const QrScanner();
-                return AuthOptionsScreen();
+                return const QrScanner();
+                // return AuthOptionsScreen();
               }
             },
             transitionsBuilder:

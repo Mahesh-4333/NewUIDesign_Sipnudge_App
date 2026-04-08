@@ -16,6 +16,7 @@ import 'package:hydrify/models/hydration_summary.dart';
 import 'package:hydrify/services/notification/notification_service.dart';
 import 'package:hydrify/services/health_service.dart';
 import 'package:http/http.dart' as http;
+import 'package:permission_handler/permission_handler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 part 'ble_state.dart';
@@ -71,6 +72,9 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
   /// Current retry count for exponential back-off in [_rescan].
   int _scanRetryCount = 0;
 
+  /// Guards against multiple initialization calls to start()
+  bool _isInitialized = false;
+
   final dbHelper = DatabaseHelper();
   final List<HydrationEntry> _pendingSlots = [];
 
@@ -81,6 +85,107 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
   @override
   double get currentHydrationValue => state.currentHydrationValue;
 
+  /// Requests all permissions sequentially for better UX.
+  /// Bluetooth → Location → Notification
+  Future<void> requestAllPermissionsSequentially() async {
+    try {
+      Console.log(
+          tag: '[BLE_Cubit] Starting sequential permission flow',
+          value: 'BLE_Cubit');
+
+      // 1. BLUETOOTH PERMISSIONS
+      Console.log(
+          tag: '[BLE_Cubit] Requesting Bluetooth permissions...',
+          value: 'BLE_Cubit');
+
+      if (!await Permission.bluetooth.isGranted) {
+        emit(state.copyWith(
+          status: BleStatus.initializing,
+          message: "Bluetooth permission required...",
+        ));
+        await Permission.bluetooth.request();
+        await Future.delayed(const Duration(milliseconds: 1000));
+      }
+
+      if (!await Permission.bluetoothScan.isGranted) {
+        emit(state.copyWith(
+          status: BleStatus.initializing,
+          message: "Bluetooth scan permission required...",
+        ));
+        await Permission.bluetoothScan.request();
+        await Future.delayed(const Duration(milliseconds: 1000));
+      }
+
+      if (!await Permission.bluetoothConnect.isGranted) {
+        emit(state.copyWith(
+          status: BleStatus.initializing,
+          message: "Bluetooth connect permission required...",
+        ));
+        await Permission.bluetoothConnect.request();
+        await Future.delayed(const Duration(milliseconds: 1000));
+      }
+
+      if (!await Permission.bluetoothAdvertise.isGranted) {
+        emit(state.copyWith(
+          status: BleStatus.initializing,
+          message: "Bluetooth advertise permission required...",
+        ));
+        await Permission.bluetoothAdvertise.request();
+        await Future.delayed(const Duration(milliseconds: 1000));
+      }
+
+      Console.log(
+          tag: '[BLE_Cubit] Bluetooth permissions granted', value: 'BLE_Cubit');
+
+      // 2. LOCATION PERMISSION
+      Console.log(
+          tag: '[BLE_Cubit] Requesting Location permission...',
+          value: 'BLE_Cubit');
+
+      emit(state.copyWith(
+        status: BleStatus.initializing,
+        message: "Location permission required for weather...",
+      ));
+
+      final locationPermission = await Permission.locationWhenInUse.status;
+      if (!locationPermission.isGranted) {
+        await Permission.locationWhenInUse.request();
+        await Future.delayed(const Duration(milliseconds: 1000));
+      }
+
+      Console.log(
+          tag: '[BLE_Cubit] Location permission granted', value: 'BLE_Cubit');
+
+      // 3. NOTIFICATION PERMISSION
+      Console.log(
+          tag: '[BLE_Cubit] Requesting Notification permission...',
+          value: 'BLE_Cubit');
+
+      emit(state.copyWith(
+        status: BleStatus.initializing,
+        message: "Notification permission required for reminders...",
+      ));
+
+      final notificationPermission = await Permission.notification.status;
+      if (!notificationPermission.isGranted) {
+        await Permission.notification.request();
+        await Future.delayed(const Duration(milliseconds: 1000));
+      }
+
+      Console.log(
+          tag: '[BLE_Cubit] Notification permission granted',
+          value: 'BLE_Cubit');
+      Console.log(
+          tag: '[BLE_Cubit] All permissions completed successfully',
+          value: 'BLE_Cubit');
+    } catch (e) {
+      Console.log(
+          tag: '[BLE_Cubit] Permission request error: $e', value: 'BLE_Cubit');
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // BLE initialization and scanning
   // ---------------------------------------------------------------------------
   // BLE initialization and scanning
   // ---------------------------------------------------------------------------
@@ -90,6 +195,13 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
   // tap bottle 0 day before
 
   Future<void> start() async {
+    if (_isInitialized) {
+      Console.log(
+          tag: '[BLE_Cubit] start() already called, ignoring duplicate call',
+          value: 'BLE_Cubit');
+      return;
+    }
+
     // await _checkAndResetForNewDay();
 
     // await _fetchInvestorDayIncrement();
@@ -98,6 +210,11 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
       status: BleStatus.initializing,
       message: "Initializing...",
     ));
+
+    // Request ALL permissions sequentially: Bluetooth → Location → Notification
+    await requestAllPermissionsSequentially();
+
+    _isInitialized = true;
 
     await _waitForBluetoothOn(() async {
       final prefs = await SharedPreferences.getInstance();
@@ -754,7 +871,6 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
             Console.log(
                 tag: "Time drift detected ($difference min). Syncing RTC...",
                 value: 'BLE_Cubit');
-            sendRtcSyncCommand();
           }
         } catch (e) {
           Console.log(tag: "Failed to parse TS: $tsStr", value: 'BLE_Cubit');
@@ -1076,6 +1192,9 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
         }
       }
 
+      //  sendRTCSyncCommand
+      sendRtcSyncCommand();
+
       // 2. Sync Pending Config Data
       final pendingConfig = await SharedPrefsHelper.getPendingConfigData();
       Console.log(
@@ -1220,14 +1339,19 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
   Future<bool> sendRtcSyncCommand() async {
     try {
       final now = DateTime.now();
+      final offset = now.timeZoneOffset;
+      final hours = offset.inHours.abs().toString().padLeft(2, '0');
+      final minutes = (offset.inMinutes.abs() % 60).toString().padLeft(2, '0');
+      final sign = offset.isNegative ? '-' : '+';
+      final formattedOffset = '$sign$hours:$minutes';
 
-      // Format: YYYY-MM-DD HH:MM:SS
+      // Format: YYYY-MM-DD HH:MM:SS±HH:MM
       final timestamp = "${now.year}-"
           "${now.month.toString().padLeft(2, '0')}-"
           "${now.day.toString().padLeft(2, '0')} "
           "${now.hour.toString().padLeft(2, '0')}:"
           "${now.minute.toString().padLeft(2, '0')}:"
-          "${now.second.toString().padLeft(2, '0')}";
+          "${now.second.toString().padLeft(2, '0')}/$formattedOffset";
 
       Console.log(tag: "Syncing RTC with: $timestamp", value: "BLE_CUBIT");
 

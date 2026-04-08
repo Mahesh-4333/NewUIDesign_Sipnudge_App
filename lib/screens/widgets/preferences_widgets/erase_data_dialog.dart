@@ -22,10 +22,13 @@ class _EraseDataDialogState extends State<EraseDataDialog> {
   double _dragPosition = 0;
   final double _buttonWidth = 280.w;
   final double _sliderWidth = 50.w;
+  int _dotCount = 0;
+  Timer? _dotTimer;
 
   @override
   void dispose() {
     _timer?.cancel();
+    _dotTimer?.cancel();
     super.dispose();
   }
 
@@ -43,6 +46,12 @@ class _EraseDataDialogState extends State<EraseDataDialog> {
         });
       } else {
         timer.cancel();
+        _dotTimer =
+            Timer.periodic(const Duration(milliseconds: 500), (dotTimer) {
+          setState(() {
+            _dotCount = (_dotCount + 1) % 4;
+          });
+        });
         await widget.onErase();
         if (mounted) Navigator.pop(context);
       }
@@ -111,39 +120,93 @@ class _EraseDataDialogState extends State<EraseDataDialog> {
               SizedBox(height: 30.h),
 
               // Timer Circle
-              CircularPercentIndicator(
-                radius: 65.r,
-                lineWidth: 8.w,
-                percent: _secondsRemaining / 5,
-                center: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      "$_secondsRemaining",
-                      style: TextStyle(
-                          height: 1,
-                          color: AppColors.bluegray,
-                          fontSize: 40.sp,
-                          fontFamily: AppFontStyles.urbanistFontFamily,
-                          fontVariations: [AppFontStyles.boldFontVariation]),
-                    ),
-                    Text(
-                      "SECONDS",
-                      style: TextStyle(
-                        height: 2,
-                        color: AppColors.greyColor,
-                        fontSize: 10.sp,
-                        fontFamily: AppFontStyles.urbanistFontFamily,
-                        fontVariations: [AppFontStyles.boldFontVariation],
-                        letterSpacing: 1.2,
+              if (_secondsRemaining > 0)
+                CircularPercentIndicator(
+                  radius: 65.r,
+                  lineWidth: 8.w,
+                  percent: _secondsRemaining / 5,
+                  center: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        "$_secondsRemaining",
+                        style: TextStyle(
+                            height: 1,
+                            color: AppColors.bluegray,
+                            fontSize: 40.sp,
+                            fontFamily: AppFontStyles.urbanistFontFamily,
+                            fontVariations: [AppFontStyles.boldFontVariation]),
                       ),
+                      Text(
+                        "SECONDS",
+                        style: TextStyle(
+                          height: 2,
+                          color: AppColors.greyColor,
+                          fontSize: 10.sp,
+                          fontFamily: AppFontStyles.urbanistFontFamily,
+                          fontVariations: [AppFontStyles.boldFontVariation],
+                          letterSpacing: 1.2,
+                        ),
+                      ),
+                    ],
+                  ),
+                  progressColor: const Color(0xffEF4444),
+                  backgroundColor: const Color(0xffEF4444).withOpacity(0.1),
+                  circularStrokeCap: CircularStrokeCap.round,
+                )
+              else
+                SizedBox(
+                  height: 130.h,
+                  child: Center(
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          "Deleting ",
+                          style: TextStyle(
+                            color: AppColors.bluegray,
+                            fontSize: 18.sp,
+                            fontFamily: AppFontStyles.urbanistFontFamily,
+                            fontVariations: [AppFontStyles.boldFontVariation],
+                          ),
+                        ),
+                        Text(
+                          ".",
+                          style: TextStyle(
+                            color: _dotCount >= 1
+                                ? AppColors.bluegray
+                                : AppColors.bluegray.withOpacity(0.3),
+                            fontSize: 28.sp,
+                            fontFamily: AppFontStyles.urbanistFontFamily,
+                            fontVariations: [AppFontStyles.boldFontVariation],
+                          ),
+                        ),
+                        Text(
+                          ".",
+                          style: TextStyle(
+                            color: _dotCount >= 2
+                                ? AppColors.bluegray
+                                : AppColors.bluegray.withOpacity(0.3),
+                            fontSize: 28.sp,
+                            fontFamily: AppFontStyles.urbanistFontFamily,
+                            fontVariations: [AppFontStyles.boldFontVariation],
+                          ),
+                        ),
+                        Text(
+                          ".",
+                          style: TextStyle(
+                            color: _dotCount >= 3
+                                ? AppColors.bluegray
+                                : AppColors.bluegray.withOpacity(0.3),
+                            fontSize: 28.sp,
+                            fontFamily: AppFontStyles.urbanistFontFamily,
+                            fontVariations: [AppFontStyles.boldFontVariation],
+                          ),
+                        ),
+                      ],
                     ),
-                  ],
+                  ),
                 ),
-                progressColor: const Color(0xffEF4444),
-                backgroundColor: const Color(0xffEF4444).withOpacity(0.1),
-                circularStrokeCap: CircularStrokeCap.round,
-              ),
               SizedBox(height: 35.h),
 
               // Swipe to Erase Button

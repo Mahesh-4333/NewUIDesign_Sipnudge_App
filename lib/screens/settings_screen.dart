@@ -27,6 +27,7 @@ import 'package:hydrify/screens/user_personal_info_input_screen..dart';
 import 'package:hydrify/screens/widgets/logout_widgets/logout_bottom_sheet.dart';
 import 'package:hydrify/screens/active_notifications_screen.dart';
 import 'package:hydrify/screens/data_and_analytics_screen.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:hydrify/screens/widgets/setting_screen_widget/editableProfileAvatar.dart';
 import 'package:hydrify/screens/widgets/setting_screen_widget/profile_menu_item.dart';
 import 'package:hydrify/screens/widgets/setting_screen_widget/sipnudgeshopwidget.dart';
@@ -42,6 +43,7 @@ class SettingScreen extends StatefulWidget {
 class _SettingScreenState extends State<SettingScreen> {
   final TextEditingController _nameController = TextEditingController();
   final FocusNode _nameFocusNode = FocusNode();
+  String _appVersion = '';
 
   static const String _userNameKey = 'user_display_name';
 
@@ -51,6 +53,14 @@ class _SettingScreenState extends State<SettingScreen> {
     // Listen for changes
     UserManager().addListener(_onNameChanged);
     _loadSavedName();
+    _loadAppVersion();
+  }
+
+  Future<void> _loadAppVersion() async {
+    final packageInfo = await PackageInfo.fromPlatform();
+    setState(() {
+      _appVersion = 'Version : ${packageInfo.version}+${packageInfo.buildNumber}';
+    });
   }
 
   void _onNameChanged(String newName) {
@@ -244,7 +254,9 @@ class _SettingScreenState extends State<SettingScreen> {
 
       List<XFile> filesToShare = [];
 
-      Console.log(tag: "await File(dbPath).exists()", value: await File(dbPath).exists());
+      Console.log(
+          tag: "await File(dbPath).exists()",
+          value: await File(dbPath).exists());
       if (await File(dbPath).exists()) {
         filesToShare.add(XFile(dbPath));
       } else {
@@ -259,8 +271,11 @@ class _SettingScreenState extends State<SettingScreen> {
 
       if (filesToShare.isNotEmpty) {
         final box = context.findRenderObject() as RenderBox;
-        await Share.shareXFiles(filesToShare,
-            text: 'SipNudge App Logs and Database', sharePositionOrigin: box.localToGlobal(Offset.zero) & box.size,);
+        await Share.shareXFiles(
+          filesToShare,
+          text: 'SipNudge App Logs and Database',
+          sharePositionOrigin: box.localToGlobal(Offset.zero) & box.size,
+        );
       } else {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -461,7 +476,18 @@ class _SettingScreenState extends State<SettingScreen> {
                     // Menu group 2
                     SizedBox(height: AppDimensions.dim34.h),
                     const SipnudgeShopWidget(),
-                    SizedBox(height: AppDimensions.dim165.h),
+                    SizedBox(height: 100.h),
+                    if (_appVersion.isNotEmpty)
+                      Text(
+                        _appVersion,
+                        style: TextStyle(
+                          color: AppColors.bluegray,
+                          fontSize: AppFontStyles.fontSize_14.sp,
+                          fontFamily: AppFontStyles.museoModernoFontFamily,
+                          fontVariations: [AppFontStyles.semiBoldFontVariation],
+                        ),
+                      ),
+                    SizedBox(height: AppDimensions.dim149.h),
                   ],
                 ),
               ),

@@ -43,14 +43,22 @@ class LocationService {
 
   Future<Position> getCurrentLocation() async {
     try {
-      Console.log(tag: "APP", value: 'Getting current location');
+      Console.log(tag: "APP", value: '=== GET CURRENT LOCATION CALLED ===');
+
+      final permission = await Geolocator.checkPermission();
+      Console.log(tag: "APP", value: 'Current permission status: $permission');
 
       await handlePermission();
+
+      Console.log(tag: "APP", value: 'Permission granted, getting position...');
 
       final position = await Geolocator.getCurrentPosition(
           desiredAccuracy: LocationAccuracy.high);
 
-      Console.log(tag: "APP", value: 'Location obtained: ${position.latitude}, ${position.longitude}');
+      Console.log(
+          tag: "APP",
+          value:
+              'Location obtained: ${position.latitude}, ${position.longitude}');
       return position;
     } catch (e) {
       Console.log(tag: "APP", value: 'Error getting location: $e');

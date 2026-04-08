@@ -1,7 +1,5 @@
-import 'package:hydrify/helpers/logger.dart';
 import 'dart:ui';
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -15,26 +13,24 @@ import 'package:hydrify/cubit/bottle/bottle_data_cubit.dart';
 import 'package:hydrify/cubit/hydration/hydration_cubit.dart';
 import 'package:hydrify/cubit/hydration/hydration_state.dart';
 import 'package:hydrify/helpers/database_helper.dart';
+import 'package:hydrify/helpers/hydration_helper.dart';
 import 'package:hydrify/helpers/logger.dart';
 import 'package:hydrify/helpers/shared_pref_helper.dart';
 import 'package:hydrify/helpers/water_consumption_data_helper.dart';
 import 'package:hydrify/models/bottle_info.dart';
-import 'package:hydrify/helpers/hydration_helper.dart';
 import 'package:hydrify/models/hydration_entry.dart';
-import 'package:hydrify/models/hydration_summary.dart';
 import 'package:hydrify/providers/weather_provider.dart';
 import 'package:hydrify/screens/hydration_30_day.dart';
-import 'package:hydrify/screens/notification.dart';
-import 'package:hydrify/screens/qr_scanning.dart';
 import 'package:hydrify/screens/widgets/autoScroll_GoalText.dart';
 import 'package:hydrify/screens/widgets/ble_device_selection_sheet.dart';
 import 'package:hydrify/screens/widgets/custom_circular_loader/custom_circular_progress_indicator.dart';
 import 'package:hydrify/screens/widgets/custom_circular_loader/custom_circular_water_progress_indicator.dart';
 import 'package:hydrify/screens/widgets/greeting_widget.dart';
+import 'package:hydrify/screens/widgets/timezone_change_dialog.dart';
 import 'package:hydrify/screens/widgets/user_info_input_widgets/custom_beating_ble_status_indicator.dart';
 import 'package:hydrify/screens/widgets/water_wave_widget.dart';
 import 'package:hydrify/services/notification/notification_service.dart';
-import 'package:marquee/marquee.dart';
+import 'package:hydrify/services/timezone_change_detector.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -47,9 +43,7 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
-  // late AnimationController _controller;
-  // late Animation<double> _shadowOffsetAnimation;
+class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   bool _isPickerShown = false;
   bool hasConnectedBefore = false;
   bool isGuest = false;
@@ -66,6 +60,7 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _loadBottle();
     _checkGuestStatus();
 
@@ -73,23 +68,19 @@ class _HomeScreenState extends State<HomeScreen> {
       onTap: (slot) {},
     );
 
-    //==================================================================
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       final prefs = await SharedPreferences.getInstance();
       hasConnectedBefore = prefs.getBool('ble_connected_once') ?? false;
 
-      // 🔹 read current bottle volume from cubit
       final bottleState = context.read<BottleDataCubit>().state;
       final double currentVolume = bottleState.volume;
 
       if (hasConnectedBefore) {
-        context.read<BleCubit>().start();
         var history =
             await context.read<BottleDataCubit>().getCurrentDayHistory();
 
         context.read<BleCubit>().updateCurrentHydrationValue(history);
 
-        // Cancel all today's notifications if target already met on app open
         final stopWhenFull = await SharedPrefsHelper.getStopWhenFull();
         if (stopWhenFull) {
           double completionPercent =
@@ -106,18 +97,80 @@ class _HomeScreenState extends State<HomeScreen> {
           }
         }
       } else {
-        // if (currentVolume < 600) {
         _showStartJourneyDialog(context);
-        // } else {
-
-        // Removing dialog as it causes bottle data to not come
-        context.read<BleCubit>().start();
-        // }
       }
 
-      // Check and schedule notifications if not already scheduled
       await _checkAndScheduleHydrationReminders();
+      await _initializeTimezoneDetector();
     });
+  }
+
+  Future<void> _initializeTimezoneDetector() async {
+    await TimezoneChangeDetector().init();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _checkTimezoneChangeOnResume();
+    }
+  }
+
+  Future<void> _checkTimezoneChangeOnResume() async {
+    final hasChanged = await TimezoneChangeDetector().hasTimezoneChanged();
+    if (hasChanged && mounted) {
+      _showTimezoneChangeDialog();
+    }
+  }
+
+  void _showTimezoneChangeDialog() {
+    if (!mounted) return;
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return TimezoneChangeDialog(
+          onRefresh: _refreshTimezone,
+        );
+      },
+    );
+  }
+
+  Future<void> _refreshTimezone() async {
+    await TimezoneChangeDetector().updateTimezone();
+
+    final dbHelper = DatabaseHelper();
+    final waterGoal = await SharedPrefsHelper.getWaterGoal();
+
+    if (waterGoal != null && waterGoal > 0) {
+      final slots =
+          HydrationHelper.generateHydrationSlots(waterGoal.toDouble());
+
+      await dbHelper.clearHydrationSlots();
+      for (var slot in slots) {
+        await dbHelper.insertOrUpdateSlot(slot);
+      }
+
+      final notificationService = NotificationService();
+      await notificationService.resetAllHydrationReminders(slots);
+      await notificationService.scheduleHydrationRemindersForFuture(slots);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Hydration schedule refreshed for new timezone'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
   }
 
   Future<void> _checkAndScheduleHydrationReminders() async {
@@ -149,6 +202,8 @@ class _HomeScreenState extends State<HomeScreen> {
         Console.log(
             tag: "Notifications",
             value: "Scheduling hydration reminders for ${slots.length} slots.");
+
+        // Request notification permissions before scheduling
         await notificationService.resetAllHydrationReminders(slots);
         await notificationService.scheduleHydrationRemindersForFuture(slots);
       }
@@ -662,57 +717,124 @@ class _HomeScreenState extends State<HomeScreen> {
 
         final weatherData = weatherProvider.weatherData;
         if (weatherData == null) {
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            weatherProvider.fetchWeatherForCurrentLocation();
-          });
+          // Only fetch once on build, don't keep retrying
+          if (!weatherProvider.isLoading && weatherProvider.error == null) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              weatherProvider.fetchWeatherForCurrentLocation();
+            });
+          }
+
+          if (weatherProvider.error != null) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Text(
+                  'Weather unavailable',
+                  style: TextStyle(
+                    fontSize: AppFontStyles.fontSize_14,
+                    color: AppColors.bluegray,
+                  ),
+                ),
+                InkWell(
+                  onTap: () async {
+                    await weatherProvider.fetchWeatherForCurrentLocation();
+                  },
+                  child: Text(
+                    'Tap to refresh',
+                    style: TextStyle(
+                      fontSize: AppFontStyles.fontSize_12,
+                      color: Colors.blue,
+                      decoration: TextDecoration.underline,
+                    ),
+                  ),
+                ),
+              ],
+            );
+          }
+
           return const Center(child: CircularProgressIndicator());
+        }
+
+        if (weatherProvider.error != null) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Text(
+                'Weather unavailable',
+                style: TextStyle(
+                  fontSize: AppFontStyles.fontSize_14,
+                  color: AppColors.bluegray,
+                ),
+              ),
+              InkWell(
+                onTap: () async {
+                  await weatherProvider.fetchWeatherForCurrentLocation();
+                },
+                child: Text(
+                  'Tap to refresh',
+                  style: TextStyle(
+                    fontSize: AppFontStyles.fontSize_12,
+                    color: Colors.blue,
+                    decoration: TextDecoration.underline,
+                  ),
+                ),
+              ),
+            ],
+          );
         }
 
         var iconPath = weatherProvider.getWeatherIcon();
         print('=== UI Widget Debug ===');
         print('Icon path received from provider: "$iconPath"');
 
-        // if (iconPath == "assets/images/sunny_ic.svg") {
-        //   iconPath = "assets/images/sunny_ic.png";
-        // }
-
         if (iconPath == "assets/images/01_sunny_color.svg") {
           iconPath = "assets/images/01_sunny_color.svg";
         }
-
-        // if (iconPath == "assets/weather/03_cloud_color.png") {
-        //   iconPath = "assets/weather/03_cloud_color.png";
-        // }
 
         return Padding(
           padding:
               EdgeInsets.symmetric(horizontal: AppDimensions.defaultPadding),
           child: Row(
             children: [
-              Column(
-                children: [
-                  // Wrap SvgPicture.asset with error handling
-                  SizedBox(
-                    height: AppDimensions.dim45.h,
-                    width: AppDimensions.dim45.h, // Add width for debugging
-
-                    child: _buildWeatherIconWidget(iconPath),
-                  ),
-                  SizedBox(
-                      height:
-                          AppDimensions.dim8.h), // Changed from width to height
-                  Text(
-                    '${weatherData.temperature.round()}°C / ${weatherData.humidity.round()}%',
-                    style: TextStyle(
-                      fontSize: AppFontStyles.fontSize_16,
-                      fontFamily: AppFontStyles.poppinsFamily,
-                      color: AppColors.bluegray,
-                      fontVariations: [
-                        AppFontStyles.boldFontVariation,
-                      ],
+              InkWell(
+                onTap: () async {
+                  Console.log(
+                      tag: "APP", value: '=== WEATHER WIDGET TAPPED ===');
+                  await weatherProvider.fetchWeatherForCurrentLocation();
+                  Console.log(
+                      tag: "APP", value: '=== WEATHER FETCH COMPLETED ===');
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text(
+                            'Location permission requested. Weather will update shortly.'),
+                        backgroundColor: Colors.green,
+                        duration: Duration(seconds: 2),
+                      ),
+                    );
+                  }
+                },
+                child: Column(
+                  children: [
+                    SizedBox(
+                      height: AppDimensions.dim45.h,
+                      width: AppDimensions.dim45.h,
+                      child: _buildWeatherIconWidget(iconPath),
                     ),
-                  ),
-                ],
+                    SizedBox(height: AppDimensions.dim8.h),
+                    Text(
+                      '${weatherData.temperature.round()}°C / ${weatherData.humidity.round()}%',
+                      style: TextStyle(
+                        fontSize: AppFontStyles.fontSize_16,
+                        fontFamily: AppFontStyles.poppinsFamily,
+                        color: AppColors.bluegray,
+                        fontVariations: [
+                          AppFontStyles.boldFontVariation,
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
               ),
               SizedBox(width: AppDimensions.dim12.w),
               Expanded(
