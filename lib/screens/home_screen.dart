@@ -76,6 +76,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       final double currentVolume = bottleState.volume;
 
       if (hasConnectedBefore) {
+        context.read<BleCubit>().start();
         var history =
             await context.read<BottleDataCubit>().getCurrentDayHistory();
 
@@ -98,6 +99,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         }
       } else {
         _showStartJourneyDialog(context);
+        context.read<BleCubit>().start();
       }
 
       await _checkAndScheduleHydrationReminders();
@@ -424,7 +426,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                                     Navigator.of(context).pop();
 
                                     if (!isGuest) {
-                                      context.read<BleCubit>().start();
                                       final prefs =
                                           await SharedPreferences.getInstance();
                                       await prefs.setBool(

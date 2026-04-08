@@ -119,13 +119,13 @@ class _BottomNavScreenNewState extends State<BottomNavScreenNew> {
                     curr.commandSentTimestamp != prev.commandSentTimestamp &&
                     curr.lastCommandSent != null,
                 listener: (context, state) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(state.message),
-                      behavior: SnackBarBehavior.floating,
-                      backgroundColor: Colors.green.shade700,
-                    ),
-                  );
+                  // ScaffoldMessenger.of(context).showSnackBar(
+                  //   SnackBar(
+                  //     content: Text(state.message),
+                  //     behavior: SnackBarBehavior.floating,
+                  //     backgroundColor: Colors.green.shade700,
+                  //   ),
+                  // );
                 },
               ),
             ],

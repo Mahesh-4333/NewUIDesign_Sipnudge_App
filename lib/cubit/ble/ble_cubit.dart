@@ -780,6 +780,9 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
           if (c.properties.notify || c.properties.indicate) {
             try {
               await c.setNotifyValue(true);
+              Console.log(
+                  tag: "[BLE_Cubit]  enable notify for ${c.uuid}",
+                  value: 'BLE_Cubit');
             } catch (e) {
               Console.log(
                   tag: "[BLE_Cubit] Failed to enable notify for ${c.uuid}: $e",
@@ -1178,12 +1181,12 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
               value: 'BLE_Cubit');
           await _resetChar!
               .write(pendingResetCommand.codeUnits, withoutResponse: true);
-          emit(state.copyWith(
-            status: BleStatus.connected,
-            message: "Reset command sent successfully $pendingResetCommand",
-            commandSentTimestamp: DateTime.now().millisecondsSinceEpoch,
-            lastCommandSent: 'pendingResetCommand',
-          ));
+          // emit(state.copyWith(
+          //   status: BleStatus.connected,
+          //   message: "Reset command sent successfully $pendingResetCommand",
+          //   commandSentTimestamp: DateTime.now().millisecondsSinceEpoch,
+          //   lastCommandSent: 'pendingResetCommand',
+          // ));
           await SharedPrefsHelper.clearPendingResetCommand();
         } catch (e) {
           Console.log(
@@ -1208,12 +1211,12 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
               value: "Sending pending config data: $pendingConfig");
           await _configChar!
               .write(pendingConfig.codeUnits, withoutResponse: true);
-          emit(state.copyWith(
-            status: BleStatus.connected,
-            message: "Config data sent successfully $pendingConfig",
-            commandSentTimestamp: DateTime.now().millisecondsSinceEpoch,
-            lastCommandSent: 'pendingConfig',
-          ));
+          // emit(state.copyWith(
+          //   status: BleStatus.connected,
+          //   message: "Config data sent successfully $pendingConfig",
+          //   commandSentTimestamp: DateTime.now().millisecondsSinceEpoch,
+          //   lastCommandSent: 'pendingConfig',
+          // ));
           await SharedPrefsHelper.clearPendingConfigData();
         } catch (e) {
           Console.log(
@@ -1242,12 +1245,12 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
         print(
             '============> success  $payload   =====> unit ${payload.codeUnits}');
 
-        emit(state.copyWith(
-          status: BleStatus.connected,
-          message: "Hydration slots synced",
-          commandSentTimestamp: DateTime.now().millisecondsSinceEpoch,
-          lastCommandSent: 'hydrationSlots',
-        ));
+        // emit(state.copyWith(
+        //   status: BleStatus.connected,
+        //   message: "Hydration slots synced",
+        //   commandSentTimestamp: DateTime.now().millisecondsSinceEpoch,
+        //   lastCommandSent: 'hydrationSlots',
+        // ));
       }
     } catch (e) {
       print('============> error ${e.toString()}');
