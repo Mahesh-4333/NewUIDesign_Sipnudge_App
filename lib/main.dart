@@ -79,9 +79,6 @@ Future<void> main() async {
     apiKey: '4fa9cd3687912a01b9c5c66718b2b99f',
   );
 
-  final notificationService = NotificationService();
-  await notificationService.init();
-
   FlutterBluePlus.setLogLevel(LogLevel.none);
 
   await UserManager().init();
@@ -98,7 +95,6 @@ Future<void> main() async {
 
   runApp(
     MyApp(
-      notificationService: notificationService,
       httpClient: httpClient,
       weatherService: weatherService,
       locationService: locationService,
@@ -107,14 +103,12 @@ Future<void> main() async {
 }
 
 class MyApp extends StatelessWidget {
-  final NotificationService notificationService;
   final http.Client httpClient;
   final WeatherService weatherService;
   final LocationService locationService;
 
   const MyApp({
     super.key,
-    required this.notificationService,
     required this.httpClient,
     required this.weatherService,
     required this.locationService,

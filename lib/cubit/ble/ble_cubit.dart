@@ -774,6 +774,27 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
         });
       }
 
+      // ✅ 3. Perform an initial manual read of _dataChar to get status immediately
+      if (_dataChar != null && _dataChar!.properties.read) {
+        try {
+          final val = await _dataChar!.read();
+          if (val.isNotEmpty) {
+            final data = String.fromCharCodes(val);
+            Console.log(
+                tag: "⬇️ [DATA_CHAR] Initial Read Result: $data",
+                value: 'BLE_Cubit');
+            _parseData(data);
+          }
+        } catch (e) {
+          Console.log(
+              tag: "[BLE_Cubit] Initial read failed: $e", value: 'BLE_Cubit');
+        }
+      }
+
+      await _flushPendingSlots();
+      final flushDelay = await SharedPrefsHelper.getFlushDelay();
+      await Future.delayed(Duration(milliseconds: flushDelay));
+
       // ✅ 2. Now enable notifications for ALL characteristics across all services
       for (var service in services) {
         for (var c in service.characteristics) {
@@ -792,29 +813,10 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
         }
       }
 
-      // ✅ 3. Perform an initial manual read of _dataChar to get status immediately
-      if (_dataChar != null && _dataChar!.properties.read) {
-        try {
-          final val = await _dataChar!.read();
-          if (val.isNotEmpty) {
-            final data = String.fromCharCodes(val);
-            Console.log(
-                tag: "⬇️ [DATA_CHAR] Initial Read Result: $data",
-                value: 'BLE_Cubit');
-            _parseData(data);
-          }
-        } catch (e) {
-          Console.log(
-              tag: "[BLE_Cubit] Initial read failed: $e", value: 'BLE_Cubit');
-        }
-      }
-
       emit(state.copyWith(
         status: BleStatus.connected,
         message: "Connected to ${device.platformName}",
       ));
-
-      await _flushPendingSlots();
     } catch (e, st) {
       Console.log(
           tag:
@@ -1165,6 +1167,7 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
   }
 
   Future<void> _flushPendingSlots() async {
+    final startMs = DateTime.now().millisecondsSinceEpoch;
     print("============> $_ackChar");
     print('============> ${_pendingSlots.isEmpty}');
 
@@ -1196,7 +1199,7 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
       }
 
       //  sendRTCSyncCommand
-      sendRtcSyncCommand();
+      await sendRtcSyncCommand();
 
       // 2. Sync Pending Config Data
       final pendingConfig = await SharedPrefsHelper.getPendingConfigData();
@@ -1257,6 +1260,10 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
 
       emit(
           state.copyWith(status: BleStatus.error, message: "Flush failed: $e"));
+    } finally {
+      final endMs = DateTime.now().millisecondsSinceEpoch;
+      print(
+          "============> Total time taken for _flushPendingSlots: ${endMs - startMs}ms");
     }
   }
 
@@ -1339,7 +1346,7 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
     }
   }
 
-  Future<bool> sendRtcSyncCommand() async {
+  Future<void> sendRtcSyncCommand() async {
     try {
       final now = DateTime.now();
       final offset = now.timeZoneOffset;
@@ -1362,13 +1369,10 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
         timestamp.codeUnits,
         withoutResponse: true,
       );
-
-      return true;
     } catch (e) {
       Console.log(
           tag: "Exception occurred in RTC Sync: ${e.toString()}",
           value: "BLE_CUBIT");
-      return false;
     }
   }
 

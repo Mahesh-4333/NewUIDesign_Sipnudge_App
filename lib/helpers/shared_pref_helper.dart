@@ -40,6 +40,7 @@ class SharedPrefsHelper {
   static const String _keyFavoriteRingtones = 'favorite_ringtones';
   static const String _keyHasRequestedHealthPermission =
       'has_requested_health_permission';
+  static const String _keyFlushDelay = 'flush_delay';
 
   // ----------------------------
   // RINGTONE METHODS (NEW)
@@ -98,6 +99,16 @@ class SharedPrefsHelper {
   static Future<bool> getHasRequestedHealthPermission() async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getBool(_keyHasRequestedHealthPermission) ?? false;
+  }
+
+  static Future<void> setFlushDelay(int delay) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt(_keyFlushDelay, delay);
+  }
+
+  static Future<int> getFlushDelay() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getInt(_keyFlushDelay) ?? 100;
   }
 
   // ----------------------------
@@ -426,7 +437,10 @@ class SharedPrefsHelper {
     final endEpoch = quietEnd.millisecondsSinceEpoch ~/ 1000;
 
     // 4. Construct Payload
-    final payload = '0/$startEpoch/$endEpoch|'
+    final payload = '0/${bedHour24 < 10 ? '0$bedHour24' : bedHour24}/'
+        '${bedMinute < 10 ? '0$bedMinute' : bedMinute}/'
+        '${wakeHour24 < 10 ? '0$wakeHour24' : wakeHour24}/'
+        '${wakeMinute < 10 ? '0$wakeMinute' : wakeMinute}|'
         '1/$targetWater|'
         '2/${(lIntensity * 100).toInt()}|'
         '3/${(vStrength * 100).toInt()}|'

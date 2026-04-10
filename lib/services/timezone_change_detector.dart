@@ -53,6 +53,9 @@ class TimezoneChangeDetector extends ChangeNotifier {
 
     final newTimezone = (await FlutterTimezone.getLocalTimezone()).identifier;
     _currentTimezone = newTimezone;
+    Console.log(
+        tag: "TimezoneDetector",
+        value: "$_currentTimezone $newTimezone");
 
     final hasChanged = _storedTimezone != newTimezone;
 

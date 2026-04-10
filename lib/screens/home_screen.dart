@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
@@ -43,7 +44,10 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
+class _HomeScreenState extends State<HomeScreen> {
+  Timer? _timezoneTimer;
+  bool _isTimezoneDialogOpen = false;
+
   bool _isPickerShown = false;
   bool hasConnectedBefore = false;
   bool isGuest = false;
@@ -60,13 +64,14 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addObserver(this);
+    _timezoneTimer = Timer.periodic(const Duration(seconds: 3), (timer) {
+      _checkTimezoneChange();
+    });
+
     _loadBottle();
     _checkGuestStatus();
 
-    NotificationService().init(
-      onTap: (slot) {},
-    );
+    NotificationService().init();
 
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       final prefs = await SharedPreferences.getInstance();
@@ -111,22 +116,21 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     await TimezoneChangeDetector().init();
   }
 
-  @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed) {
-      _checkTimezoneChangeOnResume();
-    }
-  }
-
-  Future<void> _checkTimezoneChangeOnResume() async {
+  Future<void> _checkTimezoneChange() async {
+    if (_isTimezoneDialogOpen) return;
     final hasChanged = await TimezoneChangeDetector().hasTimezoneChanged();
+    Console.log(tag: "TimezoneChangeDetector_hasChanged", value: hasChanged);
     if (hasChanged && mounted) {
       _showTimezoneChangeDialog();
     }
   }
 
   void _showTimezoneChangeDialog() {
-    if (!mounted) return;
+    if (!mounted || _isTimezoneDialogOpen) return;
+
+    setState(() {
+      _isTimezoneDialogOpen = true;
+    });
 
     showDialog(
       context: context,
@@ -136,7 +140,13 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           onRefresh: _refreshTimezone,
         );
       },
-    );
+    ).then((_) {
+      if (mounted) {
+        setState(() {
+          _isTimezoneDialogOpen = false;
+        });
+      }
+    });
   }
 
   Future<void> _refreshTimezone() async {
@@ -150,6 +160,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           HydrationHelper.generateHydrationSlots(waterGoal.toDouble());
 
       await dbHelper.clearHydrationSlots();
+      await Future.delayed(Duration(seconds: 2));
       for (var slot in slots) {
         await dbHelper.insertOrUpdateSlot(slot);
       }
@@ -157,6 +168,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       final notificationService = NotificationService();
       await notificationService.resetAllHydrationReminders(slots);
       await notificationService.scheduleHydrationRemindersForFuture(slots);
+      context.read<BleCubit>().queueHydrationSlots(slots);
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -171,7 +183,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
   @override
   void dispose() {
-    WidgetsBinding.instance.removeObserver(this);
+    _timezoneTimer?.cancel();
     super.dispose();
   }
 
