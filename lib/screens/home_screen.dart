@@ -105,8 +105,10 @@ class _HomeScreenState extends State<HomeScreen> {
           }
         }
       } else {
-        _showStartJourneyDialog(context);
-        context.read<BleCubit>().start();
+        await _showStartJourneyDialog(context);
+        if (mounted) {
+          context.read<BleCubit>().start();
+        }
       }
 
       await _checkAndScheduleHydrationReminders();
@@ -253,7 +255,7 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
-  void _showStartJourneyDialog(BuildContext context) async {
+  Future<void> _showStartJourneyDialog(BuildContext context) async {
     // Check if user is logged in as guest by checking email
     final userEmail = await SharedPrefsHelper.getUserEmail();
     final isGuest = userEmail == "guest_user";
@@ -263,7 +265,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
     if (!context.mounted) return;
 
-    showDialog(
+    await showDialog(
       context: context,
       barrierDismissible: true,
       barrierColor: Colors.transparent,

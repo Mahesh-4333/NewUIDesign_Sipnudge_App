@@ -67,6 +67,7 @@ class _DrinkTypesWidgetState extends State<DrinkTypesWidget>
           tag: "HealthService", value: "Has permission: $hasPermission");
       if (hasPermission) {
         steps = await HealthService().getStepCount();
+        Console.log(tag: "steps_124", value: steps.toString());
         if (Platform.isAndroid) {
           final waterLiters = await HealthService().getWaterIntakeLiters();
           healthWaterMl = waterLiters * 1000.0;

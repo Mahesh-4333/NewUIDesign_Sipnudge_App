@@ -88,76 +88,50 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
   @override
   double get currentHydrationValue => state.currentHydrationValue;
 
-  /// Requests all permissions sequentially for better UX.
-  /// Bluetooth → Location → Notification
+  /// Requests all permissions in groups for better UX and reliability.
+  /// Bluetooth (Scan, Connect, Advertise) → Location → Notification
   Future<void> requestAllPermissionsSequentially() async {
     try {
       Console.log(
-          tag: '[BLE_Cubit] Starting sequential permission flow',
+          tag: '[BLE_Cubit] Starting grouped permission flow',
           value: 'BLE_Cubit');
 
       // 1. BLUETOOTH PERMISSIONS
-      Console.log(
-          tag: '[BLE_Cubit] Requesting Bluetooth permissions...',
-          value: 'BLE_Cubit');
-
-      if (!await Permission.bluetooth.isGranted) {
+      if (Platform.isAndroid) {
+        // For Android 12+ (API 31+), we need specific BLE permissions.
+        // permission_handler handles SDK version checks internally when requesting these.
+        Console.log(
+            tag: '[BLE_Cubit] Requesting Android Bluetooth permissions...',
+            value: 'BLE_Cubit');
+        
         emit(state.copyWith(
           status: BleStatus.initializing,
-          message: "Bluetooth permission required...",
+          message: "Bluetooth permissions required...",
         ));
-        await Permission.bluetooth.request();
-        await Future.delayed(const Duration(milliseconds: 1000));
+
+        // Grouping these ensures fewer system dialog interruptions
+        await [
+          Permission.bluetoothScan,
+          Permission.bluetoothConnect,
+          Permission.bluetoothAdvertise,
+        ].request();
+      } else if (Platform.isIOS) {
+        if (!await Permission.bluetooth.isGranted) {
+          await Permission.bluetooth.request();
+        }
       }
 
-      if (!await Permission.bluetoothScan.isGranted) {
-        emit(state.copyWith(
-          status: BleStatus.initializing,
-          message: "Bluetooth scan permission required...",
-        ));
-        await Permission.bluetoothScan.request();
-        await Future.delayed(const Duration(milliseconds: 1000));
-      }
-
-      if (!await Permission.bluetoothConnect.isGranted) {
-        emit(state.copyWith(
-          status: BleStatus.initializing,
-          message: "Bluetooth connect permission required...",
-        ));
-        await Permission.bluetoothConnect.request();
-        await Future.delayed(const Duration(milliseconds: 1000));
-      }
-
-      if (!await Permission.bluetoothAdvertise.isGranted) {
-        emit(state.copyWith(
-          status: BleStatus.initializing,
-          message: "Bluetooth advertise permission required...",
-        ));
-        await Permission.bluetoothAdvertise.request();
-        await Future.delayed(const Duration(milliseconds: 1000));
-      }
-
-      Console.log(
-          tag: '[BLE_Cubit] Bluetooth permissions granted', value: 'BLE_Cubit');
-
-      // 2. LOCATION PERMISSION
+      // 2. LOCATION PERMISSION (Required for scanning on older Android, and for weather)
       Console.log(
           tag: '[BLE_Cubit] Requesting Location permission...',
           value: 'BLE_Cubit');
 
       emit(state.copyWith(
         status: BleStatus.initializing,
-        message: "Location permission required for weather...",
+        message: "Location permission required...",
       ));
 
-      final locationPermission = await Permission.locationWhenInUse.status;
-      if (!locationPermission.isGranted) {
-        await Permission.locationWhenInUse.request();
-        await Future.delayed(const Duration(milliseconds: 1000));
-      }
-
-      Console.log(
-          tag: '[BLE_Cubit] Location permission granted', value: 'BLE_Cubit');
+      await Permission.locationWhenInUse.request();
 
       // 3. NOTIFICATION PERMISSION
       Console.log(
@@ -166,26 +140,20 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
 
       emit(state.copyWith(
         status: BleStatus.initializing,
-        message: "Notification permission required for reminders...",
+        message: "Notification permission required...",
       ));
 
-      final notificationPermission = await Permission.notification.status;
-      if (!notificationPermission.isGranted) {
-        await Permission.notification.request();
-        await Future.delayed(const Duration(milliseconds: 1000));
-      }
-
+      await Permission.notification.request();
+      
       Console.log(
-          tag: '[BLE_Cubit] Notification permission granted',
-          value: 'BLE_Cubit');
-      Console.log(
-          tag: '[BLE_Cubit] All permissions completed successfully',
+          tag: '[BLE_Cubit] All permission groups processed',
           value: 'BLE_Cubit');
     } catch (e) {
       Console.log(
           tag: '[BLE_Cubit] Permission request error: $e', value: 'BLE_Cubit');
     }
   }
+
 
   // ---------------------------------------------------------------------------
   // BLE initialization and scanning
