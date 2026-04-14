@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:developer';
+import 'dart:io';
 
 import 'package:bloc/bloc.dart';
 import 'package:flutter/material.dart';
@@ -52,6 +53,8 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
   StreamSubscription<List<ScanResult>>? _scanSub;
   StreamSubscription<BluetoothConnectionState>? _connectionSub;
   StreamSubscription<BluetoothAdapterState>? _adapterStateSub;
+  Timer? _watchdogTimer;
+  DateTime? _stuckScanningSince;
 
   // Track characteristic value notifications to avoid duplicate listeners
   StreamSubscription? _dataSub;
@@ -217,6 +220,7 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
     _isInitialized = true;
 
     await _waitForBluetoothOn(() async {
+      _startWatchdog(); // ✅ Start the watchdog to ensure scanning recovery
       final prefs = await SharedPreferences.getInstance();
       savedDeviceName = prefs.getString('last_device_name');
       savedDeviceId = prefs.getString('last_device_id');
@@ -420,7 +424,7 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
     });
 
     // ✅ Restart scan after timeout ONLY if we haven't already connected
-    Future.delayed(const Duration(seconds: 30), () {
+    Future.delayed(const Duration(seconds: 5), () {
       if (!_scanCancelled && state.status == BleStatus.scanning) {
         Console.log(
             tag: '[BLE_Cubit] Scan timeout — restarting scan for last device',
@@ -500,6 +504,110 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
     }
   }
 
+  /// ✅ Watchdog: Periodically monitors BLE state and ensures scanning is active
+  /// when the app expects to be connected but isn't.
+  void _startWatchdog() {
+    _watchdogTimer?.cancel();
+    _watchdogTimer = Timer.periodic(const Duration(seconds: 2), (timer) async {
+      // 1. Skip if Bluetooth is not supported or not ON
+      if (await FlutterBluePlus.isSupported == false) return;
+      final adapterState = await FlutterBluePlus.adapterState.first;
+      if (adapterState != BluetoothAdapterState.on) return;
+
+      // 2. Skip if already connected or currently connecting
+      if (state.status == BleStatus.connected || _isConnecting) {
+        _stuckScanningSince = null;
+        if (state.manualRetryRequired) {
+          emit(state.copyWith(manualRetryRequired: false));
+        }
+        return;
+      }
+
+      // 3. Skip if already scanning
+      if (FlutterBluePlus.isScanningNow) {
+        _stuckScanningSince = null;
+        if (state.manualRetryRequired) {
+          emit(state.copyWith(manualRetryRequired: false));
+        }
+        return;
+      }
+
+      // 4. Track stuck state
+      _stuckScanningSince ??= DateTime.now();
+      final stuckDuration = DateTime.now().difference(_stuckScanningSince!);
+      
+      if (stuckDuration.inSeconds >= 10 && !state.manualRetryRequired) {
+        Console.log(
+            tag: '[BLE_Watchdog] Scanning stuck for > 10s. Prompting manual retry.',
+            value: 'BLE_Cubit');
+        emit(state.copyWith(manualRetryRequired: true));
+      }
+
+      // 5. Trigger recovery scan
+      final hasSavedDevice = (savedDeviceId != null || savedDeviceName != null);
+
+      if (hasSavedDevice) {
+        Console.log(
+            tag:
+                '[BLE_Watchdog] Device disconnected and not scanning. Restarting scan for last device.',
+            value: 'BLE_Cubit');
+        _scanForLastDevice();
+      } else if (state.status == BleStatus.scanning) {
+        Console.log(
+            tag:
+                '[BLE_Watchdog] Scanning status active but no scan running. Restarting all-device scan.',
+            value: 'BLE_Cubit');
+        _scanForAllDevices();
+      }
+    });
+  }
+
+  @override
+  Future<void> close() {
+    _watchdogTimer?.cancel();
+    _scanSub?.cancel();
+    _connectionSub?.cancel();
+    _adapterStateSub?.cancel();
+    _clearCharacteristicSubscriptions();
+    _hydrationController.close();
+    return super.close();
+  }
+
+  /// ✅ Completely resets the BLE service and restarts it.
+  Future<void> reinitialize() async {
+    Console.log(tag: '[BLE_Cubit] Reinitializing BLE service...', value: 'BLE_Cubit');
+    
+    // 1. Reset state and stop everything
+    _watchdogTimer?.cancel();
+    _scanSub?.cancel();
+    _connectionSub?.cancel();
+    _adapterStateSub?.cancel();
+    _clearCharacteristicSubscriptions();
+    
+    try {
+      if (FlutterBluePlus.isScanningNow) {
+        await FlutterBluePlus.stopScan();
+      }
+    } catch (_) {}
+
+    _isInitialized = false;
+    _isConnecting = false;
+    _stuckScanningSince = null;
+    _scanCancelled = false;
+    _scanRetryCount = 0;
+
+    emit(const BleState(status: BleStatus.initializing, message: "Reinitializing..."));
+
+    // 2. Start fresh
+    await start();
+  }
+
+  /// ✅ Manually dismisses the retry dialog
+  void dismissRetryDialog() {
+    _stuckScanningSince = null; // Reset the timer so it doesn't pop up immediately
+    emit(state.copyWith(manualRetryRequired: false));
+  }
+
   // ---------------------------------------------------------------------------
   // BLE connection
   // ---------------------------------------------------------------------------
@@ -561,13 +669,15 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
       Console.log(tag: '[BLE_Cubit] Connection SUCCESS', value: 'BLE_Cubit');
 
       // ✅ Request MTU (223 bytes) for better data throughput
-      try {
-        await device.requestMtu(223);
-        Console.log(
-            tag: '[BLE_Cubit] MTU requested (max 223)', value: 'BLE_Cubit');
-      } catch (e) {
-        Console.log(
-            tag: '[BLE_Cubit] MTU request failed: $e', value: 'BLE_Cubit');
+      if (Platform.isAndroid) {
+        try {
+          await device.requestMtu(512);
+          Console.log(
+              tag: '[BLE_Cubit] MTU requested (max 223)', value: 'BLE_Cubit');
+        } catch (e) {
+          Console.log(
+              tag: '[BLE_Cubit] MTU request failed: $e', value: 'BLE_Cubit');
+        }
       }
 
       await _discoverServices(device);
@@ -727,6 +837,9 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
                   isHydration30DaysDataSync: true, historyData: data));
               _hydrationController.add([]);
               _syncWithHealth(history);
+            } else {
+              final history = await getCurrentDayHistory();
+              emit(state.copyWith(currentHydrationValue: history));
             }
             _sendAck(device);
           } catch (e) {
@@ -1109,30 +1222,6 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
     // }
   }
 
-  // ---------------------------------------------------------------------------
-  // Utilities + Hydration sync
-  // ---------------------------------------------------------------------------
-
-  Future<void> sendConfigData(String payload) async {
-    if (_configChar == null) {
-      Console.log(tag: "Config characterstic not found", value: 'BLE_Cubit');
-      emit(state.copyWith(message: "Config characteristic not found"));
-      return;
-    }
-    try {
-      Console.log(tag: "Sending config data: $payload", value: 'BLE_Cubit');
-      await _configChar!.write(payload.codeUnits, withoutResponse: true);
-      emit(state.copyWith(
-        message: "Config data sent successfully",
-        commandSentTimestamp: DateTime.now().millisecondsSinceEpoch,
-        lastCommandSent: 'config',
-      ));
-    } catch (e) {
-      Console.log(tag: "Failed to send config data: $e", value: 'BLE_Cubit');
-      emit(state.copyWith(message: "Failed to send config data"));
-    }
-  }
-
   void _listenToConnection(BluetoothDevice device) {
     _connectionSub?.cancel();
     _connectionSub = device.connectionState.listen((stateChange) {
@@ -1469,7 +1558,7 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
       DatabaseHelper.hydrationSummaryTableName,
     );
 
-    Console.log(tag: "getCurrentDayHistory", value: maps.toString());
+    //Console.log(tag: "getCurrentDayHistory", value: maps.toString());
 
     var hyderationData = List.generate(
       maps.length,

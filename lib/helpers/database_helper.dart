@@ -171,10 +171,10 @@ CREATE TABLE IF NOT EXISTS app_metadata (
       await clearHydrationSlots();
     }
 
-    Console.log(
-        tag: "APP",
-        value:
-            "[DB] Inserting slot: ${entry.slot.label}, amount: ${entry.amount} mL ${entry.waterDrank} mL startEpoch ${startEpoch} endEpoch ${endEpoch}");
+    // Console.log(
+    //     tag: "APP",
+    //     value:
+    //         "[DB] Inserting slot: ${entry.slot.label}, amount: ${entry.amount} mL ${entry.waterDrank} mL startEpoch ${startEpoch} endEpoch ${endEpoch}");
     await db.insert(
       'hydration_slots',
       {
@@ -190,7 +190,7 @@ CREATE TABLE IF NOT EXISTS app_metadata (
     );
 
     final allSlots = await db.query('hydration_slots');
-    Console.log(tag: "APP", value: "[DB] Current slots in DB:");
+    //Console.log(tag: "APP", value: "[DB] Current slots in DB:");
     for (var s in allSlots) {
       Console.log(
           tag: "APP",
@@ -235,6 +235,7 @@ CREATE TABLE IF NOT EXISTS app_metadata (
     final db = await database;
 
     final data = {
+      'id': 1, // Ensure only one user row exists with fixed ID
       'gender': state.gender?.toString().split('.').last,
       'height': state.height,
       'heightUnit': state.heightUnit,
@@ -252,14 +253,22 @@ CREATE TABLE IF NOT EXISTS app_metadata (
       'stepGoal': state.stepGoal,
     };
 
-    // Ensure only one user row
-    await db.delete('user');
-    await db.insert('user', data);
+    Console.log(
+        tag: "APP",
+        value: "[DB] Saving User Info: height=${state.height}, weight=${state.weight}, age=${state.age}");
+
+    // Atomic insert or replace
+    await db.insert(
+      'user',
+      data,
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
   }
 
   Future<UserInfoState?> getUserInfo() async {
     final db = await database;
-    final result = await db.query('user', limit: 1);
+    // Explicitly query for our singleton row with ID 1
+    final result = await db.query('user', where: 'id = ?', whereArgs: [1], limit: 1);
 
     if (result.isEmpty) return null;
     final row = result.first;

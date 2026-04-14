@@ -178,7 +178,7 @@ class BottleDataCubit extends Cubit<BottleDataState> {
       DatabaseHelper.hydrationSummaryTableName,
     );
 
-    Console.log(tag: "getCurrentDayHistory", value: maps.toString());
+    //Console.log(tag: "getCurrentDayHistory", value: maps.toString());
 
     var hyderationData = List.generate(
       maps.length,
@@ -251,6 +251,10 @@ class BottleDataCubit extends Cubit<BottleDataState> {
       Console.error(
           "BottleDataCubit", "❌ Error clearing bottle tracking data: $e");
     }
+  }
+
+  void refresh() {
+    emit(state.copyWith(lastRefreshed: DateTime.now()));
   }
 
   @override

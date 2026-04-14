@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:math';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -9,6 +10,7 @@ import 'package:hydrify/constants/assets_path.dart';
 import 'package:hydrify/cubit/bottle/bottle_data_cubit.dart';
 import 'package:hydrify/cubit/hydration/hydration_cubit.dart';
 import 'package:hydrify/cubit/hydration/hydration_state.dart';
+import 'package:hydrify/helpers/logger.dart';
 import 'package:hydrify/helpers/vibration_helper.dart';
 import 'package:hydrify/services/health_service.dart';
 import 'package:hydrify/helpers/shared_pref_helper.dart';
@@ -58,16 +60,24 @@ class _DrinkTypesWidgetState extends State<DrinkTypesWidget>
           await context.read<BottleDataCubit>().getCurrentDayHistory();
 
       int steps = 0;
+      double healthWaterMl = 0.0;
       final hasPermission =
           await SharedPrefsHelper.getHasRequestedHealthPermission();
+      Console.log(
+          tag: "HealthService", value: "Has permission: $hasPermission");
       if (hasPermission) {
         steps = await HealthService().getStepCount();
+        if (Platform.isAndroid) {
+          final waterLiters = await HealthService().getWaterIntakeLiters();
+          healthWaterMl = waterLiters * 1000.0;
+        }
       }
 
       final userInfo = context.read<UserInfoCubit>().state;
       if (mounted) {
         setState(() {
-          _waterIntake = history;
+          _waterIntake =
+              Platform.isAndroid ? max(history, healthWaterMl) : history;
           _waterGoal = waterGoalParams;
           _stepCount = steps;
           _stepGoal = userInfo.stepGoal ?? 1000;
@@ -102,32 +112,33 @@ class _DrinkTypesWidgetState extends State<DrinkTypesWidget>
           _fetchWaterIntake();
         },
         child: Container(
-        width: double.maxFinite,
-        padding: EdgeInsets.only(left: 10.w , right: 10.w, top: 10.h, bottom: 35.h),
-        margin: EdgeInsets.only(
+          width: double.maxFinite,
+          padding:
+              EdgeInsets.only(left: 10.w, right: 10.w, top: 10.h, bottom: 35.h),
+          margin: EdgeInsets.only(
             left: AppDimensions.defaultPadding.w,
             right: AppDimensions.defaultPadding.w,
-           ),
-        decoration: BoxDecoration(
-            boxShadow: [
-              BoxShadow(
-                blurRadius: AppDimensions.radius_4,
-                color: AppColors.black.withOpacity(.25),
-                offset: Offset(
-                  AppDimensions.dim2,
-                  AppDimensions.dim2,
-                ),
-              )
-            ],
-            borderRadius: BorderRadius.circular(
-              AppDimensions.radius_10.w,
-            ),
-            color: Color(0XFFFFFFFF),
-            border: Border.all(color: AppColors.greywith80)),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
+          ),
+          decoration: BoxDecoration(
+              boxShadow: [
+                BoxShadow(
+                  blurRadius: AppDimensions.radius_4,
+                  color: AppColors.black.withOpacity(.25),
+                  offset: Offset(
+                    AppDimensions.dim2,
+                    AppDimensions.dim2,
+                  ),
+                )
+              ],
+              borderRadius: BorderRadius.circular(
+                AppDimensions.radius_10.w,
+              ),
+              color: Color(0XFFFFFFFF),
+              border: Border.all(color: AppColors.greywith80)),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
@@ -147,142 +158,159 @@ class _DrinkTypesWidgetState extends State<DrinkTypesWidget>
                   ),
                 ],
               ),
-            SizedBox(
-              height: 5.h,
-            ),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                SizedBox(
-                  width: AppDimensions.dim120.w,
-                  height: AppDimensions.dim120.w,
-                  child: Stack(
-                    alignment: Alignment.center,
-                    children: [
-                      // Inner background (grey) for water
-                      CustomPaint(
-                        size: Size(AppDimensions.dim110.w, AppDimensions.dim110.w),
-                        painter: _DoubleProgressPainter(
-                          outerProgress: _waterGoal > 0 ? (_waterIntake / _waterGoal).clamp(0.0, 1.0) : 0,
-                          innerProgress: _stepGoal > 0 ? (_stepCount / _stepGoal).clamp(0.0, 1.0) : 0,
-                          outerTrackColor: Color(0xFFECECEC),
-                          outerGradient: LinearGradient(
-                            colors: [Color(0xFF369FFF) , Color(0xFFC8E2FB)],
-                            begin: Alignment.topCenter,
-                            end: Alignment.bottomCenter,
-                          ),
-                          innerTrackColor: Color(0xFFECECEC),
-                          innerGradient: LinearGradient(
-                            colors: [Color(0xFF00BA88) , Color(0xFFFFFFFF)],
-                            begin: Alignment.topCenter,
-                            end: Alignment.bottomCenter,
-                          ),
-                          strokeWidth: 12.w,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                Expanded(
-                  child: Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 30.w),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisAlignment: MainAxisAlignment.center,
+              SizedBox(
+                height: 5.h,
+              ),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  SizedBox(
+                    width: AppDimensions.dim120.w,
+                    height: AppDimensions.dim120.w,
+                    child: Stack(
+                      alignment: Alignment.center,
                       children: [
-                        // Water Legend
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Row(
-                              children: [
-                                Image.asset(AssetsPath.goalWaterIcon, width: 30.w, height: 30.w,),
-                                SizedBox(
-                                  width: AppDimensions.dim8.w,
-                                ),
-                                Text(
-                                  "Goal",
-                                  style: TextStyle(
-                                    color: AppColors.switchReminderColor,
-                                    fontSize: 18.sp,
-                                    fontFamily: AppFontStyles.urbanistFontFamily,
-                                    fontVariations: [
-                                      AppFontStyles.boldFontVariation
-                                    ],
-                                  ),
-                                ),
-                              ],
+                        // Inner background (grey) for water
+                        CustomPaint(
+                          size: Size(
+                              AppDimensions.dim110.w, AppDimensions.dim110.w),
+                          painter: _DoubleProgressPainter(
+                            outerProgress: _waterGoal > 0
+                                ? (_waterIntake / _waterGoal).clamp(0.0, 1.0)
+                                : 0,
+                            innerProgress: _stepGoal > 0
+                                ? (_stepCount / _stepGoal).clamp(0.0, 1.0)
+                                : 0,
+                            outerTrackColor: Color(0xFFECECEC),
+                            outerGradient: LinearGradient(
+                              colors: [Color(0xFF369FFF), Color(0xFFC8E2FB)],
+                              begin: Alignment.topCenter,
+                              end: Alignment.bottomCenter,
                             ),
-                            Text(
-                              "${(_waterIntake / 1000).toStringAsFixed(1)}L/${(_waterGoal / 1000).toStringAsFixed(1)}L",
-                              style: TextStyle(
-                                color: AppColors.switchReminderColor,
-                                fontSize: AppFontStyles.fontSize_16,
-                                fontFamily: AppFontStyles.urbanistFontFamily,
-                                fontVariations: [
-                                  AppFontStyles.semiBoldFontVariation
-                                ],
-                              ),
+                            innerTrackColor: Color(0xFFECECEC),
+                            innerGradient: LinearGradient(
+                              colors: [Color(0xFF00BA88), Color(0xFFFFFFFF)],
+                              begin: Alignment.topCenter,
+                              end: Alignment.bottomCenter,
                             ),
-                          ],
+                            strokeWidth: 12.w,
+                          ),
                         ),
-                        SizedBox(
-                          height: AppDimensions.dim15.h,
-                        ),
-                        // Steps Legend
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Row(
-                              children: [
-                                Image.asset(AssetsPath.goalStepsIcon, width: 30.w, height: 25.w,),
-                                SizedBox(
-                                  width: AppDimensions.dim8.w,
-                                ),
-                                Text(
-                                  "Steps",
-                                  style: TextStyle(
-                                    color: AppColors.switchReminderColor,
-                                    fontSize: 18.sp,
-                                    fontFamily: AppFontStyles.urbanistFontFamily,
-                                    fontVariations: [
-                                      AppFontStyles.boldFontVariation
-                                    ],
-                                  ),
-                                ),
-                              ],
-                            ),
-                            _isLoading
-                                ? SizedBox(
-                                    width: AppDimensions.dim16.w,
-                                    height: AppDimensions.dim16.w,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                      valueColor: AlwaysStoppedAnimation<Color>(
-                                          Color(0xFFEF4444)),
-                                    ),
-                                  )
-                                : Text(
-                                    "$_stepCount/$_stepGoal",
-                                    style: TextStyle(
-                                      color: AppColors.switchReminderColor,
-                                      fontSize: AppFontStyles.fontSize_16,
-                                      fontFamily: AppFontStyles.urbanistFontFamily,
-                                      fontVariations: [
-                                        AppFontStyles.semiBoldFontVariation
-                                      ],
-                                    ),
-                                  ),
-                          ],
-                        )
                       ],
                     ),
                   ),
-                )
-              ],
-            )
-          ],
-        ),
+                  Expanded(
+                    child: Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 30.w),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          // Water Legend
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Row(
+                                children: [
+                                  Image.asset(
+                                    AssetsPath.goalWaterIcon,
+                                    width: 30.w,
+                                    height: 30.w,
+                                  ),
+                                  SizedBox(
+                                    width: AppDimensions.dim8.w,
+                                  ),
+                                  Text(
+                                    "Goal",
+                                    style: TextStyle(
+                                      color: AppColors.switchReminderColor,
+                                      fontSize: 18.sp,
+                                      fontFamily:
+                                          AppFontStyles.urbanistFontFamily,
+                                      fontVariations: [
+                                        AppFontStyles.boldFontVariation
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              Text(
+                                "${(_waterIntake / 1000).toStringAsFixed(1)}L/${(_waterGoal / 1000).toStringAsFixed(1)}L",
+                                style: TextStyle(
+                                  color: AppColors.switchReminderColor,
+                                  fontSize: AppFontStyles.fontSize_16,
+                                  fontFamily: AppFontStyles.urbanistFontFamily,
+                                  fontVariations: [
+                                    AppFontStyles.semiBoldFontVariation
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                          SizedBox(
+                            height: AppDimensions.dim15.h,
+                          ),
+                          // Steps Legend
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Row(
+                                children: [
+                                  Image.asset(
+                                    AssetsPath.goalStepsIcon,
+                                    width: 30.w,
+                                    height: 25.w,
+                                  ),
+                                  SizedBox(
+                                    width: AppDimensions.dim8.w,
+                                  ),
+                                  Text(
+                                    "Steps",
+                                    style: TextStyle(
+                                      color: AppColors.switchReminderColor,
+                                      fontSize: 18.sp,
+                                      fontFamily:
+                                          AppFontStyles.urbanistFontFamily,
+                                      fontVariations: [
+                                        AppFontStyles.boldFontVariation
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              _isLoading
+                                  ? SizedBox(
+                                      width: AppDimensions.dim16.w,
+                                      height: AppDimensions.dim16.w,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        valueColor:
+                                            AlwaysStoppedAnimation<Color>(
+                                                Color(0xFFEF4444)),
+                                      ),
+                                    )
+                                  : Text(
+                                      "$_stepCount/$_stepGoal",
+                                      style: TextStyle(
+                                        color: AppColors.switchReminderColor,
+                                        fontSize: AppFontStyles.fontSize_16,
+                                        fontFamily:
+                                            AppFontStyles.urbanistFontFamily,
+                                        fontVariations: [
+                                          AppFontStyles.semiBoldFontVariation
+                                        ],
+                                      ),
+                                    ),
+                            ],
+                          )
+                        ],
+                      ),
+                    ),
+                  )
+                ],
+              )
+            ],
+          ),
         ),
       ),
     );
@@ -332,7 +360,9 @@ class _DoubleProgressPainter extends CustomPainter {
       ..strokeWidth = strokeWidth
       ..strokeCap = StrokeCap.round;
 
-    void drawRing(double radius, double progress, Color trackC, LinearGradient grad, {bool hasBorder = false}) {
+    void drawRing(
+        double radius, double progress, Color trackC, LinearGradient grad,
+        {bool hasBorder = false}) {
       final rect = Rect.fromCircle(center: center, radius: radius);
 
       // 1. Draw track
@@ -350,12 +380,12 @@ class _DoubleProgressPainter extends CustomPainter {
 
         // 3. Draw white border if required
         //if (hasBorder) {
-          final borderPaint = Paint()
-            ..style = PaintingStyle.stroke
-            ..strokeWidth = strokeWidth + 2.0 // Thicker to create border effect
-            ..strokeCap = StrokeCap.round
-            ..color = Colors.white;
-          canvas.drawArc(rect, -pi / 2, sweepAngle, false, borderPaint);
+        final borderPaint = Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = strokeWidth + 2.0 // Thicker to create border effect
+          ..strokeCap = StrokeCap.round
+          ..color = Colors.white;
+        canvas.drawArc(rect, -pi / 2, sweepAngle, false, borderPaint);
         //}
 
         // 4. Draw gradient progress
@@ -368,7 +398,8 @@ class _DoubleProgressPainter extends CustomPainter {
     drawRing(innerRadius, innerProgress, innerTrackColor, innerGradient);
 
     // Draw Outer Ring (Water), enabling the border
-    drawRing(outerRadius, outerProgress, outerTrackColor, outerGradient, hasBorder: true);
+    drawRing(outerRadius, outerProgress, outerTrackColor, outerGradient,
+        hasBorder: true);
   }
 
   @override

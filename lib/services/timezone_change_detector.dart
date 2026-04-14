@@ -42,11 +42,17 @@ class TimezoneChangeDetector extends ChangeNotifier {
   }
 
   Future<bool> hasTimezoneChanged() async {
+    Console.log(
+        tag: "_isInitialized",
+        value: "$_isInitialized");
     if (!_isInitialized) {
       await init();
       return false;
     }
 
+    Console.log(
+        tag: "_isFirstInstall",
+        value: "$_isFirstInstall");
     if (_isFirstInstall) {
       return false;
     }

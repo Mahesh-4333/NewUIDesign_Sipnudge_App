@@ -328,7 +328,9 @@ class _QrScannerState extends State<QrScanner>
                                 Navigator.push(
                                   context,
                                   MaterialPageRoute(
-                                    builder: (context) => UserInfoInputScreen(fromSettings: true,),
+                                    builder: (context) => UserInfoInputScreen(
+                                      fromSettings: true,
+                                    ),
                                   ),
                                   // (route) => false,
                                 );

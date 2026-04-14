@@ -219,6 +219,9 @@ class _BottomNavScreenNewState extends State<BottomNavScreenNew> {
               Navigator.pop(dialogContext);
               // Request health permissions via HealthService
               final success = await HealthService().requestAuthorization();
+              Console.log(
+                  tag: 'Health Permission_124', value: success.toString());
+
               // Mark as requested regardless of outcome to avoid repeated prompts
               await SharedPrefsHelper.setHasRequestedHealthPermission(true);
               if (success) {

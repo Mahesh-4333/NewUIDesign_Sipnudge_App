@@ -7,6 +7,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:http/http.dart' as http;
+import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:hydrify/constants/app_font_styles.dart';
 import 'package:hydrify/cubit/Preferences/preferences_cubit.dart';
 import 'package:hydrify/cubit/account&security/account&security_cubit.dart';
@@ -92,7 +93,6 @@ Future<void> main() async {
     print("StackTrace :  ${details.stack}");
   };
 
-
   runApp(
     MyApp(
       httpClient: httpClient,
@@ -142,7 +142,10 @@ class MyApp extends StatelessWidget {
         BlocProvider(create: (context) => AccountSecurityCubit()),
         BlocProvider(create: (context) => HelpAndSupportCubit()),
         BlocProvider(create: (context) => PersonalInfoCubit()),
-        BlocProvider(create: (context) => DrinkReminderCubit(hydrationCubit: hydrationCubit, bottleDataCubit: context.read<BottleDataCubit>())),
+        BlocProvider(
+            create: (context) => DrinkReminderCubit(
+                hydrationCubit: hydrationCubit,
+                bottleDataCubit: context.read<BottleDataCubit>())),
         BlocProvider(create: (context) => PersonalInfoCubit()),
         BlocProvider(create: (context) => PreferencesCubit()),
         // BlocProvider(create: (Context) => NotificationCubit()),

@@ -24,6 +24,7 @@ import 'package:hydrify/providers/weather_provider.dart';
 import 'package:hydrify/screens/hydration_30_day.dart';
 import 'package:hydrify/screens/widgets/autoScroll_GoalText.dart';
 import 'package:hydrify/screens/widgets/ble_device_selection_sheet.dart';
+import 'package:hydrify/screens/widgets/ble_retry_dialog.dart';
 import 'package:hydrify/screens/widgets/custom_circular_loader/custom_circular_progress_indicator.dart';
 import 'package:hydrify/screens/widgets/custom_circular_loader/custom_circular_water_progress_indicator.dart';
 import 'package:hydrify/screens/widgets/greeting_widget.dart';
@@ -49,6 +50,7 @@ class _HomeScreenState extends State<HomeScreen> {
   bool _isTimezoneDialogOpen = false;
 
   bool _isPickerShown = false;
+  bool _isRetryDialogShown = false;
   bool hasConnectedBefore = false;
   bool isGuest = false;
   String selectedBottle = 'purple';
@@ -171,6 +173,10 @@ class _HomeScreenState extends State<HomeScreen> {
       context.read<BleCubit>().queueHydrationSlots(slots);
 
       if (mounted) {
+        context.read<HydrationCubit>().loadSlotsFromDb();
+        context.read<HydrationCubit>().refreshAchievementStats();
+        context.read<BottleDataCubit>().refresh();
+        setState(() {});
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Hydration schedule refreshed for new timezone'),
@@ -521,6 +527,25 @@ class _HomeScreenState extends State<HomeScreen> {
             ((state.volume ?? 0) < 600)) {
           // _showStartJourneyDialog(context);
           // Removing as this causes error
+        }
+
+        if (state.manualRetryRequired && !_isRetryDialogShown) {
+          _isRetryDialogShown = true;
+          Console.log(tag: "APP", value: "⚠️ Showing manual retry dialog...");
+
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            showDialog(
+              context: context,
+              barrierDismissible: false,
+              builder: (ctx) => const BleRetryDialog(),
+            ).then((_) {
+              Console.log(tag: "APP", value: "❌ Retry dialog closed.");
+              _isRetryDialogShown = false;
+              if (context.mounted) {
+                context.read<BleCubit>().dismissRetryDialog();
+              }
+            });
+          });
         }
       },
       child: Scaffold(
@@ -969,9 +994,9 @@ class _HomeScreenState extends State<HomeScreen> {
                   final history = await context
                       .read<BottleDataCubit>()
                       .getCurrentDayHistory();
-                  Console.log(
-                      tag: "getCurrentDayHistory_progress",
-                      value: history.toString());
+                  // Console.log(
+                  //     tag: "getCurrentDayHistory_progress",
+                  //     value: history.toString());
 
                   double waterVolumeConsumed = history;
                   double completionPercent = await WaterConsumptionCalculator

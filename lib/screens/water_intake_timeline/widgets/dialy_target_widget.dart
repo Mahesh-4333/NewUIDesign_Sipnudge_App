@@ -12,14 +12,14 @@ class DailyTargetWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<BottleDataCubit, BottleDataState>(
-        buildWhen: (previous, current) => previous.volume != current.volume,
+    return BlocBuilder<BleCubit, BleState>(
+        buildWhen: (previous, current) =>
+            previous.currentHydrationValue != current.currentHydrationValue,
         builder: (context, state) {
           return FutureBuilder<double>(
             future: () async {
-              final historyData = await context
-                  .read<BottleDataCubit>()
-                  .getCurrentDayHistory();
+              final historyData =
+                  await context.read<BottleDataCubit>().getCurrentDayHistory();
 
               double waterVolumeConsumed = historyData;
 
@@ -34,7 +34,12 @@ class DailyTargetWidget extends StatelessWidget {
               double completionPercent = snapshot.data ?? 0.0;
 
               if (snapshot.connectionState == ConnectionState.waiting) {
-                return const CircularProgressIndicator();
+                return Center(
+                  child: SizedBox(
+                      height: 30.h,
+                      width: 30.h,
+                      child: const CircularProgressIndicator()),
+                );
               }
 
               return Column(
@@ -50,11 +55,8 @@ class DailyTargetWidget extends StatelessWidget {
                           style: TextStyle(
                             color: AppColors.blueWaterIntake,
                             fontSize: 22.sp,
-                            fontFamily:
-                            AppFontStyles.urbanistFontFamily,
-                            fontVariations: [
-                              AppFontStyles.boldFontVariation
-                            ],
+                            fontFamily: AppFontStyles.urbanistFontFamily,
+                            fontVariations: [AppFontStyles.boldFontVariation],
                           ),
                         ),
                         TextSpan(
@@ -62,11 +64,8 @@ class DailyTargetWidget extends StatelessWidget {
                           style: TextStyle(
                             color: AppColors.bluegray,
                             fontSize: 20.sp,
-                            fontFamily:
-                            AppFontStyles.urbanistFontFamily,
-                            fontVariations: [
-                              AppFontStyles.boldFontVariation
-                            ],
+                            fontFamily: AppFontStyles.urbanistFontFamily,
+                            fontVariations: [AppFontStyles.boldFontVariation],
                           ),
                         ),
                       ],
@@ -85,13 +84,19 @@ class DailyTargetWidget extends StatelessWidget {
                             color: AppColors.bluegray,
                             fontSize: 15.sp,
                             fontFamily: AppFontStyles.urbanistFontFamily,
-                            fontVariations: [AppFontStyles.semiBoldFontVariation],
+                            fontVariations: [
+                              AppFontStyles.semiBoldFontVariation
+                            ],
                           ),
                           children: [
                             const TextSpan(text: "Connect your Bottle to "),
                             TextSpan(
                               text: "sync",
-                              style: TextStyle(color: syncColor, fontVariations: [AppFontStyles.extraBoldFontVariation]),
+                              style: TextStyle(
+                                  color: syncColor,
+                                  fontVariations: [
+                                    AppFontStyles.extraBoldFontVariation
+                                  ]),
                             ),
                             const TextSpan(text: " data"),
                           ],

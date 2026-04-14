@@ -1,6 +1,7 @@
 import 'package:bloc/bloc.dart';
 import 'package:equatable/equatable.dart';
 import 'package:hydrify/helpers/database_helper.dart';
+import 'package:hydrify/helpers/logger.dart';
 import 'package:hydrify/helpers/water_consumption_data_helper.dart';
 
 part 'user_info_state.dart';
@@ -118,6 +119,15 @@ class UserInfoCubit extends Cubit<UserInfoState> {
   }
 
   Future<void> saveUser(UserInfoState state) async {
+    // Safeguard: Don't save if state is essentially empty/uninitialized
+    // This prevents overwriting existing DB data with defaults during race conditions.
+    if (state.height == null && state.weight == null && state.age == null) {
+      Console.log(
+          tag: "APP",
+          value:
+              "[UserInfoCubit] Skipping saveUser: state appears uninitialized.");
+      return;
+    }
     await dbHelper.saveUserInfo(state);
   }
 
