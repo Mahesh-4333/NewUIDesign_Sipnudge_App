@@ -4,6 +4,8 @@ import 'package:health/health.dart';
 import 'package:hydrify/helpers/logger.dart';
 import 'package:hydrify/helpers/shared_pref_helper.dart';
 import 'package:url_launcher/url_launcher_string.dart';
+import 'package:hydrify/services/pedometer_service.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 class HealthService {
   final Health _health = Health();
@@ -160,6 +162,14 @@ class HealthService {
   Future<int> getStepCount(
       {DateTime? start, DateTime? end, bool forcePermission = false}) async {
     try {
+      if (Platform.isAndroid) {
+        // Request permission if not granted
+        if (await Permission.activityRecognition.isDenied) {
+          await Permission.activityRecognition.request();
+        }
+        return await PedometerService().getTodaySteps();
+      }
+
       final now = end ?? DateTime.now();
       final startOfDay = start ?? DateTime(now.year, now.month, now.day);
 

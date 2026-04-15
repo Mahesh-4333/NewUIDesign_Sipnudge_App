@@ -30,6 +30,7 @@
     <uses-permission android:name="android.permission.health.READ_STEPS"/>
     <uses-permission android:name="android.permission.health.READ_HYDRATION"/>
     <uses-permission android:name="android.permission.health.WRITE_HYDRATION"/>
+    <uses-permission android:name="android.permission.ACTIVITY_RECOGNITION" />
 
 
     <!-- SipnudgeV2x4 // -->

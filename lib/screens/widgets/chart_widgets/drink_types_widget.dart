@@ -61,14 +61,19 @@ class _DrinkTypesWidgetState extends State<DrinkTypesWidget>
 
       int steps = 0;
       double healthWaterMl = 0.0;
-      final hasPermission =
+      bool hasPermission =
           await SharedPrefsHelper.getHasRequestedHealthPermission();
       Console.log(
           tag: "HealthService", value: "Has permission: $hasPermission");
-      if (hasPermission) {
+
+      // On Android, we use pedometer for steps, which has its own permission handling.
+      // We still want to call getStepCount() to trigger the pedometer logic.
+      if (hasPermission || Platform.isAndroid) {
         steps = await HealthService().getStepCount();
         Console.log(tag: "steps_124", value: steps.toString());
-        if (Platform.isAndroid) {
+        
+        // Water intake still comes from Health Connect on Android
+        if (Platform.isAndroid && hasPermission) {
           final waterLiters = await HealthService().getWaterIntakeLiters();
           healthWaterMl = waterLiters * 1000.0;
         }
