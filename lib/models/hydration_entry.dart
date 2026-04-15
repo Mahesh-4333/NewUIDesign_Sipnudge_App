@@ -55,6 +55,7 @@ class HydrationEntry {
   final TimeOfDay endTime;
   final double amount; // Target amount (mL)
   final double waterDrank; // Actual water consumed (mL)
+  final double offslot; // Off-slot water consumed (mL)
   final HydrationStatus status;
 
   const HydrationEntry({
@@ -63,6 +64,7 @@ class HydrationEntry {
     required this.endTime,
     required this.amount,
     this.waterDrank = 0.0,
+    this.offslot = 0.0,
     this.status = HydrationStatus.pending,
   });
 
@@ -72,6 +74,7 @@ class HydrationEntry {
     TimeOfDay? endTime,
     double? amount,
     double? waterDrank,
+    double? offslot,
     HydrationStatus? status,
   }) {
     return HydrationEntry(
@@ -80,6 +83,7 @@ class HydrationEntry {
       endTime: endTime ?? this.endTime,
       amount: amount ?? this.amount,
       waterDrank: waterDrank ?? this.waterDrank,
+      offslot: offslot ?? this.offslot,
       status: status ?? this.status,
     );
   }
@@ -103,6 +107,7 @@ class HydrationEntry {
         endTime.minute,
         amount,
         waterDrank,
+        offslot,
         status,
       ];
 

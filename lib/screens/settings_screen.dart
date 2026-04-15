@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:hydrify/helpers/logger.dart';
+import 'package:hydrify/screens/data_n_analytics/data_n_analytics.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
@@ -26,6 +27,8 @@ import 'package:hydrify/screens/preferences_page.dart';
 import 'package:hydrify/screens/user_personal_info_input_screen..dart';
 import 'package:hydrify/screens/widgets/logout_widgets/logout_bottom_sheet.dart';
 import 'package:hydrify/screens/active_notifications_screen.dart';
+import 'package:hydrify/screens/data_and_analytics_screen.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:hydrify/screens/widgets/setting_screen_widget/editableProfileAvatar.dart';
 import 'package:hydrify/screens/widgets/setting_screen_widget/profile_menu_item.dart';
 import 'package:hydrify/screens/widgets/setting_screen_widget/sipnudgeshopwidget.dart';
@@ -41,6 +44,7 @@ class SettingScreen extends StatefulWidget {
 class _SettingScreenState extends State<SettingScreen> {
   final TextEditingController _nameController = TextEditingController();
   final FocusNode _nameFocusNode = FocusNode();
+  String _appVersion = '';
 
   static const String _userNameKey = 'user_display_name';
 
@@ -50,6 +54,14 @@ class _SettingScreenState extends State<SettingScreen> {
     // Listen for changes
     UserManager().addListener(_onNameChanged);
     _loadSavedName();
+    _loadAppVersion();
+  }
+
+  Future<void> _loadAppVersion() async {
+    final packageInfo = await PackageInfo.fromPlatform();
+    setState(() {
+      _appVersion = 'Version : ${packageInfo.version}+${packageInfo.buildNumber}';
+    });
   }
 
   void _onNameChanged(String newName) {
@@ -119,13 +131,13 @@ class _SettingScreenState extends State<SettingScreen> {
           );
           break;
 
-        // case AppStrings.dataAnalytics:
-        //   navigator.push(
-        //     MaterialPageRoute(
-        //       builder: (_) => const DataAnalyticsScreen(),
-        //     ),
-        //   );
-        //   break;
+        case AppStrings.dataAnalytics:
+          navigator.push(
+            MaterialPageRoute(
+              builder: (_) =>  DataNAnalyticsScreen(),
+            ),
+          );
+          break;
 
         // case AppStrings.linkaccounts:
         //   navigator.push(
@@ -168,6 +180,10 @@ class _SettingScreenState extends State<SettingScreen> {
 
         case 'Export Log':
           _exportLog(context);
+          break;
+
+        case 'Add Millisecond':
+          _showFlushDelayDialog(context);
           break;
 
         case 'Active Notifications':
@@ -243,7 +259,9 @@ class _SettingScreenState extends State<SettingScreen> {
 
       List<XFile> filesToShare = [];
 
-      Console.log(tag: "await File(dbPath).exists()", value: await File(dbPath).exists());
+      Console.log(
+          tag: "await File(dbPath).exists()",
+          value: await File(dbPath).exists());
       if (await File(dbPath).exists()) {
         filesToShare.add(XFile(dbPath));
       } else {
@@ -258,8 +276,11 @@ class _SettingScreenState extends State<SettingScreen> {
 
       if (filesToShare.isNotEmpty) {
         final box = context.findRenderObject() as RenderBox;
-        await Share.shareXFiles(filesToShare,
-            text: 'SipNudge App Logs and Database', sharePositionOrigin: box.localToGlobal(Offset.zero) & box.size,);
+        await Share.shareXFiles(
+          filesToShare,
+          text: 'SipNudge App Logs and Database',
+          sharePositionOrigin: box.localToGlobal(Offset.zero) & box.size,
+        );
       } else {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -298,12 +319,86 @@ class _SettingScreenState extends State<SettingScreen> {
     );
   }
 
+  void _showFlushDelayDialog(BuildContext context) async {
+    final currentDelay = await SharedPrefsHelper.getFlushDelay();
+    final TextEditingController delayController =
+        TextEditingController(text: currentDelay.toString());
+
+    if (!mounted) return;
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: AppColors.white.withOpacity(0.9),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16.r),
+        ),
+        title: Text(
+          "Set Flush Delay (ms)",
+          style: TextStyle(
+            color: AppColors.black,
+            fontFamily: AppFontStyles.urbanistFontFamily,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        content: TextField(
+          controller: delayController,
+          keyboardType: TextInputType.number,
+          decoration: InputDecoration(
+            hintText: "Enter milliseconds (default 200)",
+            hintStyle: TextStyle(
+              color: AppColors.bluegray.withOpacity(0.5),
+              fontFamily: AppFontStyles.urbanistFontFamily,
+            ),
+          ),
+          style: TextStyle(
+            color: AppColors.black,
+            fontFamily: AppFontStyles.urbanistFontFamily,
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(
+              "Cancel",
+              style: TextStyle(
+                color: AppColors.bluegray,
+                fontFamily: AppFontStyles.urbanistFontFamily,
+              ),
+            ),
+          ),
+          TextButton(
+            onPressed: () async {
+              final newDelay = int.tryParse(delayController.text);
+              if (newDelay != null && newDelay > 0) {
+                await SharedPrefsHelper.setFlushDelay(newDelay);
+                if (context.mounted) Navigator.pop(context);
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text("Flush delay set to $newDelay ms")),
+                  );
+                }
+              }
+            },
+            child: Text(
+              "Save",
+              style: TextStyle(
+                color: AppColors.darkgray,
+                fontFamily: AppFontStyles.urbanistFontFamily,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return BlocBuilder<ProfileCubit, ProfileState>(
       builder: (context, state) {
         return Scaffold(
-          resizeToAvoidBottomInset: true,
           body: Container(
             width: double.infinity,
             height: double.infinity,
@@ -460,7 +555,18 @@ class _SettingScreenState extends State<SettingScreen> {
                     // Menu group 2
                     SizedBox(height: AppDimensions.dim34.h),
                     const SipnudgeShopWidget(),
-                    SizedBox(height: AppDimensions.dim165.h),
+                    SizedBox(height: 100.h),
+                    if (_appVersion.isNotEmpty)
+                      Text(
+                        _appVersion,
+                        style: TextStyle(
+                          color: AppColors.bluegray,
+                          fontSize: AppFontStyles.fontSize_14.sp,
+                          fontFamily: AppFontStyles.museoModernoFontFamily,
+                          fontVariations: [AppFontStyles.semiBoldFontVariation],
+                        ),
+                      ),
+                    SizedBox(height: AppDimensions.dim149.h),
                   ],
                 ),
               ),

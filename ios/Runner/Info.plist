@@ -51,6 +51,10 @@
 	<string>This app needs camera access to take profile pictures.</string>
 	<key>NSFaceIDUsageDescription</key>
 	<string>This app uses face id to authenticate the user</string>
+	<key>NSHealthShareUsageDescription</key>
+	<string>We need health kit permission to read your water intake and activity data.</string>
+	<key>NSHealthUpdateUsageDescription</key>
+	<string>We needed health kit permission to store water intake today</string>
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
 	<string>This app needs access to location to determine weather info</string>
 	<key>NSLocationAlwaysUsageDescription</key>

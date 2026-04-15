@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:hydrify/constants/app_colors.dart';
 import 'package:hydrify/constants/app_dimensions.dart';
+import 'package:hydrify/cubit/ble/ble_cubit.dart';
 import 'package:hydrify/cubit/bottom_nav/bottom_nav_cubit.dart';
 import 'package:hydrify/cubit/hydration/hydration_cubit.dart';
 import 'package:hydrify/cubit/hydration/hydration_state.dart';
@@ -13,6 +14,9 @@ import 'package:hydrify/screens/drink_reminder_page.dart';
 import 'package:hydrify/screens/home_screen.dart';
 import 'package:hydrify/screens/settings_screen.dart';
 import 'package:hydrify/screens/user_personal_info_input_screen..dart';
+import 'package:hydrify/helpers/shared_pref_helper.dart';
+import 'package:hydrify/screens/widgets/health_permission_dialog.dart';
+import 'package:hydrify/services/health_service.dart';
 import 'package:hydrify/screens/water_intake_timeline/water_intake_timeline_screen.dart';
 import 'package:hydrify/screens/widgets/animated_bottom_navbar_widget.dart';
 
@@ -81,21 +85,50 @@ class _BottomNavScreenNewState extends State<BottomNavScreenNew> {
               ],
             ),
           ),
-          child: BlocListener<HydrationCubit, HydrationState>(
-            listenWhen: (prev, curr) {
-              Console.log(
-                  tag: "newlyUnlockedLevel123",
-                  value:
-                      "${curr.newlyUnlockedLevel} :: ${prev.newlyUnlockedLevel}");
-              if (curr.newlyUnlockedLevel != null &&
-                  prev.newlyUnlockedLevel != curr.newlyUnlockedLevel) {
-                return true;
-              }
-              return false;
-            },
-            listener: (context, hydrationState) {
-              // _showLevelUpSnackbar(context, hydrationState.newlyUnlockedLevel!);
-            },
+          child: MultiBlocListener(
+            listeners: [
+              BlocListener<HydrationCubit, HydrationState>(
+                listenWhen: (prev, curr) {
+                  Console.log(
+                      tag: "newlyUnlockedLevel123",
+                      value:
+                          "${curr.newlyUnlockedLevel} :: ${prev.newlyUnlockedLevel}");
+                  if (curr.newlyUnlockedLevel != null &&
+                      prev.newlyUnlockedLevel != curr.newlyUnlockedLevel) {
+                    return true;
+                  }
+                  return false;
+                },
+                listener: (context, hydrationState) {
+                  // _showLevelUpSnackbar(context, hydrationState.newlyUnlockedLevel!);
+                },
+              ),
+              BlocListener<BottomNavCubit, BottomNavState>(
+                listenWhen: (prev, curr) =>
+                    prev.selectedTab != curr.selectedTab,
+                listener: (context, state) {
+                  Console.log(
+                      tag: "_currentTabSelected", value: state.selectedTab);
+                  if (state.selectedTab == BottomNavTab.analysis) {
+                    _checkAndShowHealthDialog(context);
+                  }
+                },
+              ),
+              BlocListener<BleCubit, BleState>(
+                listenWhen: (prev, curr) =>
+                    curr.commandSentTimestamp != prev.commandSentTimestamp &&
+                    curr.lastCommandSent != null,
+                listener: (context, state) {
+                  // ScaffoldMessenger.of(context).showSnackBar(
+                  //   SnackBar(
+                  //     content: Text(state.message),
+                  //     behavior: SnackBarBehavior.floating,
+                  //     backgroundColor: Colors.green.shade700,
+                  //   ),
+                  // );
+                },
+              ),
+            ],
             child: BlocBuilder<BottomNavCubit, BottomNavState>(
               builder: (context, state) {
                 return _buildTabNavigators(state.selectedTab);
@@ -165,6 +198,43 @@ class _BottomNavScreenNewState extends State<BottomNavScreenNew> {
         ),
       ),
     );
+  }
+
+  Future<void> _checkAndShowHealthDialog(BuildContext context) async {
+    final userEmail = await SharedPrefsHelper.getUserEmail();
+    final isGuest = userEmail == "guest_user";
+
+    if (!isGuest) {
+      final alreadyRequested =
+          await SharedPrefsHelper.getHasRequestedHealthPermission();
+      Console.log(tag: 'Health Permission', value: alreadyRequested);
+      if (!alreadyRequested) {
+        if (!mounted) return;
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (dialogContext) => HealthPermissionDialog(
+            onCancel: () => Navigator.pop(dialogContext),
+            onAllow: () async {
+              Navigator.pop(dialogContext);
+              // Request health permissions via HealthService
+              final success = await HealthService().requestAuthorization();
+              Console.log(
+                  tag: 'Health Permission_124', value: success.toString());
+
+              // Mark as requested regardless of outcome to avoid repeated prompts
+              await SharedPrefsHelper.setHasRequestedHealthPermission(true);
+              if (success) {
+                Console.log(tag: 'Health Permission', value: 'Granted');
+              } else {
+                Console.log(
+                    tag: 'Health Permission', value: 'Denied or Cancelled');
+              }
+            },
+          ),
+        );
+      }
+    }
   }
 
   /// Builds all tab Navigators and shows only the selected one using Offstage.

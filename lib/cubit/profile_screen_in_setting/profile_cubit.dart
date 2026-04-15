@@ -29,7 +29,15 @@ class ProfileCubit extends Cubit<ProfileState> {
               ),
               ProfileMenuItem(
                 iconPath: "assets/data_analytics_icon.png",
+                title: "Data & Analytics",
+              ),
+              ProfileMenuItem(
+                iconPath: "assets/data_analytics_icon.png",
                 title: "Export Log",
+              ),
+              ProfileMenuItem(
+                iconPath: "assets/performance.png",
+                title: "Add Millisecond",
               ),
               // ProfileMenuItem(
               //   iconPath: "assets/drink_rem.png",

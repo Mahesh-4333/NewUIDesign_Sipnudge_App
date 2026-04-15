@@ -6,6 +6,7 @@ class BottleDataState extends Equatable {
   final int currentPage;
   final int battery;
   final List<BottleData> currentPageData;
+  final DateTime? lastRefreshed;
 
   const BottleDataState({
     required this.volume,
@@ -13,6 +14,7 @@ class BottleDataState extends Equatable {
     required this.battery,
     required this.currentPage,
     required this.currentPageData,
+    this.lastRefreshed,
   });
 
   factory BottleDataState.initial() {
@@ -22,6 +24,7 @@ class BottleDataState extends Equatable {
       battery: 0,
       currentPage: 0,
       currentPageData: [],
+      lastRefreshed: null,
     );
   }
 
@@ -31,6 +34,7 @@ class BottleDataState extends Equatable {
     int? currentPage,
     List<BottleData>? currentPageData,
     int? battery,
+    DateTime? lastRefreshed,
   }) {
     return BottleDataState(
       volume: volume ?? this.volume,
@@ -38,10 +42,11 @@ class BottleDataState extends Equatable {
       currentPage: currentPage ?? this.currentPage,
       currentPageData: currentPageData ?? this.currentPageData,
       battery: battery ?? this.battery,
+      lastRefreshed: lastRefreshed ?? this.lastRefreshed,
     );
   }
 
   @override
   List<Object?> get props =>
-      [volume, volumePercent, currentPage, currentPageData, battery];
+      [volume, volumePercent, currentPage, currentPageData, battery, lastRefreshed];
 }

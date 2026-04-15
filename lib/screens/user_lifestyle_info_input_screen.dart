@@ -95,10 +95,12 @@ class _UserLifestyleInfoInputScreenState
               builder: (context, state) {
                 var selectedHours = state.wakeupHour;
                 var selectedMins = state.wakeupMinute;
+                var selectedPeriod = state.wakeupPeriod;
                 return CustomTimeInputWidget(
                   isBedtime: false,
                   selectedHours: selectedHours,
                   selectedMins: selectedMins,
+                  selectedPeriod: selectedPeriod,
                 );
               },
             ),
@@ -124,10 +126,12 @@ class _UserLifestyleInfoInputScreenState
               builder: (context, state) {
                 var selectedHours = state.bedtimeHour;
                 var selectedMins = state.bedtimeMinute;
+                var selectedPeriod = state.bedtimePeriod;
                 return CustomTimeInputWidget(
                   isBedtime: true,
                   selectedHours: selectedHours,
                   selectedMins: selectedMins,
+                  selectedPeriod: selectedPeriod,
                 );
               },
             ),

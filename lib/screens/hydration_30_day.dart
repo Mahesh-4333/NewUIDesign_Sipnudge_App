@@ -62,12 +62,15 @@ class _Hydration30DayPageState extends State<Hydration30DayPage> {
     // Here we keep ascending (oldest -> newest). If you prefer newest first, uncomment below:
     // latest = latest.reversed.toList();
 
+    context.read<BleCubit>().clearData();
     // Assign directly — no null-bangs, no checks
     if (!mounted) return;
     setState(() {
       _rows = latest;
       _loading = false;
     });
+
+
   }
 
   Future<void> _onRefresh() async => _loadLast30Days();
@@ -188,7 +191,7 @@ class _Hydration30DayPageState extends State<Hydration30DayPage> {
                                       Padding(
                                         padding: const EdgeInsets.all(8.0),
                                         child:
-                                            Text(waterGoal.toStringAsFixed(0)),
+                                            Text(r.target.toStringAsFixed(0)),
                                       ),
                                       Padding(
                                         padding: const EdgeInsets.all(8.0),

@@ -14,11 +14,13 @@ class CustomTimeInputWidget extends StatefulWidget {
     required this.isBedtime,
     this.selectedHours,
     this.selectedMins,
+    this.selectedPeriod,
   });
 
   final bool isBedtime;
   final int? selectedMins;
   final int? selectedHours;
+  final String? selectedPeriod;
 
   @override
   State<CustomTimeInputWidget> createState() => _CustomTimeInputWidgetState();
@@ -28,19 +30,31 @@ class _CustomTimeInputWidgetState extends State<CustomTimeInputWidget> {
   int selectedHour = 1;
   int selectedMinute = 0;
 
+  @override
+  void initState() {
+    super.initState();
+    // Sync initial local values with passed props if they exist
+    if (widget.selectedHours != null) selectedHour = widget.selectedHours!;
+    if (widget.selectedMins != null) selectedMinute = widget.selectedMins!;
+  }
+
   Future<void> _pickTime() async {
+    // Determine the initial values based on current widget props or local state
+    final currentHour = widget.selectedHours ?? selectedHour;
+    final currentMinute = widget.selectedMins ?? selectedMinute;
+
     // Call the sheet once and request both pickers together
     final result = await showCupertinoPickerBottomSheet(
       context: context,
       title: 'Select Time',
-      initialValue: selectedHour,
+      initialValue: currentHour,
       minValue: 1,
       maxValue: 12,
       suffix: 'hrs',
 
       // enable the secondary (minutes) picker
       hasSecondaryValue: true,
-      secondaryInitialValue: selectedMinute,
+      secondaryInitialValue: currentMinute,
       secondaryMinValue: 0,
       secondaryMaxValue: 59,
       secondarySuffix: 'min',
@@ -116,7 +130,7 @@ class _CustomTimeInputWidgetState extends State<CustomTimeInputWidget> {
           leftLabel: "AM",
           rightLabel: "PM",
           toggleType: 2,
-          initialValue: widget.isBedtime ? "PM" : "AM",
+          initialValue: widget.selectedPeriod ?? (widget.isBedtime ? "PM" : "AM"),
           onChanged: (value) {
             if (widget.isBedtime) {
               context.read<UserInfoCubit>().updateBedTime(period: value);

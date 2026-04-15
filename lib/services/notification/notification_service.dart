@@ -1,15 +1,15 @@
+import 'dart:typed_data';
 import 'package:hydrify/helpers/logger.dart';
 import 'dart:io';
 import 'dart:math' as math;
 
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
-import 'package:fluttertoast/fluttertoast.dart';
 import 'package:hydrify/helpers/shared_pref_helper.dart';
 import 'package:hydrify/models/hydration_entry.dart';
-import 'package:hydrify/services/google_calendar_manager.dart';
 import 'package:timezone/data/latest.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
 import 'notification_manager.dart';
+import 'package:flutter_timezone/flutter_timezone.dart';
 
 typedef NotificationTapCallback = void Function(HydrationSlot slot);
 
@@ -49,7 +49,11 @@ class NotificationService {
   NotificationTapCallback? onNotificationTap;
 
   Future<void> init({NotificationTapCallback? onTap}) async {
+
     tz.initializeTimeZones();
+    final String timeZoneName = (await FlutterTimezone.getLocalTimezone()).identifier;
+    tz.setLocalLocation(tz.getLocation(timeZoneName));
+    Console.log(tag: "Notifications", value: "Timezone set to $timeZoneName");
 
     await NotificationManager.instance.initialize();
 
@@ -80,16 +84,16 @@ class NotificationService {
     onNotificationTap = onTap;
 
     await _plugin.initialize(
-      initSettings,
+      settings: initSettings,
       onDidReceiveNotificationResponse: (details) async {
         final payload = details.payload;
         final actionId = details.actionId;
         final notificationId = details.id;
 
         if (notificationId != null) {
-          await NotificationManager.instance.stopAlarm(notificationId);
+          // await NotificationManager.instance.stopAlarm(notificationId);
 
-          await _plugin.cancel(notificationId);
+          await _plugin.cancel(id : notificationId);
         }
         if (actionId == 'STOP_ACTION' ||
             (actionId != null && actionId.startsWith("STOP"))) {
@@ -108,20 +112,16 @@ class NotificationService {
       onDidReceiveBackgroundNotificationResponse: notificationTapBackground,
     );
 
-    // // Request iOS permissions including Critical Alerts (bypasses DND + mute).
-    // // Critical Alerts only work if the entitlement is enabled in the
-    // // provisioning profile (com.apple.developer.usernotifications.critical-alerts).
-    // if (Platform.isIOS) {
-    //   await _plugin
-    //       .resolvePlatformSpecificImplementation<
-    //           IOSFlutterLocalNotificationsPlugin>()
-    //       ?.requestPermissions(
-    //         alert: true,
-    //         sound: true,
-    //         badge: true,
-    //         critical: true,
-    //       );
-    // }
+    if (Platform.isIOS) {
+      await _plugin
+          .resolvePlatformSpecificImplementation<
+              IOSFlutterLocalNotificationsPlugin>()
+          ?.requestPermissions(
+            alert: true,
+            sound: true,
+            badge: true,
+          );
+    }
 
     final NotificationAppLaunchDetails? launchDetails =
         await _plugin.getNotificationAppLaunchDetails();
@@ -133,8 +133,8 @@ class NotificationService {
 
   void _handleTapLogic(NotificationResponse details) async {
     if (details.id != null) {
-      await NotificationManager.instance.stopAlarm(details.id!);
-      await _plugin.cancel(details.id!);
+      // await NotificationManager.instance.stopAlarm(details.id!);
+      await _plugin.cancel(id : details.id!);
     }
 
     final payload = details.payload;
@@ -163,18 +163,18 @@ class NotificationService {
 
     if (Platform.isIOS) {
       final selected = await SharedPrefsHelper.getSelectedRingtone() ?? 1;
-      final fileName = "ringtone${selected}.caf";
+      final fileName = "ringtone$selected.caf";
       Console.log(
           tag: "APP",
           value:
               "[iOS] Daily repeat scheduled id=$id at $notifyAt sound=$fileName silent=$isSilent");
 
       await _plugin.zonedSchedule(
-        id,
-        title,
-        body,
-        tzNotifyAt,
-        NotificationDetails(
+        id: id,
+        title : title,
+        body : body,
+        scheduledDate: tzNotifyAt,
+        notificationDetails: NotificationDetails(
           iOS: DarwinNotificationDetails(
             sound: fileName,
             presentAlert: true,
@@ -195,20 +195,19 @@ class NotificationService {
       // Android — use flutter_local_notifications with daily repeat.
       // Sound file must exist in android/app/src/main/res/raw/.
       final selected = await SharedPrefsHelper.getSelectedRingtone() ?? 1;
-      final soundName = "ringtone${selected}";
+      final soundName = "ringtone$selected";
       Console.log(
           tag: "APP",
           value:
               "[Android] Daily repeat scheduled id=$id at $notifyAt sound=$soundName silent=$isSilent");
 
       await _plugin.zonedSchedule(
-        id,
-        title,
-        body,
-        tzNotifyAt,
-        NotificationDetails(
+        id : id,
+        title : title,
+        body : body,
+        scheduledDate: tzNotifyAt,
+        notificationDetails: NotificationDetails(
           android: AndroidNotificationDetails(
-
             // Unique channel per ringtone so Android picks the right sound.
             'hydration_daily_$soundName',
             'Hydration Reminders',
@@ -220,6 +219,7 @@ class NotificationService {
                 ? null
                 : RawResourceAndroidNotificationSound(soundName),
             enableVibration: true,
+            vibrationPattern: Int64List.fromList([0, 500, 250, 500]),
             // ✅ Use the ALARM audio stream so the sound plays at alarm
             // volume (not the quieter notification stream volume).
             audioAttributesUsage: AudioAttributesUsage.alarm,
@@ -235,7 +235,6 @@ class NotificationService {
                 cancelNotification: true,
               ),
             ],
-
           ),
         ),
         payload: payload,
@@ -247,18 +246,6 @@ class NotificationService {
     }
   }
 
-  Future<bool> _shouldSilenceHydrationReminder(DateTime notifyAt) async {
-    try {
-      final calendarManager = GoogleCalendarManager();
-      return await calendarManager.hasOverlappingEvent(
-        notifyAt,
-        notifyAt.add(const Duration(minutes: 5)),
-      );
-    } catch (e) {
-      Console.log(tag: "APP", value: '[Calendar] Failed to check calendar: $e');
-      return false; // fail-safe → normal reminder
-    }
-  }
 
   /// Schedules hydration reminders that repeat **every day at the same time forever**.
   ///
@@ -274,6 +261,11 @@ class NotificationService {
 
     final alarmRepeatIndex = await SharedPrefsHelper.getAlarmRepeatIndex();
     final alarmRepeatTimes = [1, 3, 5, 10][alarmRepeatIndex];
+
+    // Small delay after cancelAll() to ensure OS cleanup before we start scheduling.
+    await Future.delayed(const Duration(milliseconds: 500));
+
+    Console.log(tag: "Notifications", value: "Scheduling for ${entries.length} slots with $alarmRepeatTimes repeats");
 
     // ✅ No outer dayOffset loop — matchDateTimeComponents.time repeats daily forever.
     for (final entry in entries) {
@@ -297,8 +289,7 @@ class NotificationService {
           notifyAt = notifyAt.add(const Duration(days: 1));
         }
 
-        await Future.delayed(Duration(milliseconds: 400));
-
+        await Future.delayed(const Duration(milliseconds: 300));
         // dayOffset=0 — ID encodes slot+repeat only; daily repeat handles the rest.
         await _scheduleSingleReminder(
           entry: entry,
@@ -360,7 +351,7 @@ class NotificationService {
     // No dayOffset loop needed — other day offsets don't exist anymore.
     for (int repeat = 0; repeat < 10; repeat++) {
       final id = _buildNotificationId(updatedEntry.slot, 0, repeat);
-      await _plugin.cancel(id);
+      await _plugin.cancel(id : id);
     }
 
     await scheduleHydrationRemindersForFuture([updatedEntry]);
@@ -390,26 +381,26 @@ class NotificationService {
 
     // Only dayOffset=0 IDs exist in the daily-repeat system.
     // Use the actual repeat count from prefs so we cancel exactly the IDs that were scheduled.
-    final alarmRepeatIndex = await SharedPrefsHelper.getAlarmRepeatIndex();
-    final alarmRepeatTimes = [1, 3, 5, 10][alarmRepeatIndex];
+    // final alarmRepeatIndex = await SharedPrefsHelper.getAlarmRepeatIndex();
+    // final alarmRepeatTimes = [1, 3, 5, 10][alarmRepeatIndex];
 
-    for (final slot in HydrationSlot.values) {
-      for (int repeat = 0; repeat < alarmRepeatTimes; repeat++) {
-        final id = _buildNotificationId(slot, 0, repeat);
-        if (Platform.isAndroid) {
-          await NotificationManager.instance.stopAlarm(id);
-        }
-      }
-    }
+    // for (final slot in HydrationSlot.values) {
+    //   for (int repeat = 0; repeat < alarmRepeatTimes; repeat++) {
+    //     final id = _buildNotificationId(slot, 0, repeat);
+    //     if (Platform.isAndroid) {
+    //       await NotificationManager.instance.stopAlarm(id);
+    //     }
+    //   }
+    // }
   }
 
   Future<void> cancelSlotReminders(HydrationSlot slot, int dayOffset) async {
     // Cancel the base reminder
     final baseId = _buildNotificationId(slot, dayOffset);
-    await _plugin.cancel(baseId);
-    if (Platform.isAndroid) {
-      await NotificationManager.instance.stopAlarm(baseId);
-    }
+    await _plugin.cancel(id : baseId);
+    // if (Platform.isAndroid) {
+    //   await NotificationManager.instance.stopAlarm(baseId);
+    // }
 
     // Cancel only the repeat IDs that were actually scheduled.
     final alarmRepeatIndex = await SharedPrefsHelper.getAlarmRepeatIndex();
@@ -417,17 +408,13 @@ class NotificationService {
 
     for (int repeat = 0; repeat < alarmRepeatTimes; repeat++) {
       final repeatId = _buildNotificationId(slot, dayOffset, repeat);
-      await _plugin.cancel(repeatId);
+      await _plugin.cancel(id : repeatId);
       if (Platform.isAndroid) {
-        await NotificationManager.instance.stopAlarm(repeatId);
+        // await NotificationManager.instance.stopAlarm(repeatId);
       }
     }
   }
 
-  HydrationSlot _slotFromNotificationId(int id) {
-    final slotIndex = id % 100;
-    return HydrationSlot.values[slotIndex];
-  }
 
   /// Returns the next-7-days scheduled notifications for display purposes.
   ///
@@ -495,7 +482,7 @@ class NotificationService {
     final pendingRequests = await _plugin.pendingNotificationRequests();
     final activeIds = pendingRequests.map((e) => e.id).toSet();
 
-    // 2. Get the complete projection for the coming days
+    // 2. Get the complete projection for the coming days (next 7 days)
     final calculated = await getCalculatedScheduledNotifications(entries);
 
     // 3. Filter down to the first upcoming occurrence for each active ID
@@ -509,8 +496,15 @@ class NotificationService {
       }
     }
 
+    Console.log(tag: "ActiveNotification", value: "Verified Active IDs in OS: ${activeIds.length}. Displaying ${activeOccurrences.length} upcoming alerts.");
+    
     // Sort by chronological firing order
     activeOccurrences.sort((a, b) => a.dateTime.compareTo(b.dateTime));
     return activeOccurrences;
+  }
+
+  Future<bool> hasScheduledNotifications() async {
+    final pendingRequests = await _plugin.pendingNotificationRequests();
+    return pendingRequests.isNotEmpty;
   }
 }

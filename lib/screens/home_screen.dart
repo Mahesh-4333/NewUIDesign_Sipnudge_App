@@ -1,7 +1,6 @@
-import 'package:hydrify/helpers/logger.dart';
+import 'dart:async';
 import 'dart:ui';
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -15,25 +14,25 @@ import 'package:hydrify/cubit/bottle/bottle_data_cubit.dart';
 import 'package:hydrify/cubit/hydration/hydration_cubit.dart';
 import 'package:hydrify/cubit/hydration/hydration_state.dart';
 import 'package:hydrify/helpers/database_helper.dart';
+import 'package:hydrify/helpers/hydration_helper.dart';
 import 'package:hydrify/helpers/logger.dart';
 import 'package:hydrify/helpers/shared_pref_helper.dart';
 import 'package:hydrify/helpers/water_consumption_data_helper.dart';
 import 'package:hydrify/models/bottle_info.dart';
 import 'package:hydrify/models/hydration_entry.dart';
-import 'package:hydrify/models/hydration_summary.dart';
 import 'package:hydrify/providers/weather_provider.dart';
 import 'package:hydrify/screens/hydration_30_day.dart';
-import 'package:hydrify/screens/notification.dart';
-import 'package:hydrify/screens/qr_scanning.dart';
 import 'package:hydrify/screens/widgets/autoScroll_GoalText.dart';
 import 'package:hydrify/screens/widgets/ble_device_selection_sheet.dart';
+import 'package:hydrify/screens/widgets/ble_retry_dialog.dart';
 import 'package:hydrify/screens/widgets/custom_circular_loader/custom_circular_progress_indicator.dart';
 import 'package:hydrify/screens/widgets/custom_circular_loader/custom_circular_water_progress_indicator.dart';
 import 'package:hydrify/screens/widgets/greeting_widget.dart';
+import 'package:hydrify/screens/widgets/timezone_change_dialog.dart';
 import 'package:hydrify/screens/widgets/user_info_input_widgets/custom_beating_ble_status_indicator.dart';
 import 'package:hydrify/screens/widgets/water_wave_widget.dart';
 import 'package:hydrify/services/notification/notification_service.dart';
-import 'package:marquee/marquee.dart';
+import 'package:hydrify/services/timezone_change_detector.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -47,9 +46,11 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  // late AnimationController _controller;
-  // late Animation<double> _shadowOffsetAnimation;
+  Timer? _timezoneTimer;
+  bool _isTimezoneDialogOpen = false;
+
   bool _isPickerShown = false;
+  bool _isRetryDialogShown = false;
   bool hasConnectedBefore = false;
   bool isGuest = false;
   String selectedBottle = 'purple';
@@ -65,19 +66,19 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
+    _timezoneTimer = Timer.periodic(const Duration(seconds: 3), (timer) {
+      _checkTimezoneChange();
+    });
+
     _loadBottle();
     _checkGuestStatus();
 
-    NotificationService().init(
-      onTap: (slot) {},
-    );
+    NotificationService().init();
 
-    //==================================================================
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       final prefs = await SharedPreferences.getInstance();
       hasConnectedBefore = prefs.getBool('ble_connected_once') ?? false;
 
-      // 🔹 read current bottle volume from cubit
       final bottleState = context.read<BottleDataCubit>().state;
       final double currentVolume = bottleState.volume;
 
@@ -88,7 +89,6 @@ class _HomeScreenState extends State<HomeScreen> {
 
         context.read<BleCubit>().updateCurrentHydrationValue(history);
 
-        // Cancel all today's notifications if target already met on app open
         final stopWhenFull = await SharedPrefsHelper.getStopWhenFull();
         if (stopWhenFull) {
           double completionPercent =
@@ -105,16 +105,135 @@ class _HomeScreenState extends State<HomeScreen> {
           }
         }
       } else {
-        // if (currentVolume < 600) {
-        _showStartJourneyDialog(context);
-        // } else {
+        await _showStartJourneyDialog(context);
+        if (mounted) {
+          context.read<BleCubit>().start();
+        }
+      }
 
-        // Removing dialog as it causes bottle data to not come
-        context.read<BleCubit>().start();
-        await prefs.setBool('ble_connected_once', true);
-        // }
+      await _checkAndScheduleHydrationReminders();
+      await _initializeTimezoneDetector();
+    });
+  }
+
+  Future<void> _initializeTimezoneDetector() async {
+    await TimezoneChangeDetector().init();
+  }
+
+  Future<void> _checkTimezoneChange() async {
+    if (_isTimezoneDialogOpen) return;
+    final hasChanged = await TimezoneChangeDetector().hasTimezoneChanged();
+    Console.log(tag: "TimezoneChangeDetector_hasChanged", value: hasChanged);
+    if (hasChanged && mounted) {
+      _showTimezoneChangeDialog();
+    }
+  }
+
+  void _showTimezoneChangeDialog() {
+    if (!mounted || _isTimezoneDialogOpen) return;
+
+    setState(() {
+      _isTimezoneDialogOpen = true;
+    });
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return TimezoneChangeDialog(
+          onRefresh: _refreshTimezone,
+        );
+      },
+    ).then((_) {
+      if (mounted) {
+        setState(() {
+          _isTimezoneDialogOpen = false;
+        });
       }
     });
+  }
+
+  Future<void> _refreshTimezone() async {
+    await TimezoneChangeDetector().updateTimezone();
+
+    final dbHelper = DatabaseHelper();
+    final waterGoal = await SharedPrefsHelper.getWaterGoal();
+
+    if (waterGoal != null && waterGoal > 0) {
+      final slots =
+          HydrationHelper.generateHydrationSlots(waterGoal.toDouble());
+
+      await dbHelper.clearHydrationSlots();
+      await Future.delayed(Duration(seconds: 2));
+      for (var slot in slots) {
+        await dbHelper.insertOrUpdateSlot(slot);
+      }
+
+      final notificationService = NotificationService();
+      await notificationService.resetAllHydrationReminders(slots);
+      await notificationService.scheduleHydrationRemindersForFuture(slots);
+      context.read<BleCubit>().queueHydrationSlots(slots);
+
+      if (mounted) {
+        context.read<HydrationCubit>().loadSlotsFromDb();
+        context.read<HydrationCubit>().refreshAchievementStats();
+        context.read<BottleDataCubit>().refresh();
+        setState(() {});
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Hydration schedule refreshed for new timezone'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    _timezoneTimer?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _checkAndScheduleHydrationReminders() async {
+    final notificationService = NotificationService();
+    final bool alreadyScheduled =
+        await notificationService.hasScheduledNotifications();
+
+    if (!alreadyScheduled) {
+      Console.log(
+          tag: "Notifications",
+          value: "No notifications scheduled. Checking database for slots...");
+      final dbHelper = DatabaseHelper();
+      var slots = await dbHelper.getAllSlots();
+
+      if (slots.isEmpty) {
+        Console.log(
+            tag: "Notifications",
+            value: "Database slots empty. Generating from water goal...");
+        final waterGoal = await SharedPrefsHelper.getWaterGoal();
+        if (waterGoal != null && waterGoal > 0) {
+          slots = HydrationHelper.generateHydrationSlots(waterGoal.toDouble());
+          for (var slot in slots) {
+            await dbHelper.insertOrUpdateSlot(slot);
+          }
+        }
+      }
+
+      if (slots.isNotEmpty) {
+        Console.log(
+            tag: "Notifications",
+            value: "Scheduling hydration reminders for ${slots.length} slots.");
+
+        // Request notification permissions before scheduling
+        await notificationService.resetAllHydrationReminders(slots);
+        await notificationService.scheduleHydrationRemindersForFuture(slots);
+      }
+    } else {
+      Console.log(
+          tag: "Notifications",
+          value: "Notifications already scheduled. Skipping.");
+    }
   }
 
   Future<void> _loadBottle() async {
@@ -136,7 +255,7 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
-  void _showStartJourneyDialog(BuildContext context) async {
+  Future<void> _showStartJourneyDialog(BuildContext context) async {
     // Check if user is logged in as guest by checking email
     final userEmail = await SharedPrefsHelper.getUserEmail();
     final isGuest = userEmail == "guest_user";
@@ -146,7 +265,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
     if (!context.mounted) return;
 
-    showDialog(
+    await showDialog(
       context: context,
       barrierDismissible: true,
       barrierColor: Colors.transparent,
@@ -327,7 +446,6 @@ class _HomeScreenState extends State<HomeScreen> {
                                     Navigator.of(context).pop();
 
                                     if (!isGuest) {
-                                      context.read<BleCubit>().start();
                                       final prefs =
                                           await SharedPreferences.getInstance();
                                       await prefs.setBool(
@@ -411,6 +529,25 @@ class _HomeScreenState extends State<HomeScreen> {
             ((state.volume ?? 0) < 600)) {
           // _showStartJourneyDialog(context);
           // Removing as this causes error
+        }
+
+        if (state.manualRetryRequired && !_isRetryDialogShown) {
+          _isRetryDialogShown = true;
+          Console.log(tag: "APP", value: "⚠️ Showing manual retry dialog...");
+
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            showDialog(
+              context: context,
+              barrierDismissible: false,
+              builder: (ctx) => const BleRetryDialog(),
+            ).then((_) {
+              Console.log(tag: "APP", value: "❌ Retry dialog closed.");
+              _isRetryDialogShown = false;
+              if (context.mounted) {
+                context.read<BleCubit>().dismissRetryDialog();
+              }
+            });
+          });
         }
       },
       child: Scaffold(
@@ -521,243 +658,6 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  void _showMockBottomSheet(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (context) {
-        return Container(
-          padding: EdgeInsets.all(20.w),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                "Bluetooth Debug Mocks",
-                style: TextStyle(
-                  fontSize: 18.sp,
-                  fontWeight: FontWeight.bold,
-                  fontFamily: AppFontStyles.museoModernoFontFamily,
-                ),
-              ),
-              SizedBox(height: 10.h),
-              const Divider(),
-              SizedBox(
-                height: 400.h,
-                child: ListView(
-                  shrinkWrap: true,
-                  children: [
-                    ListTile(
-                      leading: const Icon(Icons.search),
-                      title: const Text("Simulate Scanning"),
-                      onTap: () {
-                        context.read<BleCubit>().mockBluetoothScan();
-                        Navigator.pop(context);
-                      },
-                    ),
-                    ListTile(
-                      leading: const Icon(Icons.bluetooth_connected),
-                      title: const Text("Simulate Connection"),
-                      onTap: () {
-                        context.read<BleCubit>().mockBluetoothConnect();
-                        Navigator.pop(context);
-                      },
-                    ),
-                    ListTile(
-                      leading: const Icon(Icons.battery_charging_full),
-                      title: const Text("Simulate Real-time Data"),
-                      subtitle: const Text("Volume: 450ml | Battery: 85%"),
-                      onTap: () {
-                        context.read<BleCubit>().mockBottleData(
-                              volume: 450.0,
-                              battery: 85,
-                              percent: 45,
-                            );
-                        Navigator.pop(context);
-                      },
-                    ),
-                    ListTile(
-                      leading: const Icon(Icons.list_alt),
-                      title: const Text("Inject Today's Slots"),
-                      subtitle: const Text(
-                          "Generates mock data from current DB slots"),
-                      onTap: () async {
-                        final dbHelper = DatabaseHelper();
-                        final slotsFromDb = await dbHelper.getAllSlots();
-
-                        // if (slotsFromDb.isNotEmpty) {
-                        //   // Generate payload: "index/target/consumed|..."
-                        //   // We use the existing values to simulate a sync event
-                        //   final payload = slotsFromDb
-                        //       .map((s) =>
-                        //           "${s.slot.index}/${s.amount.toInt()}/${s.waterDrank.toInt()}")
-                        //       .join("|");
-                        //
-                        //   context.read<BleCubit>().mockHydrationSlots(payload);
-                        // } else {
-                        // Fallback to hardcoded dummy if DB is empty
-                        context.read<BleCubit>().mockHydrationSlots(
-                            "0/475/200|1/238/100|2/238/0|3/238/0|4/238/0|5/238/0|6/238/0");
-                        //}
-                        Navigator.pop(context);
-                      },
-                    ),
-                    ListTile(
-                      leading: const Icon(Icons.auto_awesome),
-                      title: const Text("Simulate 7-Day Streak"),
-                      subtitle: const Text("Injects 7 perfect days"),
-                      onTap: () {
-                        context.read<BleCubit>().mockFull7DayStreak();
-                        Navigator.pop(context);
-                      },
-                    ),
-                    ListTile(
-                      leading: const Icon(Icons.history),
-                      title: const Text("Load 30-Day History (Mock)"),
-                      onTap: () {
-                        final now =
-                            DateTime.now().millisecondsSinceEpoch ~/ 1000;
-                        context.read<BleCubit>().mock30DayHistory(
-                            "$now|0/2000/1800|1/2000/2100|2/2000/2000");
-                        Navigator.pop(context);
-                      },
-                    ),
-                    const Divider(),
-                    ListTile(
-                      leading:
-                          const Icon(Icons.calendar_month, color: Colors.green),
-                      title: const Text("Manual Drink (Select Date)",
-                          style: TextStyle(color: Colors.green)),
-                      subtitle: const Text("Pick any date and amount to add"),
-                      onTap: () {
-                        Navigator.pop(context); // Close bottom sheet
-                        _showManualConsumptionForDateDialog(context);
-                      },
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
-  void _showManualConsumptionForDateDialog(BuildContext context) {
-    DateTime selectedDate = DateTime.now();
-    int selectedSlotIndex = 0;
-    double amount = 250.0;
-
-    showDialog(
-      context: context,
-      builder: (context) {
-        return StatefulBuilder(builder: (context, setState) {
-          return AlertDialog(
-            title: const Text("Manual Entry (Historical)"),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text("Select Date:"),
-                InkWell(
-                  onTap: () async {
-                    final picked = await showDatePicker(
-                      context: context,
-                      initialDate: selectedDate,
-                      firstDate:
-                          DateTime.now().subtract(const Duration(days: 30)),
-                      lastDate: DateTime.now(),
-                    );
-                    if (picked != null) {
-                      setState(() => selectedDate = picked);
-                    }
-                  },
-                  child: Container(
-                    padding:
-                        const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
-                    decoration: BoxDecoration(
-                      border: Border.all(color: Colors.grey),
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                            "${selectedDate.year}-${selectedDate.month}-${selectedDate.day}"),
-                        const Icon(Icons.calendar_today, size: 16),
-                      ],
-                    ),
-                  ),
-                ),
-                SizedBox(height: 16.h),
-                const Text("Slot Index (0-6):"),
-                DropdownButton<int>(
-                  value: selectedSlotIndex,
-                  isExpanded: true,
-                  items: List.generate(7, (index) {
-                    return DropdownMenuItem(
-                      value: index,
-                      child: Text("Slot $index"),
-                    );
-                  }),
-                  onChanged: (val) => setState(() => selectedSlotIndex = val!),
-                ),
-                SizedBox(height: 16.h),
-                const Text("Amount (mL):"),
-                TextField(
-                  keyboardType: TextInputType.text,
-                  decoration: const InputDecoration(hintText: "e.g. 250"),
-                  onChanged: (val) {
-                    amount = double.tryParse(val) ?? 250.0;
-                  },
-                ),
-              ],
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text("Cancel"),
-              ),
-              ElevatedButton(
-                onPressed: () async {
-                  Console.log(tag: "amount consumed", value: amount.toString());
-
-                  // 1. Update local database/state for immediate feedback
-                  final bleCubit = context.read<BleCubit>();
-                  await bleCubit.mockManualConsumption(
-                    selectedSlotIndex,
-                    amount,
-                    date: selectedDate,
-                  );
-
-                  // 2. Prepare mock command for Bluetooth mirroring
-                  // We get the current slot values to send the absolute new total
-                  final dbHelper = DatabaseHelper();
-                  final slots = await dbHelper.getAllSlots();
-                  if (selectedSlotIndex >= 0 &&
-                      selectedSlotIndex < slots.length) {
-                    final entry = slots[selectedSlotIndex];
-                    final mockCommand =
-                        "MOCK_SLOTS:${entry.slot.index}/${entry.amount.toInt()}/${entry.waterDrank.toInt()}";
-
-                    // 3. Send to Bluetooth - Device will echo this back via Notify
-                    // await bleCubit.sendBluetoothMock(mockCommand);
-                  }
-
-                  Navigator.pop(context);
-                },
-                child: const Text("Add Water"),
-              ),
-            ],
-          );
-        });
-      },
-    );
-  }
-
   Widget _buildAppBar(BuildContext context) {
     return Padding(
       padding: EdgeInsets.symmetric(horizontal: AppDimensions.defaultPadding),
@@ -857,57 +757,124 @@ class _HomeScreenState extends State<HomeScreen> {
 
         final weatherData = weatherProvider.weatherData;
         if (weatherData == null) {
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            weatherProvider.fetchWeatherForCurrentLocation();
-          });
+          // Only fetch once on build, don't keep retrying
+          if (!weatherProvider.isLoading && weatherProvider.error == null) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              weatherProvider.fetchWeatherForCurrentLocation();
+            });
+          }
+
+          if (weatherProvider.error != null) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Text(
+                  'Weather unavailable',
+                  style: TextStyle(
+                    fontSize: AppFontStyles.fontSize_14,
+                    color: AppColors.bluegray,
+                  ),
+                ),
+                InkWell(
+                  onTap: () async {
+                    await weatherProvider.fetchWeatherForCurrentLocation();
+                  },
+                  child: Text(
+                    'Tap to refresh',
+                    style: TextStyle(
+                      fontSize: AppFontStyles.fontSize_12,
+                      color: Colors.blue,
+                      decoration: TextDecoration.underline,
+                    ),
+                  ),
+                ),
+              ],
+            );
+          }
+
           return const Center(child: CircularProgressIndicator());
+        }
+
+        if (weatherProvider.error != null) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Text(
+                'Weather unavailable',
+                style: TextStyle(
+                  fontSize: AppFontStyles.fontSize_14,
+                  color: AppColors.bluegray,
+                ),
+              ),
+              InkWell(
+                onTap: () async {
+                  await weatherProvider.fetchWeatherForCurrentLocation();
+                },
+                child: Text(
+                  'Tap to refresh',
+                  style: TextStyle(
+                    fontSize: AppFontStyles.fontSize_12,
+                    color: Colors.blue,
+                    decoration: TextDecoration.underline,
+                  ),
+                ),
+              ),
+            ],
+          );
         }
 
         var iconPath = weatherProvider.getWeatherIcon();
         print('=== UI Widget Debug ===');
         print('Icon path received from provider: "$iconPath"');
 
-        // if (iconPath == "assets/images/sunny_ic.svg") {
-        //   iconPath = "assets/images/sunny_ic.png";
-        // }
-
         if (iconPath == "assets/images/01_sunny_color.svg") {
           iconPath = "assets/images/01_sunny_color.svg";
         }
-
-        // if (iconPath == "assets/weather/03_cloud_color.png") {
-        //   iconPath = "assets/weather/03_cloud_color.png";
-        // }
 
         return Padding(
           padding:
               EdgeInsets.symmetric(horizontal: AppDimensions.defaultPadding),
           child: Row(
             children: [
-              Column(
-                children: [
-                  // Wrap SvgPicture.asset with error handling
-                  SizedBox(
-                    height: AppDimensions.dim45.h,
-                    width: AppDimensions.dim45.h, // Add width for debugging
-
-                    child: _buildWeatherIconWidget(iconPath),
-                  ),
-                  SizedBox(
-                      height:
-                          AppDimensions.dim8.h), // Changed from width to height
-                  Text(
-                    '${weatherData.temperature.round()}°C / ${weatherData.humidity.round()}%',
-                    style: TextStyle(
-                      fontSize: AppFontStyles.fontSize_16,
-                      fontFamily: AppFontStyles.poppinsFamily,
-                      color: AppColors.bluegray,
-                      fontVariations: [
-                        AppFontStyles.boldFontVariation,
-                      ],
+              InkWell(
+                onTap: () async {
+                  Console.log(
+                      tag: "APP", value: '=== WEATHER WIDGET TAPPED ===');
+                  await weatherProvider.fetchWeatherForCurrentLocation();
+                  Console.log(
+                      tag: "APP", value: '=== WEATHER FETCH COMPLETED ===');
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text(
+                            'Location permission requested. Weather will update shortly.'),
+                        backgroundColor: Colors.green,
+                        duration: Duration(seconds: 2),
+                      ),
+                    );
+                  }
+                },
+                child: Column(
+                  children: [
+                    SizedBox(
+                      height: AppDimensions.dim45.h,
+                      width: AppDimensions.dim45.h,
+                      child: _buildWeatherIconWidget(iconPath),
                     ),
-                  ),
-                ],
+                    SizedBox(height: AppDimensions.dim8.h),
+                    Text(
+                      '${weatherData.temperature.round()}°C / ${weatherData.humidity.round()}%',
+                      style: TextStyle(
+                        fontSize: AppFontStyles.fontSize_16,
+                        fontFamily: AppFontStyles.poppinsFamily,
+                        color: AppColors.bluegray,
+                        fontVariations: [
+                          AppFontStyles.boldFontVariation,
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
               ),
               SizedBox(width: AppDimensions.dim12.w),
               Expanded(
@@ -1029,9 +996,9 @@ class _HomeScreenState extends State<HomeScreen> {
                   final history = await context
                       .read<BottleDataCubit>()
                       .getCurrentDayHistory();
-                  Console.log(
-                      tag: "getCurrentDayHistory_progress",
-                      value: history.toString());
+                  // Console.log(
+                  //     tag: "getCurrentDayHistory_progress",
+                  //     value: history.toString());
 
                   double waterVolumeConsumed = history;
                   double completionPercent = await WaterConsumptionCalculator

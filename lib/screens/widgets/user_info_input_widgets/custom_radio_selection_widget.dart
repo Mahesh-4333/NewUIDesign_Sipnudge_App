@@ -75,7 +75,7 @@ class CustomRadioSelectionWidget extends StatelessWidget {
           name: AppStrings.sedentary,
           icon: "assets/images/selentaryicon_selected.svg",
           description: AppStrings.sedentaryDes,
-          //subDescription: "less than 5000 steps",
+          // subDescription: "less than 5000 steps",
           isSelected: state.activityLevel == ActivityLevel.sedentary,
           onTap: () {
             cubit.setActivityLevel(ActivityLevel.sedentary);
@@ -86,7 +86,7 @@ class CustomRadioSelectionWidget extends StatelessWidget {
           name: AppStrings.lightlyActive,
           icon: "assets/images/lightlyactiveicon_selected.svg",
           description: AppStrings.lightActivityDes,
-          //subDescription: "5,000 - 7,500 steps",
+          // subDescription: "5,000 - 7,500 steps",
           isSelected: state.activityLevel == ActivityLevel.lightActivity,
           onTap: () {
             cubit.setActivityLevel(ActivityLevel.lightActivity);
@@ -97,7 +97,7 @@ class CustomRadioSelectionWidget extends StatelessWidget {
           name: AppStrings.moderatelyActive,
           icon: "assets/images/moderatelyactiveicon_selected.svg",
           description: AppStrings.midActivityDes,
-          //subDescription: "7,500 - 10,000 steps",
+          // subDescription: "7,500 - 10,000 steps",
           isSelected: state.activityLevel == ActivityLevel.midActive,
           onTap: () {
             cubit.setActivityLevel(ActivityLevel.midActive);
@@ -113,7 +113,7 @@ class CustomRadioSelectionWidget extends StatelessWidget {
             cubit.setActivityLevel(ActivityLevel.veryActive);
           },
           width: tileWidth,
-        )
+        ),
       ];
     } else if (type == 3) {
       return [
@@ -221,6 +221,19 @@ class CustomRadioSelectionWidget extends StatelessWidget {
                   SizedBox(height: AppDimensions.dim10.h),
                   Text(
                     description,
+                    style: TextStyle(
+                      fontFamily: AppFontStyles.urbanistFontFamily,
+                      fontSize: AppFontStyles.fontSize_14,
+                      color:
+                          isSelected ? AppColors.bluegray : AppColors.lightgray,
+                      fontVariations: [AppFontStyles.semiBoldFontVariation],
+                    ),
+                  ),
+                ],
+                if (subDescription != null) ...[
+                  SizedBox(height: AppDimensions.dim5.h),
+                  Text(
+                    subDescription,
                     style: TextStyle(
                       fontFamily: AppFontStyles.urbanistFontFamily,
                       fontSize: AppFontStyles.fontSize_14,

@@ -1,3 +1,5 @@
+import 'dart:developer';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_inner_shadow/flutter_inner_shadow.dart';
@@ -248,30 +250,30 @@ class PreferencesPage extends StatelessWidget {
 
                                           final hydrationCubit =
                                               context.read<HydrationCubit>();
-                                          await hydrationCubit.resetUI();
-                                          await hydrationCubit
-                                              .refreshAchievementStats(updateUnlock: false);
-
                                           final bleCubit =
                                               context.read<BleCubit>();
+                                          await hydrationCubit.resetUI();
+                                          await hydrationCubit
+                                              .refreshAchievementStats(
+                                                  updateUnlock: false);
+
                                           await bleCubit.clearData();
+                                          await bleCubit.forgetDevice();
+                                          log("-=-=-=-=-=-=-=- Sending Commnand =-=-=-=-=-=-=-");
+                                          var commandSent = await bleCubit
+                                              .sendResetCommandWithStateCheck();
 
                                           Fluttertoast.showToast(
                                               msg: "Local data cleared.");
+                                          Fluttertoast.showToast(
+                                              msg:
+                                              "Tracking restarted. Connect your device again.");
                                         } catch (e) {
                                           Fluttertoast.showToast(
                                               msg:
                                                   "Error clearing local data: $e");
                                           return;
                                         }
-
-                                        final bleCubit =
-                                            context.read<BleCubit>();
-                                        await bleCubit.forgetDevice();
-
-                                        Fluttertoast.showToast(
-                                            msg:
-                                                "Tracking restarted. Connect your device again.");
                                       },
                                     );
                                   },
