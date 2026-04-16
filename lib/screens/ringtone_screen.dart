@@ -49,8 +49,9 @@ class _RingtoneScreenState extends State<RingtoneScreen> {
     final saved = await SharedPrefsHelper.getSelectedRingtone();
     final favorites = await SharedPrefsHelper.getFavoriteRingtones();
     if (mounted) {
+      Console.log(tag: "selected_index", value: saved);
       setState(() {
-        if (saved != null) selectedIndex = saved;
+        selectedIndex = saved ?? 1;
         favoriteIds = favorites.toSet();
       });
     }

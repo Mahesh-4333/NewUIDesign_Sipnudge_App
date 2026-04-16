@@ -62,14 +62,12 @@ class _Hydration30DayPageState extends State<Hydration30DayPage> {
     // Here we keep ascending (oldest -> newest). If you prefer newest first, uncomment below:
     // latest = latest.reversed.toList();
 
-    context.read<BleCubit>().clearData();
     // Assign directly — no null-bangs, no checks
     if (!mounted) return;
     setState(() {
       _rows = latest;
       _loading = false;
     });
-
 
   }
 

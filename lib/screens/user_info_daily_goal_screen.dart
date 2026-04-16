@@ -72,8 +72,8 @@ class _UserInfoDailyGoalScreenState extends State<UserInfoDailyGoalScreen> {
   void _setupDynamicSlider() {
     double goalInLiters = widget.waterGoal / 1000;
 
-    double minGoal = (goalInLiters * 0.7).clamp(1.0, 2.5);
-    double maxGoal = (goalInLiters * 1.3).clamp(2.5, 5.0);
+    double minGoal = (goalInLiters - 2.0).clamp(1.0, goalInLiters);
+    double maxGoal = (goalInLiters + 2.0).clamp(goalInLiters, 10.0);
 
     minGoal = minGoal > goalInLiters ? goalInLiters * 0.8 : minGoal;
     maxGoal = maxGoal < goalInLiters ? goalInLiters * 1.2 : maxGoal;
@@ -332,7 +332,6 @@ class _UserInfoDailyGoalScreenState extends State<UserInfoDailyGoalScreen> {
                 }
 
                 await SharedPrefsHelper.setLastLevelUpDate("");
-                await context.read<BleCubit>().queueHydrationSlots(slots);
 
                 // Initialize notification service before scheduling, to ensure plugin is ready and permissions are requested on first launch
                 await NotificationService().init();
