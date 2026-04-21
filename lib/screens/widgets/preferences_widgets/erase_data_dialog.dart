@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:hydrify/constants/assets_path.dart';
@@ -60,12 +61,14 @@ class _EraseDataDialogState extends State<EraseDataDialog> {
 
   @override
   Widget build(BuildContext context) {
-    return Dialog(
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(30.r),
-      ),
-      backgroundColor: Colors.white,
-      surfaceTintColor: Colors.transparent,
+    return BackdropFilter(
+      filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+      child: Dialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(30.r),
+        ),
+        backgroundColor: Colors.white,
+        surfaceTintColor: Colors.transparent,
       child: Container(
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(30.r),
@@ -338,6 +341,7 @@ class _EraseDataDialogState extends State<EraseDataDialog> {
             ],
           ),
         ),
+      ),
       ),
     );
   }

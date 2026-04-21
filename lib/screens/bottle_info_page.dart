@@ -36,6 +36,7 @@ class _BottleInfoScreenState extends State<BottleInfoScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      bottomNavigationBar: SizedBox(height: 0, width: 0,),
       body: Container(
         width: double.infinity,
         height: double.infinity,
@@ -86,7 +87,8 @@ class _BottleInfoScreenState extends State<BottleInfoScreen> {
 
                       SizedBox(height: 30.h),
 
-                      _infoWidget()
+                      _infoWidget(),
+                      SizedBox(height: 30.h),
                     ],
                   ),
                 ),

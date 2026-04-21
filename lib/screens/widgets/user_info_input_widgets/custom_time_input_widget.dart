@@ -49,7 +49,7 @@ class _CustomTimeInputWidgetState extends State<CustomTimeInputWidget> {
       title: 'Select Time',
       initialValue: currentHour,
       minValue: 1,
-      maxValue: 12,
+      maxValue: 11,
       suffix: 'hrs',
 
       // enable the secondary (minutes) picker

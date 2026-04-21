@@ -11,6 +11,7 @@ import 'package:hydrify/screens/widgets/chart_widgets/custom_chart_data_widget.d
 import 'package:hydrify/screens/widgets/chart_widgets/drink_types_widget.dart';
 import 'package:hydrify/screens/widgets/chart_widgets/today_goal_widget.dart';
 import 'package:hydrify/screens/widgets/chart_widgets/analysis_hydration_slots_widget.dart';
+import 'package:hydrify/screens/widgets/chart_widgets/food_scanner_widget.dart';
 import 'package:hydrify/screens/widgets/date_filter_widget.dart';
 
 class AnalysisScreen extends StatefulWidget {
@@ -23,7 +24,6 @@ class AnalysisScreen extends StatefulWidget {
 class _AnalysisScreenState extends State<AnalysisScreen> {
   bool? isGuest;
 
-  
   @override
   void initState() {
     super.initState();
@@ -37,7 +37,6 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
     });
     print('🔍 DEBUG Analysis: isGuest = $isGuest, email = $userEmail');
   }
-
 
   @override
   Widget build(BuildContext context) {
@@ -87,7 +86,7 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
               child: Padding(
                 padding: EdgeInsets.only(
                   top: AppDimensions.defaultPadding.w,
-                  bottom: AppDimensions.dim20.w,
+                  bottom: AppDimensions.dim200.h,
                 ),
                 child: ListView(
                   physics: NeverScrollableScrollPhysics(),
@@ -206,7 +205,14 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
                 SizedBox(
                   height: AppDimensions.dim25.h,
                 ),
+                FoodScannerWidget(),
+                SizedBox(
+                  height: AppDimensions.dim25.h,
+                ),
                 AnalysisHydrationSlotsWidget(),
+                SizedBox(
+                  height: AppDimensions.dim120.h,
+                ),
               ],
             ),
           ),

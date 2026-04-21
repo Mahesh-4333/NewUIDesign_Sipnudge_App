@@ -103,7 +103,7 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
         Console.log(
             tag: '[BLE_Cubit] Requesting Android Bluetooth permissions...',
             value: 'BLE_Cubit');
-        
+
         emit(state.copyWith(
           status: BleStatus.initializing,
           message: "Bluetooth permissions required...",
@@ -144,7 +144,7 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
       ));
 
       await Permission.notification.request();
-      
+
       Console.log(
           tag: '[BLE_Cubit] All permission groups processed',
           value: 'BLE_Cubit');
@@ -153,7 +153,6 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
           tag: '[BLE_Cubit] Permission request error: $e', value: 'BLE_Cubit');
     }
   }
-
 
   // ---------------------------------------------------------------------------
   // BLE initialization and scanning
@@ -244,6 +243,7 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
     if (lastDate == null) {
       await dbHelper.saveLastSyncDate(today);
       await dbHelper.clearHydrationSlots();
+      await dbHelper.clearTodayHydrationHistory();
 
       for (final updatedEntry in entry) {
         await dbHelper.insertOrUpdateSlot(updatedEntry);
@@ -264,6 +264,7 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
 
     // 1️⃣ Clear hydration slots
     await dbHelper.clearHydrationSlots();
+    await dbHelper.clearTodayHydrationHistory();
     for (final updatedEntry in entry) {
       await dbHelper.insertOrUpdateSlot(updatedEntry);
     } // 2️⃣ Clear in-memory streams
@@ -392,10 +393,11 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
     });
 
     // ✅ Restart scan after timeout ONLY if we haven't already connected
-    Future.delayed(const Duration(seconds: 5), () {
+    Future.delayed(const Duration(milliseconds: 5000), () {
       if (!_scanCancelled && state.status == BleStatus.scanning) {
         Console.log(
-            tag: '[BLE_Cubit] Scan timeout — restarting scan for last device',
+            tag:
+                '[BLE_Cubit] Scan timeout (1.5s) — restarting scan for last device',
             value: 'BLE_Cubit');
         _scanForLastDevice();
       }
@@ -503,10 +505,11 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
       // 4. Track stuck state
       _stuckScanningSince ??= DateTime.now();
       final stuckDuration = DateTime.now().difference(_stuckScanningSince!);
-      
+
       if (stuckDuration.inSeconds >= 10 && !state.manualRetryRequired) {
         Console.log(
-            tag: '[BLE_Watchdog] Scanning stuck for > 10s. Prompting manual retry.',
+            tag:
+                '[BLE_Watchdog] Scanning stuck for > 10s. Prompting manual retry.',
             value: 'BLE_Cubit');
         emit(state.copyWith(manualRetryRequired: true));
       }
@@ -543,15 +546,16 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
 
   /// ✅ Completely resets the BLE service and restarts it.
   Future<void> reinitialize() async {
-    Console.log(tag: '[BLE_Cubit] Reinitializing BLE service...', value: 'BLE_Cubit');
-    
+    Console.log(
+        tag: '[BLE_Cubit] Reinitializing BLE service...', value: 'BLE_Cubit');
+
     // 1. Reset state and stop everything
     _watchdogTimer?.cancel();
     _scanSub?.cancel();
     _connectionSub?.cancel();
     _adapterStateSub?.cancel();
     _clearCharacteristicSubscriptions();
-    
+
     try {
       if (FlutterBluePlus.isScanningNow) {
         await FlutterBluePlus.stopScan();
@@ -564,7 +568,8 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
     _scanCancelled = false;
     _scanRetryCount = 0;
 
-    emit(const BleState(status: BleStatus.initializing, message: "Reinitializing..."));
+    emit(const BleState(
+        status: BleStatus.initializing, message: "Reinitializing..."));
 
     // 2. Start fresh
     await start();
@@ -572,7 +577,8 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
 
   /// ✅ Manually dismisses the retry dialog
   void dismissRetryDialog() {
-    _stuckScanningSince = null; // Reset the timer so it doesn't pop up immediately
+    _stuckScanningSince =
+        null; // Reset the timer so it doesn't pop up immediately
     emit(state.copyWith(manualRetryRequired: false));
   }
 
@@ -764,6 +770,7 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
         _hydration30DaysSub =
             _hydration30DaysChar!.onValueReceived.listen((value) async {
           try {
+            final historyPrevious = await getCurrentDayHistory();
             await dbHelper.clearHydrationDaySummaries();
             final data = String.fromCharCodes(value);
             Console.log(
@@ -805,6 +812,7 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
                   isHydration30DaysDataSync: true, historyData: data));
               _hydrationController.add([]);
               _syncWithHealth(history);
+              _syncWithLocalConsumption(history, historyPrevious);
             } else {
               final history = await getCurrentDayHistory();
               emit(state.copyWith(currentHydrationValue: history));
@@ -924,11 +932,13 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
     int? battery;
     double? volume;
     int? percent;
+    int? refill;
     DateTime? ts;
     for (var p in parts) {
       if (p.contains('battery=')) battery = int.tryParse(p.split('=')[1]);
       if (p.contains('volume=')) volume = double.tryParse(p.split('=')[1]);
       if (p.contains('percent=')) percent = int.tryParse(p.split('=')[1]);
+      if (p.contains('refills=')) refill = int.tryParse(p.split('=')[1]);
       if (p.contains('ts=')) {
         String tsStr = p.split('=')[1].trim();
         Console.log(tag: "Raw TS from bottle: $tsStr", value: 'BLE_Cubit');
@@ -967,6 +977,7 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
     emit(state.copyWith(
         battery: battery,
         volume: volume,
+        refill: refill,
         percent: percent,
         ts: ts,
         bottleData: data));
@@ -1099,11 +1110,11 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
       // Heuristic: if epoch looks like milliseconds (> 1e12) treat as ms, else seconds.
       final epochMillis =
           (epochNum.toString().length == 13) ? epochNum : epochNum * 1000;
-      DateTime rawStartDate =
-          DateTime.fromMillisecondsSinceEpoch(epochMillis, isUtc: true);
+
       // Normalize to UTC midnight for stable day-indexing
+      // Use isUtc: true to ensure it stays in GMT
       DateTime startDate =
-          DateTime.fromMillisecondsSinceEpoch(epochMillis).toLocal();
+          DateTime.fromMillisecondsSinceEpoch(epochMillis, isUtc: true);
 
       Console.log(
           tag:
@@ -1214,7 +1225,8 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
                   '[BLE_Cubit] Device disconnected — triggering reconnect scan',
               value: 'BLE_Cubit');
           if (savedDeviceId != null || savedDeviceName != null) {
-            _rescan(lastDeviceOnly: true);
+            // ✅ Trigger IMMEDIATE scan bypassing the _rescan back-off delay
+            _scanForLastDevice();
           }
           break;
         default:
@@ -1584,6 +1596,37 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
       Console.log(
           tag: "[HealthSync] Error syncing with Health: $e",
           value: "BLE_Cubit");
+    }
+  }
+
+  Future<void> _syncWithLocalConsumption(
+      double currentTotalMl, double previousTotal) async {
+    try {
+      final now = DateTime.now();
+
+      // 1. Current data from bottle (ml)
+      final currentTotal = currentTotalMl;
+
+      // 3. Difference (ml)
+      final diff = currentTotal - previousTotal;
+      final diffL = diff / 1000.0;
+
+      Console.log(
+          tag:
+              "[LocalSync] Sync log: Bottle=$currentTotal ml, AppState=$previousTotal ml, Diff=$diff ml",
+          value: "BLE_Cubit");
+
+      // Sync if more than 1ml
+      if (diff >= 1.0) {
+        Console.log(
+            tag: "[LocalSync] Syncing $diffL L to Health and Database",
+            value: "BLE_Cubit");
+        // await _healthService.addWaterIntake(diffL, now);
+        await dbHelper.insertTodayHydration(diff, now);
+      }
+    } catch (e) {
+      Console.log(
+          tag: "[LocalSync] Error syncing locally: $e", value: "BLE_Cubit");
     }
   }
 }

@@ -12,6 +12,7 @@ import 'package:hydrify/constants/assets_path.dart';
 import 'package:hydrify/cubit/hydration/hydration_cubit.dart';
 import 'package:hydrify/cubit/hydration/hydration_state.dart';
 import 'package:hydrify/models/hydration_entry.dart';
+import 'package:intl/intl.dart';
 
 class AnalysisHydrationSlotsWidget extends StatefulWidget {
   const AnalysisHydrationSlotsWidget({super.key});
@@ -161,281 +162,274 @@ class _AnalysisHydrationSlotsWidgetState
       offslotSpots.add(FlSpot(i.toDouble(), entries[i].offslot));
     }
 
-        double maxVal = 0;
-        if (entries.isNotEmpty) {
-          final maxAmount =
-              entries.map((e) => e.waterDrank).reduce((a, b) => a > b ? a : b);
-          final maxOffslot =
-              entries.map((e) => e.offslot).reduce((a, b) => a > b ? a : b);
+    double maxVal = 0;
+    if (entries.isNotEmpty) {
+      final maxAmount =
+          entries.map((e) => e.waterDrank).reduce((a, b) => a > b ? a : b);
+      final maxOffslot =
+          entries.map((e) => e.offslot).reduce((a, b) => a > b ? a : b);
 
-          if (_activeTabIndex == 0) {
-            maxVal = maxAmount;
-          } else if (_activeTabIndex == 2) {
-            maxVal = maxOffslot;
-          } else {
-            maxVal = math.max(maxAmount, maxOffslot);
-          }
-        }
+      if (_activeTabIndex == 0) {
+        maxVal = maxAmount;
+      } else if (_activeTabIndex == 2) {
+        maxVal = maxOffslot;
+      } else {
+        maxVal = math.max(maxAmount, maxOffslot);
+      }
+    }
 
-        // Calculate chartMaxY based on max value, rounding up to nearest 100
-        double chartMaxY = ((maxVal / 100).ceil() * 100).toDouble();
-        if (chartMaxY < 200) {
-          chartMaxY = 200; // Lower minimum floor to be more responsive
-        }
-        chartMaxY += 100; // Add one extra interval for padding at the top
+    // Calculate chartMaxY based on max value, rounding up to nearest 100
+    double chartMaxY = ((maxVal / 100).ceil() * 100).toDouble();
+    if (chartMaxY < 200) {
+      chartMaxY = 200; // Lower minimum floor to be more responsive
+    }
+    chartMaxY += 100; // Add one extra interval for padding at the top
 
-        double yInterval = (chartMaxY / 5).ceilToDouble();
-        if (yInterval < 50) {
-          yInterval = 50;
-        }
+    double yInterval = (chartMaxY / 5).ceilToDouble();
+    if (yInterval < 50) {
+      yInterval = 50;
+    }
 
-        final Color topLineColor = const Color(0xFFA8D59D); // Light green
-        final Color topDotColor = const Color(0xFF2C5E1A); // Dark green
+    final Color topLineColor = const Color(0xFFA8D59D); // Light green
+    final Color topDotColor = const Color(0xFF2C5E1A); // Dark green
 
-        final Color bottomLineColor = const Color(0xFFEFA69D); // Light red
-        final Color bottomDotColor = const Color(0xFFAC2618); // Dark red
+    final Color bottomLineColor = const Color(0xFFEFA69D); // Light red
+    final Color bottomDotColor = const Color(0xFFAC2618); // Dark red
 
-        return Padding(
-          padding: EdgeInsets.symmetric(horizontal: AppDimensions.dim20.w),
-          child: SizedBox(
-            height: 250.h,
-            child: Row(
-              children: [
-                // Fixed Y-Axis
-                Padding(
-                  padding: EdgeInsets.only(bottom: 30.h),
-                  child: SizedBox(
-                    width: 35.w,
-                    child: LineChart(
-                      LineChartData(
-                        minY: 0, // Starts at 0 now
-                        maxY: chartMaxY,
-                        clipData: const FlClipData.all(),
-                        gridData: FlGridData(show: false),
-                        borderData: FlBorderData(
-                          show: true,
-                          border: Border(
-                            right: BorderSide(
-                              color: Colors.grey.withOpacity(0.2),
-                              width: 1.w,
-                            ),
+    return Padding(
+      padding: EdgeInsets.symmetric(horizontal: AppDimensions.dim20.w),
+      child: SizedBox(
+        height: 250.h,
+        child: Row(
+          children: [
+            // Fixed Y-Axis
+            Padding(
+              padding: EdgeInsets.only(bottom: 30.h),
+              child: SizedBox(
+                width: 35.w,
+                child: LineChart(
+                  LineChartData(
+                    minY: 0, // Starts at 0 now
+                    maxY: chartMaxY,
+                    clipData: const FlClipData.all(),
+                    gridData: FlGridData(show: false),
+                    borderData: FlBorderData(
+                      show: true,
+                      border: Border(
+                        right: BorderSide(
+                          color: Colors.grey.withOpacity(0.2),
+                          width: 1.w,
+                        ),
+                      ),
+                    ),
+                    lineBarsData: [
+                      LineChartBarData(
+                        spots: const [FlSpot(0, 0)],
+                        color: Colors.transparent,
+                      )
+                    ],
+                    titlesData: FlTitlesData(
+                      leftTitles: AxisTitles(
+                        sideTitles: SideTitles(
+                          showTitles: true,
+                          reservedSize: 35.w,
+                          interval: yInterval,
+                          getTitlesWidget: (value, meta) {
+                            return Padding(
+                              padding: EdgeInsets.only(right: 6.w),
+                              child: Text(
+                                value.toInt().toString(),
+                                style: TextStyle(
+                                  color: Colors.black87,
+                                  fontSize: 12.sp,
+                                  fontFamily: AppFontStyles.urbanistFontFamily,
+                                ),
+                                textAlign: TextAlign.right,
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                      bottomTitles: const AxisTitles(
+                        sideTitles: SideTitles(
+                          showTitles: false,
+                        ),
+                      ),
+                      topTitles: const AxisTitles(
+                          sideTitles: SideTitles(showTitles: false)),
+                      rightTitles: const AxisTitles(
+                          sideTitles: SideTitles(showTitles: false)),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            // Scrollable X-Axis Chart
+            Expanded(
+              child: SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Container(
+                  width: math.max(
+                    MediaQuery.of(context).size.width - 80.w,
+                    entries.length * 60.w,
+                  ),
+                  margin: EdgeInsets.only(top: 0.h),
+                  padding: EdgeInsets.only(right: 20.w, left: 10.w),
+                  child: LineChart(
+                    LineChartData(
+                      minX: -0.2, // Add padding on the left
+                      maxX: entries.isEmpty
+                          ? 0.4
+                          : (entries.length - 1).toDouble() +
+                              0.4, // Add padding on the right
+                      minY: -4, // Starts at 0
+                      maxY: chartMaxY,
+                      clipData: const FlClipData.all(),
+                      gridData: FlGridData(show: false),
+                      borderData: FlBorderData(show: false),
+                      titlesData: FlTitlesData(
+                        leftTitles: const AxisTitles(
+                            sideTitles: SideTitles(showTitles: false)),
+                        rightTitles: const AxisTitles(
+                            sideTitles: SideTitles(showTitles: false)),
+                        topTitles: const AxisTitles(
+                            sideTitles: SideTitles(showTitles: false)),
+                        bottomTitles: AxisTitles(
+                          sideTitles: SideTitles(
+                            showTitles: true,
+                            reservedSize: 30.h,
+                            interval: 1,
+                            getTitlesWidget: (value, meta) {
+                              // Ensure we only render for exactly the integer indices of our entries
+                              if (value % 1 != 0 ||
+                                  value < 0.0 ||
+                                  value >= entries.length.toDouble()) {
+                                return const SizedBox.shrink();
+                              }
+                              int index = value.toInt();
+                              return Padding(
+                                padding: EdgeInsets.only(top: 8.h),
+                                child: Text(
+                                  "${entries[index].startTime.hour}:${entries[index].startTime.minute < 10 ? "0${entries[index].startTime.minute}" : entries[index].startTime.minute}",
+                                  style: TextStyle(
+                                    color: Colors.black87,
+                                    fontSize: 12.sp,
+                                    fontFamily:
+                                        AppFontStyles.urbanistFontFamily,
+                                    fontVariations: [
+                                      AppFontStyles.regularFontVariation
+                                    ],
+                                  ),
+                                ),
+                              );
+                            },
                           ),
                         ),
-                        lineBarsData: [
+                      ),
+                      lineTouchData: LineTouchData(
+                        touchTooltipData: LineTouchTooltipData(
+                          fitInsideHorizontally: true,
+                          fitInsideVertically: true,
+                          getTooltipColor: (spot) =>
+                              Colors.black.withOpacity(0.8),
+                          getTooltipItems: (touchedSpots) {
+                            return touchedSpots.map((spot) {
+                              final isAmount = spot.barIndex == 0;
+                              final label = isAmount ? 'Amount' : 'Off-Slot';
+                              return LineTooltipItem(
+                                '$label\n${spot.y.toStringAsFixed(0)} ml',
+                                TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 12.sp,
+                                  fontFamily: AppFontStyles.urbanistFontFamily,
+                                  fontVariations: [
+                                    AppFontStyles.boldFontVariation
+                                  ],
+                                ),
+                              );
+                            }).toList();
+                          },
+                        ),
+                      ),
+                      lineBarsData: [
+                        if (_activeTabIndex == 0 || _activeTabIndex == 1)
                           LineChartBarData(
-                            spots: const [FlSpot(0, 0)],
-                            color: Colors.transparent,
-                          )
-                        ],
-                        titlesData: FlTitlesData(
-                          leftTitles: AxisTitles(
-                            sideTitles: SideTitles(
-                              showTitles: true,
-                              reservedSize: 35.w,
-                              interval: yInterval,
-                              getTitlesWidget: (value, meta) {
-                                return Padding(
-                                  padding: EdgeInsets.only(right: 6.w),
-                                  child: Text(
-                                    value.toInt().toString(),
-                                    style: TextStyle(
-                                      color: Colors.black87,
-                                      fontSize: 12.sp,
-                                      fontFamily:
-                                          AppFontStyles.urbanistFontFamily,
-                                    ),
-                                    textAlign: TextAlign.right,
-                                  ),
+                            spots: amountSpots.isNotEmpty
+                                ? amountSpots
+                                : [const FlSpot(0, 0)],
+                            isCurved: true,
+                            curveSmoothness: 0.3, // Smoother curve
+                            preventCurveOverShooting: true,
+                            color: topLineColor,
+                            barWidth: 3.w,
+                            isStrokeCapRound: true,
+                            dotData: FlDotData(
+                              show: true,
+                              checkToShowDot: (spot, barData) => spot.y != 0,
+                              getDotPainter: (spot, percent, barData, index) {
+                                return FlDotCirclePainter(
+                                  radius: 3.w,
+                                  color: topDotColor,
+                                  strokeWidth: 0,
                                 );
                               },
                             ),
-                          ),
-                          bottomTitles: const AxisTitles(
-                            sideTitles: SideTitles(
-                              showTitles: false,
-                            ),
-                          ),
-                          topTitles: const AxisTitles(
-                              sideTitles: SideTitles(showTitles: false)),
-                          rightTitles: const AxisTitles(
-                              sideTitles: SideTitles(showTitles: false)),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-                // Scrollable X-Axis Chart
-                Expanded(
-                  child: SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    child: Container(
-                      width: math.max(
-                        MediaQuery.of(context).size.width - 80.w,
-                        entries.length * 60.w,
-                      ),
-                      margin: EdgeInsets.only(top: 0.h),
-                      padding: EdgeInsets.only(right: 20.w, left: 10.w),
-                      child: LineChart(
-                        LineChartData(
-                          minX: -0.2, // Add padding on the left
-                          maxX: entries.isEmpty
-                              ? 0.4
-                              : (entries.length - 1).toDouble() +
-                                  0.4, // Add padding on the right
-                          minY: -4, // Starts at 0
-                          maxY: chartMaxY,
-                          clipData: const FlClipData.all(),
-                          gridData: FlGridData(show: false),
-                          borderData: FlBorderData(show: false),
-                          titlesData: FlTitlesData(
-                            leftTitles: const AxisTitles(
-                                sideTitles: SideTitles(showTitles: false)),
-                            rightTitles: const AxisTitles(
-                                sideTitles: SideTitles(showTitles: false)),
-                            topTitles: const AxisTitles(
-                                sideTitles: SideTitles(showTitles: false)),
-                            bottomTitles: AxisTitles(
-                              sideTitles: SideTitles(
-                                showTitles: true,
-                                reservedSize: 30.h,
-                                interval: 1,
-                                getTitlesWidget: (value, meta) {
-                                  // Ensure we only render for exactly the integer indices of our entries
-                                  if (value % 1 != 0 ||
-                                      value < 0.0 ||
-                                      value >= entries.length.toDouble()) {
-                                    return const SizedBox.shrink();
-                                  }
-                                  int index = value.toInt();
-                                  return Padding(
-                                    padding: EdgeInsets.only(top: 8.h),
-                                    child: Text(
-                                      "${entries[index].startTime.hour}:${entries[index].startTime.minute < 10 ? "0${entries[index].startTime.minute}" : entries[index].startTime.minute}",
-                                      style: TextStyle(
-                                        color: Colors.black87,
-                                        fontSize: 12.sp,
-                                        fontFamily:
-                                            AppFontStyles.urbanistFontFamily,
-                                        fontVariations: [
-                                          AppFontStyles.regularFontVariation
-                                        ],
-                                      ),
-                                    ),
-                                  );
-                                },
+                            belowBarData: BarAreaData(
+                              show: true,
+                              gradient: LinearGradient(
+                                begin: Alignment.topCenter,
+                                end: Alignment.bottomCenter,
+                                colors: [
+                                  topLineColor.withOpacity(0.4),
+                                  topLineColor.withOpacity(0.0),
+                                ],
                               ),
                             ),
                           ),
-                          lineTouchData: LineTouchData(
-                            touchTooltipData: LineTouchTooltipData(
-                              fitInsideHorizontally: true,
-                              fitInsideVertically: true,
-                              getTooltipColor: (spot) =>
-                                  Colors.black.withOpacity(0.8),
-                              getTooltipItems: (touchedSpots) {
-                                return touchedSpots.map((spot) {
-                                  final isAmount = spot.barIndex == 0;
-                                  final label =
-                                      isAmount ? 'Amount' : 'Off-Slot';
-                                  return LineTooltipItem(
-                                    '$label\n${spot.y.toStringAsFixed(0)} ml',
-                                    TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 12.sp,
-                                      fontFamily:
-                                          AppFontStyles.urbanistFontFamily,
-                                      fontVariations: [
-                                        AppFontStyles.boldFontVariation
-                                      ],
-                                    ),
-                                  );
-                                }).toList();
+                        if (_activeTabIndex == 2 || _activeTabIndex == 1)
+                          LineChartBarData(
+                            spots: offslotSpots.isNotEmpty
+                                ? offslotSpots
+                                : [const FlSpot(0, 0)],
+                            isCurved: true,
+                            curveSmoothness: 0.3, // Smoother curve
+                            preventCurveOverShooting: true,
+                            color: bottomLineColor,
+                            barWidth: 3.w,
+                            isStrokeCapRound: true,
+                            dotData: FlDotData(
+                              show: true,
+                              checkToShowDot: (spot, barData) => spot.y != 0,
+                              getDotPainter: (spot, percent, barData, index) {
+                                return FlDotCirclePainter(
+                                  radius: 3.w,
+                                  color: bottomDotColor,
+                                  strokeWidth: 0,
+                                );
                               },
                             ),
+                            belowBarData: BarAreaData(
+                              show: true,
+                              gradient: LinearGradient(
+                                begin: Alignment.topCenter,
+                                end: Alignment.bottomCenter,
+                                colors: [
+                                  bottomLineColor.withOpacity(0.4),
+                                  bottomLineColor.withOpacity(0.0),
+                                ],
+                              ),
+                            ),
                           ),
-                          lineBarsData: [
-                            if (_activeTabIndex == 0 || _activeTabIndex == 1)
-                              LineChartBarData(
-                                spots: amountSpots.isNotEmpty
-                                    ? amountSpots
-                                    : [const FlSpot(0, 0)],
-                                isCurved: true,
-                                curveSmoothness: 0.3, // Smoother curve
-                                preventCurveOverShooting: true,
-                                color: topLineColor,
-                                barWidth: 3.w,
-                                isStrokeCapRound: true,
-                                dotData: FlDotData(
-                                  show: true,
-                                  checkToShowDot: (spot, barData) =>
-                                      spot.y != 0,
-                                  getDotPainter:
-                                      (spot, percent, barData, index) {
-                                    return FlDotCirclePainter(
-                                      radius: 3.w,
-                                      color: topDotColor,
-                                      strokeWidth: 0,
-                                    );
-                                  },
-                                ),
-                                belowBarData: BarAreaData(
-                                  show: true,
-                                  gradient: LinearGradient(
-                                    begin: Alignment.topCenter,
-                                    end: Alignment.bottomCenter,
-                                    colors: [
-                                      topLineColor.withOpacity(0.4),
-                                      topLineColor.withOpacity(0.0),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            if (_activeTabIndex == 2 || _activeTabIndex == 1)
-                              LineChartBarData(
-                                spots: offslotSpots.isNotEmpty
-                                    ? offslotSpots
-                                    : [const FlSpot(0, 0)],
-                                isCurved: true,
-                                curveSmoothness: 0.3, // Smoother curve
-                                preventCurveOverShooting: true,
-                                color: bottomLineColor,
-                                barWidth: 3.w,
-                                isStrokeCapRound: true,
-                                dotData: FlDotData(
-                                  show: true,
-                                  checkToShowDot: (spot, barData) =>
-                                      spot.y != 0,
-                                  getDotPainter:
-                                      (spot, percent, barData, index) {
-                                    return FlDotCirclePainter(
-                                      radius: 3.w,
-                                      color: bottomDotColor,
-                                      strokeWidth: 0,
-                                    );
-                                  },
-                                ),
-                                belowBarData: BarAreaData(
-                                  show: true,
-                                  gradient: LinearGradient(
-                                    begin: Alignment.topCenter,
-                                    end: Alignment.bottomCenter,
-                                    colors: [
-                                      bottomLineColor.withOpacity(0.4),
-                                      bottomLineColor.withOpacity(0.0),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                          ],
-                        ),
-                      ),
+                      ],
                     ),
                   ),
                 ),
-              ],
+              ),
             ),
-          ),
-        );
+          ],
+        ),
+      ),
+    );
   }
 
   Widget _buildListContent(HydrationState state) {
@@ -486,6 +480,121 @@ class _AnalysisHydrationSlotsWidgetState
                       "${e.waterDrank.toInt()}/${e.amount.toInt()} ml",
                       e.status == HydrationStatus.completed)),
             SizedBox(height: AppDimensions.dim25.h),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  "History",
+                  style: TextStyle(
+                    color: AppColors.bluegray,
+                    fontSize: AppFontStyles.fontSize_20,
+                    fontFamily: AppFontStyles.urbanistFontFamily,
+                    fontVariations: [AppFontStyles.boldFontVariation],
+                  ),
+                ),
+                GestureDetector(
+                  onTap: () {
+                    showDialog(
+                      context: context,
+                      builder: (context) => AlertDialog(
+                        title: Text(
+                          "Clear History",
+                          style: TextStyle(
+                              fontVariations: [AppFontStyles.boldFontVariation],
+                              fontSize: 16.sp),
+                        ),
+                        content: Text(
+                          "Are you sure you want to clear today's hydration history? This action cannot be undone.",
+                          style: TextStyle(
+                              fontVariations: [AppFontStyles.boldFontVariation],
+                              fontSize: 16.sp),
+                        ),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.pop(context),
+                            child: Text(
+                              "CANCEL",
+                              style: TextStyle(fontVariations: [
+                                AppFontStyles.boldFontVariation
+                              ], fontSize: 16.sp),
+                            ),
+                          ),
+                          TextButton(
+                            onPressed: () {
+                              context
+                                  .read<HydrationCubit>()
+                                  .clearTodayHistory();
+                              Navigator.pop(context);
+                            },
+                            child: Text(
+                              "CLEAR",
+                              style: TextStyle(
+                                  color: Colors.red,
+                                  fontVariations: [
+                                    AppFontStyles.boldFontVariation
+                                  ],
+                                  fontSize: 16.sp),
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                  child: Text(
+                    "CLEAR",
+                    style: TextStyle(
+                      color: AppColors.bluegray.withOpacity(0.7),
+                      fontSize: AppFontStyles.fontSize_12,
+                      fontFamily: AppFontStyles.urbanistFontFamily,
+                      fontVariations: [AppFontStyles.boldFontVariation],
+                      letterSpacing: 1.0,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            SizedBox(height: AppDimensions.dim16.h),
+            if (state.todayHydrationHistory.isEmpty)
+              _buildSlotItemIndicator(
+                  "No History", "Record your sips", "0 ml", false)
+            else ...[
+              () {
+                final groupedHistory = _getGroupedHistory(
+                    state.entries, state.todayHydrationHistory);
+                final slotsWithHistory = groupedHistory.entries
+                    .where((entry) => entry.value.isNotEmpty)
+                    .toList();
+
+                return Column(
+                  children: slotsWithHistory.map((group) {
+                    final slotType = group.key;
+                    final sips = group.value;
+
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _buildSlotGroupHeader(slotType, state.entries),
+                        ...sips.asMap().entries.map((sipEntry) {
+                          final i = sipEntry.key + 1;
+                          final e = sipEntry.value;
+                          final dt = DateTime.parse(e['timestamp']).toLocal();
+                          final time = DateFormat('hh:mm:ss a').format(dt);
+                          final date = DateFormat('dd/MM/yyyy').format(dt);
+                          return _buildHistoryItemCard(
+                            index: i,
+                            time: "$time - ${e['timezone'] ?? ''}",
+                            date: date,
+                            amount:
+                                "Consumed - ${(e['consumed'] as num).toInt()} ml",
+                          );
+                        }),
+                      ],
+                    );
+                  }).toList(),
+                );
+              }(),
+            ],
+            SizedBox(height: AppDimensions.dim25.h),
           ],
           if (_activeTabIndex == 2 || _activeTabIndex == 1) ...[
             Row(
@@ -525,6 +634,113 @@ class _AnalysisHydrationSlotsWidgetState
                       e.offslot > 0))
                   .toList(),
           ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHistoryItemCard({
+    required int index,
+    required String time,
+    required String date,
+    required String amount,
+  }) {
+    return Container(
+      margin: EdgeInsets.only(bottom: AppDimensions.dim12.h),
+      padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 8.h),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(100.w),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.09),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
+        border: Border.all(
+          color: AppColors.bluegray.withOpacity(0.1),
+          width: 1.w,
+        ),
+      ),
+      child: Row(
+        children: [
+          // Circular Index with Gradient Border
+          Container(
+            width: 50.w,
+            height: 50.w,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: const LinearGradient(
+                colors: [
+                  Color(0xFF7CBABB),
+                  Color(0xFF86A7D1),
+                ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+            ),
+            padding: EdgeInsets.all(2.w), // Border thickness
+            child: Container(
+              decoration: const BoxDecoration(
+                shape: BoxShape.circle,
+                color: Colors.white,
+              ),
+              alignment: Alignment.center,
+              child: Text(
+                index.toString(),
+                style: TextStyle(
+                  color: const Color(0xFF353535),
+                  fontSize: 18.sp,
+                  fontFamily: AppFontStyles.urbanistFontFamily,
+                  fontVariations: [AppFontStyles.boldFontVariation],
+                ),
+              ),
+            ),
+          ),
+          SizedBox(width: 16.w),
+          // Text Content
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Text(
+                  time,
+                  style: TextStyle(
+                    color: AppColors.bluegray,
+                    fontSize: 18.sp,
+                    fontFamily: AppFontStyles.urbanistFontFamily,
+                    fontVariations: [AppFontStyles.boldFontVariation],
+                  ),
+                ),
+                SizedBox(height: 4.h),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      date,
+                      style: TextStyle(
+                        color: const Color(0xFF708F9F),
+                        fontSize: 14.sp,
+                        fontFamily: AppFontStyles.urbanistFontFamily,
+                        fontVariations: [AppFontStyles.semiBoldFontVariation],
+                      ),
+                    ),
+                    SizedBox(width: 16.w),
+                    Text(
+                      amount,
+                      style: TextStyle(
+                        color: const Color(0xFF708F9F),
+                        fontSize: 14.sp,
+                        fontFamily: AppFontStyles.urbanistFontFamily,
+                        fontVariations: [AppFontStyles.semiBoldFontVariation],
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
         ],
       ),
     );
@@ -571,7 +787,7 @@ class _AnalysisHydrationSlotsWidgetState
                   title,
                   style: TextStyle(
                     color: AppColors.bluegray,
-                    fontSize: AppFontStyles.fontSize_16,
+                    fontSize: AppFontStyles.fontSize_17,
                     fontFamily: AppFontStyles.urbanistFontFamily,
                     fontVariations: [AppFontStyles.boldFontVariation],
                   ),
@@ -581,9 +797,9 @@ class _AnalysisHydrationSlotsWidgetState
                   "$subtitle   |   $amountText",
                   style: TextStyle(
                     color: Colors.grey.shade600,
-                    fontSize: AppFontStyles.fontSize_12,
+                    fontSize: AppFontStyles.fontSize_13,
                     fontFamily: AppFontStyles.urbanistFontFamily,
-                    fontVariations: [AppFontStyles.regularFontVariation],
+                    fontVariations: [AppFontStyles.semiBoldFontVariation],
                   ),
                 ),
               ],
@@ -602,5 +818,106 @@ class _AnalysisHydrationSlotsWidgetState
         ],
       ),
     );
+  }
+
+  Widget _buildSlotGroupHeader(
+      HydrationSlot slotType, List<HydrationEntry> entries) {
+    final entry = entries.firstWhere((e) => e.slot == slotType);
+    return Padding(
+      padding: EdgeInsets.only(top: 16.h, bottom: 8.h),
+      child: Row(
+        children: [
+          Container(
+            padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 4.h),
+            decoration: BoxDecoration(
+              color: AppColors.bottomnavbar.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(20.r),
+              border:
+                  Border.all(color: AppColors.bottomnavbar.withOpacity(0.3)),
+            ),
+            child: Text(
+              slotType.label,
+              style: TextStyle(
+                color: AppColors.bluegray,
+                fontSize: 14.sp,
+                fontFamily: AppFontStyles.urbanistFontFamily,
+                fontVariations: [AppFontStyles.boldFontVariation],
+              ),
+            ),
+          ),
+          SizedBox(width: 8.w),
+          Text(
+            entry.formattedRange,
+            style: TextStyle(
+              color: AppColors.bluegray.withOpacity(0.6),
+              fontSize: 12.sp,
+              fontFamily: AppFontStyles.urbanistFontFamily,
+              fontVariations: [AppFontStyles.semiBoldFontVariation],
+            ),
+          ),
+          Expanded(
+              child: Divider(
+                  indent: 12.w, color: AppColors.bluegray.withOpacity(0.1))),
+        ],
+      ),
+    );
+  }
+
+  Map<HydrationSlot, List<Map<String, dynamic>>> _getGroupedHistory(
+      List<HydrationEntry> slots, List<Map<String, dynamic>> history) {
+    final grouped = <HydrationSlot, List<Map<String, dynamic>>>{};
+    for (final slot in slots) {
+      grouped[slot.slot] = [];
+    }
+
+    for (final sip in history) {
+      final timestamp = DateTime.parse(sip['timestamp']).toLocal();
+      final sipTime = TimeOfDay.fromDateTime(timestamp);
+
+      HydrationEntry? bestSlot;
+      int minDistance = 1441; // More than minutes in a day
+
+      for (final slot in slots) {
+        final dist =
+            _calculateTimeDistance(sipTime, slot.startTime, slot.endTime);
+        if (dist < minDistance) {
+          minDistance = dist;
+          bestSlot = slot;
+        }
+        if (minDistance == 0) break; // Optimization
+      }
+
+      if (bestSlot != null) {
+        grouped[bestSlot.slot]!.add(sip);
+      }
+    }
+    return grouped;
+  }
+
+  int _calculateTimeDistance(TimeOfDay sip, TimeOfDay start, TimeOfDay end) {
+    final sipMin = sip.hour * 60 + sip.minute;
+    final startMin = start.hour * 60 + start.minute;
+    final endMin = end.hour * 60 + end.minute;
+
+    // Check if within slot
+    bool isInside = false;
+    if (startMin <= endMin) {
+      isInside = sipMin >= startMin && sipMin < endMin;
+    } else {
+      // Midnight overlap
+      isInside = sipMin >= startMin || sipMin < endMin;
+    }
+
+    if (isInside) return 0;
+
+    // Calculate distance to start or end
+    int distToStart = _minMinutesBetween(sipMin, startMin);
+    int distToEnd = _minMinutesBetween(sipMin, endMin);
+    return math.min(distToStart, distToEnd);
+  }
+
+  int _minMinutesBetween(int m1, int m2) {
+    final diff = (m1 - m2).abs();
+    return math.min(diff, 1440 - diff);
   }
 }

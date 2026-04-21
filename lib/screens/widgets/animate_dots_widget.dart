@@ -3,7 +3,16 @@ import 'package:hydrify/constants/app_colors.dart';
 import 'package:hydrify/constants/app_font_styles.dart';
 
 class AnimatedDots extends StatefulWidget {
-  const AnimatedDots({super.key});
+  final Color? color;
+  final double? fontSize;
+  final List<FontVariation>? fontVariations;
+
+  const AnimatedDots({
+    super.key,
+    this.color,
+    this.fontSize,
+    this.fontVariations,
+  });
 
   @override
   _AnimatedDotsState createState() => _AnimatedDotsState();
@@ -21,7 +30,7 @@ class _AnimatedDotsState extends State<AnimatedDots>
       duration: Duration(milliseconds: 1500),
       vsync: this,
     );
-    _animation = IntTween(begin: 0, end: 3).animate(_controller);
+    _animation = IntTween(begin: 0, end: 4).animate(_controller);
     _controller.repeat();
   }
 
@@ -43,11 +52,12 @@ class _AnimatedDotsState extends State<AnimatedDots>
         return Text(
           dots.padRight(3),
           style: TextStyle(
-            color: AppColors.black,
-            fontSize: AppFontStyles.fontSize_20,
-            fontVariations: [
-              AppFontStyles.semiBoldFontVariation,
-            ],
+            color: widget.color ?? AppColors.black,
+            fontSize: widget.fontSize ?? AppFontStyles.fontSize_20,
+            fontVariations: widget.fontVariations ??
+                [
+                  AppFontStyles.semiBoldFontVariation,
+                ],
           ),
         );
       },

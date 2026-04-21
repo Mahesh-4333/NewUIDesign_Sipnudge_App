@@ -410,9 +410,6 @@ class _SettingScreenState extends State<SettingScreen> {
             ),
             child: SafeArea(
               child: SingleChildScrollView(
-                padding: EdgeInsets.only(
-                  bottom: MediaQuery.of(context).viewInsets.bottom + 20.h,
-                ),
                 child: Column(
                   children: [
                     Padding(

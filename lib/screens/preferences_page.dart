@@ -16,6 +16,7 @@ import 'package:hydrify/cubit/bottle/bottle_data_cubit.dart';
 import 'package:hydrify/cubit/hydration/hydration_cubit.dart';
 import 'package:hydrify/cubit/bottom_nav/bottom_nav_cubit.dart';
 import 'package:hydrify/helpers/database_helper.dart';
+import 'package:hydrify/helpers/hydration_helper.dart';
 import 'package:hydrify/helpers/shared_pref_helper.dart';
 import 'package:hydrify/screens/ringtone_screen.dart';
 import 'package:hydrify/screens/user_info_daily_goal_screen.dart';
@@ -239,6 +240,7 @@ class PreferencesPage extends StatelessWidget {
                                 showDialog(
                                   context: context,
                                   barrierDismissible: false,
+                                  barrierColor: Colors.black.withOpacity(0.2),
                                   builder: (innerContext) {
                                     return EraseDataDialog(
                                       onErase: () async {
@@ -253,6 +255,9 @@ class PreferencesPage extends StatelessWidget {
                                           final bleCubit =
                                               context.read<BleCubit>();
                                           await hydrationCubit.resetUI();
+                                          context
+                                              .read<HydrationCubit>()
+                                              .clearTodayHistory();
                                           await hydrationCubit
                                               .refreshAchievementStats(
                                                   updateUnlock: false);
@@ -262,6 +267,8 @@ class PreferencesPage extends StatelessWidget {
                                           log("-=-=-=-=-=-=-=- Sending Commnand =-=-=-=-=-=-=-");
                                           var commandSent = await bleCubit
                                               .sendResetCommandWithStateCheck();
+
+                                          SharedPrefsHelper.updateAndSaveDeviceConfig();
 
                                           Fluttertoast.showToast(
                                               msg: "Local data cleared.");
@@ -330,7 +337,7 @@ class PreferencesPage extends StatelessWidget {
                           },
                         ),
                       ),
-                      SizedBox(height: 40.h),
+                      SizedBox(height: 150.h),
                     ],
                   ),
                 ),

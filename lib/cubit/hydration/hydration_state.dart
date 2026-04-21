@@ -17,6 +17,7 @@ class HydrationState {
   final int? newlyUnlockedLevel;
   final Map<int, String> levelToIntakeMap;
   final Map<int, String> exactLevelToIntakeMap;
+  final List<Map<String, dynamic>> todayHydrationHistory;
 
   HydrationState(
       {required this.entries,
@@ -32,7 +33,8 @@ class HydrationState {
       this.newlyUnlockedLevel = 0,
       this.consistencyStreak = 0,
       this.levelToIntakeMap = const {},
-      this.exactLevelToIntakeMap = const {}});
+      this.exactLevelToIntakeMap = const {},
+      this.todayHydrationHistory = const []});
 
   HydrationState copyWith(
       {List<HydrationEntry>? entries,
@@ -49,7 +51,8 @@ class HydrationState {
       int? consistencyStreak,
       bool clearNewlyUnlockedLevel = false,
       Map<int, String>? levelToIntakeMap,
-      Map<int, String>? exactLevelToIntakeMap}) {
+      Map<int, String>? exactLevelToIntakeMap,
+      List<Map<String, dynamic>>? todayHydrationHistory}) {
     return HydrationState(
       entries: entries ?? this.entries,
       totalDrank: totalDrank ?? this.totalDrank,
@@ -70,7 +73,10 @@ class HydrationState {
           : (newlyUnlockedLevel ?? this.newlyUnlockedLevel),
       consistencyStreak: consistencyStreak ?? this.consistencyStreak,
       levelToIntakeMap: levelToIntakeMap ?? this.levelToIntakeMap,
-      exactLevelToIntakeMap: exactLevelToIntakeMap ?? this.exactLevelToIntakeMap,
+      exactLevelToIntakeMap:
+          exactLevelToIntakeMap ?? this.exactLevelToIntakeMap,
+      todayHydrationHistory:
+          todayHydrationHistory ?? this.todayHydrationHistory,
     );
   }
 
@@ -84,6 +90,7 @@ class HydrationState {
       currentSlotConsumption: 0.0,
       currentSlotPercentage: 0.0,
       consistencyStreak: 0,
+      todayHydrationHistory: [],
     );
   }
 }

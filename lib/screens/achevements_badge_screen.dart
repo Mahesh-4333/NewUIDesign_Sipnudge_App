@@ -1,7 +1,11 @@
 import 'dart:io';
+import 'dart:math';
 import 'dart:ui';
 import 'dart:typed_data';
 
+import 'package:confetti/confetti.dart';
+import 'package:hydrify/helpers/vibration_helper.dart';
+import 'package:hydrify/screens/widgets/animated_achievement_badge.dart';
 import 'package:screenshot/screenshot.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:path_provider/path_provider.dart';
@@ -37,6 +41,7 @@ class _AchievementsBadgeScreenState extends State<AchievementsBadgeScreen> {
   Map<int, double> _levelToExactMlMap = {};
 
   bool _didAutoRefresh = false;
+  late ConfettiController _confettiController;
 
   @override
   void initState() {
@@ -47,6 +52,8 @@ class _AchievementsBadgeScreenState extends State<AchievementsBadgeScreen> {
             .state
             .totalDrank;
     _loadHydrationData(liveTotalDrank: liveTotalDrank);
+    _confettiController =
+        ConfettiController(duration: const Duration(seconds: 2));
   }
 
   Future<void> _checkGuestUser() async {
@@ -72,7 +79,8 @@ class _AchievementsBadgeScreenState extends State<AchievementsBadgeScreen> {
 
     final int cubitLevel = hydrationState.currentLevel;
     final Map<int, String> cubitLevelMap = hydrationState.levelToIntakeMap;
-    final Map<int, String> cubitExactLevelMap = hydrationState.exactLevelToIntakeMap;
+    final Map<int, String> cubitExactLevelMap =
+        hydrationState.exactLevelToIntakeMap;
 
     // Build the ml map from the string map (e.g. "2.2L" → 2200.0)
     final Map<int, double> localMlMap = {};
@@ -95,10 +103,16 @@ class _AchievementsBadgeScreenState extends State<AchievementsBadgeScreen> {
       _currentLevel = cubitLevel.clamp(0, 365);
       _levelToIntakeMap = cubitLevelMap;
       _levelToMlMap = localMlMap;
-      _levelToExactMlMap  = localExactMlMap;
+      _levelToExactMlMap = localExactMlMap;
       _dailyWaterGoal = dailyGoalMl;
       _loading = false;
     });
+  }
+
+  @override
+  void dispose() {
+    _confettiController.dispose();
+    super.dispose();
   }
 
   String _getWaterIntakeForLevel(int level) {
@@ -130,6 +144,8 @@ class _AchievementsBadgeScreenState extends State<AchievementsBadgeScreen> {
         listener: (context, state) {
       _loadHydrationData(liveTotalDrank: state.totalDrank, silent: true);
     }, builder: (context, state) {
+      final int currentLevelNum = int.tryParse(_currentLevel.toString()) ?? 0;
+      final bool hasAchievedAnyLevel = currentLevelNum > 0;
       return Scaffold(
         extendBody: true,
         extendBodyBehindAppBar: true,
@@ -147,10 +163,13 @@ class _AchievementsBadgeScreenState extends State<AchievementsBadgeScreen> {
                   Expanded(
                     child: Stack(
                       children: [
-                        const ConcentricCirclesAnimation(),
+                        if (hasAchievedAnyLevel)
+                          const ConcentricCirclesAnimation(),
                         Positioned(
-                          left: AppDimensions.dim75.w,
-                          top: AppDimensions.dim90.w,
+                          left: 0,
+                          right: 0,
+                          top: 0,
+                          bottom: 0,
                           child: getCurrentLevelBadge(
                             _currentLevel.toString(),
                           ),
@@ -185,6 +204,7 @@ class _AchievementsBadgeScreenState extends State<AchievementsBadgeScreen> {
                           ]),
                       child: GridView.builder(
                         itemCount: 52,
+                        padding: EdgeInsets.only(bottom: 120.h, top: 60.h),
                         gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                           crossAxisCount: 3,
                           childAspectRatio: 1.2.r,
@@ -199,17 +219,22 @@ class _AchievementsBadgeScreenState extends State<AchievementsBadgeScreen> {
                           return Builder(
                             builder: (itemContext) {
                               return GestureDetector(
-                                onTap: () {
+                                onTap: () async {
                                   if (isUnlocked && !isGuest!) {
+                                    _confettiController.play();
+                                    VibrationHelper.vibrate(duration: 250);
                                     final ScreenshotController
                                         screenshotController =
                                         ScreenshotController();
 
-                                    showLevelUpDialog(context, level,
+                                    await showLevelUpDialog(context, level,
                                         _getWaterIntakeForLevel(level),
                                         screenshotController:
                                             screenshotController,
+                                        confettiController: _confettiController,
+                                        createParticlePath: drawRandomShape,
                                         onShare: (dialogContext) async {
+                                          _confettiController.stop();
                                       try {
                                         // Capture the dialog as image bytes
                                         final Uint8List? imageBytes =
@@ -256,6 +281,7 @@ class _AchievementsBadgeScreenState extends State<AchievementsBadgeScreen> {
                                             "Error capturing or sharing: $e");
                                       }
                                     });
+                                    _confettiController.stop();
                                   }
                                 },
                                 child: getLevelBadges(
@@ -326,6 +352,22 @@ class _AchievementsBadgeScreenState extends State<AchievementsBadgeScreen> {
                 ),
               ),
             ],
+            Align(
+              alignment: Alignment.topCenter,
+              child: ConfettiWidget(
+                confettiController: _confettiController,
+                blastDirectionality: BlastDirectionality.explosive,
+                shouldLoop: false,
+                colors: const [
+                  Colors.green,
+                  Colors.blue,
+                  Colors.pink,
+                  Colors.orange,
+                  Colors.purple
+                ],
+                createParticlePath: drawRandomShape,
+              ),
+            ),
           ],
         ),
       );
@@ -340,53 +382,62 @@ class _AchievementsBadgeScreenState extends State<AchievementsBadgeScreen> {
       height: AppDimensions.dim320.h,
       child: Stack(
         children: [
-          Positioned.fill(
-            child: Align(
-              alignment: Alignment.center,
-              child: Transform.translate(
-                offset: Offset(-16.w, 0),
-                child: Image.asset(
-                  hasAchievedAnyLevel
-                      ? "assets/images/goals_new_img.png"
-                      : "assets/images/level_lock_img1.png",
-                  width: hasAchievedAnyLevel
-                      ? AppDimensions.dim330.w
-                      : AppDimensions.dim280.w,
-                  height: hasAchievedAnyLevel
-                      ? AppDimensions.dim320.h
-                      : AppDimensions.dim280.h,
-                  fit: BoxFit.contain,
+          hasAchievedAnyLevel
+              ? Positioned.fill(
+                  child: Align(
+                    alignment: Alignment.center,
+                    child: Transform.translate(
+                      offset: Offset(-0.w, 0),
+                      child: AnimatedAchievementBadge(),
+                    ),
+                  ),
+                )
+              : Positioned.fill(
+                  child: Align(
+                    alignment: Alignment.center,
+                    child: Transform.translate(
+                      offset: Offset(-0.w, 0),
+                      child: Image.asset(
+                        hasAchievedAnyLevel
+                            ? "assets/images/goals_new_img.png"
+                            : "assets/images/level_lock_img1.png",
+                        width: hasAchievedAnyLevel
+                            ? AppDimensions.dim330.w
+                            : AppDimensions.dim280.w,
+                        height: hasAchievedAnyLevel
+                            ? AppDimensions.dim320.h
+                            : AppDimensions.dim280.h,
+                        fit: BoxFit.contain,
+                      ),
+                    ),
+                  ),
                 ),
-              ),
-            ),
-          ),
           if (hasAchievedAnyLevel)
             Positioned(
-              left: AppDimensions.dim100.w,
-              top: AppDimensions.dim105.h,
-              child: SizedBox(
-                width: AppDimensions.dim100.w,
-                child: ShaderMask(
-                  shaderCallback: (bounds) => const LinearGradient(
-                    colors: [
-                      Color(0xFF16446F),
-                      Color(0xFF2569A9),
-                      Color(0xFF59ADFB),
-                    ],
-                  ).createShader(
-                    Rect.fromLTWH(0, 0, bounds.width, bounds.height),
-                  ),
-                  blendMode: BlendMode.srcIn,
-                  child: Transform.translate(
-                    offset: Offset(0, -5.h),
-                    child: Text(
-                      level,
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: AppFontStyles.fontSize_80.sp,
-                        fontVariations: [AppFontStyles.boldFontVariation],
-                        fontFamily: AppFontStyles.poppinsFamily,
-                      ),
+              left: 0,
+              right: 0,
+              bottom: 0,
+              top: 165.h,
+              child: ShaderMask(
+                shaderCallback: (bounds) => const LinearGradient(
+                  colors: [
+                    Color(0xFF16446F),
+                    Color(0xFF2569A9),
+                    Color(0xFF59ADFB),
+                  ],
+                ).createShader(
+                  Rect.fromLTWH(0, 0, bounds.width, bounds.height),
+                ),
+                blendMode: BlendMode.srcIn,
+                child: Transform.translate(
+                  offset: Offset(-2, 0.h),
+                  child: Text(
+                    level,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 90.sp,
+                      fontVariations: [AppFontStyles.extraBoldFontVariation],
+                      fontFamily: AppFontStyles.poppinsFamily,
                     ),
                   ),
                 ),
@@ -406,11 +457,7 @@ class _AchievementsBadgeScreenState extends State<AchievementsBadgeScreen> {
           Align(
             alignment: Alignment.topCenter,
             child: isUnlocked
-                ? Image.asset(
-                    "assets/images/goals_levels_img.png",
-                    width: AppDimensions.dim107.w,
-                    height: AppDimensions.dim111.h,
-                  )
+                ? AnimatedAchievementBadge()
                 : Padding(
                     padding: EdgeInsets.only(top: AppDimensions.dim22.h),
                     child: Image.asset(
@@ -424,7 +471,7 @@ class _AchievementsBadgeScreenState extends State<AchievementsBadgeScreen> {
             Positioned.fill(
               child: Align(
                 alignment: Platform.isIOS
-                    ? const Alignment(0, -0.25)
+                    ? const Alignment(0, -0.1)
                     : const Alignment(0, -0.1),
                 child: ShaderMask(
                   shaderCallback: (bounds) => const LinearGradient(
@@ -443,14 +490,14 @@ class _AchievementsBadgeScreenState extends State<AchievementsBadgeScreen> {
                       color: AppColors.white,
                       fontFamily: AppFontStyles.urbanistFontFamily,
                       fontVariations: [AppFontStyles.extraBoldFontVariation],
-                      fontSize: AppFontStyles.fontSize_28,
+                      fontSize: AppFontStyles.fontSize_35,
                     ),
                   ),
                 ),
               ),
             ),
           Positioned(
-            top: isUnlocked ? AppDimensions.dim80.h : AppDimensions.dim80.h,
+            top: isUnlocked ? AppDimensions.dim93.h : AppDimensions.dim80.h,
             left: isUnlocked ? AppDimensions.dim5.w : 0.w,
             right: 0,
             child: Column(
@@ -523,5 +570,64 @@ class _AchievementsBadgeScreenState extends State<AchievementsBadgeScreen> {
         ],
       ),
     );
+  }
+
+  Path drawStar(Size size) {
+    double degToRad(double deg) => deg * (pi / 180.0);
+
+    const numberOfPoints = 5;
+    final halfWidth = size.width / 2;
+    final externalRadius = halfWidth;
+    final internalRadius = halfWidth / 2.5;
+    final degreesPerStep = degToRad(360 / numberOfPoints);
+    final halfDegreesPerStep = degreesPerStep / 2;
+    final path = Path();
+    final fullAngle = degToRad(-90);
+
+    path.moveTo(halfWidth + externalRadius * cos(fullAngle),
+        halfWidth + externalRadius * sin(fullAngle));
+
+    for (double step = 0; step < 360; step += degreesPerStep) {
+      path.lineTo(halfWidth + externalRadius * cos(step + fullAngle),
+          halfWidth + externalRadius * sin(step + fullAngle));
+      path.lineTo(
+          halfWidth +
+              internalRadius * cos(step + halfDegreesPerStep + fullAngle),
+          halfWidth +
+              internalRadius * sin(step + halfDegreesPerStep + fullAngle));
+    }
+    path.close();
+    return path;
+  }
+
+  Path drawRandomShape(Size size) {
+    final random = Random();
+    final choice = random.nextInt(4);
+
+    switch (choice) {
+      case 0:
+        return drawStar(size);
+      case 1:
+        return Path()
+          ..addOval(Rect.fromCircle(
+              center: Offset(size.width / 2, size.height / 2),
+              radius: size.width / 2));
+      case 2:
+        return Path()
+          ..addRect(Rect.fromCenter(
+              center: Offset(size.width / 2, size.height / 2),
+              width: size.width,
+              height: size.height));
+      case 3:
+        final path = Path();
+        path.moveTo(size.width / 2, 0);
+        path.lineTo(size.width, size.height / 2);
+        path.lineTo(size.width / 2, size.height);
+        path.lineTo(0, size.height / 2);
+        path.close();
+        return path;
+      default:
+        return drawStar(size);
+    }
   }
 }

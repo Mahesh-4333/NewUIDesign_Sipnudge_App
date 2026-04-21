@@ -17,6 +17,8 @@ import 'package:hydrify/models/ringtone_model.dart';
 import 'package:hydrify/screens/widgets/ringtone_screen_widget/category_header.dart';
 import 'package:hydrify/screens/widgets/ringtone_screen_widget/ringtone_list_item.dart';
 import 'package:hydrify/screens/widgets/ringtone_screen_widget/top_pick_card.dart';
+import 'package:hydrify/cubit/bottom_nav/bottom_nav_cubit.dart';
+import 'package:hydrify/screens/widgets/animate_dots_widget.dart';
 
 class RingtoneScreen extends StatefulWidget {
   const RingtoneScreen({super.key});
@@ -30,6 +32,7 @@ class _RingtoneScreenState extends State<RingtoneScreen> {
   int? playingIndex;
   Set<int> favoriteIds = {};
   late final AudioPlayer _audioPlayer;
+  bool _isSaving = false;
 
   @override
   void initState() {
@@ -105,29 +108,44 @@ class _RingtoneScreenState extends State<RingtoneScreen> {
   }
 
   Future<void> _saveChanges() async {
-    Console.log(tag: "ringtoneIndex", value: selectedIndex.toString());
-    await SharedPrefsHelper.setSelectedRingtone(selectedIndex);
+    if (_isSaving) return;
+    setState(() => _isSaving = true);
 
-    final selectedRingtone = mockRingtones.firstWhere(
-      (r) => r.id == selectedIndex,
-      orElse: () => mockRingtones.first,
-    );
-    await SharedPrefsHelper.setSelectedRingtoneName(selectedRingtone.title);
+    try {
+      await Future.delayed(const Duration(milliseconds: 1500));
 
-    // Reschedule all notifications so they use the newly selected ringtone.
-    // The sound is baked into the notification at schedule time (Android uses
-    // it as part of the channel ID), so we must cancel and re-schedule.
-    final slots = await DatabaseHelper().getAllSlots();
-    if (slots.isNotEmpty) {
-      await NotificationService().resetAllHydrationReminders(slots);
-      await NotificationService().scheduleHydrationRemindersForFuture(slots);
-    }
+      Console.log(tag: "ringtoneIndex", value: selectedIndex.toString());
+      await SharedPrefsHelper.setSelectedRingtone(selectedIndex);
 
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Ringtone saved successfully!")),
+      final selectedRingtone = mockRingtones.firstWhere(
+        (r) => r.id == selectedIndex,
+        orElse: () => mockRingtones.first,
       );
-      Navigator.of(context).pop();
+      await SharedPrefsHelper.setSelectedRingtoneName(selectedRingtone.title);
+
+      // Reschedule all notifications so they use the newly selected ringtone.
+      // The sound is baked into the notification at schedule time (Android uses
+      // it as part of the channel ID), so we must cancel and re-schedule.
+      final slots = await DatabaseHelper().getAllSlots();
+      if (slots.isNotEmpty) {
+        await NotificationService().resetAllHydrationReminders(slots);
+        await NotificationService().scheduleHydrationRemindersForFuture(slots);
+      }
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Ringtone saved successfully!")),
+        );
+        Navigator.of(context).pop();
+      }
+    } catch (e) {
+      Console.log(tag: "save_changes_error", value: e.toString());
+      if (mounted) {
+        setState(() => _isSaving = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Failed to save changes: $e")),
+        );
+      }
     }
   }
 
@@ -151,8 +169,16 @@ class _RingtoneScreenState extends State<RingtoneScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<PreferencesCubit, PreferencesState>(
-      builder: (context, state) {
+    return BlocListener<BottomNavCubit, BottomNavState>(
+      listenWhen: (prev, curr) => prev.selectedTab != curr.selectedTab,
+      listener: (context, state) {
+        _audioPlayer.stop();
+        if (mounted) {
+          setState(() => playingIndex = null);
+        }
+      },
+      child: BlocBuilder<PreferencesCubit, PreferencesState>(
+        builder: (context, state) {
         return Scaffold(
           extendBodyBehindAppBar: true,
           appBar: AppBar(
@@ -251,12 +277,12 @@ class _RingtoneScreenState extends State<RingtoneScreen> {
                                   onFavoriteTap: () =>
                                       _onFavoriteTap(ringtone.id),
                                 )),
-                        SizedBox(height: 100.h), // Space for button
+                        SizedBox(height: 220.h), // Space for button
                       ],
                     ),
                   ),
                   Positioned(
-                    bottom: 20.h,
+                    bottom: 140.h,
                     left: 80.w,
                     right: 80.w,
                     child: ElevatedButton(
@@ -271,20 +297,43 @@ class _RingtoneScreenState extends State<RingtoneScreen> {
                       ),
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Text(
-                            "Save Changes",
-                            style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 18.sp,
-                                fontFamily: AppFontStyles.urbanistFontFamily,
-                                fontVariations: [
-                                  AppFontStyles.boldFontVariation
-                                ]),
-                          ),
-                          SizedBox(width: 8.w),
-                          const Icon(Icons.check_circle, color: Colors.white),
-                        ],
+                        children: _isSaving
+                            ? [
+                                Text(
+                                  "Saving",
+                                  style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 18.sp,
+                                      fontFamily:
+                                          AppFontStyles.urbanistFontFamily,
+                                      fontVariations: [
+                                        AppFontStyles.boldFontVariation
+                                      ]),
+                                ),
+                                AnimatedDots(
+                                  color: Colors.white,
+                                  fontSize: 18.sp,
+                                  fontVariations: [
+                                    AppFontStyles.boldFontVariation
+                                  ],
+                                ),
+                              ]
+                            : [
+                                Text(
+                                  "Save Changes",
+                                  style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 18.sp,
+                                      fontFamily:
+                                          AppFontStyles.urbanistFontFamily,
+                                      fontVariations: [
+                                        AppFontStyles.boldFontVariation
+                                      ]),
+                                ),
+                                SizedBox(width: 8.w),
+                                const Icon(Icons.check_circle,
+                                    color: Colors.white),
+                              ],
                       ),
                     ),
                   ),
@@ -294,6 +343,7 @@ class _RingtoneScreenState extends State<RingtoneScreen> {
           ),
         );
       },
+    ),
     );
   }
 }

@@ -52,12 +52,14 @@ class HydrationCubit extends Cubit<HydrationState> {
           .fold(0.0, (sum, e) => sum + e.amount);
 
       final streak = await _dbHelper.getConsistencyStreak();
+      final history = await _dbHelper.getTodayHydrationHistory();
       
       emit(state.copyWith(
         entries: slotsFromDb,
         goal: dailyGoal.round(),
         totalDrank: total.round(),
         consistencyStreak: streak,
+        todayHydrationHistory: history,
       ));
 
       _calculateCurrentSlotStatus();
@@ -298,7 +300,8 @@ class HydrationCubit extends Cubit<HydrationState> {
     }
 
     final int streak = await _dbHelper.getConsistencyStreak();
-
+    final history = await _dbHelper.getTodayHydrationHistory();
+    
     // 4. Emit the updated state
     log("[HydrationCubit] Emitting state with ${currentEntries.length} entries and totalDrank $totalDrankToday",
         name: "CUBIT_DEBUG");
@@ -307,17 +310,29 @@ class HydrationCubit extends Cubit<HydrationState> {
       totalDrank: totalDrankToday.round(),
       newlyUnlockedLevel: newlyUnlocked,
       consistencyStreak: streak,
+      todayHydrationHistory: history,
     ));
 
     _calculateCurrentSlotStatus();
   }
 
   void subscribeToBleUpdates(BleCubit bleCubit) {
-    bleCubit.hydrationUpdates.listen((entries) {
+    bleCubit.hydrationUpdates.listen((entries) async {
       for (final entry in entries) {
         updateSlot(entry);
       }
+      await refreshTodayHistory();
     });
+  }
+
+  Future<void> refreshTodayHistory() async {
+    final history = await _dbHelper.getTodayHydrationHistory();
+    emit(state.copyWith(todayHydrationHistory: history));
+  }
+
+  Future<void> clearTodayHistory() async {
+    await _dbHelper.clearTodayHydrationHistory();
+    await refreshTodayHistory();
   }
 
   // -------------------- HELPERS --------------------

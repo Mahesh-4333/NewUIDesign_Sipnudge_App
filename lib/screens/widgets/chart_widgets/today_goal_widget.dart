@@ -5,6 +5,8 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:hydrify/constants/app_colors.dart';
 import 'package:hydrify/constants/app_dimensions.dart';
 import 'package:hydrify/constants/app_font_styles.dart';
+import 'package:hydrify/constants/app_style.dart';
+import 'package:hydrify/cubit/ble/ble_cubit.dart';
 import 'package:hydrify/cubit/bottle/bottle_data_cubit.dart';
 import 'package:hydrify/cubit/hydration/hydration_cubit.dart';
 import 'package:hydrify/cubit/hydration/hydration_state.dart';
@@ -25,215 +27,236 @@ class _TodayGoalWidgetState extends State<TodayGoalWidget>
   @override
   Widget build(BuildContext context) {
     super.build(context);
-    return BlocBuilder<HydrationCubit, HydrationState>(
-      builder: (context, state) {
-        return FutureBuilder<List<dynamic>>(
-          future: Future.wait([
-            SharedPrefsHelper.getWaterGoal(),
-            context.read<BottleDataCubit>().getCurrentDayHistory(),
-          ]),
-          builder: (context, snapshot) {
-            if (!snapshot.hasData) {
-              // Using a placeholder SizedBox to prevent layout jump when data loads
-              return SizedBox(height: 410.h);
-            }
-            final double waterGoalFromPrefs =
-                (snapshot.data![0] ?? 2500).toDouble();
-            final double intakeMl = (snapshot.data![1] as num).toDouble();
-            final double goalMl = waterGoalFromPrefs;
-            final double progress = (intakeMl / goalMl).clamp(0.0, 1.0);
-            final int percentage = (progress * 100).toInt();
+    return BlocBuilder<BottleDataCubit, BottleDataState>(
+        builder: (context, stateble) {
+      return BlocBuilder<HydrationCubit, HydrationState>(
+        builder: (context, state) {
+          return FutureBuilder<List<dynamic>>(
+            future: Future.wait([
+              SharedPrefsHelper.getWaterGoal(),
+              context.read<BottleDataCubit>().getCurrentDayHistory(),
+            ]),
+            builder: (context, snapshot) {
+              if (!snapshot.hasData) {
+                // Using a placeholder SizedBox to prevent layout jump when data loads
+                return SizedBox(height: 410.h);
+              }
+              final double waterGoalFromPrefs =
+                  (snapshot.data![0] ?? 2500).toDouble();
+              final double intakeMl = (snapshot.data![1] as num).toDouble();
+              final double goalMl = waterGoalFromPrefs;
+              final double progress = (intakeMl / goalMl).clamp(0.0, 1.0);
+              final int percentage = (progress * 100).toInt();
 
-            return Container(
-              width: double.maxFinite,
-              padding: EdgeInsets.all(AppDimensions.dim20.w),
-              margin: EdgeInsets.only(
-                left: AppDimensions.defaultPadding.w,
-                right: AppDimensions.defaultPadding.w,
-              ),
-              decoration: BoxDecoration(
-                boxShadow: [
-                  BoxShadow(
-                    blurRadius: AppDimensions.radius_4,
-                    color: AppColors.black.withOpacity(.25),
-                    offset: Offset(
-                      AppDimensions.dim2,
-                      AppDimensions.dim2,
-                    ),
-                  )
-                ],
-                borderRadius: BorderRadius.circular(
-                  AppDimensions.radius_10.w,
+              return Container(
+                width: double.maxFinite,
+                padding: EdgeInsets.all(AppDimensions.dim20.w),
+                margin: EdgeInsets.only(
+                  left: AppDimensions.defaultPadding.w,
+                  right: AppDimensions.defaultPadding.w,
                 ),
-                color: Color(0XFFFFFFFF),
-                border: Border.all(color: AppColors.greywith80),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Padding(
-                    padding: EdgeInsets.only(left: 10.w),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        ...[
-                          Text(
-                            "Today's Goal",
-                            style: TextStyle(
-                              color: AppColors.bluegray,
-                              fontSize: AppFontStyles.fontSize_20,
-                              fontFamily: AppFontStyles.urbanistFontFamily,
-                              fontVariations: [AppFontStyles.boldFontVariation],
-                            ),
-                          ),
-                          SizedBox(height: AppDimensions.dim4.h),
-                          Text(
-                            "All logs with Slots and off slots",
-                            style: TextStyle(
-                              color: Color(0xFF6B7280), // Gray color for subtitle
-                              fontSize: AppFontStyles.fontSize_14,
-                              fontFamily: AppFontStyles.urbanistFontFamily,
-                              fontVariations: [AppFontStyles.regularFontVariation],
-                            ),
-                          ),
-                        ]
-                      ],
-                    ),
+                decoration: BoxDecoration(
+                  boxShadow: [
+                    BoxShadow(
+                      blurRadius: AppDimensions.radius_4,
+                      color: AppColors.black.withOpacity(.25),
+                      offset: Offset(
+                        AppDimensions.dim2,
+                        AppDimensions.dim2,
+                      ),
+                    )
+                  ],
+                  borderRadius: BorderRadius.circular(
+                    AppDimensions.radius_10.w,
                   ),
-                  SizedBox(height: AppDimensions.dim32.h),
-                  Center(
-                    child: SizedBox(
-                      width: AppDimensions.dim220.w,
-                      height: AppDimensions.dim220.w,
-                      child: Stack(
-                        alignment: Alignment.center,
+                  color: Color(0XFFFFFFFF),
+                  border: Border.all(color: AppColors.greywith80),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Padding(
+                      padding: EdgeInsets.only(left: 10.w),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          CustomPaint(
-                            size: Size(
-                                AppDimensions.dim220.w, AppDimensions.dim220.w),
-                            painter: _SingleProgressPainter(
-                              progress: progress,
-                              trackColor: Color(0xFFF3F4F6),
-                              // Light grey track like the mockup
-                              gradient: LinearGradient(
-                                colors: [AppColors.blueWaterIntake, AppColors.blueWaterIntake],
-                                begin: Alignment.topCenter,
-                                end: Alignment.bottomCenter,
-                              ),
-                              strokeWidth: 12.w,
-                            ),
-                          ),
-                          Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Text(
-                                "${(intakeMl / 1000).toStringAsFixed(1)}L",
-                                style: TextStyle(
-                                  color: AppColors.bluegray,
-                                  fontSize: 40.sp,
-                                  fontFamily:
-                                      AppFontStyles.urbanistFontFamily,
-                                  fontVariations: [
-                                    AppFontStyles.extraBoldFontVariation
-                                  ],
-                                ),
-                              ),
-                              SizedBox(height: AppDimensions.dim4.h),
-                              Text(
-                                "$percentage% OF GOAL",
-                                style: TextStyle(
-                                  color: AppColors.bluegray,
-                                  fontSize: AppFontStyles.fontSize_14,
-                                  fontFamily: AppFontStyles.urbanistFontFamily,
-                                  fontVariations: [
-                                    AppFontStyles.fontWeightVariation600
-                                  ],
-                                ),
-                              ),
-                              SizedBox(height: AppDimensions.dim4.h),
-                              Text(
-                                "ACHIEVED",
-                                style: TextStyle(
-                                  color: Color(0xFFEAB308), // Gold/Yellow
-                                  fontSize: AppFontStyles.fontSize_14,
-                                  fontFamily: AppFontStyles.urbanistFontFamily,
-                                  fontVariations: [
-                                    AppFontStyles.fontWeightVariation600
-                                  ],
-                                ),
-                              ),
-                            ],
-                          )
-                        ],
-                      ),
-                    ),
-                  ),
-                  SizedBox(height: AppDimensions.dim40.h),
-                  Center(
-                    child: Container(
-                      padding: EdgeInsets.symmetric(
-                        horizontal: AppDimensions.dim24.w,
-                        vertical: AppDimensions.dim12.h,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Color(0xFFF3F4F6).withOpacity(0.5),
-                        borderRadius:
-                            BorderRadius.circular(AppDimensions.radius_30.r),
-                        border:
-                            Border.all(color: Color(0xFFE5E7EB), width: 1.5),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.05),
-                            blurRadius: 4,
-                            offset: Offset(0, 2),
-                            spreadRadius: 0,
-                          )
-                        ],
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            Icons.water_drop_outlined,
-                            color: AppColors.blueWaterIntake,
-                            size: 24.w,
-                          ),
-                          SizedBox(width: AppDimensions.dim8.w),
-                          Text.rich(
-                            TextSpan(
-                              text: "Consistency Streak: ",
+                          ...[
+                            Text(
+                              "Today's Goal",
                               style: TextStyle(
                                 color: AppColors.bluegray,
-                                fontSize: AppFontStyles.fontSize_16,
+                                fontSize: AppFontStyles.fontSize_20,
+                                fontFamily: AppFontStyles.urbanistFontFamily,
+                                fontVariations: [
+                                  AppFontStyles.boldFontVariation
+                                ],
+                              ),
+                            ),
+                            SizedBox(height: AppDimensions.dim4.h),
+                            Text(
+                              "All logs with Slots and off slots",
+                              style: TextStyle(
+                                color: Color(0xFF6B7280),
+                                // Gray color for subtitle
+                                fontSize: AppFontStyles.fontSize_14,
                                 fontFamily: AppFontStyles.urbanistFontFamily,
                                 fontVariations: [
                                   AppFontStyles.regularFontVariation
                                 ],
                               ),
+                            ),
+                          ]
+                        ],
+                      ),
+                    ),
+                    SizedBox(height: AppDimensions.dim32.h),
+                    Center(
+                      child: SizedBox(
+                        width: AppDimensions.dim220.w,
+                        height: AppDimensions.dim220.w,
+                        child: Stack(
+                          alignment: Alignment.center,
+                          children: [
+                            CustomPaint(
+                              size: Size(AppDimensions.dim220.w,
+                                  AppDimensions.dim220.w),
+                              painter: _SingleProgressPainter(
+                                progress: progress,
+                                trackColor: Color(0xFFF3F4F6),
+                                // Light grey track like the mockup
+                                gradient: LinearGradient(
+                                  colors: [
+                                    AppColors.blueWaterIntake,
+                                    AppColors.blueWaterIntake
+                                  ],
+                                  begin: Alignment.topCenter,
+                                  end: Alignment.bottomCenter,
+                                ),
+                                strokeWidth: 12.w,
+                              ),
+                            ),
+                            Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
                               children: [
-                                TextSpan(
-                                  text: "${state.consistencyStreak} Days",
+                                Text(
+                                  "${(intakeMl / 1000).toStringAsFixed(1)}L",
                                   style: TextStyle(
+                                    color: AppColors.bluegray,
+                                    fontSize: 40.sp,
+                                    fontFamily:
+                                        AppFontStyles.urbanistFontFamily,
+                                    fontVariations: [
+                                      AppFontStyles.extraBoldFontVariation
+                                    ],
+                                  ),
+                                ),
+                                SizedBox(height: AppDimensions.dim4.h),
+                                Text(
+                                  "$percentage% OF GOAL",
+                                  style: TextStyle(
+                                    color: AppColors.bluegray,
+                                    fontSize: AppFontStyles.fontSize_14,
+                                    fontFamily:
+                                        AppFontStyles.urbanistFontFamily,
+                                    fontVariations: [
+                                      AppFontStyles.fontWeightVariation600
+                                    ],
+                                  ),
+                                ),
+                                SizedBox(height: AppDimensions.dim4.h),
+                                Text(
+                                  "ACHIEVED",
+                                  style: TextStyle(
+                                    color: Color(0xFFEAB308), // Gold/Yellow
+                                    fontSize: AppFontStyles.fontSize_14,
+                                    fontFamily:
+                                        AppFontStyles.urbanistFontFamily,
+                                    fontVariations: [
+                                      AppFontStyles.fontWeightVariation600
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            )
+                          ],
+                        ),
+                      ),
+                    ),
+                    SizedBox(height: AppDimensions.dim40.h),
+                    Center(
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius:
+                              BorderRadius.circular(AppDimensions.radius_30.r),
+                          border:
+                              Border.all(color: Color(0xFFE5E7EB), width: 1.5),
+                          boxShadow: AppStyle.boxShadowVariation3,
+                        ),
+                        child: Container(
+                          padding: EdgeInsets.only(
+                              // horizontal: AppDimensions.dim30.w,
+                              bottom: 4.h,
+                              top: 4.h,
+                              right: 30.w,
+                              left: 5.w),
+                          decoration: BoxDecoration(
+                            color: Color(0x52b6dcff),
+                            borderRadius: BorderRadius.circular(
+                                AppDimensions.radius_30.r),
+                            // border:
+                            // Border.all(color: Color(0xFFE5E7EB), width: 1.5),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.water_drop_outlined,
+                                color: AppColors.blueWaterIntake,
+                                size: 35.w,
+                              ),
+                              SizedBox(width: AppDimensions.dim35.w),
+                              Text.rich(
+                                textAlign: TextAlign.center,
+                                TextSpan(
+                                  text: "TODAY'S REFFILS",
+                                  style: TextStyle(
+                                    color: AppColors.bluegray,
+                                    fontSize: AppFontStyles.fontSize_15,
+                                    fontFamily:
+                                        AppFontStyles.urbanistFontFamily,
                                     fontVariations: [
                                       AppFontStyles.boldFontVariation
                                     ],
                                   ),
-                                )
-                              ],
-                            ),
+                                  children: [
+                                    TextSpan(
+                                      text:
+                                          "\n${stateble.refills ?? 0} refills",
+                                      style: TextStyle(
+                                        fontSize: AppFontStyles.fontSize_15,
+                                        fontVariations: [
+                                          AppFontStyles.extraBoldFontVariation
+                                        ],
+                                      ),
+                                    )
+                                  ],
+                                ),
+                              ),
+                            ],
                           ),
-                        ],
+                        ),
                       ),
                     ),
-                  ),
-                  SizedBox(height: AppDimensions.dim10.h),
-                ],
-              ),
-            );
-          },
-        );
-      },
-    );
+                    SizedBox(height: AppDimensions.dim10.h),
+                  ],
+                ),
+              );
+            },
+          );
+        },
+      );
+    });
   }
 }
 

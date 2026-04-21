@@ -39,10 +39,10 @@ class ProfileCubit extends Cubit<ProfileState> {
                 iconPath: "assets/performance.png",
                 title: "Add Millisecond",
               ),
-              // ProfileMenuItem(
-              //   iconPath: "assets/drink_rem.png",
-              //   title: "Active Notifications",
-              // ),
+              ProfileMenuItem(
+                iconPath: "assets/drink_rem.png",
+                title: "Active Notifications",
+              ),
               ProfileMenuItem(
                 iconPath: "assets/logout.png",
                 title: "Logout",

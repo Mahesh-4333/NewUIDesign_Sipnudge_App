@@ -4,12 +4,14 @@ class BottleData {
   final double liquidVolume;
   final int liquidPercent;
   final int battery;
+  final int refills;
   final DateTime timestamp;
 
   BottleData({
     required this.liquidVolume,
     required this.liquidPercent,
     required this.battery,
+    required this.refills,
     required this.timestamp,
   });
 
@@ -18,6 +20,7 @@ class BottleData {
       'liquidVolume': liquidVolume,
       'liquidPercent': liquidPercent,
       'battery': battery,
+      'refills': refills,
       'timestamp': timestamp.toIso8601String(),
     };
   }
@@ -27,6 +30,7 @@ class BottleData {
       liquidVolume: map['liquidVolume'] as double,
       liquidPercent: map['liquidPercent'] as int,
       battery: map['battery'] as int,
+      refills: map['refills'] as int? ?? 0,
       timestamp: DateTime.parse(map['timestamp'] as String),
     );
   }
@@ -42,6 +46,7 @@ List<BottleData> generateDummyWeeklyData() {
       liquidVolume: random.nextDouble() * 1000, // ml (0–1000ml)
       liquidPercent: random.nextInt(101), // 0–100%
       battery: 50 + random.nextInt(51), // 50–100%
+      refills: random.nextInt(5),
       timestamp: date,
     );
   });
@@ -58,6 +63,7 @@ List<BottleData> generateDummyMonthlyData() {
       liquidVolume: random.nextDouble() * 1000,
       liquidPercent: random.nextInt(101),
       battery: 40 + random.nextInt(61),
+      refills: random.nextInt(5),
       timestamp: date,
     );
   });

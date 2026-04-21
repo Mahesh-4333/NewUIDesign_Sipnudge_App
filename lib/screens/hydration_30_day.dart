@@ -78,6 +78,7 @@ class _Hydration30DayPageState extends State<Hydration30DayPage> {
     return BlocBuilder<BleCubit, BleState>(
       builder: (context, state) {
         return Scaffold(
+          backgroundColor: Colors.white,
           appBar: AppBar(
             title: const Text('30-Day Hydration History'),
             actions: [

@@ -290,13 +290,13 @@ class _AnimatedBottomNavBarState extends State<AnimatedBottomNavBar>
                       height: AppDimensions.dim88.h,
                       decoration: BoxDecoration(
                         boxShadow: [
-                          BoxShadow(
-                            blurRadius: AppDimensions.dim30.r,
-                            spreadRadius: AppDimensions.dim2.r,
-                            color: Colors.white.withOpacity(.09),
-                            offset: Offset(
-                                AppDimensions.dim4.w, AppDimensions.dim4.h),
-                          )
+                          // BoxShadow(
+                          //   blurRadius: AppDimensions.dim30.r,
+                          //   spreadRadius: AppDimensions.dim2.r,
+                          //   // color: Colors.white.withOpacity(.09),
+                          //   offset: Offset(
+                          //       AppDimensions.dim4.w, AppDimensions.dim4.h),
+                          // )
                         ],
                         borderRadius:
                             BorderRadius.circular(AppDimensions.dim90.r),

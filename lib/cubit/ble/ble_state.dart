@@ -17,6 +17,7 @@ class BleState {
   final String message;
   final int? battery;
   final double? volume;
+  final int? refill;
   final int? percent;
   final List<ScanResult> scannedDevices;
   final bool isFirstConnection;
@@ -36,6 +37,7 @@ class BleState {
     this.message = '',
     this.battery,
     this.volume,
+    this.refill,
     this.percent,
     this.scannedDevices = const [],
     this.isFirstConnection = true,
@@ -56,6 +58,7 @@ class BleState {
     String? message,
     int? battery,
     double? volume,
+    int? refill,
     int? percent,
     DateTime? ts,
     List<ScanResult>? scannedDevices,
@@ -75,6 +78,7 @@ class BleState {
       message: message ?? this.message,
       battery: battery ?? this.battery,
       volume: volume ?? this.volume,
+      refill: refill ?? this.refill,
       percent: percent ?? this.percent,
       ts: ts ?? this.ts,
       scannedDevices: scannedDevices ?? this.scannedDevices,

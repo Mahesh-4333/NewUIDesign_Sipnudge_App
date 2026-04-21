@@ -91,5 +91,12 @@ class AssetsPath {
 
   static const String refreshIcon = "assets/refresh.png";
 
+  static const String asc = "assets/achievement_badge/ach.svg";
+  static const String badge_background = "assets/achievement_badge/badge_background.svg";
+  static const String badge_leaves = "assets/achievement_badge/badge_leaves.svg";
+  static const String badge_leaves_left = "assets/achievement_badge/badge_leaves_left.svg";
+  static const String badge_leaves_right = "assets/achievement_badge/badge_leaves_right.svg";
+  static const String badge_ring = "assets/achievement_badge/badge_ring.svg";
+  static const String badge_core = "assets/achievement_badge/badge_core.svg";
 
 }

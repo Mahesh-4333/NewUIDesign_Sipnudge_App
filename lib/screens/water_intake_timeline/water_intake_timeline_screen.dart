@@ -324,7 +324,8 @@ class _WaterIntakeTimelineState extends State<WaterIntakeTimelineScreen> {
             // Blur overlay
             Positioned.fill(
               child: ClipRRect(
-                borderRadius: BorderRadius.circular(16), // match your card radius
+                borderRadius:
+                    BorderRadius.circular(16), // match your card radius
                 child: BackdropFilter(
                   filter: ImageFilter.blur(sigmaX: 6, sigmaY: 6),
                   child: Container(
@@ -365,7 +366,8 @@ class _WaterIntakeTimelineState extends State<WaterIntakeTimelineScreen> {
             // Blur overlay
             Positioned.fill(
               child: ClipRRect(
-                borderRadius: BorderRadius.circular(16), // match your card radius
+                borderRadius:
+                    BorderRadius.circular(16), // match your card radius
                 child: BackdropFilter(
                   filter: ImageFilter.blur(sigmaX: 6, sigmaY: 6),
                   child: Container(
@@ -1409,10 +1411,12 @@ class ProgressCircle extends StatelessWidget {
   Widget build(BuildContext context) {
     return BlocBuilder<BleCubit, BleState>(
       buildWhen: (previous, current) {
-        Console.log(tag: "home_Screen_biuld", value: "${previous.currentHydrationValue} : ${current.currentHydrationValue}");
+        Console.log(
+            tag: "home_Screen_biuld",
+            value:
+                "${previous.currentHydrationValue} : ${current.currentHydrationValue}");
 
-        if (previous.currentHydrationValue !=
-            current.currentHydrationValue) {
+        if (previous.currentHydrationValue != current.currentHydrationValue) {
           return true;
         }
         return false;
@@ -1447,8 +1451,7 @@ class ProgressCircle extends StatelessWidget {
               );
             }
 
-            final history =
-                snapshot.data!['history'] as double ?? 0;
+            final history = snapshot.data!['history'] as double ?? 0;
             final userGoalMl =
                 (snapshot.data!['userGoalLiters'] as double? ?? 2.0) * 1000;
 

@@ -329,6 +329,17 @@ class _UserInfoDailyGoalScreenState extends State<UserInfoDailyGoalScreen> {
                     await dbHelper.insertOrUpdateSlot(slot);
                   }
                   await context.read<BleCubit>().queueHydrationSlots(slots);
+                } else {
+                  List<HydrationEntry> updatedSlots = [];
+                  for (var existingSlot in isSlotAvailableInDb) {
+                    final newSlot =
+                        slots.firstWhere((s) => s.slot == existingSlot.slot);
+                    final updatedSlot =
+                        existingSlot.copyWith(amount: newSlot.amount);
+                    await dbHelper.insertOrUpdateSlot(updatedSlot);
+                    updatedSlots.add(updatedSlot);
+                  }
+                  await context.read<BleCubit>().queueHydrationSlots(updatedSlots);
                 }
 
                 await SharedPrefsHelper.setLastLevelUpDate("");

@@ -49,6 +49,7 @@ class BottleDataCubit extends Cubit<BottleDataState> {
         volume: lastData.liquidVolume,
         volumePercent: lastData.liquidPercent,
         battery: lastData.battery,
+        refills: lastData.refills,
       ));
     } else {
       Console.log(
@@ -74,11 +75,13 @@ class BottleDataCubit extends Cubit<BottleDataState> {
     final newVolume = bleState.volume ?? state.volume;
     final newPercent = bleState.percent ?? state.volumePercent;
     final newBattery = bleState.battery ?? state.battery;
+    final newRefills = bleState.refill ?? state.refills;
 
     final newData = BottleData(
       liquidVolume: newVolume,
       liquidPercent: newPercent,
       battery: newBattery,
+      refills: newRefills,
       timestamp: DateTime.now(),
     );
 
@@ -97,6 +100,7 @@ class BottleDataCubit extends Cubit<BottleDataState> {
       volume: newVolume,
       volumePercent: newPercent,
       battery: newBattery,
+      refills: newRefills,
       currentPage: state.currentPage,
       currentPageData: pageData,
     ));

@@ -9,6 +9,7 @@ import 'package:hydrify/models/hydration_entry.dart';
 import 'package:hydrify/models/hydration_summary.dart';
 import 'package:path/path.dart' as path;
 import 'package:sqflite/sqflite.dart';
+import 'package:flutter_timezone/flutter_timezone.dart';
 
 class DatabaseHelper {
   static Database? _database;
@@ -18,6 +19,8 @@ class DatabaseHelper {
 
   static const String tableName = 'bottle_history';
   static const String hydrationSummaryTableName = 'hydration_day_summaries';
+  static const String todayHydrationHistoryTableName =
+      'today_hydration_history';
 
   // REPLACE your old getter with this one:
   Future<Database> get database async {
@@ -52,10 +55,28 @@ class DatabaseHelper {
     String finalPath = path.join(await getDatabasesPath(), 'bottle_history.db');
     return await openDatabase(
       finalPath,
-      version: 2,
+      version: 5,
       onUpgrade: (db, oldVersion, newVersion) async {
         if (oldVersion < 2) {
           await db.execute('ALTER TABLE user ADD COLUMN stepGoal INTEGER');
+        }
+        if (oldVersion < 3) {
+          await db.execute('''
+            CREATE TABLE IF NOT EXISTS $todayHydrationHistoryTableName(
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              timestamp TEXT NOT NULL,
+              consumed REAL NOT NULL,
+              timezone TEXT
+            )
+          ''');
+        }
+        if (oldVersion < 4) {
+          await db.execute(
+              'ALTER TABLE $tableName ADD COLUMN refills INTEGER DEFAULT 0');
+        }
+        if (oldVersion < 5) {
+          await db.execute(
+              'ALTER TABLE $todayHydrationHistoryTableName ADD COLUMN timezone TEXT');
         }
       },
       onCreate: (Database db, int version) async {
@@ -65,6 +86,7 @@ class DatabaseHelper {
             liquidVolume REAL NOT NULL,
             liquidPercent INTEGER NOT NULL,
             battery INTEGER NOT NULL,
+            refills INTEGER DEFAULT 0,
             timestamp TEXT NOT NULL
           )
         ''');
@@ -123,6 +145,15 @@ CREATE TABLE IF NOT EXISTS app_metadata (
   value TEXT
 );
 ''');
+
+        await db.execute('''
+            CREATE TABLE IF NOT EXISTS $todayHydrationHistoryTableName(
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              timestamp TEXT NOT NULL,
+              consumed REAL NOT NULL,
+              timezone TEXT
+            )
+          ''');
       },
     );
   }
@@ -255,7 +286,8 @@ CREATE TABLE IF NOT EXISTS app_metadata (
 
     Console.log(
         tag: "APP",
-        value: "[DB] Saving User Info: height=${state.height}, weight=${state.weight}, age=${state.age}");
+        value:
+            "[DB] Saving User Info: height=${state.height}, weight=${state.weight}, age=${state.age}");
 
     // Atomic insert or replace
     await db.insert(
@@ -268,7 +300,8 @@ CREATE TABLE IF NOT EXISTS app_metadata (
   Future<UserInfoState?> getUserInfo() async {
     final db = await database;
     // Explicitly query for our singleton row with ID 1
-    final result = await db.query('user', where: 'id = ?', whereArgs: [1], limit: 1);
+    final result =
+        await db.query('user', where: 'id = ?', whereArgs: [1], limit: 1);
 
     if (result.isEmpty) return null;
     final row = result.first;
@@ -326,6 +359,42 @@ CREATE TABLE IF NOT EXISTS app_metadata (
   TimeOfDay _epochToTimeOfDay(int epoch) {
     final dt = DateTime.fromMillisecondsSinceEpoch(epoch * 1000);
     return TimeOfDay(hour: dt.hour, minute: dt.minute);
+  }
+
+  Future<void> insertTodayHydration(double consumed, DateTime timestamp) async {
+    final db = await database;
+    final timezone = (await FlutterTimezone.getLocalTimezone()).identifier;
+    await db.insert(
+      todayHydrationHistoryTableName,
+      {
+        'timestamp': timestamp.toIso8601String(),
+        'consumed': consumed,
+        'timezone': timezone,
+      },
+    );
+    Console.log(
+        tag: "APP",
+        value:
+            "[DB] Inserted today history: $consumed mL at $timestamp [Timezone: $timezone]");
+  }
+
+  Future<List<Map<String, dynamic>>> getTodayHydrationHistory() async {
+    final db = await database;
+    return await db.query(todayHydrationHistoryTableName,
+        orderBy: 'timestamp DESC');
+  }
+
+  Future<void> clearTodayHydrationHistory() async {
+    try {
+      final db = await database;
+      final count = await db.delete(todayHydrationHistoryTableName);
+      Console.log(
+          tag: "APP",
+          value: "[DB] Cleared today_hydration_history. Rows deleted: $count");
+    } catch (e) {
+      Console.log(
+          tag: "APP", value: "[DB] Error clearing today_hydration_history: $e");
+    }
   }
 
   Future<void> clearAllSlots() async {
@@ -461,21 +530,26 @@ CREATE TABLE IF NOT EXISTS app_metadata (
       final result = await db.query(
         hydrationSummaryTableName,
         where: 'date >= ? AND date <= ?',
-        whereArgs: [firstDayOfMonth.millisecondsSinceEpoch, midnightToday.millisecondsSinceEpoch],
+        whereArgs: [
+          firstDayOfMonth.millisecondsSinceEpoch,
+          midnightToday.millisecondsSinceEpoch
+        ],
         orderBy: 'date DESC',
       );
 
       if (result.isEmpty) return 0;
 
-      final summaries = result.map((r) => HydrationDaySummary.fromMap(r)).toList();
+      final summaries =
+          result.map((r) => HydrationDaySummary.fromMap(r)).toList();
       int currentStreak = 0;
       DateTime checkDate = midnightToday;
 
       // Special handling for today: if goal is met today, it starts/continues the streak.
       // If not met today, we check if yesterday was met.
       for (var summary in summaries) {
-        final normalizedSummaryDate = DateTime(summary.date.year, summary.date.month, summary.date.day);
-        
+        final normalizedSummaryDate =
+            DateTime(summary.date.year, summary.date.month, summary.date.day);
+
         if (normalizedSummaryDate.isAtSameMomentAs(midnightToday)) {
           if (summary.consumed >= summary.target) {
             currentStreak++;
@@ -486,7 +560,7 @@ CREATE TABLE IF NOT EXISTS app_metadata (
 
         // If there's a gap in days (missing record for a day), the streak breaks.
         while (checkDate.isAfter(normalizedSummaryDate)) {
-           return currentStreak;
+          return currentStreak;
         }
 
         if (summary.consumed >= summary.target) {
@@ -500,7 +574,8 @@ CREATE TABLE IF NOT EXISTS app_metadata (
 
       return currentStreak;
     } catch (e) {
-      Console.log(tag: "APP", value: "[DB] Error calculating consistency streak: $e");
+      Console.log(
+          tag: "APP", value: "[DB] Error calculating consistency streak: $e");
       return 0;
     }
   }

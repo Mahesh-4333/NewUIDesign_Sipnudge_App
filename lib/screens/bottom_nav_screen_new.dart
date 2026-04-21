@@ -54,87 +54,95 @@ class _BottomNavScreenNewState extends State<BottomNavScreenNew> {
     return WillPopScope(
       onWillPop: _onWillPop,
       child: Scaffold(
-        extendBody: true,
-        bottomNavigationBar: SafeArea(
-          top: false,
-          left: false,
-          right: false,
-          bottom: false,
-          child: Padding(
-            padding: EdgeInsets.only(
-              left: AppDimensions.defaultPadding.w,
-              right: AppDimensions.defaultPadding.w,
-              bottom: AppDimensions.dim28.h,
-            ),
-            child: SizedBox(
-              height: AppDimensions.dim88.h,
-              child: const AnimatedBottomNavBar(),
-            ),
-          ),
-        ),
-        body: Container(
-          width: double.infinity,
-          height: double.infinity,
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [
-                AppColors.gradientStart,
-                AppColors.gradientEnd,
-              ],
-            ),
-          ),
-          child: MultiBlocListener(
-            listeners: [
-              BlocListener<HydrationCubit, HydrationState>(
-                listenWhen: (prev, curr) {
-                  Console.log(
-                      tag: "newlyUnlockedLevel123",
-                      value:
-                          "${curr.newlyUnlockedLevel} :: ${prev.newlyUnlockedLevel}");
-                  if (curr.newlyUnlockedLevel != null &&
-                      prev.newlyUnlockedLevel != curr.newlyUnlockedLevel) {
-                    return true;
-                  }
-                  return false;
-                },
-                listener: (context, hydrationState) {
-                  // _showLevelUpSnackbar(context, hydrationState.newlyUnlockedLevel!);
-                },
+        extendBody: false,
+        bottomNavigationBar: SizedBox(height: 0, width: 0,),
+        body: Stack(
+          children: [
+            Container(
+              width: double.infinity,
+              height: double.infinity,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    AppColors.gradientStart,
+                    AppColors.gradientEnd,
+                  ],
+                ),
               ),
-              BlocListener<BottomNavCubit, BottomNavState>(
-                listenWhen: (prev, curr) =>
-                    prev.selectedTab != curr.selectedTab,
-                listener: (context, state) {
-                  Console.log(
-                      tag: "_currentTabSelected", value: state.selectedTab);
-                  if (state.selectedTab == BottomNavTab.analysis) {
-                    _checkAndShowHealthDialog(context);
-                  }
-                },
+              child: MultiBlocListener(
+                listeners: [
+                  BlocListener<HydrationCubit, HydrationState>(
+                    listenWhen: (prev, curr) {
+                      Console.log(
+                          tag: "newlyUnlockedLevel123",
+                          value:
+                              "${curr.newlyUnlockedLevel} :: ${prev.newlyUnlockedLevel}");
+                      if (curr.newlyUnlockedLevel != null &&
+                          prev.newlyUnlockedLevel != curr.newlyUnlockedLevel) {
+                        return true;
+                      }
+                      return false;
+                    },
+                    listener: (context, hydrationState) {
+                      // _showLevelUpSnackbar(context, hydrationState.newlyUnlockedLevel!);
+                    },
+                  ),
+                  BlocListener<BottomNavCubit, BottomNavState>(
+                    listenWhen: (prev, curr) =>
+                        prev.selectedTab != curr.selectedTab,
+                    listener: (context, state) {
+                      Console.log(
+                          tag: "_currentTabSelected", value: state.selectedTab);
+                      if (state.selectedTab == BottomNavTab.analysis) {
+                        _checkAndShowHealthDialog(context);
+                      }
+                    },
+                  ),
+                  BlocListener<BleCubit, BleState>(
+                    listenWhen: (prev, curr) =>
+                        curr.commandSentTimestamp != prev.commandSentTimestamp &&
+                        curr.lastCommandSent != null,
+                    listener: (context, state) {
+                      // ScaffoldMessenger.of(context).showSnackBar(
+                      //   SnackBar(
+                      //     content: Text(state.message),
+                      //     behavior: SnackBarBehavior.floating,
+                      //     backgroundColor: Colors.green.shade700,
+                      //   ),
+                      // );
+                    },
+                  ),
+                ],
+                child: BlocBuilder<BottomNavCubit, BottomNavState>(
+                  builder: (context, state) {
+                    return _buildTabNavigators(state.selectedTab);
+                  },
+                ),
               ),
-              BlocListener<BleCubit, BleState>(
-                listenWhen: (prev, curr) =>
-                    curr.commandSentTimestamp != prev.commandSentTimestamp &&
-                    curr.lastCommandSent != null,
-                listener: (context, state) {
-                  // ScaffoldMessenger.of(context).showSnackBar(
-                  //   SnackBar(
-                  //     content: Text(state.message),
-                  //     behavior: SnackBarBehavior.floating,
-                  //     backgroundColor: Colors.green.shade700,
-                  //   ),
-                  // );
-                },
-              ),
-            ],
-            child: BlocBuilder<BottomNavCubit, BottomNavState>(
-              builder: (context, state) {
-                return _buildTabNavigators(state.selectedTab);
-              },
             ),
-          ),
+            Positioned(
+              bottom: 0.h,
+              child: SafeArea(
+                top: false,
+                left: false,
+                right: false,
+                bottom: false,
+                child: Padding(
+                  padding: EdgeInsets.only(
+                    left: AppDimensions.defaultPadding.w,
+                    right: AppDimensions.defaultPadding.w,
+                    bottom: AppDimensions.dim28.h,
+                  ),
+                  child: SizedBox(
+                    height: AppDimensions.dim88.h,
+                    child: const AnimatedBottomNavBar(),
+                  ),
+                ),
+              ),
+            )
+          ],
         ),
       ),
     );
@@ -274,40 +282,46 @@ class _BottomNavScreenNewState extends State<BottomNavScreenNew> {
 
     return Offstage(
       offstage: selectedTab != tab,
-      child: Navigator(
-        key: navigatorKey,
-        onGenerateRoute: (RouteSettings settings) {
-          if (tab == BottomNavTab.settings) {
-            switch (settings.name) {
-              case '/':
-                return MaterialPageRoute(
-                  builder: (_) => const SettingScreen(),
-                  settings: settings,
-                );
-              case '/personalinfo':
-                return MaterialPageRoute(
-                  builder: (_) => UserInfoInputScreen(fromSettings: true),
-                  settings: settings,
-                );
-              case '/drinkreminder':
-                return MaterialPageRoute(
-                  builder: (_) => const DrinkReminderPage(),
-                  settings: settings,
-                );
+      child: Theme(
+        data: Theme.of(context).copyWith(
+          scaffoldBackgroundColor: Colors.transparent,
+          canvasColor: Colors.transparent, // 🔥 MOST IMPORTANT
+        ),
+        child: Navigator(
+          key: navigatorKey,
+          onGenerateRoute: (RouteSettings settings) {
+            if (tab == BottomNavTab.settings) {
+              switch (settings.name) {
+                case '/':
+                  return MaterialPageRoute(
+                    builder: (_) => const SettingScreen(),
+                    settings: settings,
+                  );
+                case '/personalinfo':
+                  return MaterialPageRoute(
+                    builder: (_) => UserInfoInputScreen(fromSettings: true),
+                    settings: settings,
+                  );
+                case '/drinkreminder':
+                  return MaterialPageRoute(
+                    builder: (_) => const DrinkReminderPage(),
+                    settings: settings,
+                  );
 
-              case '/waterintaketimeline':
-                return MaterialPageRoute(
-                  builder: (_) => const WaterIntakeTimelineScreen(),
-                  settings: settings,
-                );
-              // add other setting routes here...
+                case '/waterintaketimeline':
+                  return MaterialPageRoute(
+                    builder: (_) => const WaterIntakeTimelineScreen(),
+                    settings: settings,
+                  );
+                // add other setting routes here...
+              }
             }
-          }
-          return MaterialPageRoute(
-            builder: (_) => child,
-            settings: settings,
-          );
-        },
+            return PageRouteBuilder(
+              pageBuilder: (_, __, ___) => child,
+              transitionsBuilder: (_, __, ___, child) => child,
+            );
+          },
+        ),
       ),
     );
   }

@@ -104,25 +104,26 @@ class HealthService {
     Console.log(
         tag: "HealthService",
         value: "hasPermissions check for $types: $hasPermission");
+    // If we definitely have permission, return true.
     if (hasPermission == true) return true;
 
-    if(Platform.isAndroid){
-      force = true;
-    }
-
-    // If we haven't asked yet, ask now.
+    // If we haven't asked yet, or if we are being forced to ask again (e.g. via refresh button).
     bool alreadyRequested =
         await SharedPrefsHelper.getHasRequestedHealthPermission();
 
+    Console.log(tag: "alreadyRequested", value: alreadyRequested);
+    if (alreadyRequested) {
+      return true;
+    }
     if (force || !alreadyRequested) {
+      // Mark as requested to prevent infinite loops if authorization fails or is inconclusive.
+      await SharedPrefsHelper.setHasRequestedHealthPermission(true);
+      Console.log(tag: "setHasRequestedHealthPermission", value: true);
       bool authorized = await requestAuthorization();
-      if (authorized) {
-        await SharedPrefsHelper.setHasRequestedHealthPermission(true);
-        return true;
-      }
+      return authorized;
     }
 
-    // If we already requested and still don't have permission (and were not forced), return false.
+    // Default to false if we don't have permission and aren't allowed to ask.
     return false;
   }
 
@@ -176,10 +177,11 @@ class HealthService {
       final types = [HealthDataType.STEPS];
 
       bool authorized = await _ensurePermissions(types, force: forcePermission);
+      Console.log(tag: "authorized_124", value: authorized);
       if (!authorized) return 0;
 
       final steps = await _health.getTotalStepsInInterval(startOfDay, now);
-      return steps ?? 0;
+      return steps!;
     } catch (e) {
       Console.log(tag: "getStepCount Error", value: e.toString());
       return 0;

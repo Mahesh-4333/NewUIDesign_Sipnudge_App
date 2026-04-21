@@ -2,13 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:hydrify/constants/app_colors.dart';
 import 'package:screenshot/screenshot.dart';
+import 'package:confetti/confetti.dart';
 
 import 'package:hydrify/constants/app_dimensions.dart';
 import 'package:hydrify/constants/app_font_styles.dart';
 
-void showLevelUpDialog(BuildContext context, int level, String totalLitres,
+Future<void> showLevelUpDialog(BuildContext context, int level, String totalLitres,
     {ScreenshotController? screenshotController,
-    Function(BuildContext)? onShare}) {
+    Function(BuildContext)? onShare,
+    ConfettiController? confettiController,
+    Path Function(Size)? createParticlePath}) {
   
   String displayMl = totalLitres;
   if (totalLitres.toLowerCase().endsWith('l')) {
@@ -20,180 +23,200 @@ void showLevelUpDialog(BuildContext context, int level, String totalLitres,
     displayMl = '$totalLitres ml';
   }
 
-  showDialog(
+  return showDialog(
     context: context,
     barrierDismissible: true,
     builder: (dialogContext) {
-      return Dialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20.r),
-        ),
-        insetPadding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 80.h),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(20.r),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Screenshot(
-                // If a controller is provided, use it, otherwise fall back (for safety)
-                controller: screenshotController ?? ScreenshotController(),
-                child: Container(
-                  width: double.infinity,
-                  padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 20.h),
-                  decoration: BoxDecoration(
-                    image: const DecorationImage(
-                      image: AssetImage('assets/popupscreenimage.png'),
-                      fit: BoxFit.cover,
-                    ),
-                  ),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      /// Badge with Gradient Level Number
-                      Padding(
-                        padding: EdgeInsets.only(left: 30.w),
-                        child: Center(
-                          child: Stack(
-                            alignment: Alignment.center,
-                            children: [
-                              Transform.translate(
-                                offset: Offset(-15.w,
-                                    0), // move 15px LEFT (adjust value as needed)
-                                child: Image.asset(
-                                  'assets/images/goals_new_img.png',
-                                  width: 330.w,
-                                  height: 320.h,
-                                  fit: BoxFit.contain,
-                                ),
-                              ),
-                              Padding(
-                                padding: EdgeInsets.only(right: 30.w),
-                                child: ShaderMask(
-                                  shaderCallback: (bounds) => const LinearGradient(
-                                    colors: [
-                                      Color(0xFF16446F),
-                                      Color(0xFF2569A9),
-                                      Color(0xFF59ADFB),
-                                    ],
-                                  ).createShader(
-                                    Rect.fromLTWH(
-                                      0,
-                                      0,
-                                      bounds.width,
-                                      bounds.height,
+      return Stack(
+        alignment: Alignment.topCenter,
+        clipBehavior: Clip.none,
+        children: [
+          Dialog(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20.r),
+            ),
+            insetPadding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 80.h),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(20.r),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Screenshot(
+                    // If a controller is provided, use it, otherwise fall back (for safety)
+                    controller: screenshotController ?? ScreenshotController(),
+                    child: Container(
+                      width: double.infinity,
+                      padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 20.h),
+                      decoration: BoxDecoration(
+                        image: const DecorationImage(
+                          image: AssetImage('assets/popupscreenimage.png'),
+                          fit: BoxFit.cover,
+                        ),
+                      ),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          /// Badge with Gradient Level Number
+                          Padding(
+                            padding: EdgeInsets.only(left: 30.w),
+                            child: Center(
+                              child: Stack(
+                                alignment: Alignment.center,
+                                children: [
+                                  Transform.translate(
+                                    offset: Offset(-15.w,
+                                        0), // move 15px LEFT (adjust value as needed)
+                                    child: Image.asset(
+                                      'assets/images/goals_new_img.png',
+                                      width: 330.w,
+                                      height: 320.h,
+                                      fit: BoxFit.contain,
                                     ),
                                   ),
-                                  blendMode: BlendMode.srcIn,
-                                  child: Transform.translate(
-                                    offset: Offset(0, -5.h),
-                                    child: Text(
-                                      '$level',
-                                      style: TextStyle(
-                                        fontSize: 74.sp,
-                                        fontWeight: FontWeight.w900,
-                                        fontFamily: 'poppins-Bold',
-                                        color: Colors.white,
+                                  Padding(
+                                    padding: EdgeInsets.only(right: 30.w),
+                                    child: ShaderMask(
+                                      shaderCallback: (bounds) => const LinearGradient(
+                                        colors: [
+                                          Color(0xFF16446F),
+                                          Color(0xFF2569A9),
+                                          Color(0xFF59ADFB),
+                                        ],
+                                      ).createShader(
+                                        Rect.fromLTWH(
+                                          0,
+                                          0,
+                                          bounds.width,
+                                          bounds.height,
+                                        ),
+                                      ),
+                                      blendMode: BlendMode.srcIn,
+                                      child: Transform.translate(
+                                        offset: Offset(0, -5.h),
+                                        child: Text(
+                                          '$level',
+                                          style: TextStyle(
+                                            fontSize: 74.sp,
+                                            fontVariations: [AppFontStyles.extraBoldFontVariation],
+                                            fontFamily: AppFontStyles.poppinsFamily,
+                                            color: Colors.white,
+                                          ),
+                                        ),
                                       ),
                                     ),
                                   ),
-                                ),
-                              ),
-                              Padding(
-                                padding: EdgeInsets.only(right: 25.w, top: 240.h),
-                                child: Text(
-                                  "You've Reached Level $level!",
-                                  style: TextStyle(
-                                    fontSize: AppFontStyles.fontSize_24,
-                                    fontVariations: [
-                                      AppFontStyles.boldFontVariation
-                                    ],
-                                    fontFamily: AppFontStyles.urbanistFontFamily,
-                                    color: AppColors.bluegray,
+                                  Padding(
+                                    padding: EdgeInsets.only(right: 25.w, top: 240.h),
+                                    child: Text(
+                                      "You've Reached Level $level!",
+                                      style: TextStyle(
+                                        fontSize: AppFontStyles.fontSize_24,
+                                        fontVariations: [
+                                          AppFontStyles.boldFontVariation
+                                        ],
+                                        fontFamily: AppFontStyles.urbanistFontFamily,
+                                        color: AppColors.bluegray,
+                                      ),
+                                      textAlign: TextAlign.center,
+                                    ),
                                   ),
-                                  textAlign: TextAlign.center,
-                                ),
+                                ],
                               ),
-                            ],
+                            ),
                           ),
-                        ),
-                      ),
 
-                      /// Message
-                      Padding(
-                        padding: EdgeInsets.symmetric(horizontal: 8.w),
-                        child: Text(
-                          '"Way to go! Your $displayMl water goal is complete. Keep the good habits flowing!"',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            fontSize: AppFontStyles.fontSize_16,
-                            fontVariations: [AppFontStyles.semiBoldFontVariation],
-                            fontFamily: AppFontStyles.urbanistFontFamily,
-                            color: AppColors.bluegray,
+                          /// Message
+                          Padding(
+                            padding: EdgeInsets.symmetric(horizontal: 8.w),
+                            child: Text(
+                              '"Way to go! Your $displayMl water goal is complete. Keep the good habits flowing!"',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                fontSize: AppFontStyles.fontSize_16,
+                                fontVariations: [AppFontStyles.semiBoldFontVariation],
+                                fontFamily: AppFontStyles.urbanistFontFamily,
+                                color: AppColors.bluegray,
+                              ),
+                            ),
                           ),
-                        ),
+                          
+                          SizedBox(height: 10.h),
+                        ],
                       ),
-                      
-                      SizedBox(height: 10.h),
-                    ],
+                    ),
                   ),
-                ),
-              ),
 
-              // Bottom Area NOT captured by the screenshot
-              Container(
-                width: double.infinity,
-                padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 20.h),
-                color: Colors.white,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 10.w),
-                      child: Text(
-                        'Share your achievements with friends',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontSize: AppFontStyles.fontSize_16,
-                          fontVariations: [AppFontStyles.semiBoldFontVariation],
-                          fontFamily: AppFontStyles.urbanistFontFamily,
-                          color: AppColors.bluegray,
-                        ),
-                      ),
-                    ),
-                    SizedBox(height: 10.h),
-
-                    /// Share Button
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton(
-                        onPressed:
-                            onShare != null ? () => onShare(dialogContext) : null,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF369FFF),
-                          minimumSize:
-                              Size(double.maxFinite, AppDimensions.dim50.h),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(30.r),
-                          ),
-                          padding: EdgeInsets.symmetric(vertical: 14.h),
-                        ),
-                        child: Text(
-                          'Share',
-                          style: TextStyle(
-                            fontSize: AppFontStyles.fontSize_16,
-                            fontVariations: [AppFontStyles.boldFontVariation],
-                            fontFamily: AppFontStyles.urbanistFontFamily,
-                            color: Colors.white,
+                  // Bottom Area NOT captured by the screenshot
+                  Container(
+                    width: double.infinity,
+                    padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 20.h),
+                    color: Colors.white,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Padding(
+                          padding: EdgeInsets.symmetric(horizontal: 10.w),
+                          child: Text(
+                            'Share your achievements with friends',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              fontSize: AppFontStyles.fontSize_16,
+                              fontVariations: [AppFontStyles.semiBoldFontVariation],
+                              fontFamily: AppFontStyles.urbanistFontFamily,
+                              color: AppColors.bluegray,
+                            ),
                           ),
                         ),
-                      ),
+                        SizedBox(height: 10.h),
+
+                        /// Share Button
+                        SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton(
+                            onPressed:
+                                onShare != null ? () => onShare(dialogContext) : null,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF369FFF),
+                              minimumSize:
+                                  Size(double.maxFinite, AppDimensions.dim50.h),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(30.r),
+                              ),
+                              padding: EdgeInsets.symmetric(vertical: 14.h),
+                            ),
+                            child: Text(
+                              'Share',
+                              style: TextStyle(
+                                fontSize: AppFontStyles.fontSize_16,
+                                fontVariations: [AppFontStyles.boldFontVariation],
+                                fontFamily: AppFontStyles.urbanistFontFamily,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
-            ],
+            ),
           ),
-        ),
+          if (confettiController != null)
+            ConfettiWidget(
+              confettiController: confettiController,
+              blastDirectionality: BlastDirectionality.explosive,
+              shouldLoop: false,
+              colors: const [
+                Colors.green,
+                Colors.blue,
+                Colors.pink,
+                Colors.orange,
+                Colors.purple
+              ],
+              createParticlePath: createParticlePath,
+            ),
+        ],
       );
     },
   );
