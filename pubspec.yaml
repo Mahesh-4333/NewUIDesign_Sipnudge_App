@@ -51,6 +51,7 @@ dependencies:
   share_plus: ^7.2.1 
   screenshot: ^3.0.0
   audioplayers: ^6.0.0
+  alarm: ^5.1.5
   mobile_scanner: ^7.1.4
   qr_flutter: ^4.1.0
   googleapis: ^15.0.0
@@ -65,6 +66,8 @@ dependencies:
   liquid_glass_easy: ^1.1.1
   package_info_plus: ^8.0.0
   pedometer: ^4.2.0
+  timelines_plus: ^2.0.0
+  dotted_border: ^3.1.0
 
 
 dev_dependencies:
@@ -127,6 +130,11 @@ flutter:
     - family: Poppins
       fonts:
         - asset: assets/fonts/Poppins-SemiBold.ttf
+    - family: Inter
+      fonts:
+        - asset: assets/fonts/Inter-VariableFont_opsz,wght.ttf
+
+
 
         
   # For details regarding fonts from package dependencies,

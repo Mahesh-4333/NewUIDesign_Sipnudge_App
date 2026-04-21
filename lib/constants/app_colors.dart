@@ -146,6 +146,37 @@ class AppColors {
   static const color_F97316 = Color(0XFFF97316);
   static const color_F8FAFC = Color(0XFFF8FAFC);
   static const color_EFF6FF = Color(0xFFEFF6FF);
+  static const Color color_1E69B3 = Color(0xFF1E69B3);
+  static const Color color_3B82F6 = Color(0xFF3B82F6);
+  static const Color color_3B82F6_30 = Color(0x4D3B82F6);
+  static const Color color_CBD5E1 = Color(0XFFCBD5E1);
+  static const Color color_414755 = Color(0XFF414755);
+  static const Color color_EBF2FE = Color(0XFFEBF2FE);
+  static const Color color_414141 = Color(0XFF414141);
+  static const Color color_464545 = Color(0xCC464545);
+  static const Color color_4F4F4F = Color(0x664F4F4F);
+  static const Color color_369FFF = Color(0XFF369FFF);
+  static const Color color_006768 = Color(0XFF006768);
+
+  static const Color color_000076F7 = Color(0x000076F7);
+  static const Color color_66FFFFFF = Color(0x66FFFFFF);
+  static const Color color_00007AFF = Color(0x00007AFF);
+
+  static const Color color_1AFFFFFF = Color(0x1AFFFFFF);
+  static const Color color_1A004999 = Color(0x1A004999);
+  static const Color color_1C000000 = Color(0x1C000000);
+  static const Color color_1E293B = Color(0XFF1E293B);
+  static const Color color_1A73E8 = Color(0XFF1A73E8);
+  static const Color color_0076F7 =
+      Color(0xFF0076F7); // Solid version of rgba(0, 118, 247)
+  static const Color color_007AFF =
+      Color(0xFF007AFF); // Solid version of rgba(0, 122, 255)
+  static const Color color_004999 = Color(0xFF004999);
+
+  static const Color color_CBD5E1D1 = Color(0XCBD5E1D1);
+  static const Color color_2563EB = Color(0XFF2563EB);
+  static const Color color_D9D9D9 = Color(0XFFD9D9D9);
+  static const Color color_80EFF6FF = Color(0X80EFF6FF);
 
   static const LinearGradient guestButtonColor = LinearGradient(
     begin: Alignment.centerLeft,
