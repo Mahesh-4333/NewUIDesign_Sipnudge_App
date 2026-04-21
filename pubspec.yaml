@@ -58,6 +58,8 @@ dependencies:
   http: ^1.6.0
   vibration: ^3.1.5
   marquee: ^2.2.3
+  timelines_plus: ^2.0.0
+  dotted_border: ^3.1.0
 
 
 dev_dependencies:
@@ -118,6 +120,11 @@ flutter:
     - family: Poppins
       fonts:
         - asset: assets/fonts/Poppins-SemiBold.ttf
+    - family: Inter
+      fonts:
+        - asset: assets/fonts/Inter-VariableFont_opsz,wght.ttf
+
+       
 
         
   # For details regarding fonts from package dependencies,

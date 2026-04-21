@@ -13,6 +13,8 @@ import 'package:hydrify/cubit/account&security/account&security_cubit.dart';
 import 'package:hydrify/cubit/ble/ble_cubit.dart';
 import 'package:hydrify/cubit/bottle/bottle_data_cubit.dart';
 import 'package:hydrify/cubit/bottom_nav/bottom_nav_cubit.dart';
+import 'package:hydrify/cubit/calendar/calendar_cubit.dart';
+import 'package:hydrify/cubit/data_analytics/data_analytics_cubit.dart';
 import 'package:hydrify/cubit/drinkreminder/drink_reminder_cubit.dart';
 import 'package:hydrify/cubit/filter/filter_cubit.dart';
 import 'package:hydrify/cubit/help&support/help&support_cubil.dart';
@@ -95,7 +97,6 @@ Future<void> main() async {
     print("StackTrace :  ${details.stack}");
   };
 
-
   runApp(
     MyApp(
       notificationService: notificationService,
@@ -148,9 +149,15 @@ class MyApp extends StatelessWidget {
         BlocProvider(create: (context) => AccountSecurityCubit()),
         BlocProvider(create: (context) => HelpAndSupportCubit()),
         BlocProvider(create: (context) => PersonalInfoCubit()),
-        BlocProvider(create: (context) => DrinkReminderCubit(hydrationCubit: hydrationCubit, bottleDataCubit: context.read<BottleDataCubit>())),
+        BlocProvider(
+            create: (context) => DrinkReminderCubit(
+                hydrationCubit: hydrationCubit,
+                bottleDataCubit: context.read<BottleDataCubit>())),
         BlocProvider(create: (context) => PersonalInfoCubit()),
         BlocProvider(create: (context) => PreferencesCubit()),
+        BlocProvider(create: (context) => DataAnalyticsCubit()),
+        BlocProvider(create: (context) => CalendarCubit()),
+
         // BlocProvider(create: (Context) => NotificationCubit()),
       ],
       child: Builder(

@@ -6,6 +6,7 @@ class AppFontStyles {
   static String urbanistFontFamily = "Urbanist";
   static String lexendFontFamily = "Lexend";
   static String poppinsFamily = "Poppins";
+  static String interFontFamily = "Inter";
   static String fontWeightVariationKey = "wght";
   static double fontWeightExtraBoldValue = 900;
   static double fontWeightBoldValue = 700;
@@ -17,6 +18,8 @@ class AppFontStyles {
 
   static double lineHeight_160 = 160;
   static double fontSize_1 = 1.sp;
+  static double fontSize_8 = 8.sp;
+  static double fontSize_11 = 11.sp;
   static double fontSize_16 = 16.sp;
   static double fontSize_14 = 14.sp;
   static double fontSize_12 = 12.sp;
