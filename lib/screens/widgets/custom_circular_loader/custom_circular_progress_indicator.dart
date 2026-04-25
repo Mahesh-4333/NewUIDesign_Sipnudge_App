@@ -119,8 +119,8 @@ class _EllipseArcPainter extends CustomPainter {
     }
 
     /// EXACT same arc open top like image
-    const startAngle = -120 * pi / 180; // arc opens at top
-    const totalAngle = -300 * pi / 180; // 300° like screenshot
+    const startAngle = -60 * pi / 180; // Changed to make it clockwise
+    const totalAngle = 300 * pi / 180; // Changed to make it clockwise
 
     // background full arc
     canvas.drawArc(

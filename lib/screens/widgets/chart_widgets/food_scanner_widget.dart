@@ -1,13 +1,24 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:math';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_inner_shadow/flutter_inner_shadow.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_generative_ai/google_generative_ai.dart';
+import 'package:hydrify/constants/app_style.dart';
+import 'package:hydrify/constants/assets_path.dart';
+import 'package:hydrify/cubit/bottom_nav/bottom_nav_cubit.dart';
+import 'package:hydrify/helpers/logger.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:hydrify/constants/app_colors.dart';
 import 'package:hydrify/constants/app_dimensions.dart';
 import 'package:hydrify/constants/app_font_styles.dart';
 import 'package:hydrify/constants/app_api_constants.dart';
+import 'package:hydrify/helpers/database_helper.dart';
+import 'package:hydrify/models/food_scan_data.dart';
+import 'package:fl_chart/fl_chart.dart';
 
 class FoodScannerWidget extends StatefulWidget {
   const FoodScannerWidget({super.key});
@@ -18,30 +29,115 @@ class FoodScannerWidget extends StatefulWidget {
 
 class _FoodScannerWidgetState extends State<FoodScannerWidget> {
   File? _image;
+  Uint8List? _imageBytes;
   final ImagePicker _picker = ImagePicker();
-  final TextEditingController _weightController =
-      TextEditingController(text: "250");
   bool _isAnalyzing = false;
-  String? _waterContent;
-  String? _waterVolume;
-  String? _totalVolume;
-  String? _dishName;
-  String? _confidenceScore;
-  String? _reasoning;
-  int? _calories;
-  num? _protein;
-  num? _carbs;
-  num? _fat;
-  num? _sodium;
-  num? _fiber;
-  bool _showMacros = false;
-  List<String> _details = [];
   String? _errorMessage;
 
+  // Food Data
+  String? _dishName;
+  double _currentWeight = 100.0;
+  double _baseWeight = 100.0;
+  double _waterPercentage = 0.0;
+  double _waterMl = 0.0;
+  int _calories = 0;
+  double _protein = 0.0;
+  double _carbs = 0.0;
+  double _fat = 0.0;
+  double? _sodium;
+  double? _fiber;
+  String _confidenceScore = "0%";
+  String _confidenceLevel = "NA";
+  List<String> _ingredients = [];
+  String? _reasoning;
+
+  // Base values for recalculation
+  double _baseWaterMl = 0.0;
+  int _baseCalories = 0;
+  double _baseProtein = 0.0;
+  double _baseCarbs = 0.0;
+  double _baseFat = 0.0;
+  double? _baseSodium;
+  double? _baseFiber;
+
   @override
-  void dispose() {
-    _weightController.dispose();
-    super.dispose();
+  void initState() {
+    super.initState();
+    _loadTodayScan();
+  }
+
+  Future<void> _loadTodayScan() async {
+    final scans = await DatabaseHelper().getAllFoodScans();
+    if (scans.isNotEmpty) {
+      final latest = FoodScanData.fromMap(scans.first);
+      final now = DateTime.now();
+      if (latest.timestamp.year == now.year &&
+          latest.timestamp.month == now.month &&
+          latest.timestamp.day == now.day) {
+        setState(() {
+          _dishName = latest.dishName;
+          _currentWeight = latest.weightG;
+          _baseWeight = latest.weightG;
+          _waterPercentage = latest.waterPercentage;
+          _waterMl = latest.waterContentMl;
+          _calories = latest.caloriesKcal.toInt();
+          _protein = latest.proteinG;
+          _carbs = latest.carbsG;
+          _fat = latest.fatG;
+          _sodium = latest.sodiumMg;
+          _fiber = latest.fiberG;
+          _confidenceScore = latest.confidenceScore;
+          _ingredients = latest.ingredients;
+          _reasoning = latest.reasoning;
+          if (latest.imageBase64 != null) {
+            _imageBytes = base64Decode(latest.imageBase64!);
+          } else if (latest.imagePath != null) {
+            _image = File(latest.imagePath!);
+          }
+
+          // Set base values for future recalculations
+          _baseWaterMl = _waterMl;
+          _baseCalories = _calories;
+          _baseProtein = _protein;
+          _baseCarbs = _carbs;
+          _baseFat = _fat;
+          _baseSodium = _sodium;
+          _baseFiber = _fiber;
+          _baseWeight = _currentWeight;
+
+          _updateConfidenceLevel(_confidenceScore);
+        });
+      }
+    }
+  }
+
+  void _updateConfidenceLevel(String score) {
+    if (score.contains('%')) {
+      final val = double.tryParse(score.replaceAll('%', '')) ?? 0;
+      if (val > 80)
+        _confidenceLevel = "High";
+      else if (val > 50)
+        _confidenceLevel = "Medium";
+      else
+        _confidenceLevel = "Low";
+    } else {
+      _confidenceLevel = score;
+    }
+  }
+
+  void _recalculate(double newWeight) {
+    if (_baseWeight == 0) return;
+    final ratio = newWeight / _baseWeight;
+    setState(() {
+      _currentWeight = newWeight;
+      _waterMl = _baseWaterMl * ratio;
+      _calories = (_baseCalories * ratio).toInt();
+      _protein = _baseProtein * ratio;
+      _carbs = _baseCarbs * ratio;
+      _fat = _baseFat * ratio;
+      if (_baseSodium != null) _sodium = _baseSodium! * ratio;
+      if (_baseFiber != null) _fiber = _baseFiber! * ratio;
+    });
   }
 
   Future<void> _captureAndAnalyze() async {
@@ -53,20 +149,12 @@ class _FoodScannerWidgetState extends State<FoodScannerWidget> {
 
       if (photo == null) return;
 
+      final bytes = await photo.readAsBytes();
       setState(() {
         _image = File(photo.path);
+        _imageBytes = bytes;
         _isAnalyzing = true;
         _errorMessage = null;
-        _dishName = null;
-        _confidenceScore = null;
-        _reasoning = null;
-        _calories = null;
-        _protein = null;
-        _carbs = null;
-        _fat = null;
-        _sodium = null;
-        _fiber = null;
-        _details = [];
       });
 
       await _analyzeWithGemini(photo);
@@ -85,57 +173,38 @@ class _FoodScannerWidgetState extends State<FoodScannerWidget> {
       'gemini-2.5-flash',
     ];
 
-    final weight = _weightController.text.trim().isEmpty
-        ? "250"
-        : _weightController.text.trim();
     final bytes = await photo.readAsBytes();
     final content = [
       Content.multi([
         TextPart(
-            "You are an expert nutritionist and food analysis AI for a smart hydration and macro-tracking app. \n\n"
-            "Your task is to analyze the attached image of food, identify its components, and accurately estimate both the total water content and the full nutritional breakdown based on the provided total weight, food state, and user profile.\n\n"
-            "User Input:\n"
-            "- Total food weight: $weight grams.\n"
-            "- Food state: Freshly cooked\n"
-            "- Dietary preference: Pure Vegetarian\n"
-            "- Fitness goal: Body Recomposition\n\n"
-            "Follow these steps:\n"
-            "1. Visual Identification: Carefully analyze the image to identify the main dish and all visible ingredients. Strictly adhere to the user's dietary preference when identifying ambiguous ingredients (e.g., if vegetarian, assume brown chunks are soya or paneer, not meat).\n"
-            "2. Moisture Estimation: Determine the baseline water percentage, then adjust it based on the \"Food state\" (reducing it by 5-10% for leftovers/reheated food to account for evaporation and retrogradation).\n"
-            "3. Hydration Calculation: Multiply the total weight by the final adjusted water percentage to find the total water content in milliliters (1g = 1ml).\n"
-            "4. Nutritional Breakdown: Estimate the calories, protein, carbohydrates, fat, sodium, and dietary fiber for the total weight provided. Account for changes in caloric density due to moisture loss in the specified food state.\n\n"
-            "You MUST return your response STRICTLY as a valid JSON object. Do not include any markdown formatting, code blocks, or conversational text outside the JSON. \n\n"
+            "You are an expert nutritionist. Analyze this food image and provide nutritional info for 100g portion.\n\n"
             "Use the following JSON schema:\n"
             "{\n"
-            "  \"dish_name\": \"Name of the overall dish\",\n"
-            "  \"visible_ingredients\": [\"ingredient 1\", \"ingredient 2\"],\n"
-            "  \"dietary_type\": \"Confirmed dietary classification\",\n"
+            "  \"dish_name\": \"Name\",\n"
+            "  \"visible_ingredients\": [\"item 1\", \"item 2\"],\n"
             "  \"hydration_data\": {\n"
-            "    \"baseline_water_percentage\": 60,\n"
-            "    \"adjusted_water_percentage\": 52,\n"
-            "    \"total_water_ml\": 270\n"
+            "    \"water_percentage\": 65,\n"
+            "    \"total_water_ml\": 65\n"
             "  },\n"
             "  \"nutritional_estimates\": {\n"
-            "    \"calories_kcal\": 900,\n"
-            "    \"protein_g\": 28,\n"
-            "    \"carbs_g\": 110,\n"
-            "    \"fat_g\": 35,\n"
-            "    \"sodium_mg\": 1700,\n"
-            "    \"fiber_g\": 10\n"
+            "    \"calories_kcal\": 250,\n"
+            "    \"protein_g\": 15,\n"
+            "    \"carbs_g\": 30,\n"
+            "    \"fat_g\": 10,\n"
+            "    \"sodium_mg\": 400,\n"
+            "    \"fiber_g\": 5\n"
             "  },\n"
-            "  \"confidence_score\": \"High/Medium/Low\",\n"
-            "  \"reasoning\": \"A brief explanation of the moisture adjustments and macro estimates based on the visual evidence, user dietary preference, and food state.\"\n"
+            "  \"confidence_score\": \"85%\",\n"
+            "  \"reasoning\": \"A brief explanation.\"\n"
             "}"),
         DataPart('image/jpeg', bytes),
       ])
     ];
 
     for (int i = 0; i < models.length; i++) {
-      final modelName = models[i];
       try {
-        debugPrint("Attempting analysis with: $modelName");
         final model = GenerativeModel(
-          model: modelName,
+          model: models[i],
           apiKey: AppApiConstants.geminiApiKey,
         );
 
@@ -147,56 +216,23 @@ class _FoodScannerWidgetState extends State<FoodScannerWidget> {
           setState(() {
             _isAnalyzing = false;
           });
-          return; // Success!
-        } else {
-          throw Exception("Empty response from AI");
+          await _saveToDb();
+          return;
         }
       } catch (e) {
-        debugPrint("Gemini Error with $modelName: $e");
-        final errorStr = e.toString().toLowerCase();
-
-        bool isTransient = errorStr.contains('503') ||
-            errorStr.contains('404') ||
-            errorStr.contains('not found') ||
-            errorStr.contains('unavailable') ||
-            errorStr.contains('demand');
-
-        if (isTransient && i < models.length - 1) {
-          debugPrint("Retrying with next model...");
-          continue;
+        if (i == models.length - 1) {
+          setState(() {
+            _errorMessage = "AI analysis failed.";
+            _isAnalyzing = false;
+          });
         }
-
-        setState(() {
-          _errorMessage =
-              "AI analysis failed. Please try again later or check your API key.";
-          _isAnalyzing = false;
-        });
-        break;
+        Console.log(tag: "food_scanner_error", value: e.toString());
       }
     }
   }
 
-  Future<void> _listModels() async {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text("Debug: Available Models"),
-        content: const SingleChildScrollView(
-          child: Text(
-              "Check console logs for a list of available models. If the error persists, the model might be unavailable for your key."),
-        ),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text("Close")),
-        ],
-      ),
-    );
-  }
-
   void _parseResponse(String text) {
     try {
-      // Clean potential markdown tags if AI ignores instructions
       String jsonClean = text.trim();
       if (jsonClean.contains('```json')) {
         jsonClean = jsonClean.split('```json').last.split('```').first.trim();
@@ -210,384 +246,824 @@ class _FoodScannerWidgetState extends State<FoodScannerWidget> {
 
       setState(() {
         _dishName = data['dish_name'] ?? "Unknown Dish";
-        _details = List<String>.from(data['visible_ingredients'] ?? []);
-        _waterContent = "${hydration['adjusted_water_percentage'] ?? hydration['baseline_water_percentage'] ?? 0}%";
-        _waterVolume = "${hydration['total_water_ml'] ?? 0} ml";
-        _totalVolume = "${_weightController.text} g";
-        _confidenceScore = data['confidence_score'] ?? "Medium";
+        _ingredients = List<String>.from(data['visible_ingredients'] ?? []);
+        _waterPercentage = (hydration['water_percentage'] ?? 0).toDouble();
+        _waterMl = (hydration['total_water_ml'] ?? 0).toDouble();
+        _confidenceScore = data['confidence_score'] ?? "70%";
         _reasoning = data['reasoning'] ?? "";
-        
-        // Macros
-        _calories = nutrition['calories_kcal'];
-        _protein = nutrition['protein_g'];
-        _carbs = nutrition['carbs_g'];
-        _fat = nutrition['fat_g'];
-        _sodium = nutrition['sodium_mg'];
-        _fiber = nutrition['fiber_g'];
+
+        _calories = (nutrition['calories_kcal'] ?? 0).toInt();
+        _protein = (nutrition['protein_g'] ?? 0).toDouble();
+        _carbs = (nutrition['carbs_g'] ?? 0).toDouble();
+        _fat = (nutrition['fat_g'] ?? 0).toDouble();
+        _sodium = nutrition['sodium_mg'] != null
+            ? (nutrition['sodium_mg']).toDouble()
+            : null;
+        _fiber = nutrition['fiber_g'] != null
+            ? (nutrition['fiber_g']).toDouble()
+            : null;
+
+        _baseWaterMl = _waterMl;
+        _baseCalories = _calories;
+        _baseProtein = _protein;
+        _baseCarbs = _carbs;
+        _baseFat = _fat;
+        _baseSodium = _sodium;
+        _baseFiber = _fiber;
+        _baseWeight = 100.0;
+        _currentWeight = 100.0;
+
+        _updateConfidenceLevel(_confidenceScore);
       });
     } catch (e) {
-      debugPrint("JSON Parsing Error: $e");
       setState(() {
-        _errorMessage =
-            "Failed to parse AI response. Please ensure image is clear.";
+        _errorMessage = "Failed to parse AI response.";
       });
     }
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: double.maxFinite,
-      margin: EdgeInsets.symmetric(horizontal: AppDimensions.defaultPadding.w),
-      padding: EdgeInsets.all(AppDimensions.dim16.w),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(AppDimensions.radius_12.r),
-        border: Border.all(color: AppColors.greywith80.withOpacity(0.5)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
+  Future<void> _saveToDb() async {
+    if (_dishName == null) return;
+    try {
+      final scan = FoodScanData(
+        dishName: _dishName!,
+        imagePath: _image?.path,
+        weightG: _currentWeight,
+        waterContentMl: _waterMl,
+        waterPercentage: _waterPercentage,
+        caloriesKcal: _calories.toDouble(),
+        proteinG: _protein,
+        carbsG: _carbs,
+        fatG: _fat,
+        sodiumMg: _sodium,
+        fiberG: _fiber,
+        confidenceScore: _confidenceScore,
+        ingredients: _ingredients,
+        reasoning: _reasoning,
+        imageBase64: _imageBytes != null ? base64Encode(_imageBytes!) : null,
+        timestamp: DateTime.now(),
+      );
+      await DatabaseHelper().insertFoodScan(scan.toMap());
+      Console.log(
+          tag: 'FoodScanner', value: '[DB] Food scan saved: ${scan.dishName}');
+    } catch (e, st) {
+      Console.log(tag: 'FoodScanner', value: '[DB] _saveToDb failed: $e\n$st');
+    }
+  }
+
+  void _showWeightPicker() async {
+    context.read<BottomNavCubit>().hideBar();
+
+    // Calculate initial item index
+    final int initialItem = (_currentWeight.toInt() - 1).clamp(0, 2999);
+    final FixedExtentScrollController scrollController =
+        FixedExtentScrollController(initialItem: initialItem);
+
+    await showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(25.r)),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Weight Input Section
-          Padding(
-            padding: EdgeInsets.only(bottom: 12.h),
-            child: Row(
-              children: [
-                Icon(Icons.scale_rounded,
-                    size: 18.w, color: AppColors.bluegray),
-                SizedBox(width: 8.w),
-                Text(
-                  "Total Food Weight (g):",
-                  style: TextStyle(
-                    fontSize: 13.sp,
-                    color: AppColors.bluegray,
-                    fontWeight: FontWeight.w600,
+      builder: (context) {
+        return Container(
+          height: 350.h,
+          padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 16.h),
+          child: Column(
+            children: [
+              // Header with Done button on top right
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const SizedBox(width: 60), // Spacer for centering title
+                  Text(
+                    "Select Weight (g)",
+                    style: TextStyle(
+                      fontSize: 18.sp,
+                      fontVariations: [AppFontStyles.boldFontVariation],
+                      fontFamily: AppFontStyles.urbanistFontFamily,
+                      color: AppColors.bluegray,
+                    ),
                   ),
-                ),
-                SizedBox(width: 12.w),
-                Expanded(
-                  child: Container(
-                    height: 36.h,
-                    child: TextField(
-                      controller: _weightController,
-                      keyboardType: TextInputType.text,
-                      textInputAction: TextInputAction.done,
-                      textAlign: TextAlign.center,
+                  TextButton(
+                    onPressed: () {
+                      _saveToDb();
+                      Navigator.pop(context);
+                    },
+                    child: Text(
+                      "Done",
                       style: TextStyle(
-                          fontSize: 14.sp,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.blueWaterIntake),
-                      decoration: InputDecoration(
-                        contentPadding: EdgeInsets.symmetric(horizontal: 10.w),
-                        border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(8.r)),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8.r),
-                          borderSide: BorderSide(
-                              color: AppColors.greywith80.withOpacity(0.5)),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8.r),
-                          borderSide:
-                              BorderSide(color: AppColors.blueWaterIntake),
-                        ),
+                        fontSize: 16.sp,
+                        fontVariations: [AppFontStyles.boldFontVariation],
+                        color: AppColors.blueWaterIntake,
                       ),
                     ),
                   ),
-                ),
-              ],
-            ),
-          ),
-          Divider(color: AppColors.greywith80.withOpacity(0.3)),
-          SizedBox(height: 8.h),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Left Side: Image or Placeholder
-              InkWell(
-                onTap: _isAnalyzing ? null : _captureAndAnalyze,
-                borderRadius: BorderRadius.circular(AppDimensions.radius_10.r),
-                child: Container(
-                  width: 120.w,
-                  height: 120.w,
-                  decoration: BoxDecoration(
-                    color: AppColors.greywith80.withOpacity(0.1),
-                    borderRadius:
-                        BorderRadius.circular(AppDimensions.radius_10.r),
-                  ),
-                  child: ClipRRect(
-                    borderRadius:
-                        BorderRadius.circular(AppDimensions.radius_10.r),
-                    child: _image != null
-                        ? Image.file(_image!, fit: BoxFit.cover)
-                        : Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(Icons.camera_alt_outlined,
-                                  size: 32.w, color: AppColors.bluegray),
-                              SizedBox(height: 4.h),
-                              Text(
-                                "Capture Food",
-                                style: TextStyle(
-                                  fontSize: 10.sp,
-                                  color: AppColors.bluegray,
-                                  fontWeight: FontWeight.w600,
-                                ),
+                ],
+              ),
+              SizedBox(height: 20.h),
+
+              // Cupertino-style picker with highlight
+              Expanded(
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    // Highlight bar
+                    Container(
+                      height: 50.h,
+                      width: double.infinity,
+                      decoration: BoxDecoration(
+                        color: AppColors.blueWaterIntake.withOpacity(0.05),
+                        borderRadius: BorderRadius.circular(10.r),
+                      ),
+                    ),
+                    ListWheelScrollView.useDelegate(
+                      controller: scrollController,
+                      itemExtent: 50.h,
+                      perspective: 0.005,
+                      diameterRatio: 1.5,
+                      physics: const FixedExtentScrollPhysics(),
+                      onSelectedItemChanged: (index) {
+                        _recalculate((index + 1).toDouble());
+                      },
+                      childDelegate: ListWheelChildBuilderDelegate(
+                        builder: (context, index) {
+                          return Center(
+                            child: Text(
+                              "${index + 1} g",
+                              style: TextStyle(
+                                fontSize: 22.sp,
+                                fontVariations: [
+                                  AppFontStyles.boldFontVariation
+                                ],
+                                color: AppColors.bluegray,
                               ),
-                            ],
-                          ),
-                  ),
+                            ),
+                          );
+                        },
+                        childCount: 3000,
+                      ),
+                    ),
+                  ],
                 ),
               ),
-              SizedBox(width: 16.w),
-              // Right Side: Details
-              Expanded(
-                child: InkWell(
-                  onTap: _image == null
-                      ? (_isAnalyzing ? null : _captureAndAnalyze)
-                      : null,
+              SizedBox(height: 10.h),
+            ],
+          ),
+        );
+      },
+    );
+    context.read<BottomNavCubit>().showBar();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    bool isLoaded = _dishName != null;
+
+    return Container(
+      width: double.maxFinite,
+      margin: EdgeInsets.symmetric(horizontal: AppDimensions.defaultPadding.w),
+      clipBehavior: Clip.antiAlias,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20.r),
+        boxShadow: AppStyle.boxShadowVariation3,
+      ),
+      child: Stack(
+        children: [
+          // SizedBox(height: 200.h),
+          // Background Image
+          // if (_imageBytes != null || _image != null)
+          //   Positioned.fill(
+          //     child: _imageBytes != null
+          //       ? Image.memory(
+          //           _imageBytes!,
+          //           fit: BoxFit.cover,
+          //           color: Colors.black.withOpacity(0.1),
+          //           colorBlendMode: BlendMode.darken,
+          //         )
+          //       : Image.file(
+          //           _image!,
+          //           fit: BoxFit.cover,
+          //           color: Colors.black.withOpacity(0.1),
+          //           colorBlendMode: BlendMode.darken,
+          //         ),
+          //   ),
+
+          Positioned.fill(
+            left: 0,
+            right: 0,
+            bottom: isLoaded ? 120 : -300,
+            child: Image.asset(
+              AssetsPath.foodImage,
+              fit: BoxFit.cover,
+            ),
+          ),
+
+          // Foreground Content
+          Align(
+            alignment: Alignment.center,
+            child: Column(
+              children: [
+                Padding(
+                  padding: EdgeInsets.symmetric(vertical: 20.h),
                   child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        _dishName ?? "Food Analysis",
-                        style: TextStyle(
-                          fontSize: 15.sp,
-                          color: AppColors.bluegray,
-                          fontFamily: AppFontStyles.urbanistFontFamily,
-                          fontWeight: FontWeight.bold,
+                      // Confidence Badge
+                      _buildConfidenceBadge(),
+                      SizedBox(height: 10.h),
+
+                      // Title
+                      Padding(
+                        padding: EdgeInsets.symmetric(vertical: 13.h),
+                        child: Text(
+                          "Snap food pics for quick\nAI-driven nutrition facts",
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 16.sp,
+                            color: _image != null
+                                ? const Color(0xFF456173)
+                                : AppColors.bluegray,
+                            fontVariations: [AppFontStyles.boldFontVariation],
+                            height: 1.2,
+                            fontFamily: AppFontStyles.urbanistFontFamily,
+                          ),
                         ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
                       ),
-                      SizedBox(height: 4.h),
-                      if (_isAnalyzing)
-                        Container(
-                          height: 60.h,
-                          child: const Center(
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          ),
-                        )
-                      else if (_errorMessage != null)
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              _errorMessage!,
-                              style:
-                                  TextStyle(fontSize: 11.sp, color: Colors.red),
-                            ),
-                            TextButton(
-                              onPressed: _listModels,
-                              style: TextButton.styleFrom(
-                                  padding: EdgeInsets.zero,
-                                  minimumSize: const Size(0, 30)),
-                              child: const Text("Debug",
-                                  style: TextStyle(fontSize: 10)),
-                            ),
+                      // Scanner Card
+                      Container(
+                        padding: EdgeInsets.symmetric(
+                            horizontal: 8.w, vertical: 10.h),
+                        decoration: BoxDecoration(
+                          color: (_imageBytes != null || _image != null)
+                              ? Colors.white.withOpacity(0.4)
+                              : Colors.white,
+                          borderRadius: BorderRadius.circular(20.r),
+                          boxShadow: [
+                            if (_imageBytes == null && _image == null)
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.05),
+                                blurRadius: 15,
+                                offset: const Offset(0, 5),
+                              ),
                           ],
-                        )
-                      else if (_waterContent == null)
-                        Padding(
-                          padding: EdgeInsets.symmetric(vertical: 20.h),
-                          child: Text(
-                            "Capture image to see hydration details",
-                            textAlign: TextAlign.start,
-                            style: TextStyle(
-                              fontSize: 12.sp,
-                              color: AppColors.bluegray.withOpacity(0.6),
-                              fontFamily: AppFontStyles.urbanistFontFamily,
-                            ),
-                          ),
-                        )
-                      else
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                          border: Border.all(
+                              color: AppColors.greyColorText1
+                                  .withValues(alpha: 0.4),
+                              width: 1.9),
+                        ),
+                        child: Column(
                           children: [
-                            Row(
-                              children: [
-                                Text(
-                                  "Water: ",
-                                  style: TextStyle(
-                                      fontSize: 12.sp,
-                                      color: AppColors.bluegray,
-                                      fontWeight: FontWeight.w500,
-                                      fontVariations: [
-                                        AppFontStyles.semiBoldFontVariation
-                                      ]),
+                            _buildImageFrame(),
+                            if (_imageBytes == null && _image == null) ...[
+                              SizedBox(height: 16.h),
+                              Text(
+                                "Click to scan or add food item",
+                                style: TextStyle(
+                                  fontSize: 14.sp,
+                                  color: const Color(0xFF456173),
+                                  fontVariations: [
+                                    AppFontStyles.semiBoldFontVariation
+                                  ],
+                                  fontFamily: AppFontStyles.urbanistFontFamily,
                                 ),
-                                Text(
-                                  "$_waterContent ",
-                                  style: TextStyle(
-                                      fontSize: 13.sp,
-                                      color: AppColors.blueWaterIntake,
-                                      fontWeight: FontWeight.bold,
-                                      fontVariations: [
-                                        AppFontStyles.semiBoldFontVariation
-                                      ]),
-                                ),
-                                Text(
-                                  "($_waterVolume)",
-                                  style: TextStyle(
-                                      fontSize: 11.sp,
-                                      color:
-                                          AppColors.bluegray.withOpacity(0.7),
-                                      fontVariations: [
-                                        AppFontStyles.semiBoldFontVariation
-                                      ]),
-                                ),
-                              ],
-                            ),
-                            if (_confidenceScore != null)
-                              Padding(
-                                padding: EdgeInsets.only(top: 2.h),
-                                child: Text(
-                                  "Confidence: $_confidenceScore",
-                                  style: TextStyle(
-                                      fontSize: 10.sp,
-                                      color: _confidenceScore == "High"
-                                          ? Colors.green
-                                          : (_confidenceScore == "Medium"
-                                              ? Colors.orange
-                                              : Colors.red),
-                                      fontWeight: FontWeight.w600,
-                                      fontVariations: [
-                                        AppFontStyles.semiBoldFontVariation
-                                      ]),
-                                ),
-                              ),
-                            SizedBox(height: 6.h),
-                            ..._details.map((point) => Padding(
-                                  padding: EdgeInsets.only(bottom: 2.h),
-                                  child: Row(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text("• ",
-                                          style: TextStyle(
-                                              fontSize: 11.sp,
-                                              color: AppColors.darkgray,
-                                              fontVariations: [
-                                                AppFontStyles
-                                                    .semiBoldFontVariation
-                                              ])),
-                                      Expanded(
-                                        child: Text(
-                                          point,
-                                          style: TextStyle(
-                                            fontSize: 11.sp,
-                                            color: AppColors.bluegray,
-                                            height: 1.1,
-                                              fontVariations: [AppFontStyles.semiBoldFontVariation]
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                )),
-                            if (_reasoning != null && _reasoning!.isNotEmpty)
-                              Padding(
-                                padding: EdgeInsets.only(top: 4.h),
-                                child: Text(
-                                  _reasoning!,
-                                  style: TextStyle(
-                                    fontSize: 10.sp,
-                                    fontStyle: FontStyle.italic,
-                                    color: AppColors.bluegray.withOpacity(0.6),
-                                      fontVariations: [AppFontStyles.semiBoldFontVariation]
-                                  ),
-                                  maxLines: 10
-                                ),
-                              ),
-                            if (_calories != null)
-                              Column(
-                                children: [
-                                  SizedBox(height: 8.h),
-                                  InkWell(
-                                    onTap: () {
-                                      setState(() {
-                                        _showMacros = !_showMacros;
-                                      });
-                                    },
-                                    child: Row(
-                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                      children: [
-                                        Text(
-                                          "Nutritional Insights",
-                                          style: TextStyle(
-                                            fontSize: 12.sp,
-                                            color: AppColors.bluegray,
-                                            fontWeight: FontWeight.bold,
-                                            decoration: TextDecoration.underline,
-                                          ),
-                                        ),
-                                        Icon(
-                                          _showMacros ? Icons.expand_less : Icons.expand_more,
-                                          size: 16.w,
-                                          color: AppColors.bluegray,
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  if (_showMacros)
-                                    Padding(
-                                      padding: EdgeInsets.only(top: 6.h),
-                                      child: Wrap(
-                                        spacing: 6.w,
-                                        runSpacing: 4.h,
-                                        children: [
-                                          _macroChip("Calories", "${_calories}kcal"),
-                                          _macroChip("Protein", "${_protein}g"),
-                                          _macroChip("Carbs", "${_carbs}g"),
-                                          _macroChip("Fat", "${_fat}g"),
-                                          _macroChip("Fiber", "${_fiber}g"),
-                                          _macroChip("Sodium", "${_sodium}mg"),
-                                        ],
-                                      ),
-                                    ),
-                                ],
-                              ),
+                              )
+                            ],
                           ],
                         ),
+                      ),
+
+                      if (_errorMessage != null) ...[
+                        SizedBox(height: 12.h),
+                        Text(
+                          _errorMessage!,
+                          style: TextStyle(
+                            fontSize: 11.sp,
+                            color: Colors.red,
+                            fontVariations: [AppFontStyles.boldFontVariation],
+                          ),
+                        ),
+                      ],
                     ],
                   ),
                 ),
-              ),
-            ],
+                if (isLoaded) ...[
+                  SizedBox(height: 24.h),
+                  _buildFoodDetails(),
+                ],
+              ],
+            ),
           ),
         ],
       ),
     );
   }
 
-  Widget _macroChip(String label, String value) {
+  Widget _buildConfidenceBadge() {
     return Container(
-      padding: EdgeInsets.symmetric(horizontal: 6.w, vertical: 2.h),
+      padding: EdgeInsets.symmetric(horizontal: 15.w, vertical: 8.h),
       decoration: BoxDecoration(
-        color: AppColors.blueWaterIntake.withOpacity(0.2),
-        borderRadius: BorderRadius.circular(4.r),
-        border: Border.all(color: AppColors.blueWaterIntake.withOpacity(0.2)),
+        gradient: const LinearGradient(
+          colors: [
+            Color(0xff00d0ff),
+            Color(0xff00d0ff),
+            Color(0xff00d0ff),
+            Color(0xff00d0ff),
+          ],
+          begin: Alignment.centerLeft,
+          end: Alignment.centerRight,
+        ),
+        image: DecorationImage(image: AssetImage(AssetsPath.confidenceBadge)),
+        borderRadius: BorderRadius.circular(50.r),
+        border: Border.all(
+          color: Colors.white.withOpacity(0.5),
+          width: 1.8,
+        ),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text(
-            "$label: ",
-            style: TextStyle(fontSize: 9.sp, color: AppColors.bluegray, fontVariations: [AppFontStyles.semiBoldFontVariation]),
+          Image.asset(
+            AssetsPath.confidence,
+            width: 15.sp,
+            height: 15.sp,
+            color: const Color(0xFF0056D2),
           ),
+          SizedBox(width: 14.w),
           Text(
-            value,
-            style: TextStyle(fontSize: 9.sp, color: AppColors.blueWaterIntake, fontVariations: [AppFontStyles.semiBoldFontVariation]),
+            "$_confidenceScore CONFIDENCE",
+            style: TextStyle(
+              fontSize: 15.sp,
+              fontVariations: [AppFontStyles.boldFontVariation],
+              fontFamily: AppFontStyles.museoModernoFontFamily,
+              color: AppColors.darkgray,
+              letterSpacing: 1.5,
+            ),
           ),
         ],
       ),
     );
   }
+
+  Widget _buildImageFrame() {
+    return InkWell(
+      onTap: _isAnalyzing ? null : _captureAndAnalyze,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          Container(
+            width: 195.w,
+            height: 195.w,
+            padding: EdgeInsets.all(12.w),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(20.r),
+              color: Colors.white.withValues(alpha: 0.5),
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(25.r),
+              child: (_imageBytes != null || _image != null)
+                  ? Container(color: Colors.transparent)
+                  : Container(color: Colors.white),
+            ),
+          ),
+          // Scanner Corners
+          SizedBox(
+            width: 220.w,
+            height: 220.w,
+            child: CustomPaint(
+                painter: ScannerCornersPainter(
+                    color: (_imageBytes != null || _image != null)
+                        ? Colors.white
+                        : Colors.grey.withOpacity(0.4))),
+          ),
+          Image.asset(AssetsPath.camera_food_scn, width: 50.sp, height: 50.sp),
+          if (_isAnalyzing)
+            const CircularProgressIndicator(color: AppColors.blueWaterIntake),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFoodDetails() {
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 20.h),
+      decoration: BoxDecoration(
+          color: AppColors.white, borderRadius: BorderRadius.circular(20.r)),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Expanded(
+                child: Text(
+                  _dishName ?? "",
+                  style: TextStyle(
+                    fontSize: 18.sp,
+                    fontVariations: [AppFontStyles.boldFontVariation],
+                    color: AppColors.bluegray,
+                    fontFamily: AppFontStyles.urbanistFontFamily,
+                  ),
+                ),
+              ),
+              Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _buildWeightSelector(),
+                  SizedBox(height: 8.h),
+                  _buildCaloriesBadge(),
+                ],
+              ),
+            ],
+          ),
+
+          SizedBox(height: 20.h),
+
+          // Gauge Section
+          Center(
+            child: Stack(
+              children: [
+                SizedBox(
+                  height: 100.h,
+                ),
+                SizedBox(
+                  width: 160.w,
+                  height: 80.w,
+                  child: CustomPaint(
+                    painter: SemiCircleGaugePainter(_waterPercentage),
+                  ),
+                ),
+                SizedBox(height: 8.h),
+                Positioned(
+                  left: 0,
+                  right: 0,
+                  top: 35.h,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        "${_waterMl.toInt()}mL",
+                        style: TextStyle(
+                          fontSize: 24.sp,
+                          fontVariations: [AppFontStyles.boldFontVariation],
+                          color: AppColors.bluegray,
+                        ),
+                      ),
+                      Text(
+                        "WATER\nContent",
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 12.sp,
+                          fontVariations: [AppFontStyles.boldFontVariation],
+                          color: AppColors.bluegray.withOpacity(0.6),
+                        ),
+                      ),
+                    ],
+                  ),
+                )
+              ],
+            ),
+          ),
+          SizedBox(height: 24.h),
+
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: _buildInfoColumn(
+                  "Water: ",
+                  "${_waterPercentage.toInt()}% (${_waterMl.toInt()}ml)",
+                  _ingredients,
+                  "Item Contains",
+                ),
+              ),
+              Container(
+                  width: 1, height: 100.h, color: Colors.grey.withOpacity(0.2)),
+              SizedBox(width: 12.w),
+              Expanded(
+                child: _buildInfoColumn(
+                  "",
+                  "",
+                  _ingredients.reversed.take(3).toList(),
+                  // Just for design variety
+                  "Item Contains",
+                  valueColor: _confidenceLevel == "High"
+                      ? Colors.green
+                      : (_confidenceLevel == "Medium"
+                          ? Colors.orange
+                          : Colors.red),
+                ),
+              ),
+            ],
+          ),
+          SizedBox(height: 24.h),
+
+          // Macro Rings
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: [
+              _buildMacroRing("Carbs", _carbs, Color(0xffFFB53A)),
+              _buildMacroRing("Protein", _protein, Colors.blueAccent),
+              _buildMacroRing("Fat", _fat, Color(0xffB084D1)),
+            ],
+          ),
+
+          if (_reasoning != null) ...[
+            SizedBox(height: 20.h),
+            Text(
+              _reasoning!,
+              style: TextStyle(
+                  fontSize: 10.sp,
+                  fontStyle: FontStyle.italic,
+                  color: AppColors.bluegray,
+                  fontVariations: [AppFontStyles.semiBoldFontVariation]),
+            ),
+          ],
+
+          SizedBox(height: 20.h),
+          Center(
+            child: Text(
+              "Calculated based on ${_currentWeight.toInt()}g portion size",
+              style: TextStyle(
+                  fontSize: 10.sp,
+                  fontStyle: FontStyle.italic,
+                  color: Colors.grey,
+                  fontVariations: [AppFontStyles.semiBoldFontVariation]),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildWeightSelector() {
+    return InkWell(
+      onTap: _showWeightPicker,
+      child: Container(
+        padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 4.h),
+        decoration: BoxDecoration(
+          color: const Color(0xFFD4E9FF),
+          borderRadius: BorderRadius.circular(10.r),
+        ),
+        child: Row(
+          children: [
+            Text(
+              "${_currentWeight.toInt()} g",
+              style: TextStyle(
+                fontSize: 12.sp,
+                fontVariations: [AppFontStyles.boldFontVariation],
+                color: AppColors.blueWaterIntake,
+              ),
+            ),
+            Icon(Icons.unfold_more,
+                size: 14.sp, color: AppColors.blueWaterIntake),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCaloriesBadge() {
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 4.h),
+      decoration: BoxDecoration(
+        color: const Color(0xFFD4E9FF),
+        borderRadius: BorderRadius.circular(10.r),
+      ),
+      child: Text(
+        "$_calories kcal",
+        style: TextStyle(
+          fontSize: 12.sp,
+          fontVariations: [AppFontStyles.boldFontVariation],
+          color: AppColors.blueWaterIntake,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildInfoColumn(
+      String label, String value, List<String> items, String subHeader,
+      {Color? valueColor}) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        RichText(
+          text: TextSpan(
+            children: [
+              TextSpan(
+                  text: label,
+                  style: TextStyle(
+                      color: AppColors.bluegray,
+                      fontSize: 12.sp,
+                      fontVariations: [AppFontStyles.boldFontVariation],
+                      fontFamily: AppFontStyles.urbanistFontFamily)),
+              TextSpan(
+                  text: value,
+                  style: TextStyle(
+                      color: valueColor ?? AppColors.blueWaterIntake,
+                      fontSize: 12.sp,
+                      fontVariations: [AppFontStyles.extraBoldFontVariation],
+                      fontFamily: AppFontStyles.urbanistFontFamily)),
+            ],
+          ),
+        ),
+        SizedBox(height: 12.h),
+        Text(subHeader,
+            style: TextStyle(
+                color: AppColors.bluegray,
+                fontSize: 12.sp,
+                fontVariations: [AppFontStyles.boldFontVariation])),
+        SizedBox(height: 4.h),
+        ...items.map((item) => Padding(
+              padding: EdgeInsets.only(bottom: 2.h),
+              child: Text("• $item",
+                  style: TextStyle(
+                      color: AppColors.bluegray,
+                      fontSize: 11.sp,
+                      fontVariations: [AppFontStyles.semiBoldFontVariation])),
+            )),
+      ],
+    );
+  }
+
+  Widget _buildMacroRing(String label, double value, Color color) {
+    return Column(
+      children: [
+        Text(label,
+            style: TextStyle(
+                fontSize: 12.sp,
+                color: Colors.grey,
+                fontVariations: [AppFontStyles.boldFontVariation])),
+        SizedBox(height: 4.h),
+        SizedBox(
+          width: 50.w,
+          height: 50.w,
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              PieChart(
+                PieChartData(
+                  sectionsSpace: 0,
+                  centerSpaceRadius: 18.w,
+                  startDegreeOffset: 270,
+                  sections: [
+                    PieChartSectionData(
+                      color: color,
+                      value: value,
+                      radius: 6.w,
+                      showTitle: false,
+                    ),
+                    PieChartSectionData(
+                      color: color.withOpacity(0.1),
+                      value: 100 - value,
+                      radius: 6.w,
+                      showTitle: false,
+                    ),
+                  ],
+                ),
+              ),
+              Text(
+                "${value.toInt()}%",
+                style: TextStyle(
+                    fontSize: 11.sp,
+                    fontVariations: [AppFontStyles.boldFontVariation],
+                    color: AppColors.bluegray),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class ScannerCornersPainter extends CustomPainter {
+  final Color color;
+
+  ScannerCornersPainter({required this.color});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..strokeWidth = 4
+      ..strokeCap = StrokeCap.round
+      ..style = PaintingStyle.stroke;
+
+    const length = 40.0;
+    const offset = 10.0;
+    const cornerRadius = 15.0;
+
+    // Top Left
+    canvas.drawPath(
+      Path()
+        ..moveTo(offset, offset + length)
+        ..lineTo(offset, offset + cornerRadius)
+        ..arcTo(
+            Rect.fromLTWH(offset, offset, cornerRadius * 2, cornerRadius * 2),
+            pi,
+            pi / 2,
+            false)
+        ..lineTo(offset + length, offset),
+      paint,
+    );
+
+    // Top Right
+    canvas.drawPath(
+      Path()
+        ..moveTo(size.width - offset - length, offset)
+        ..lineTo(size.width - offset - cornerRadius, offset)
+        ..arcTo(
+            Rect.fromLTWH(size.width - offset - cornerRadius * 2, offset,
+                cornerRadius * 2, cornerRadius * 2),
+            -pi / 2,
+            pi / 2,
+            false)
+        ..lineTo(size.width - offset, offset + length),
+      paint,
+    );
+
+    // Bottom Left
+    canvas.drawPath(
+      Path()
+        ..moveTo(offset + length, size.height - offset)
+        ..lineTo(offset + cornerRadius, size.height - offset)
+        ..arcTo(
+            Rect.fromLTWH(offset, size.height - offset - cornerRadius * 2,
+                cornerRadius * 2, cornerRadius * 2),
+            pi / 2,
+            pi / 2,
+            false)
+        ..lineTo(offset, size.height - offset - length),
+      paint,
+    );
+
+    // Bottom Right
+    canvas.drawPath(
+      Path()
+        ..moveTo(size.width - offset, size.height - offset - length)
+        ..lineTo(size.width - offset, size.height - offset - cornerRadius)
+        ..arcTo(
+            Rect.fromLTWH(
+                size.width - offset - cornerRadius * 2,
+                size.height - offset - cornerRadius * 2,
+                cornerRadius * 2,
+                cornerRadius * 2),
+            0,
+            pi / 2,
+            false)
+        ..lineTo(size.width - offset - length, size.height - offset),
+      paint,
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+class SemiCircleGaugePainter extends CustomPainter {
+  final double percentage;
+
+  SemiCircleGaugePainter(this.percentage);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = Offset(size.width / 2, size.height);
+    final radius = size.width / 2;
+    const strokeWidth = 12.0;
+
+    final bgPaint = Paint()
+      ..color = Colors.grey.withOpacity(0.1)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = strokeWidth
+      ..strokeCap = StrokeCap.round;
+
+    final progressPaint = Paint()
+      ..shader = const LinearGradient(
+        colors: [Color(0xFF369FFF), Color(0xFF6FB9FF)],
+      ).createShader(Rect.fromCircle(center: center, radius: radius))
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = strokeWidth
+      ..strokeCap = StrokeCap.round;
+
+    canvas.drawArc(
+      Rect.fromCircle(center: center, radius: radius - strokeWidth / 2),
+      pi,
+      pi,
+      false,
+      bgPaint,
+    );
+
+    canvas.drawArc(
+      Rect.fromCircle(center: center, radius: radius - strokeWidth / 2),
+      pi,
+      pi * (percentage / 100),
+      false,
+      progressPaint,
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant SemiCircleGaugePainter oldDelegate) =>
+      oldDelegate.percentage != percentage;
 }

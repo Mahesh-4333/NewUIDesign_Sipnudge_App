@@ -17,6 +17,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.3.59"
+  alarm:
+    dependency: "direct main"
+    description:
+      name: alarm
+      sha256: "1c85123c606586b449b6a6e27f808152c1cae759323aefbe4354317092d55dc9"
+      url: "https://pub.dev"
+    source: hosted
+    version: "5.1.5"
   archive:
     dependency: transitive
     description:
@@ -305,6 +313,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.1.1"
+  dotted_border:
+    dependency: "direct main"
+    description:
+      name: dotted_border
+      sha256: "99b091ec6891ba0c5331fdc2b502993c7c108f898995739a73c6845d71dad70c"
+      url: "https://pub.dev"
+    source: hosted
+    version: "3.1.0"
   encrypt:
     dependency: "direct main"
     description:
@@ -510,6 +526,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "7.0.2"
+  flutter_fgbg:
+    dependency: transitive
+    description:
+      name: flutter_fgbg
+      sha256: eb6da9b2047372566a6e17b505975fe5bace94af01f6fc825c4b6f81baa6c447
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.7.1"
   flutter_inner_shadow:
     dependency: "direct main"
     description:
@@ -1493,6 +1517,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "0.7.6"
+  timelines_plus:
+    dependency: "direct main"
+    description:
+      name: timelines_plus
+      sha256: b23214b9ac98f4533ead6c46998bc189ce176aede9e7bb7a3d096f1b85dc8dee
+      url: "https://pub.dev"
+    source: hosted
+    version: "2.0.0"
   timezone:
     dependency: "direct main"
     description:

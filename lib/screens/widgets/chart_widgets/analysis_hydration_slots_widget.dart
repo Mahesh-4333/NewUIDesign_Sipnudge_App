@@ -585,7 +585,8 @@ class _AnalysisHydrationSlotsWidgetState
                             time: "$time - ${e['timezone'] ?? ''}",
                             date: date,
                             amount:
-                                "Consumed - ${(e['consumed'] as num).toInt()} ml",
+                                "C - ${(e['consumed'] as num).toInt()} mL R-${(e['remaining'] as num?)?.toInt() ?? 0} mL",
+                            percentage: e['percentage'] as double? ?? 0.0,
                           );
                         }),
                       ],
@@ -644,10 +645,11 @@ class _AnalysisHydrationSlotsWidgetState
     required String time,
     required String date,
     required String amount,
+    required double percentage,
   }) {
     return Container(
       margin: EdgeInsets.only(bottom: AppDimensions.dim12.h),
-      padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 8.h),
+      padding: EdgeInsets.symmetric(horizontal: 2.w, vertical: 0.h),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(100.w),
@@ -665,37 +667,43 @@ class _AnalysisHydrationSlotsWidgetState
       ),
       child: Row(
         children: [
-          // Circular Index with Gradient Border
           Container(
-            width: 50.w,
-            height: 50.w,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              gradient: const LinearGradient(
-                colors: [
-                  Color(0xFF7CBABB),
-                  Color(0xFF86A7D1),
-                ],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-            ),
-            padding: EdgeInsets.all(2.w), // Border thickness
-            child: Container(
-              decoration: const BoxDecoration(
-                shape: BoxShape.circle,
-                color: Colors.white,
-              ),
+            width: 60.w,
+            height: 60.w,
+            child: Stack(
               alignment: Alignment.center,
-              child: Text(
-                index.toString(),
-                style: TextStyle(
-                  color: const Color(0xFF353535),
-                  fontSize: 18.sp,
-                  fontFamily: AppFontStyles.urbanistFontFamily,
-                  fontVariations: [AppFontStyles.boldFontVariation],
+              children: [
+                CircularProgressIndicator(
+                  value: percentage,
+                  strokeWidth: 4.w,
+                  backgroundColor: AppColors.bluegray.withOpacity(0.1),
+                  valueColor:
+                      AlwaysStoppedAnimation<Color>(AppColors.bottomnavbar),
                 ),
-              ),
+                Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      index.toString(),
+                      style: TextStyle(
+                        color: const Color(0xFF353535),
+                        fontSize: 14.sp,
+                        fontFamily: AppFontStyles.urbanistFontFamily,
+                        fontVariations: [AppFontStyles.boldFontVariation],
+                      ),
+                    ),
+                    Text(
+                      "${(percentage * 100).toInt()}%",
+                      style: TextStyle(
+                        color: Colors.green,
+                        fontSize: 12.sp,
+                        fontFamily: AppFontStyles.urbanistFontFamily,
+                        fontVariations: [AppFontStyles.boldFontVariation],
+                      ),
+                    ),
+                  ],
+                ),
+              ],
             ),
           ),
           SizedBox(width: 16.w),

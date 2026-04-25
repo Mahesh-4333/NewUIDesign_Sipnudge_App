@@ -433,8 +433,6 @@ class SharedPrefsHelper {
       quietEnd = quietEnd.add(const Duration(days: 1));
     }
 
-    final startEpoch = quietStart.millisecondsSinceEpoch ~/ 1000;
-    final endEpoch = quietEnd.millisecondsSinceEpoch ~/ 1000;
 
     // 4. Construct Payload
     final payload = '0/${bedHour24 < 10 ? '0$bedHour24' : bedHour24}/'
@@ -446,7 +444,7 @@ class SharedPrefsHelper {
         '3/${(vStrength * 100).toInt()}|'
         '4/${rFeedback ? 1 : 0}|'
         '5/${stopOnCompletion ? 1 : 0}|'
-        '6/$repIndex';
+        '6/${[1, 3, 5][repIndex]}';
 
     Console.log(tag: "pendingConfig_ld", value: payload.toString());
     await setPendingConfigData(payload);

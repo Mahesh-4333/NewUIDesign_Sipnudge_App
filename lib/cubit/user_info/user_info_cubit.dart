@@ -118,6 +118,22 @@ class UserInfoCubit extends Cubit<UserInfoState> {
     emit(state.copyWith(dietType: type));
   }
 
+  void setCoffeeIntake(BeverageIntake intake) {
+    emit(state.copyWith(coffeeIntake: intake));
+  }
+
+  void setTeaIntake(BeverageIntake intake) {
+    emit(state.copyWith(teaIntake: intake));
+  }
+  
+  void setTypicalWaterIntake(double intake) {
+    emit(state.copyWith(typicalWaterIntake: intake));
+  }
+
+  void setWaterUnit(String unit) {
+    emit(state.copyWith(waterUnit: unit));
+  }
+
   Future<void> saveUser(UserInfoState state) async {
     // Safeguard: Don't save if state is essentially empty/uninitialized
     // This prevents overwriting existing DB data with defaults during race conditions.

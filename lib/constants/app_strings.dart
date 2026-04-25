@@ -125,8 +125,8 @@ class AppStrings {
       "You got 50% of today's goal, keep focus on your health!";
 
   static const letsHitHydrationGoals = "Let's hit our hydration goals";
-  static getGoalString(double goalPercent) {
-    return "You got ${goalPercent.toStringAsFixed(0)}% of today's goal, keep focusing on your health!";
+  static getGoalString(double goalPercent, String value) {
+    return "You got ${goalPercent.toStringAsFixed(0)}% - $value of today's goal, keep focusing on your health!";
   }
 
   static setResendOtpTimerString(int seconds) {
@@ -252,4 +252,7 @@ class AppStrings {
   static const pulseBaseLightDuringHydration =
       "Pulse base light during hydration";
   static const lastSynced = "Last synced: ";
+  static const estimatedDailyWaterConsumption = "Estimated Daily Water Consumption";
+  static const typicalIntakeSubtitle = "Your current typical intake before using the app.";
+  static const savingReminder = "Saving reminder";
 }

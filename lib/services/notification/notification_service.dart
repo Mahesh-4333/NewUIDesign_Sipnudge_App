@@ -398,9 +398,6 @@ class NotificationService {
     // Cancel the base reminder
     final baseId = _buildNotificationId(slot, dayOffset);
     await _plugin.cancel(id : baseId);
-    // if (Platform.isAndroid) {
-    //   await NotificationManager.instance.stopAlarm(baseId);
-    // }
 
     // Cancel only the repeat IDs that were actually scheduled.
     final alarmRepeatIndex = await SharedPrefsHelper.getAlarmRepeatIndex();
@@ -409,9 +406,6 @@ class NotificationService {
     for (int repeat = 0; repeat < alarmRepeatTimes; repeat++) {
       final repeatId = _buildNotificationId(slot, dayOffset, repeat);
       await _plugin.cancel(id : repeatId);
-      if (Platform.isAndroid) {
-        // await NotificationManager.instance.stopAlarm(repeatId);
-      }
     }
   }
 

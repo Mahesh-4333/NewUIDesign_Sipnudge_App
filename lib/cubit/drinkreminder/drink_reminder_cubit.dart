@@ -15,23 +15,7 @@ class DrinkReminderCubit extends Cubit<DrinkReminderState> {
   final List<String> alarmRepeatOptions = ['1 Times', '3 Times', '5 Times'];
   DrinkReminderCubit({required this.hydrationCubit, required this.bottleDataCubit}) : super(const DrinkReminderState()){
     _init();
-    // _setupHydrationListener();
   }
-
-  // void _setupHydrationListener() {
-  //   hydrationCubit.stream.listen((hydrationState) {
-  //     if (state.stopWhenFull && state.reminderEnabled) {
-  //       // Find if any entry just reached 100% or more
-  //       // For simplicity and correctness, we can just reschedule
-  //       // which will skip all completed entries for today.
-  //       if (state.reminderMode == "AI") {
-  //          _rescheduleAllReminders();
-  //       } else {
-  //          _rescheduleAllRemindersRepeat();
-  //       }
-  //     }
-  //   });
-  // }
 
   void _init() async {
     final mode = await SharedPrefsHelper.getReminderMode();
@@ -51,7 +35,12 @@ class DrinkReminderCubit extends Cubit<DrinkReminderState> {
   }
 
   Future<void> toggleReminder(bool value) async {
-    emit(state.copyWith(reminderEnabled: value));
+    emit(state.copyWith(reminderEnabled: value, isSaving: true));
+    
+    // Slight delay to show the saving animation
+    await Future.delayed(const Duration(seconds: 2));
+
+    await SharedPrefsHelper.updateAndSaveDeviceConfig();
 
     final notificationService = NotificationService();
 
@@ -60,6 +49,8 @@ class DrinkReminderCubit extends Cubit<DrinkReminderState> {
     } else {
       await notificationService.cancelAllHydrationReminders();
     }
+    
+    emit(state.copyWith(isSaving: false));
   }
 
   Future<void> _rescheduleAllReminders() async {
@@ -78,7 +69,11 @@ class DrinkReminderCubit extends Cubit<DrinkReminderState> {
   }
 
   Future<void> toggleStopWhenFull(bool value) async {
-    emit(state.copyWith(stopWhenFull: value));
+    emit(state.copyWith(stopWhenFull: value, isSaving: true));
+    await SharedPrefsHelper.updateAndSaveDeviceConfig();
+    // Slight delay to show the saving animation
+    await Future.delayed(const Duration(seconds: 2));
+
     await SharedPrefsHelper.setStopWhenFull(value);
 
     final notificationService = NotificationService();
@@ -89,32 +84,39 @@ class DrinkReminderCubit extends Cubit<DrinkReminderState> {
           await WaterConsumptionCalculator.calculateCompletionPercentage(history);
 
       if (completionPercent >= 100) {
-        // Daily target already achieved — cancel ALL today's notifications
-        for (final slot in HydrationSlot.values) {
-          await notificationService.cancelSlotReminders(slot, 0);
-        }
+        notificationService.cancelAllHydrationReminders();
+        emit(state.copyWith(isSaving: false));
         return; // No need to reschedule
       }
     }
 
-    // Reschedule to ensure scheduling logic respects the new setting
-    if (state.reminderEnabled) {
-      if (state.reminderMode == "AI") {
-        await _rescheduleAllReminders();
-      } else {
-        await _rescheduleAllRemindersRepeat();
-      }
-    }
+    // // Reschedule to ensure scheduling logic respects the new setting
+    // if (state.reminderEnabled) {
+    //   if (state.reminderMode == "AI") {
+    //     await _rescheduleAllReminders();
+    //   } else {
+    //     await _rescheduleAllRemindersRepeat();
+    //   }
+    // }
+    
+    emit(state.copyWith(isSaving: false));
   }
 
   void cycleAlarmRepeat() async {
     final nextIndex = (state.alarmRepeatIndex + 1) % alarmRepeatOptions.length;
-    emit(state.copyWith(alarmRepeatIndex: nextIndex));
+    emit(state.copyWith(alarmRepeatIndex: nextIndex, isSaving: true));
+
+    // Slight delay to show the saving animation
+    await Future.delayed(const Duration(seconds: 2));
+
     await SharedPrefsHelper.setAlarmRepeatIndex(nextIndex);
+    await SharedPrefsHelper.updateAndSaveDeviceConfig();
 
     if (state.reminderEnabled) {
       await _rescheduleAllRemindersRepeat();
     }
+
+    emit(state.copyWith(isSaving: false));
   }
 
   void setReminderMode(String mode) => emit(state.copyWith(reminderMode: mode));

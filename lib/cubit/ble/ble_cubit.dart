@@ -811,7 +811,7 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
               emit(state.copyWith(
                   isHydration30DaysDataSync: true, historyData: data));
               _hydrationController.add([]);
-              _syncWithHealth(history);
+              // _syncWithHealth(history);
               _syncWithLocalConsumption(history, historyPrevious);
             } else {
               final history = await getCurrentDayHistory();
@@ -1565,39 +1565,39 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
     emit(state.copyWith(currentHydrationValue: value));
   }
 
-  Future<void> _syncWithHealth(double currentTotalMl) async {
-    try {
-      final now = DateTime.now();
-      final startOfDay = DateTime(now.year, now.month, now.day);
-
-      // 1. Convert current data from bottle (ml) to Liters
-      final currentTotalL = currentTotalMl / 1000.0;
-
-      // 2. Get what's currently in Health (Liters)
-      final healthTotal = await _healthService.getWaterIntakeLiters(
-        start: startOfDay,
-        end: now,
-      );
-
-      // 3. We only sync the difference if current bottle data is greater
-      final diff = currentTotalL - healthTotal;
-
-      Console.log(
-          tag:
-              "[HealthSync] Sync log: Bottle=$currentTotalL L, Health=$healthTotal L, Diff=$diff L",
-          value: "BLE_Cubit");
-      // Sync if more than 0.001L (approx 1ml)
-      if (diff >= 0.001) {
-        Console.log(
-            tag: "[HealthSync] Syncing $diff L to Health", value: "BLE_Cubit");
-        await _healthService.addWaterIntake(diff, now);
-      }
-    } catch (e) {
-      Console.log(
-          tag: "[HealthSync] Error syncing with Health: $e",
-          value: "BLE_Cubit");
-    }
-  }
+  // Future<void> _syncWithHealth(double currentTotalMl) async {
+  //   try {
+  //     final now = DateTime.now();
+  //     final startOfDay = DateTime(now.year, now.month, now.day);
+  //
+  //     // 1. Convert current data from bottle (ml) to Liters
+  //     final currentTotalL = currentTotalMl / 1000.0;
+  //
+  //     // 2. Get what's currently in Health (Liters)
+  //     final healthTotal = await _healthService.getWaterIntakeLiters(
+  //       start: startOfDay,
+  //       end: now,
+  //     );
+  //
+  //     // 3. We only sync the difference if current bottle data is greater
+  //     final diff = currentTotalL - healthTotal;
+  //
+  //     Console.log(
+  //         tag:
+  //             "[HealthSync] Sync log: Bottle=$currentTotalL L, Health=$healthTotal L, Diff=$diff L",
+  //         value: "BLE_Cubit");
+  //     // Sync if more than 0.001L (approx 1ml)
+  //     if (diff >= 0.001) {
+  //       Console.log(
+  //           tag: "[HealthSync] Syncing $diff L to Health", value: "BLE_Cubit");
+  //       await _healthService.addWaterIntake(diff, now);
+  //     }
+  //   } catch (e) {
+  //     Console.log(
+  //         tag: "[HealthSync] Error syncing with Health: $e",
+  //         value: "BLE_Cubit");
+  //   }
+  // }
 
   Future<void> _syncWithLocalConsumption(
       double currentTotalMl, double previousTotal) async {
@@ -1617,12 +1617,16 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
           value: "BLE_Cubit");
 
       // Sync if more than 1ml
-      if (diff >= 1.0) {
+      if (diff >= 40.0) {
         Console.log(
             tag: "[LocalSync] Syncing $diffL L to Health and Database",
             value: "BLE_Cubit");
-        // await _healthService.addWaterIntake(diffL, now);
-        await dbHelper.insertTodayHydration(diff, now);
+
+        await dbHelper.insertTodayHydration(diff, now,
+            percentage: state.battery?.toDouble(),
+            remaining: state.volume,
+            totalAtTime: currentTotal);
+        await _healthService.addWaterIntake(diff / 1000, now);
       }
     } catch (e) {
       Console.log(

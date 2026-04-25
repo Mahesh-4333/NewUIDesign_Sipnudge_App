@@ -4,6 +4,7 @@ class DrinkReminderState {
   final int alarmRepeatIndex;
   final String reminderMode;
   final String title;
+  final bool isSaving;
 
   const DrinkReminderState({
     this.reminderEnabled = true,
@@ -11,6 +12,7 @@ class DrinkReminderState {
     this.alarmRepeatIndex = 0,
     this.reminderMode = 'Static',
     this.title = 'Home',
+    this.isSaving = false,
   });
 
   DrinkReminderState copyWith({
@@ -19,6 +21,7 @@ class DrinkReminderState {
     int? alarmRepeatIndex,
     String? reminderMode,
     String? title,
+    bool? isSaving,
   }) {
     return DrinkReminderState(
       reminderEnabled: reminderEnabled ?? this.reminderEnabled,
@@ -26,6 +29,7 @@ class DrinkReminderState {
       alarmRepeatIndex: alarmRepeatIndex ?? this.alarmRepeatIndex,
       reminderMode: reminderMode ?? this.reminderMode,
       title: title ?? this.title,
+      isSaving: isSaving ?? this.isSaving,
     );
   }
 }

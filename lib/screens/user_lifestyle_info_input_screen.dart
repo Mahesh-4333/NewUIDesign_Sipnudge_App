@@ -11,6 +11,8 @@ import 'package:hydrify/helpers/water_consumption_data_helper.dart';
 import 'package:hydrify/screens/user_info_analyzing_screen.dart';
 import 'package:hydrify/screens/widgets/user_info_input_widgets/custom_radio_selection_widget.dart';
 import 'package:hydrify/screens/widgets/user_info_input_widgets/custom_time_input_widget.dart';
+import 'package:hydrify/screens/widgets/user_info_input_widgets/beverage_intake_widget.dart';
+import 'package:hydrify/screens/widgets/user_info_input_widgets/daily_water_consumption_widget.dart';
 import 'package:hydrify/screens/widgets/user_info_input_widgets/next_button_widget.dart';
 import 'package:hydrify/services/ui_utils_service.dart';
 
@@ -26,6 +28,50 @@ class UserLifestyleInfoInputScreen extends StatefulWidget {
 
 class _UserLifestyleInfoInputScreenState
     extends State<UserLifestyleInfoInputScreen> {
+  final ScrollController _scrollController = ScrollController();
+  bool _isAtBottom = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollController.addListener(_scrollListener);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _checkIfAtBottom();
+    });
+  }
+
+  void _scrollListener() {
+    _checkIfAtBottom();
+  }
+
+  void _checkIfAtBottom() {
+    if (!_scrollController.hasClients) return;
+
+    final maxScroll = _scrollController.position.maxScrollExtent;
+    if (maxScroll <= 0) {
+      if (!_isAtBottom) {
+        setState(() {
+          _isAtBottom = true;
+        });
+      }
+      return;
+    }
+
+    final isAtBottom = _scrollController.offset >= (maxScroll - 50);
+    if (isAtBottom != _isAtBottom) {
+      setState(() {
+        _isAtBottom = isAtBottom;
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    _scrollController.removeListener(_scrollListener);
+    _scrollController.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -72,6 +118,7 @@ class _UserLifestyleInfoInputScreenState
         padding: EdgeInsets.only(
             top: AppDimensions.dim120.h, bottom: AppDimensions.bottomBarHeight),
         child: ListView(
+          controller: _scrollController,
           padding: EdgeInsets.all(
             AppDimensions.defaultPadding,
           ),
@@ -177,6 +224,29 @@ class _UserLifestyleInfoInputScreenState
             CustomRadioSelectionWidget(
               type: 3,
             ),
+            SizedBox(
+              height: AppDimensions.dim20.h,
+            ),
+            Text(
+              "Whats your daily Coffee/Tea  type?",
+              style: TextStyle(
+                  fontFamily: AppFontStyles.urbanistFontFamily,
+                  fontSize: AppFontStyles.fontSize_16,
+                  height: AppFontStyles.getLineHeight(
+                      AppFontStyles.fontSize_16, 160),
+                  color: AppColors.bluegray,
+                  fontVariations: [
+                    AppFontStyles.fontWeightVariation600,
+                  ]),
+            ),
+            SizedBox(
+              height: AppDimensions.dim20.h,
+            ),
+            BeverageIntakeWidget(),
+            SizedBox(
+              height: AppDimensions.dim20.h,
+            ),
+            DailyWaterConsumptionWidget(),
           ],
         ),
       ),
@@ -188,8 +258,17 @@ class _UserLifestyleInfoInputScreenState
           right: AppDimensions.defaultPadding.w,
         ),
         child: CustomNextButton(
-            text: AppStrings.submit,
+            text: _isAtBottom ? AppStrings.submit : "Scroll Down",
             onNextPressed: () async {
+              if (!_isAtBottom) {
+                _scrollController.animateTo(
+                  _scrollController.position.maxScrollExtent,
+                  duration: const Duration(milliseconds: 300),
+                  curve: Curves.easeInOut,
+                );
+                return;
+              }
+
               UiUtilsService.showLoading(context, "Please wait");
 
               try {

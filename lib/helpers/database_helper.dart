@@ -21,6 +21,9 @@ class DatabaseHelper {
   static const String hydrationSummaryTableName = 'hydration_day_summaries';
   static const String todayHydrationHistoryTableName =
       'today_hydration_history';
+  static const String foodScannerTableName = 'user_food_scanner';
+  static const String aiHydrationTableName = 'ai_hydration_engine';
+  static const String dailyWaterGoalsTableName = 'daily_water_goals';
 
   // REPLACE your old getter with this one:
   Future<Database> get database async {
@@ -55,7 +58,7 @@ class DatabaseHelper {
     String finalPath = path.join(await getDatabasesPath(), 'bottle_history.db');
     return await openDatabase(
       finalPath,
-      version: 5,
+      version: 14,
       onUpgrade: (db, oldVersion, newVersion) async {
         if (oldVersion < 2) {
           await db.execute('ALTER TABLE user ADD COLUMN stepGoal INTEGER');
@@ -77,6 +80,98 @@ class DatabaseHelper {
         if (oldVersion < 5) {
           await db.execute(
               'ALTER TABLE $todayHydrationHistoryTableName ADD COLUMN timezone TEXT');
+        }
+        if (oldVersion < 6) {
+          await db.execute('''
+            CREATE TABLE IF NOT EXISTS $foodScannerTableName (
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              dish_name TEXT,
+              image_path TEXT,
+              weight_g REAL,
+              water_content_ml REAL,
+              water_percentage REAL,
+              calories_kcal REAL,
+              protein_g REAL,
+              carbs_g REAL,
+              fat_g REAL,
+              sodium_mg REAL,
+              fiber_g REAL,
+              confidence_score TEXT,
+              ingredients TEXT,
+              reasoning TEXT,
+              timestamp TEXT
+            )
+          ''');
+        }
+        if (oldVersion < 7) {
+          await db.execute(
+              'ALTER TABLE $foodScannerTableName ADD COLUMN image_base64 TEXT');
+        }
+        if (oldVersion < 8) {
+          await db.execute('''
+            CREATE TABLE IF NOT EXISTS $aiHydrationTableName (
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              date TEXT NOT NULL UNIQUE,
+              weight_kg REAL NOT NULL,
+              base_goal_ml REAL NOT NULL,
+              steps INTEGER NOT NULL,
+              steps_adj_ml REAL NOT NULL,
+              temperature_c REAL NOT NULL,
+              temp_adj_ml REAL NOT NULL,
+              caffeine_mg REAL NOT NULL,
+              caffeine_adj_ml REAL NOT NULL,
+              food_water_ml REAL NOT NULL,
+              total_goal_ml REAL NOT NULL,
+              created_at TEXT NOT NULL
+            )
+          ''');
+        }
+        if (oldVersion < 9) {
+          // Re-apply image_base64 safely — some devices missed the v7 migration.
+          // SQLite has no ADD COLUMN IF NOT EXISTS, so we catch the duplicate error.
+          try {
+            await db.execute(
+                'ALTER TABLE $foodScannerTableName ADD COLUMN image_base64 TEXT');
+          } catch (_) {
+            // Column already exists — safe to ignore.
+          }
+        }
+        if (oldVersion < 10) {
+          await db.execute('''
+            CREATE TABLE IF NOT EXISTS $dailyWaterGoalsTableName (
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              date TEXT NOT NULL UNIQUE,
+              goal INTEGER NOT NULL
+            )
+          ''');
+        }
+        if (oldVersion < 11) {
+          try {
+            await db.execute('ALTER TABLE user ADD COLUMN coffeeIntake TEXT');
+            await db.execute('ALTER TABLE user ADD COLUMN teaIntake TEXT');
+          } catch (_) {
+            // Safe to ignore if columns already exist
+          }
+        }
+        if (oldVersion < 13) {
+          try {
+            await db.execute(
+                'ALTER TABLE $todayHydrationHistoryTableName ADD COLUMN percentage REAL');
+            await db.execute(
+                'ALTER TABLE $todayHydrationHistoryTableName ADD COLUMN remaining REAL');
+            await db.execute(
+                'ALTER TABLE $todayHydrationHistoryTableName ADD COLUMN total_at_time REAL');
+          } catch (_) {
+            // Safe to ignore if columns already exist
+          }
+        }
+        if (oldVersion < 14) {
+          try {
+            await db.execute('ALTER TABLE user ADD COLUMN typicalWaterIntake REAL');
+            await db.execute('ALTER TABLE user ADD COLUMN waterUnit TEXT');
+          } catch (_) {
+            // Safe to ignore if columns already exist
+          }
         }
       },
       onCreate: (Database db, int version) async {
@@ -120,7 +215,11 @@ CREATE TABLE user (
   bedtimePeriod TEXT,
   activityLevel TEXT,
   dietType TEXT,
-  stepGoal INTEGER
+  stepGoal INTEGER,
+  coffeeIntake TEXT,
+  teaIntake TEXT,
+  typicalWaterIntake REAL,
+  waterUnit TEXT
 )
 ''');
 
@@ -151,9 +250,59 @@ CREATE TABLE IF NOT EXISTS app_metadata (
               id INTEGER PRIMARY KEY AUTOINCREMENT,
               timestamp TEXT NOT NULL,
               consumed REAL NOT NULL,
-              timezone TEXT
+              timezone TEXT,
+              percentage REAL,
+              remaining REAL,
+              total_at_time REAL
             )
           ''');
+
+        await db.execute('''
+            CREATE TABLE IF NOT EXISTS $foodScannerTableName (
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              dish_name TEXT,
+              image_path TEXT,
+              weight_g REAL,
+              water_content_ml REAL,
+              water_percentage REAL,
+              calories_kcal REAL,
+              protein_g REAL,
+              carbs_g REAL,
+              fat_g REAL,
+              sodium_mg REAL,
+              fiber_g REAL,
+              confidence_score TEXT,
+              ingredients TEXT,
+              reasoning TEXT,
+              timestamp TEXT
+            )
+          ''');
+
+        await db.execute('''
+            CREATE TABLE IF NOT EXISTS $aiHydrationTableName (
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              date TEXT NOT NULL UNIQUE,
+              weight_kg REAL NOT NULL,
+              base_goal_ml REAL NOT NULL,
+              steps INTEGER NOT NULL,
+              steps_adj_ml REAL NOT NULL,
+              temperature_c REAL NOT NULL,
+              temp_adj_ml REAL NOT NULL,
+              caffeine_mg REAL NOT NULL,
+              caffeine_adj_ml REAL NOT NULL,
+              food_water_ml REAL NOT NULL,
+              total_goal_ml REAL NOT NULL,
+              created_at TEXT NOT NULL
+            )
+          ''');
+
+        await db.execute('''
+          CREATE TABLE IF NOT EXISTS $dailyWaterGoalsTableName (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            date TEXT NOT NULL UNIQUE,
+            goal INTEGER NOT NULL
+          )
+        ''');
       },
     );
   }
@@ -282,6 +431,10 @@ CREATE TABLE IF NOT EXISTS app_metadata (
       'activityLevel': state.activityLevel?.toString().split('.').last,
       'dietType': state.dietType?.toString().split('.').last,
       'stepGoal': state.stepGoal,
+      'coffeeIntake': state.coffeeIntake?.toString().split('.').last,
+      'teaIntake': state.teaIntake?.toString().split('.').last,
+      'typicalWaterIntake': state.typicalWaterIntake,
+      'waterUnit': state.waterUnit,
     };
 
     Console.log(
@@ -321,7 +474,11 @@ CREATE TABLE IF NOT EXISTS app_metadata (
       bedtimePeriod: row['bedtimePeriod'] as String?,
       activityLevel: _parseActivityLevel(row['activityLevel'] as String?),
       dietType: _parseDietType(row['dietType'] as String?),
+      coffeeIntake: _parseBeverageIntake(row['coffeeIntake'] as String?),
+      teaIntake: _parseBeverageIntake(row['teaIntake'] as String?),
       stepGoal: row['stepGoal'] as int?,
+      typicalWaterIntake: row['typicalWaterIntake'] as double?,
+      waterUnit: row['waterUnit'] as String?,
     );
   }
 
@@ -350,6 +507,14 @@ CREATE TABLE IF NOT EXISTS app_metadata (
     );
   }
 
+  BeverageIntake? _parseBeverageIntake(String? value) {
+    if (value == null) return null;
+    return BeverageIntake.values.firstWhere(
+      (b) => b.toString().split('.').last == value,
+      orElse: () => BeverageIntake.none,
+    );
+  }
+
   int _timeOfDayToEpoch(TimeOfDay tod) {
     final now = DateTime.now();
     final dt = DateTime(now.year, now.month, now.day, tod.hour, tod.minute);
@@ -361,21 +526,26 @@ CREATE TABLE IF NOT EXISTS app_metadata (
     return TimeOfDay(hour: dt.hour, minute: dt.minute);
   }
 
-  Future<void> insertTodayHydration(double consumed, DateTime timestamp) async {
+  Future<void> insertTodayHydration(double consumed, DateTime timestamp,
+      {double? percentage, double? remaining, double? totalAtTime}) async {
     final db = await database;
     final timezone = (await FlutterTimezone.getLocalTimezone()).identifier;
-    await db.insert(
+    final id = await db.insert(
       todayHydrationHistoryTableName,
       {
         'timestamp': timestamp.toIso8601String(),
         'consumed': consumed,
         'timezone': timezone,
+        if (percentage != null) 'percentage': percentage,
+        if (remaining != null) 'remaining': remaining,
+        if (totalAtTime != null) 'total_at_time': totalAtTime,
       },
     );
+
     Console.log(
         tag: "APP",
         value:
-            "[DB] Inserted today history: $consumed mL at $timestamp [Timezone: $timezone]");
+            "[DB] Inserted today history: $consumed mL at $timestamp [Timezone: $timezone] [Percentage: $percentage] [Remaining: $remaining] [TotalAtTime: $totalAtTime]");
   }
 
   Future<List<Map<String, dynamic>>> getTodayHydrationHistory() async {
@@ -578,5 +748,80 @@ CREATE TABLE IF NOT EXISTS app_metadata (
           tag: "APP", value: "[DB] Error calculating consistency streak: $e");
       return 0;
     }
+  }
+
+  Future<void> insertFoodScan(Map<String, dynamic> data) async {
+    final db = await database;
+    await db.insert(
+      foodScannerTableName,
+      data,
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+    Console.log(
+        tag: "APP",
+        value: "[DB] Inserted food scan data for ${data['dish_name']}");
+  }
+
+  Future<List<Map<String, dynamic>>> getAllFoodScans() async {
+    final db = await database;
+    return await db.query(foodScannerTableName, orderBy: 'timestamp DESC');
+  }
+
+  /// Insert or replace the AI hydration calculation log for a given date.
+  Future<void> insertAiHydrationLog(Map<String, dynamic> data) async {
+    final db = await database;
+    await db.insert(
+      aiHydrationTableName,
+      data,
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+    Console.log(
+        tag: 'AI_ENGINE',
+        value:
+            '[DB] AI log saved: goal=${data['total_goal_ml']} mL on ${data['date']}');
+  }
+
+  /// Returns today's AI hydration log, or null if none exists yet.
+  Future<Map<String, dynamic>?> getAiHydrationLogForDate(String date) async {
+    final db = await database;
+    final result = await db.query(
+      aiHydrationTableName,
+      where: 'date = ?',
+      whereArgs: [date],
+      limit: 1,
+    );
+    return result.isNotEmpty ? result.first : null;
+  }
+
+  Future<void> saveDailyWaterGoal(DateTime date, int goal) async {
+    final db = await database;
+    final dateString =
+        "\${date.year}-\${date.month.toString().padLeft(2, '0')}-\${date.day.toString().padLeft(2, '0')}";
+    await db.insert(
+      dailyWaterGoalsTableName,
+      {
+        'date': dateString,
+        'goal': goal,
+      },
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+    Console.log(
+        tag: "APP", value: "[DB] Saved daily goal $goal for $dateString");
+  }
+
+  Future<int?> getDailyWaterGoal(DateTime date) async {
+    final db = await database;
+    final dateString =
+        "\${date.year}-\${date.month.toString().padLeft(2, '0')}-\${date.day.toString().padLeft(2, '0')}";
+    final result = await db.query(
+      dailyWaterGoalsTableName,
+      where: 'date = ?',
+      whereArgs: [dateString],
+      limit: 1,
+    );
+    if (result.isNotEmpty) {
+      return result.first['goal'] as int;
+    }
+    return null;
   }
 }

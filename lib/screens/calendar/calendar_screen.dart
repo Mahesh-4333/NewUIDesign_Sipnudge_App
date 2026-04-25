@@ -35,47 +35,86 @@ class _CalendarScreenState extends State<CalendarScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      extendBodyBehindAppBar: true,
-      appBar: _getAppBarWidget(),
-      body: SingleChildScrollView(
-        child: Container(
-          width: double.infinity,
-          padding: EdgeInsets.only(
-            top: AppDimensions.dim100.h,
+      body: Container(
+        width: double.infinity,
+        // padding: EdgeInsets.only(
+        //   top: AppDimensions.dim100.h,
+        // ),
+        decoration: BoxDecoration(
+          image: DecorationImage(
+            image: AssetImage("assets/images/app_background.png"),
+            fit: BoxFit.cover,
           ),
-          decoration: BoxDecoration(
-            image: DecorationImage(
-              image: AssetImage("assets/images/app_background.png"),
-              fit: BoxFit.cover,
-            ),
-          ),
+        ),
+        child: SafeArea(
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              SizedBox(
-                height: AppDimensions.dim33.h,
+              _titleWidget(context),
+              Expanded(
+                child: SingleChildScrollView(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      SizedBox(
+                        height: AppDimensions.dim33.h,
+                      ),
+                      Align(
+                        alignment: Alignment.center,
+                        child: getTitleCard(),
+                      ),
+                      SizedBox(
+                        height: AppDimensions.dim49.h,
+                      ),
+                      CalendarWidget(
+                        onCalendarTap: _handleCalendarSelection,
+                      ),
+                      SizedBox(
+                        height: AppDimensions.dim42.h,
+                      ),
+                      getDailyScheduleTitle(),
+                      SizedBox(
+                        height: AppDimensions.dim19.h,
+                      ),
+                      getTimeLine(),
+                      SizedBox(
+                        height: AppDimensions.dim150.h,
+                      ),
+                    ],
+                  ),
+                ),
               ),
-              Align(
-                alignment: Alignment.center,
-                child: getTitleCard(),
-              ),
-              SizedBox(
-                height: AppDimensions.dim49.h,
-              ),
-              CalendarWidget(
-                onCalendarTap: _handleCalendarSelection,
-              ),
-              SizedBox(
-                height: AppDimensions.dim42.h,
-              ),
-              getDailyScheduleTitle(),
-              SizedBox(
-                height: AppDimensions.dim19.h,
-              ),
-              getTimeLine()
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  Padding _titleWidget(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
+      child: Row(
+        children: [
+          IconButton(
+            onPressed: () => Navigator.pop(context),
+            icon: Icon(Icons.arrow_back, color: Color(0xFF475569)),
+          ),
+          Expanded(
+            child: Center(
+              child: Text(
+                'Calender',
+                style: TextStyle(
+                  fontSize: 22.sp,
+                  fontVariations: [AppFontStyles.boldFontVariation,],
+                  fontFamily: AppFontStyles.urbanistFontFamily,
+                  color: Color(0xFF5D7B91),
+                  letterSpacing: 0.5,
+                ),
+              ),
+            ),
+          ),
+          SizedBox(width: 48.w), // To balance the back button
+        ],
       ),
     );
   }

@@ -107,6 +107,7 @@ flutter:
     - assets/sipnudge_bottle/
     - assets/ringtone_icons/
     - assets/achievement_badge/
+    - assets/ai_goal/
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images

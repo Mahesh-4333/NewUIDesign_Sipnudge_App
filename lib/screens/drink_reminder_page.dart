@@ -16,6 +16,7 @@ import 'package:hydrify/screens/custom_bttom_sheet_rm.dart';
 import 'package:hydrify/screens/water_intake_timeline/water_intake_timeline_screen.dart';
 
 // import 'package:hydrify/screens/widgets/FaQ_Widgets/faq_widgets.dart';
+import 'package:hydrify/screens/widgets/animate_dots_widget.dart';
 import 'package:hydrify/screens/widgets/drinkreminder_widget/reminder_card.dart';
 import 'package:hydrify/screens/widgets/drinkreminder_widget/reminder_cycle_item.dart';
 import 'package:hydrify/screens/widgets/drinkreminder_widget/reminder_list_item.dart';
@@ -40,7 +41,6 @@ class DrinkReminderPage extends StatelessWidget {
 
     // ignore: use_build_context_synchronously
     context.read<BottomNavCubit>().showBar();
-    
   }
 
   @override
@@ -88,7 +88,6 @@ class DrinkReminderPage extends StatelessWidget {
                             //--------------------------------------//
                             ReminderCard(
                               children: [
-
                                 // Alarm Repeat
                                 _buildAlarmRepeat(cubit, state),
 
@@ -117,6 +116,70 @@ class DrinkReminderPage extends StatelessWidget {
                     ),
                   ),
                 ],
+              ),
+              BlocBuilder<DrinkReminderCubit, DrinkReminderState>(
+                builder: (context, state) {
+                  if (!state.isSaving) return const SizedBox.shrink();
+                  return Positioned.fill(
+                    child: BackdropFilter(
+                      filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
+                      child: Container(
+                        color: Colors.black.withOpacity(0.2),
+                        child: Center(
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(20.r),
+                            child: BackdropFilter(
+                              filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                              child: Container(
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: 32.w,
+                                  vertical: 20.h,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: AppColors.blueWaterIntake
+                                      .withValues(alpha: 0.2),
+                                  borderRadius: BorderRadius.circular(20.r),
+                                  border: Border.all(
+                                    color: Colors.white.withOpacity(0.2),
+                                    width: 1.5,
+                                  ),
+                                ),
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Text(
+                                          AppStrings.savingReminder,
+                                          style: TextStyle(
+                                            color: Colors.white,
+                                            fontSize:
+                                                AppFontStyles.fontSize_18.sp,
+                                            fontFamily: AppFontStyles
+                                                .urbanistFontFamily,
+                                            fontVariations: [
+                                              AppFontStyles.boldFontVariation
+                                            ],
+                                          ),
+                                        ),
+                                        AnimatedDots(
+                                          color: Colors.white,
+                                          fontSize:
+                                              AppFontStyles.fontSize_18.sp,
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  );
+                },
               ),
             ],
           ),
@@ -164,7 +227,6 @@ class DrinkReminderPage extends StatelessWidget {
       ),
     );
   }
-
 
   AppBar _appBarWidget(BuildContext context) {
     return AppBar(

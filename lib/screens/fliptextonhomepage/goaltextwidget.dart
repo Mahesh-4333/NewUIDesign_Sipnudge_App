@@ -55,9 +55,10 @@ class _GoalTextWidgetState extends State<GoalTextWidget> {
           );
         },
         child: Text(
-          _showAlternate
-              ? AppStrings.touchTheCapToSyncNow
-              : AppStrings.getGoalString(widget.todayConsumptionPercentage),
+          // _showAlternate
+          //     ? AppStrings.touchTheCapToSyncNow
+          //     : AppStrings.getGoalString(widget.todayConsumptionPercentage),
+          "",
           key: ValueKey<bool>(_showAlternate),
           style: TextStyle(
             fontSize: AppFontStyles.fontSize_16,

@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:hydrify/constants/app_colors.dart';
 import 'package:hydrify/constants/app_dimensions.dart';
@@ -8,9 +7,8 @@ import 'package:hydrify/helpers/vibration_helper.dart';
 
 class CustomGradientSlider extends StatefulWidget {
   final List<double> tickValues;
-  final double initialValue; // e.g. 1.6
-  final ValueChanged<double>?
-      onChanged; // callback gets the tick value (1.1, 1.3, ...)
+  final double initialValue;
+  final ValueChanged<double>? onChanged;
 
   const CustomGradientSlider({
     super.key,
@@ -24,12 +22,18 @@ class CustomGradientSlider extends StatefulWidget {
 }
 
 class _CustomGradientSliderState extends State<CustomGradientSlider> {
-  late int _currentIndex; // index into tickValues
+  late PageController _pageController;
+  late int _currentIndex;
+  final double _viewportFraction = 0.35; // Adjust to control spacing
 
   @override
   void initState() {
     super.initState();
     _currentIndex = _findClosestIndex(widget.initialValue);
+    _pageController = PageController(
+      initialPage: _currentIndex,
+      viewportFraction: _viewportFraction,
+    );
   }
 
   @override
@@ -37,8 +41,20 @@ class _CustomGradientSliderState extends State<CustomGradientSlider> {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.initialValue != widget.initialValue ||
         oldWidget.tickValues != widget.tickValues) {
-      _currentIndex = _findClosestIndex(widget.initialValue);
+      final newIndex = _findClosestIndex(widget.initialValue);
+      if (newIndex != _currentIndex) {
+        _currentIndex = newIndex;
+        if (_pageController.hasClients) {
+          _pageController.jumpToPage(_currentIndex);
+        }
+      }
     }
+  }
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
   }
 
   int _findClosestIndex(double value) {
@@ -56,12 +72,12 @@ class _CustomGradientSliderState extends State<CustomGradientSlider> {
     return bestIndex;
   }
 
-  void _onChangedIndex(double raw) {
-    final index = raw.round().clamp(0, widget.tickValues.length - 1); // 0..N-1
-
+  void _onPageChanged(int index) {
     if (index == _currentIndex) return;
 
-    setState(() => _currentIndex = index);
+    setState(() {
+      _currentIndex = index;
+    });
 
     final value = widget.tickValues[index];
     VibrationHelper.vibrate(duration: 15, amplitude: 100);
@@ -73,209 +89,170 @@ class _CustomGradientSliderState extends State<CustomGradientSlider> {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        SliderTheme(
-          data: SliderTheme.of(context).copyWith(
-            tickMarkShape: CustomTickMarkShape(),
-            showValueIndicator: ShowValueIndicator.onlyForContinuous,
-            trackHeight: AppDimensions.dim8.h,
-            thumbShape: CustomThumbShape(),
-            trackShape: GradientTrackShape(),
-            overlayColor: Colors.transparent,
-            activeTrackColor: Colors.transparent,
-            inactiveTrackColor: Colors.transparent,
-          ),
-          child: Slider(
-            min: 0,
-            max: (widget.tickValues.length - 1).toDouble(),
-            divisions: widget.tickValues.length - 1,
-            value: _currentIndex.toDouble(),
-            label: "",
-            onChanged: _onChangedIndex,
-          ),
-        ),
-        SizedBox(height: AppDimensions.dim12.h),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: widget.tickValues.map((val) {
-            return Text(
-              '${val.toStringAsFixed(1)}L',
-              style: TextStyle(
-                color: AppColors.black40,
-                fontSize: AppFontStyles.fontSize_14,
-                fontVariations: [AppFontStyles.semiBoldFontVariation],
+        SizedBox(
+          height: 90.h,
+          child: Stack(
+            alignment: Alignment.topCenter,
+            children: [
+              // 1. The Track (Moving Gradient Fill)
+              // This stays vertically centered relative to the thumb
+              Positioned(
+                top: 8.h, // Align with thumb center
+                child: IgnorePointer(
+                  child: _buildTrackBackground(),
+                ),
               ),
-            );
-          }).toList(),
+
+              // 2. The Interactive Carousel (Labels and Ticks)
+              // We make this tall enough to contain the labels below the track
+              PageView.builder(
+                controller: _pageController,
+                itemCount: widget.tickValues.length,
+                onPageChanged: _onPageChanged,
+                physics: const BouncingScrollPhysics(),
+                itemBuilder: (context, index) {
+                  final value = widget.tickValues[index];
+                  return _buildTickItem(index, value);
+                },
+              ),
+
+              // 3. The Fixed Thumb (Centered on top of track)
+              Positioned(
+                top: 0,
+                child: IgnorePointer(
+                  child: _buildFixedThumb(),
+                ),
+              ),
+            ],
+          ),
         ),
       ],
     );
   }
-}
 
-class CustomThumbShape extends SliderComponentShape {
-  @override
-  Size getPreferredSize(bool isEnabled, bool isDiscrete) => Size(24, 24);
+  Widget _buildTrackBackground() {
+    final double trackHeight = 10.h;
+    final double radius = trackHeight / 2;
 
-  @override
-  void paint(
-    PaintingContext context,
-    Offset center, {
-    required Animation<double> activationAnimation,
-    required Animation<double> enableAnimation,
-    required bool isDiscrete,
-    required TextPainter labelPainter,
-    required RenderBox parentBox,
-    required SliderThemeData sliderTheme,
-    required TextDirection textDirection,
-    required double value,
-    required double textScaleFactor,
-    required Size sizeWithOverflow,
-  }) {
-    final Paint paint = Paint()
-      ..shader = LinearGradient(
-        colors: [Color(0XFF9AE9FF), Color(0XFF005D84)],
-        begin: Alignment.topCenter,
-        end: Alignment.bottomCenter,
-      ).createShader(
-        Rect.fromCircle(
-          center: center,
-          radius: 12,
-        ),
-      );
-
-    final Paint borderPaint = Paint()
-      ..color = AppColors.greywith80
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 2;
-
-    context.canvas.drawCircle(
-        center.translate(0, 1.5), 14, Paint()..color = Colors.black26);
-    context.canvas.drawCircle(center, 12, paint);
-    context.canvas.drawCircle(center, 12, borderPaint);
-  }
-}
-
-class GradientTrackShape extends SliderTrackShape {
-  @override
-  Rect getPreferredRect({
-    required RenderBox parentBox,
-    Offset offset = Offset.zero,
-    required SliderThemeData sliderTheme,
-    bool isEnabled = false,
-    bool isDiscrete = false,
-  }) {
-    final double trackHeight = sliderTheme.trackHeight ?? AppDimensions.dim8.h;
-    final double trackLeft = offset.dx;
-    final double trackTop =
-        offset.dy + (parentBox.size.height - trackHeight) / 2;
-    final double trackWidth = parentBox.size.width;
-
-    return Rect.fromLTWH(trackLeft, trackTop, trackWidth, trackHeight);
-  }
-
-  @override
-  void paint(
-    PaintingContext context,
-    Offset offset, {
-    required RenderBox parentBox,
-    required SliderThemeData sliderTheme,
-    required Animation<double> enableAnimation,
-    required TextDirection textDirection,
-    required Offset thumbCenter,
-    Offset? secondaryOffset,
-    bool isEnabled = false,
-    bool isDiscrete = false,
-  }) {
-    final Rect trackRect = getPreferredRect(
-      parentBox: parentBox,
-      offset: offset,
-      sliderTheme: sliderTheme,
-      isEnabled: isEnabled,
-      isDiscrete: isDiscrete,
-    );
-
-    final Paint activePaint = Paint()
-      ..shader = LinearGradient(
-        colors: [
-          Color(0XFF9AE9FF),
-          Color(0XFF005D84),
+    return Container(
+      width: 1.sw -
+          AppDimensions.defaultPadding.w * 4, // Consistent with screen padding
+      height: trackHeight,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(radius),
+        border: Border.all(color: AppColors.greywith80, width: 1.5),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
         ],
-      ).createShader(
-        Rect.fromLTWH(
-          trackRect.left,
-          trackRect.top,
-          thumbCenter.dx - trackRect.left,
-          trackRect.height,
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(radius),
+        clipBehavior: Clip.antiAlias,
+        child: AnimatedBuilder(
+          animation: _pageController,
+          builder: (context, child) {
+            double progress = 0.0;
+            if (_pageController.hasClients &&
+                _pageController.position.haveDimensions) {
+              progress = (_pageController.page ?? _currentIndex.toDouble()) /
+                  (widget.tickValues.length - 1);
+            } else {
+              progress = _currentIndex / (widget.tickValues.length - 1);
+            }
+
+            return Row(
+              children: [
+                Expanded(
+                  flex: (progress * 1000).toInt().clamp(1, 1000),
+                  child: Container(
+                    decoration: const BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [Color(0XFF9AE9FF), Color(0XFF005D84)],
+                      ),
+                    ),
+                  ),
+                ),
+                Expanded(
+                  flex: ((1 - progress) * 1000).toInt().clamp(1, 1000),
+                  child: Container(color: Colors.white),
+                ),
+              ],
+            );
+          },
         ),
-      );
-
-    final Paint inactivePaint = Paint()..color = Color(0XFFFFFFFF);
-
-    final Radius trackRadius = Radius.circular(trackRect.height / 2);
-
-    final Path trackPath = Path()
-      ..addRRect(RRect.fromRectAndRadius(trackRect, trackRadius));
-
-    context.canvas.drawShadow(trackPath, Colors.black, 4, true);
-
-    context.canvas.drawRRect(
-      RRect.fromRectAndRadius(
-        Rect.fromLTRB(
-            trackRect.left, trackRect.top, thumbCenter.dx, trackRect.bottom),
-        trackRadius,
       ),
-      activePaint,
-    );
-
-    context.canvas.drawRRect(
-      RRect.fromRectAndRadius(
-        Rect.fromLTRB(
-            thumbCenter.dx, trackRect.top, trackRect.right, trackRect.bottom),
-        trackRadius,
-      ),
-      inactivePaint,
-    );
-    // ⬅️ ADD BORDER AROUND WHOLE TRACK
-    final Paint borderPaint = Paint()
-      ..color = AppColors.greywith80
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.5;
-
-    context.canvas.drawRRect(
-      RRect.fromRectAndRadius(trackRect, trackRadius),
-      borderPaint,
     );
   }
-}
 
-class CustomTickMarkShape extends SliderTickMarkShape {
-  @override
-  Size getPreferredSize({
-    required bool isEnabled,
-    required SliderThemeData sliderTheme,
-  }) {
-    return const Size(2, 8);
+  Widget _buildTickItem(int index, double value) {
+    return AnimatedBuilder(
+      animation: _pageController,
+      builder: (context, child) {
+        double valueInPage = 0.0;
+        if (_pageController.hasClients &&
+            _pageController.position.haveDimensions) {
+          valueInPage = _pageController.page! - index;
+        } else {
+          valueInPage = (_currentIndex - index).toDouble();
+        }
+
+        double opacity = (1 - (valueInPage.abs() * 0.7)).clamp(0.0, 1.0);
+
+        return Column(
+          mainAxisAlignment: MainAxisAlignment.start,
+          children: [
+            // Spacer for Track/Thumb area
+            SizedBox(height: 35.h),
+            // Ticks (Optional, helps visual continuity)
+            Container(
+              width: 1.w,
+              height: 5.h,
+              color: AppColors.bluegray.withOpacity(0.9),
+            ),
+            SizedBox(height: 10.h),
+            Opacity(
+              opacity: opacity,
+              child: Text(
+                "${value.toStringAsFixed(1)}L",
+                style: TextStyle(
+                  color: AppColors.bluegray,
+                  fontSize: AppFontStyles.fontSize_16,
+                  fontFamily: AppFontStyles.urbanistFontFamily,
+                  fontVariations: [AppFontStyles.boldFontVariation],
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
   }
 
-  @override
-  void paint(
-    PaintingContext context,
-    Offset center, {
-    required RenderBox parentBox,
-    required SliderThemeData sliderTheme,
-    required Animation<double> enableAnimation,
-    required Offset thumbCenter,
-    required bool isEnabled,
-    required TextDirection textDirection,
-  }) {
-    final paint = Paint()
-      ..color = sliderTheme.activeTickMarkColor ?? Colors.white
-      ..strokeWidth = 2;
-
-    context.canvas.drawLine(
-      Offset(center.dx, center.dy - 4),
-      Offset(center.dx, center.dy + 4),
-      paint,
+  Widget _buildFixedThumb() {
+    return Container(
+      width: 26.w,
+      height: 26.w,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        gradient: const LinearGradient(
+          colors: [Color(0XFF9AE9FF), Color(0XFF005D84)],
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+        ),
+        // border: Border.all(color: AppColors.white, width: 2),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.2),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
     );
   }
 }

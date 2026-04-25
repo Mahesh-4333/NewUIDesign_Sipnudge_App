@@ -50,7 +50,7 @@ class CustomCircularWaterProgressIndicator extends StatelessWidget {
           painter: _WaterArcPainter(
             percentage: percentageValue,
             baseArcColor: Colors.white,
-            progressBackgroundColor: AppColors.white.withOpacity(0.40),
+            progressBackgroundColor: AppColors.white.withValues(alpha: 0.40),
             progressColor: progressColor ?? Color(0XFF1C8DBB),
             strokeWidth: AppDimensions.dim8.w,
           ),
@@ -80,8 +80,8 @@ class _WaterArcPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     final rect = Offset.zero & size;
 
-    final startAngle = -pi * 0.68;
-    final sweepAngle = -pi * 1.65;
+    final startAngle = -pi * 0.33;
+    final sweepAngle = pi * 1.65;
 
     final deflatedRect = rect.deflate(strokeWidth / 1.5);
 
@@ -91,6 +91,21 @@ class _WaterArcPainter extends CustomPainter {
       ..style = PaintingStyle.stroke
       ..strokeWidth = strokeWidth
       ..strokeCap = StrokeCap.round;
+
+    // --- OUTER SHADOW FOR BACKGROUND ---
+    final shadowPaint = Paint()
+      ..color = Colors.black.withValues(alpha: 0.15)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = strokeWidth
+      ..maskFilter = MaskFilter.blur(BlurStyle.normal, 4.0.r);
+
+    canvas.drawArc(
+      deflatedRect,
+      0,
+      2 * pi,
+      false,
+      shadowPaint,
+    );
 
     canvas.drawArc(
       deflatedRect,

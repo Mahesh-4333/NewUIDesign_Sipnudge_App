@@ -72,31 +72,16 @@ class _UserInfoDailyGoalScreenState extends State<UserInfoDailyGoalScreen> {
   void _setupDynamicSlider() {
     double goalInLiters = widget.waterGoal / 1000;
 
-    double minGoal = (goalInLiters - 2.0).clamp(1.0, goalInLiters);
-    double maxGoal = (goalInLiters + 2.0).clamp(goalInLiters, 10.0);
-
-    minGoal = minGoal > goalInLiters ? goalInLiters * 0.8 : minGoal;
-    maxGoal = maxGoal < goalInLiters ? goalInLiters * 1.2 : maxGoal;
-
-    tickValues = [
-      minGoal,
-      minGoal + (goalInLiters - minGoal) * 0.5,
-      goalInLiters,
-      goalInLiters + (maxGoal - goalInLiters) * 0.5,
-      maxGoal,
-    ];
-
-    tickValues = tickValues.map((value) {
-      return (value * 10).truncateToDouble() / 10;
-    }).toList();
+    // Fixed range from 0.5L to 10.0L with 0.5L steps
+    tickValues = [];
+    for (double val = 0.5; val <= 10.0; val += 0.5) {
+      tickValues.add(val);
+    }
 
     initialSliderValue = goalInLiters;
+    widgetMaxGoal = 10000.0;
 
-    widgetMaxGoal = maxGoal * 1000;
-
-    Console.log(tag: "APP", value: "Dynamic slider setup:");
-    Console.log(tag: "APP", value: "Goal: ${goalInLiters}L");
-    Console.log(tag: "APP", value: "Tick values: $tickValues");
+    Console.log(tag: "APP", value: "Slider setup: 0.5L to 10.0L");
     Console.log(tag: "APP", value: "Initial slider value: $initialSliderValue");
   }
 
@@ -218,9 +203,6 @@ class _UserInfoDailyGoalScreenState extends State<UserInfoDailyGoalScreen> {
                     HapticFeedback.selectionClick();
                     convertedWaterGoal = val * 1000;
                     updateDisplayWaterGoal();
-
-                    print(
-                        "Fill percent = ${convertedWaterGoal / (widgetMaxGoal)}");
                   });
                 },
               ),
@@ -312,8 +294,11 @@ class _UserInfoDailyGoalScreenState extends State<UserInfoDailyGoalScreen> {
                 await SharedPrefsHelper.setPersonalInfoSubmitted(true);
                 await SharedPrefsHelper.setWaterGoal(
                     convertedWaterGoal.toInt());
+                await DatabaseHelper().saveDailyWaterGoal(
+                    DateTime.now(), convertedWaterGoal.toInt());
 
-                final slots = HydrationHelper.generateHydrationSlots(convertedWaterGoal);
+                final slots =
+                    HydrationHelper.generateHydrationSlots(convertedWaterGoal);
                 for (var slot in slots) {
                   Console.log(
                       tag: "APP",
@@ -339,7 +324,9 @@ class _UserInfoDailyGoalScreenState extends State<UserInfoDailyGoalScreen> {
                     await dbHelper.insertOrUpdateSlot(updatedSlot);
                     updatedSlots.add(updatedSlot);
                   }
-                  await context.read<BleCubit>().queueHydrationSlots(updatedSlots);
+                  await context
+                      .read<BleCubit>()
+                      .queueHydrationSlots(updatedSlots);
                 }
 
                 await SharedPrefsHelper.setLastLevelUpDate("");
@@ -391,7 +378,6 @@ class _UserInfoDailyGoalScreenState extends State<UserInfoDailyGoalScreen> {
       ),
     );
   }
-
 
   Future<bool?> showGoogleCalendarDialog() async {
     return await showDialog<bool>(

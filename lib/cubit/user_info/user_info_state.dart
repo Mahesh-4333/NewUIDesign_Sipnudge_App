@@ -6,6 +6,8 @@ enum ActivityLevel { sedentary, lightActivity, midActive, veryActive }
 
 enum DietType { balanced, vegetarian, processed, highProtein }
 
+enum BeverageIntake { none, oneToTwo, threeToFour, fivePlus }
+
 class UserInfoState extends Equatable {
   final Gender? gender;
   final double? height;
@@ -24,7 +26,11 @@ class UserInfoState extends Equatable {
 
   final ActivityLevel? activityLevel;
   final DietType? dietType;
+  final BeverageIntake? coffeeIntake;
+  final BeverageIntake? teaIntake;
   final int? stepGoal;
+  final double? typicalWaterIntake;
+  final String? waterUnit; // "L" or "mL"
   final bool hideAchievement;
 
   const UserInfoState(
@@ -42,7 +48,11 @@ class UserInfoState extends Equatable {
       this.bedtimePeriod,
       this.activityLevel = ActivityLevel.lightActivity,
       this.dietType = DietType.balanced,
+      this.coffeeIntake = BeverageIntake.none,
+      this.teaIntake = BeverageIntake.none,
       this.stepGoal = 7000,
+      this.typicalWaterIntake = 2.0,
+      this.waterUnit = "L",
       this.hideAchievement = false});
 
   UserInfoState copyWith({
@@ -60,7 +70,11 @@ class UserInfoState extends Equatable {
     String? bedtimePeriod,
     ActivityLevel? activityLevel,
     DietType? dietType,
+    BeverageIntake? coffeeIntake,
+    BeverageIntake? teaIntake,
     int? stepGoal,
+    double? typicalWaterIntake,
+    String? waterUnit,
     bool? hideAchievement,
   }) {
     return UserInfoState(
@@ -78,7 +92,11 @@ class UserInfoState extends Equatable {
       bedtimePeriod: bedtimePeriod ?? this.bedtimePeriod,
       activityLevel: activityLevel ?? this.activityLevel,
       dietType: dietType ?? this.dietType,
+      coffeeIntake: coffeeIntake ?? this.coffeeIntake,
+      teaIntake: teaIntake ?? this.teaIntake,
       stepGoal: stepGoal ?? this.stepGoal,
+      typicalWaterIntake: typicalWaterIntake ?? this.typicalWaterIntake,
+      waterUnit: waterUnit ?? this.waterUnit,
       hideAchievement: hideAchievement ?? this.hideAchievement,
     );
   }
@@ -99,7 +117,11 @@ class UserInfoState extends Equatable {
         bedtimePeriod,
         activityLevel,
         dietType,
+        coffeeIntake,
+        teaIntake,
         stepGoal,
+        typicalWaterIntake,
+        waterUnit,
       ];
 }
 

@@ -7,7 +7,6 @@ import 'package:hydrify/models/bottle_data.dart';
 import 'package:hydrify/models/chart_data.dart';
 import 'package:hydrify/models/water_consumption_data.dart';
 import 'package:intl/intl.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 class WaterConsumptionCalculator {
   // Calculate consumption for a single day from bottle readings
@@ -139,7 +138,69 @@ class WaterConsumptionCalculator {
         break;
     }
 
-    double totalIntake = baseIntake + activityAdjustment + dietAdjustment;
+    double ageAdjustment = 0.0;
+    if (state.age != null) {
+      if (state.age! < 30) {
+        ageAdjustment = 200.0;
+      } else if (state.age! > 55) {
+        ageAdjustment = -200.0;
+      }
+    }
+
+    double coffeeAdjustment = 0.0;
+    switch (state.coffeeIntake) {
+      case BeverageIntake.none:
+        coffeeAdjustment = 0.0;
+        break;
+      case BeverageIntake.oneToTwo:
+        coffeeAdjustment = 250.0;
+        break;
+      case BeverageIntake.threeToFour:
+        coffeeAdjustment = 500.0;
+        break;
+      case BeverageIntake.fivePlus:
+        coffeeAdjustment = 750.0;
+        break;
+      case null:
+        coffeeAdjustment = 0.0;
+        break;
+    }
+
+    double teaAdjustment = 0.0;
+    switch (state.teaIntake) {
+      case BeverageIntake.none:
+        teaAdjustment = 0.0;
+        break;
+      case BeverageIntake.oneToTwo:
+        teaAdjustment = 150.0;
+        break;
+      case BeverageIntake.threeToFour:
+        teaAdjustment = 300.0;
+        break;
+      case BeverageIntake.fivePlus:
+        teaAdjustment = 450.0;
+        break;
+      case null:
+        teaAdjustment = 0.0;
+        break;
+    }
+
+    double totalIntake = baseIntake +
+        activityAdjustment +
+        dietAdjustment +
+        ageAdjustment +
+        coffeeAdjustment +
+        teaAdjustment;
+
+    // Optional: Adjust based on typical intake if it's significantly higher
+    // if (state.typicalWaterIntake != null) {
+    //   double typicalMl = state.typicalWaterIntake! * 1000;
+    //   if (typicalMl > totalIntake) {
+    //     // If user already drinks more, don't recommend less than what they are used to
+    //     // unless it's excessive (>4L)
+    //     totalIntake = (totalIntake + typicalMl) / 2;
+    //   }
+    // }
 
     // Ensure minimum reasonable intake (1500ml) and maximum safe intake (4000ml)
     return totalIntake;
@@ -197,12 +258,63 @@ class WaterConsumptionCalculator {
         break;
     }
 
+    double ageAdjustment = 0.0;
+    if (state.age != null) {
+      if (state.age! < 30) {
+        ageAdjustment = 200.0;
+      } else if (state.age! > 55) {
+        ageAdjustment = -200.0;
+      }
+    }
+
+    double coffeeAdjustment = 0.0;
+    switch (state.coffeeIntake) {
+      case BeverageIntake.none:
+        coffeeAdjustment = 0.0;
+        break;
+      case BeverageIntake.oneToTwo:
+        coffeeAdjustment = 250.0;
+        break;
+      case BeverageIntake.threeToFour:
+        coffeeAdjustment = 500.0;
+        break;
+      case BeverageIntake.fivePlus:
+        coffeeAdjustment = 750.0;
+        break;
+      case null:
+        coffeeAdjustment = 0.0;
+        break;
+    }
+
+    double teaAdjustment = 0.0;
+    switch (state.teaIntake) {
+      case BeverageIntake.none:
+        teaAdjustment = 0.0;
+        break;
+      case BeverageIntake.oneToTwo:
+        teaAdjustment = 150.0;
+        break;
+      case BeverageIntake.threeToFour:
+        teaAdjustment = 300.0;
+        break;
+      case BeverageIntake.fivePlus:
+        teaAdjustment = 450.0;
+        break;
+      case null:
+        teaAdjustment = 0.0;
+        break;
+    }
+
     return {
       'baseIntake': baseIntake,
       'genderAdjustment': 0,
       'activityAdjustment': activityAdjustment,
       'dietAdjustment': dietAdjustment,
-      'ageAdjustment': 0,
+      'caffeineAdjustment': coffeeAdjustment + teaAdjustment,
+      'typicalIntakeAdjustment': state.typicalWaterIntake != null
+          ? (state.typicalWaterIntake! * 1000)
+          : 0.0,
+      'ageAdjustment': ageAdjustment,
       'temperatureAdjustment': 0,
       'total': calculateWaterIntakeGoal(state,
           currentTemperature: currentTemperature),

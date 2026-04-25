@@ -10,6 +10,7 @@ import 'package:hydrify/constants/app_font_styles.dart';
 import 'package:hydrify/constants/app_strings.dart';
 import 'package:hydrify/cubit/data_analytics/data_analytics_cubit.dart';
 import 'package:hydrify/helpers/common.dart';
+import 'package:hydrify/screens/calendar/calendar_screen.dart';
 import 'package:hydrify/screens/widgets/chart_widgets/custom_stacked_bar_chart.dart';
 import 'package:hydrify/screens/widgets/data_analytics/animated_month_item.dart';
 import 'package:percent_indicator/percent_indicator.dart';
@@ -28,120 +29,186 @@ class _DataNAnalyticsScreenState extends State<DataNAnalyticsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      extendBodyBehindAppBar: true,
-      appBar: _getAppBarWidget(),
-      body: SingleChildScrollView(
-        child: Container(
-          width: double.infinity,
-          padding: EdgeInsets.only(
-            top: AppDimensions.dim100.h,
+      bottomNavigationBar: SizedBox(height: 0, width: 0,),
+      // appBar: _getAppBarWidget(),
+      body: Container(
+        width: double.infinity,
+        height: double.infinity,
+        decoration: BoxDecoration(
+          image: DecorationImage(
+            image: AssetImage('assets/images/app_background.png'),
+            // Assuming a background texture exists or using a subtle gradient
+            fit: BoxFit.cover,
           ),
-          decoration: BoxDecoration(
-            image: DecorationImage(
-              image: AssetImage("assets/images/app_background.png"),
-              fit: BoxFit.cover,
-            ),
-          ),
-          child: Container(
-            padding: EdgeInsets.symmetric(
-                horizontal: AppDimensions.dim40.w,
-                vertical: AppDimensions.dim12.h),
-            child: Column(
-              children: [
-                SizedBox(
-                  height: AppDimensions.dim17.h,
-                ),
-                buildMonthyNYearlyToggle(),
-                SizedBox(
-                  height: AppDimensions.dim24.h,
-                ),
-                buildMonthGrid(),
-                SizedBox(
-                  height: 16.h,
-                ),
-                buildIntakeCard(),
-                SizedBox(
-                  height: 16.h,
-                ),
-                buildDistributionCard(),
-                SizedBox(
-                  height: 16.h,
-                ),
-                buildHabitConsistencyCard(),
-                SizedBox(
-                  height: 16.h,
-                ),
-                buildEliteSmartInsights(),
-                SizedBox(
-                  height: 16.h,
-                ),
-                BlocBuilder<DataAnalyticsCubit, DataAnalyticsState>(
-                  builder: (context, state) {
-                    return Visibility(
-                      visible: state.isMonthlySelected,
-                      replacement: buildQuarterlyBreakDown(),
-                      child: buildHistoricalTrends(),
-                    );
-                  },
-                ),
-                SizedBox(
-                  height: 16.h,
-                ),
-                Container(
-                  width: 209.89,
-                  height: 49,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(100), // cleaner
-                    gradient: const LinearGradient(
-                      begin: Alignment.centerLeft,
-                      end: Alignment.centerRight,
-                      colors: [
-                        AppColors.color_1E69B3,
-                        AppColors.color_3B82F6,
-                      ],
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              Color(0xFFF8FAFC),
+              Color(0xFFF1F5F9),
+            ],
+          ),),
+        child: SafeArea(
+          child: Column(
+            children: [
+              _titleWidget(context),
+              Expanded(
+                child: SingleChildScrollView(
+                  physics: BouncingScrollPhysics(),
+                  child: Container(
+                    width: double.infinity,
+                    // padding: EdgeInsets.only(
+                    //   top: AppDimensions.dim100.h,
+                    // ),
+                    decoration: BoxDecoration(
+                      image: DecorationImage(
+                        image: AssetImage("assets/images/app_background.png"),
+                        fit: BoxFit.cover,
+                      ),
                     ),
-                    boxShadow: const [
-                      BoxShadow(
-                        color: AppColors.color_3B82F6_30,
-                        offset: Offset(0, 9.76),
-                        blurRadius: 12.2,
+                    child: Container(
+                      padding: EdgeInsets.symmetric(
+                          horizontal: AppDimensions.dim40.w,
+                          vertical: AppDimensions.dim12.h),
+                      child: Column(
+                        children: [
+                          SizedBox(
+                            height: AppDimensions.dim17.h,
+                          ),
+                          buildMonthyNYearlyToggle(),
+                          SizedBox(
+                            height: AppDimensions.dim24.h,
+                          ),
+                          buildMonthGrid(),
+                          SizedBox(
+                            height: 16.h,
+                          ),
+                          buildIntakeCard(),
+                          SizedBox(
+                            height: 16.h,
+                          ),
+                          buildDistributionCard(),
+                          SizedBox(
+                            height: 16.h,
+                          ),
+                          buildHabitConsistencyCard(),
+                          SizedBox(
+                            height: 16.h,
+                          ),
+                          buildEliteSmartInsights(),
+                          SizedBox(
+                            height: 16.h,
+                          ),
+                          BlocBuilder<DataAnalyticsCubit, DataAnalyticsState>(
+                            builder: (context, state) {
+                              return Visibility(
+                                visible: state.isMonthlySelected,
+                                replacement: buildQuarterlyBreakDown(),
+                                child: buildHistoricalTrends(),
+                              );
+                            },
+                          ),
+                          SizedBox(
+                            height: 20.h,
+                          ),
+                          Container(
+                            width: 209.89,
+                            height: 49,
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(100), // cleaner
+                              gradient: const LinearGradient(
+                                begin: Alignment.centerLeft,
+                                end: Alignment.centerRight,
+                                colors: [
+                                  AppColors.color_1E69B3,
+                                  AppColors.color_3B82F6,
+                                ],
+                              ),
+                              boxShadow: const [
+                                BoxShadow(
+                                  color: AppColors.color_3B82F6_30,
+                                  offset: Offset(0, 9.76),
+                                  blurRadius: 12.2,
+                                ),
+                                BoxShadow(
+                                  color: AppColors.color_3B82F6_30,
+                                  offset: Offset(0, -3),
+                                  blurRadius: 24,
+                                ),
+                              ],
+                            ),
+                            child: ElevatedButton(
+                              onPressed: () {
+                                showExportBottomSheet(context);
+                              },
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.transparent,
+                                shadowColor: Colors.transparent,
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 39.03,
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(100),
+                                ),
+                              ),
+                              child: Text(
+                                "Export Data",
+                                style: TextStyle(
+                                  color: AppColors.white,
+                                  fontFamily: AppFontStyles.urbanistFontFamily,
+                                  fontSize: AppFontStyles.fontSize_16,
+                                  fontVariations: [AppFontStyles.boldFontVariation],
+                                ),
+                              ),
+                            ),
+                          ),
+                          SizedBox(height: 150.h,)
+                        ],
                       ),
-                      BoxShadow(
-                        color: AppColors.color_3B82F6_30,
-                        offset: Offset(0, -3),
-                        blurRadius: 24,
-                      ),
-                    ],
+                    ),
                   ),
-                  child: ElevatedButton(
-                    onPressed: () {
-                      showExportBottomSheet(context);
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.transparent,
-                      shadowColor: Colors.transparent,
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 39.03,
-                      ),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(100),
-                      ),
-                    ),
-                    child: Text(
-                      "Export Data",
-                      style: TextStyle(
-                        color: AppColors.white,
-                        fontFamily: AppFontStyles.urbanistFontFamily,
-                        fontSize: AppFontStyles.fontSize_16,
-                        fontVariations: [AppFontStyles.boldFontVariation],
-                      ),
-                    ),
-                  ),
-                )
-              ],
-            ),
+                ),
+              ),
+            ],
           ),
         ),
+      ),
+    );
+  }
+
+  Padding _titleWidget(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
+      child: Row(
+        children: [
+          IconButton(
+            onPressed: () => Navigator.pop(context),
+            icon: Icon(Icons.arrow_back, color: Color(0xFF475569)),
+          ),
+          Expanded(
+            child: Center(
+              child: Text(
+                'Data & Analytics',
+                style: TextStyle(
+                  fontSize: 22.sp,
+                  fontVariations: [AppFontStyles.boldFontVariation,],
+                  fontFamily: AppFontStyles.urbanistFontFamily,
+                  color: Color(0xFF5D7B91),
+                  letterSpacing: 0.5,
+                ),
+              ),
+            ),
+          ),
+          SizedBox(width: 48.w), // To balance the back button
+          IconButton(
+              onPressed: () {
+                context.read<DataAnalyticsCubit>().toggleCalendar();
+                Navigator.push(context, MaterialPageRoute(builder: (context) => CalendarScreen()));
+              },
+              icon: Icon(Icons.calendar_month_outlined,
+                  color: AppColors.lightBlue400)),
+
+        ],
       ),
     );
   }
@@ -151,8 +218,8 @@ class _DataNAnalyticsScreenState extends State<DataNAnalyticsScreen> {
       elevation: 0.0,
       scrolledUnderElevation: 0.0,
       forceMaterialTransparency: true,
-      surfaceTintColor: Colors.transparent,
-      backgroundColor: Colors.transparent,
+      // surfaceTintColor: Colors.transparent,
+      // backgroundColor: Colors.transparent,
       centerTitle: true,
       leading: IconButton(
         icon: SvgPicture.asset(

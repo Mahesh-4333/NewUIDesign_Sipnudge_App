@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:hydrify/helpers/logger.dart';
-import 'package:hydrify/screens/data_n_analytics/data_n_analytics.dart';
+import 'package:hydrify/screens/data_n_analytics/data_n_analytics_screen.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';

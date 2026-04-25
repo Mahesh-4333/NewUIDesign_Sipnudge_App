@@ -312,89 +312,89 @@ class _WaterIntakeTimelineState extends State<WaterIntakeTimelineScreen> {
 
   Widget _getTabContent(HydrationState state) {
     if (_activeTabIndex == 0) {
-      // return _buildActivityCompletedView(state);
-      return Padding(
-        padding: EdgeInsets.only(bottom: 120.h),
-        child: Stack(
-          alignment: Alignment.center,
-          children: [
-            SizedBox(
-              width: AppDimensions.dim600,
-            ),
-            // Blur overlay
-            Positioned.fill(
-              child: ClipRRect(
-                borderRadius:
-                    BorderRadius.circular(16), // match your card radius
-                child: BackdropFilter(
-                  filter: ImageFilter.blur(sigmaX: 6, sigmaY: 6),
-                  child: Container(
-                    color: Colors.black.withOpacity(0.2),
-                  ),
-                ),
-              ),
-            ),
-
-            // Center Text
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              decoration: BoxDecoration(
-                color: Colors.black.withOpacity(0.7),
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: const Text(
-                "Coming Soon",
-                style: TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
-          ],
-        ),
-      );
+      return _buildActivityCompletedView(state);
+      // return Padding(
+      //   padding: EdgeInsets.only(bottom: 120.h),
+      //   child: Stack(
+      //     alignment: Alignment.center,
+      //     children: [
+      //       SizedBox(
+      //         width: AppDimensions.dim600,
+      //       ),
+      //       // Blur overlay
+      //       Positioned.fill(
+      //         child: ClipRRect(
+      //           borderRadius:
+      //               BorderRadius.circular(16), // match your card radius
+      //           child: BackdropFilter(
+      //             filter: ImageFilter.blur(sigmaX: 6, sigmaY: 6),
+      //             child: Container(
+      //               color: Colors.black.withOpacity(0.2),
+      //             ),
+      //           ),
+      //         ),
+      //       ),
+      //
+      //       // Center Text
+      //       Container(
+      //         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      //         decoration: BoxDecoration(
+      //           color: Colors.black.withOpacity(0.7),
+      //           borderRadius: BorderRadius.circular(20),
+      //         ),
+      //         child: const Text(
+      //           "Coming Soon",
+      //           style: TextStyle(
+      //             color: Colors.white,
+      //             fontWeight: FontWeight.bold,
+      //           ),
+      //         ),
+      //       ),
+      //     ],
+      //   ),
+      // );
     } else if (_activeTabIndex == 1) {
-      // return _buildActivityPendingView(state);
-      return Padding(
-        padding: EdgeInsets.only(bottom: 120.h),
-        child: Stack(
-          alignment: Alignment.center,
-          children: [
-            SizedBox(
-              width: AppDimensions.dim600,
-            ),
-            // Blur overlay
-            Positioned.fill(
-              child: ClipRRect(
-                borderRadius:
-                    BorderRadius.circular(16), // match your card radius
-                child: BackdropFilter(
-                  filter: ImageFilter.blur(sigmaX: 6, sigmaY: 6),
-                  child: Container(
-                    color: Colors.black.withOpacity(0.2),
-                  ),
-                ),
-              ),
-            ),
-
-            // Center Text
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              decoration: BoxDecoration(
-                color: Colors.black.withOpacity(0.7),
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: const Text(
-                "Coming Soon",
-                style: TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
-          ],
-        ),
-      );
+      return _buildActivityPendingView(state);
+      // return Padding(
+      //   padding: EdgeInsets.only(bottom: 120.h),
+      //   child: Stack(
+      //     alignment: Alignment.center,
+      //     children: [
+      //       SizedBox(
+      //         width: AppDimensions.dim600,
+      //       ),
+      //       // Blur overlay
+      //       Positioned.fill(
+      //         child: ClipRRect(
+      //           borderRadius:
+      //               BorderRadius.circular(16), // match your card radius
+      //           child: BackdropFilter(
+      //             filter: ImageFilter.blur(sigmaX: 6, sigmaY: 6),
+      //             child: Container(
+      //               color: Colors.black.withOpacity(0.2),
+      //             ),
+      //           ),
+      //         ),
+      //       ),
+      //
+      //       // Center Text
+      //       Container(
+      //         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      //         decoration: BoxDecoration(
+      //           color: Colors.black.withOpacity(0.7),
+      //           borderRadius: BorderRadius.circular(20),
+      //         ),
+      //         child: const Text(
+      //           "Coming Soon",
+      //           style: TextStyle(
+      //             color: Colors.white,
+      //             fontWeight: FontWeight.bold,
+      //           ),
+      //         ),
+      //       ),
+      //     ],
+      //   ),
+      // );
     } else {
       return _buildIntakeScheduleView(state);
     }
