@@ -139,10 +139,10 @@ class _TodayGoalWidgetState extends State<TodayGoalWidget>
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
                                 Text(
-                                  "${(intakeMl / 1000).toStringAsFixed(1)}L",
+                                  "${(intakeMl).toStringAsFixed(0)}ML",
                                   style: TextStyle(
                                     color: AppColors.bluegray,
-                                    fontSize: 40.sp,
+                                    fontSize: 30.sp,
                                     fontFamily:
                                         AppFontStyles.urbanistFontFamily,
                                     fontVariations: [

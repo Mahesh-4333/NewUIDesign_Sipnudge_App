@@ -1,9 +1,9 @@
 import 'package:hydrify/helpers/database_helper.dart';
 import 'package:hydrify/helpers/logger.dart';
-import 'package:hydrify/helpers/shared_pref_helper.dart';
+
 import 'package:hydrify/models/food_scan_data.dart';
 import 'package:hydrify/providers/weather_provider.dart';
-import 'package:hydrify/services/health_service.dart';
+
 import 'package:hydrify/cubit/user_info/user_info_cubit.dart';
 
 /// Result model holding every component of the AI calculation.
@@ -18,6 +18,7 @@ class AiHydrationResult {
   final double caffeineAdjMl;
   final double foodWaterMl;
   final double totalGoalMl;
+  final bool shouldShowDialog;
 
   const AiHydrationResult({
     required this.weightKg,
@@ -30,6 +31,7 @@ class AiHydrationResult {
     required this.caffeineAdjMl,
     required this.foodWaterMl,
     required this.totalGoalMl,
+    required this.shouldShowDialog,
   });
 
   Map<String, dynamic> toDbMap(String date) => {
@@ -59,6 +61,7 @@ class AiHydrationEngine {
   static Future<AiHydrationResult> calculate({
     required double weightKg,
     required WeatherProvider weatherProvider,
+    double? surroundingTemp,
   }) async {
     // ------------------------------------------------------------------
     // Step A: Baseline  Gbase = weight × 32.5 ml
@@ -68,13 +71,15 @@ class AiHydrationEngine {
     // ------------------------------------------------------------------
     // Step B1: Steps adjustment  Stepsadj = (steps / 3000) × 250 ml
     // ------------------------------------------------------------------
-    final int steps = await _fetchSteps();
+    final int steps = await DatabaseHelper().getDailySteps(DateTime.now()) ?? 0;
+    Console.log(tag: "AI_ENGINE", value: "Steps: $steps");
     final double stepsAdjMl = (steps / 3000) * 250.0;
 
     // ------------------------------------------------------------------
     // Step B2: Temperature adjustment  IF temp > 25 → (temp-25) × 50 ml
     // ------------------------------------------------------------------
-    final double temperatureC = _fetchTemperature(weatherProvider);
+    final double temperatureC =
+        _fetchTemperature(weatherProvider, surroundingTemp);
     final double tempAdjMl =
         temperatureC > 25 ? (temperatureC - 25) * 50.0 : 0.0;
 
@@ -86,21 +91,35 @@ class AiHydrationEngine {
     double caffeineMg = 0.0;
     if (userInfo != null) {
       switch (userInfo.coffeeIntake) {
-        case BeverageIntake.oneToTwo: caffeineMg += 1.5 * 95; break;
-        case BeverageIntake.threeToFour: caffeineMg += 3.5 * 95; break;
-        case BeverageIntake.fivePlus: caffeineMg += 5.0 * 95; break;
+        case BeverageIntake.oneToTwo:
+          caffeineMg += 1.5 * 95;
+          break;
+        case BeverageIntake.threeToFour:
+          caffeineMg += 3.5 * 95;
+          break;
+        case BeverageIntake.fivePlus:
+          caffeineMg += 5.0 * 95;
+          break;
         case BeverageIntake.none:
-        default: break;
+        default:
+          break;
       }
       switch (userInfo.teaIntake) {
-        case BeverageIntake.oneToTwo: caffeineMg += 1.5 * 47; break;
-        case BeverageIntake.threeToFour: caffeineMg += 3.5 * 47; break;
-        case BeverageIntake.fivePlus: caffeineMg += 5.0 * 47; break;
+        case BeverageIntake.oneToTwo:
+          caffeineMg += 1.5 * 47;
+          break;
+        case BeverageIntake.threeToFour:
+          caffeineMg += 3.5 * 47;
+          break;
+        case BeverageIntake.fivePlus:
+          caffeineMg += 5.0 * 47;
+          break;
         case BeverageIntake.none:
-        default: break;
+        default:
+          break;
       }
     }
-  
+
     final double caffeineAdjMl = caffeineMg * 2.0;
 
     // ------------------------------------------------------------------
@@ -125,8 +144,13 @@ class AiHydrationEngine {
       caffeineAdjMl: caffeineAdjMl,
       foodWaterMl: foodWaterMl,
       totalGoalMl: totalGoalMl > 0 ? totalGoalMl : 1500.0,
+      shouldShowDialog: steps > 0,
     );
 
+    Console.log(
+        tag: 'AI_ENGINE',
+        value:
+            'Steps: $steps, Temp: $temperatureC, ShouldShow: ${result.shouldShowDialog}');
     Console.log(
         tag: 'AI_ENGINE',
         value:
@@ -143,7 +167,6 @@ class AiHydrationEngine {
     // ------------------------------------------------------------------
     // Persist the new goal to SharedPrefs so the rest of the app sees it
     // ------------------------------------------------------------------
-    await SharedPrefsHelper.setWaterGoal(result.totalGoalMl.toInt());
 
     return result;
   }
@@ -152,18 +175,11 @@ class AiHydrationEngine {
   // Private helpers
   // ────────────────────────────────────────────────────────────────────
 
-  static Future<int> _fetchSteps() async {
-    try {
-      final now = DateTime.now();
-      final startOfDay = DateTime(now.year, now.month, now.day);
-      return await HealthService().getStepCount(start: startOfDay, end: now);
-    } catch (e) {
-      Console.log(tag: 'AI_ENGINE', value: 'Steps fetch failed: $e');
-      return 0;
+  static double _fetchTemperature(
+      WeatherProvider weatherProvider, double? surroundingTemp) {
+    if (surroundingTemp != null && surroundingTemp > 0) {
+      return surroundingTemp;
     }
-  }
-
-  static double _fetchTemperature(WeatherProvider weatherProvider) {
     final temp = weatherProvider.weatherData?.temperature;
     if (temp == null) {
       Console.log(

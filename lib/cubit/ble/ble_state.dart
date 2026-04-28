@@ -19,6 +19,8 @@ class BleState {
   final double? volume;
   final int? refill;
   final int? percent;
+  final double? temp;
+  final double? bqTemp;
   final List<ScanResult> scannedDevices;
   final bool isFirstConnection;
   final bool isHydration30DaysDataSync;
@@ -39,6 +41,8 @@ class BleState {
     this.volume,
     this.refill,
     this.percent,
+    this.temp,
+    this.bqTemp,
     this.scannedDevices = const [],
     this.isFirstConnection = true,
     this.isHydration30DaysDataSync = false,
@@ -60,6 +64,8 @@ class BleState {
     double? volume,
     int? refill,
     int? percent,
+    double? temp,
+    double? bqTemp,
     DateTime? ts,
     List<ScanResult>? scannedDevices,
     bool? isFirstConnection,
@@ -80,6 +86,8 @@ class BleState {
       volume: volume ?? this.volume,
       refill: refill ?? this.refill,
       percent: percent ?? this.percent,
+      temp: temp,
+      bqTemp: bqTemp,
       ts: ts ?? this.ts,
       scannedDevices: scannedDevices ?? this.scannedDevices,
       isFirstConnection: isFirstConnection ?? this.isFirstConnection,

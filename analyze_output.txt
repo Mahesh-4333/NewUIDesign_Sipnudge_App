@@ -1,0 +1,27 @@
+Analyzing user_info_daily_goal_screen_new.dart...               
+
+warning • Unused import: 'package:flutter_blue_plus/flutter_blue_plus.dart' • lib/screens/user_info_daily_goal_screen_new.dart:1:8 • unused_import
+  error • The values in a const list literal must be constants • lib/screens/user_info_daily_goal_screen_new.dart:83:21 • non_constant_list_element
+  error • The values in a const list literal must be constants • lib/screens/user_info_daily_goal_screen_new.dart:94:21 • non_constant_list_element
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/screens/user_info_daily_goal_screen_new.dart:126:57 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/screens/user_info_daily_goal_screen_new.dart:157:56 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/screens/user_info_daily_goal_screen_new.dart:161:56 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/screens/user_info_daily_goal_screen_new.dart:165:57 • deprecated_member_use
+  error • The named parameter 'shadowColor' isn't defined • lib/screens/user_info_daily_goal_screen_new.dart:194:29 • undefined_named_parameter
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/screens/user_info_daily_goal_screen_new.dart:194:55 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/screens/user_info_daily_goal_screen_new.dart:204:53 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/screens/user_info_daily_goal_screen_new.dart:206:57 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/screens/user_info_daily_goal_screen_new.dart:277:57 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/screens/user_info_daily_goal_screen_new.dart:319:53 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/screens/user_info_daily_goal_screen_new.dart:360:53 • deprecated_member_use
+   info • Use a 'SizedBox' to add whitespace to a layout • lib/screens/user_info_daily_goal_screen_new.dart:401:28 • sized_box_for_whitespace
+   info • Don't use 'BuildContext's across async gaps • lib/screens/user_info_daily_goal_screen_new.dart:453:25 • use_build_context_synchronously
+   info • Don't use 'BuildContext's across async gaps • lib/screens/user_info_daily_goal_screen_new.dart:464:25 • use_build_context_synchronously
+   info • Don't use 'BuildContext's across async gaps • lib/screens/user_info_daily_goal_screen_new.dart:474:47 • use_build_context_synchronously
+   info • Don't use 'BuildContext's across async gaps • lib/screens/user_info_daily_goal_screen_new.dart:500:23 • use_build_context_synchronously
+   info • Don't use 'BuildContext's across async gaps • lib/screens/user_info_daily_goal_screen_new.dart:502:25 • use_build_context_synchronously
+   info • Don't use 'BuildContext's across async gaps • lib/screens/user_info_daily_goal_screen_new.dart:505:17 • use_build_context_synchronously
+   info • Don't use 'BuildContext's across async gaps • lib/screens/user_info_daily_goal_screen_new.dart:506:30 • use_build_context_synchronously
+  error • The values in a const list literal must be constants • lib/screens/user_info_daily_goal_screen_new.dart:536:42 • non_constant_list_element
+  error • The values in a const list literal must be constants • lib/screens/user_info_daily_goal_screen_new.dart:547:42 • non_constant_list_element
+

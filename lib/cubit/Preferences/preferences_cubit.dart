@@ -27,6 +27,7 @@ class PreferencesCubit extends Cubit<PreferencesState> {
     final bool uvClean = await SharedPrefsHelper.getUvCleaning();
     final bool ledFeed =
         await SharedPrefsHelper.getStopWhenFull(); // Assuming this for now
+    final DateTime? resetDate = await DatabaseHelper().getLastResetDate();
 
     emit(state.copyWith(
       ringtoneFeedback: ringtoneStatus,
@@ -35,7 +36,14 @@ class PreferencesCubit extends Cubit<PreferencesState> {
       ledHue: lHue,
       uvCleaning: uvClean,
       ledFeedback: ledFeed,
+      lastResetDate: resetDate,
     ));
+  }
+
+  Future<void> updateLastResetDate() async {
+    final now = DateTime.now();
+    await DatabaseHelper().saveLastResetDate(now);
+    emit(state.copyWith(lastResetDate: now));
   }
 
   void toggleHapticFeedback(bool value) =>
@@ -50,13 +58,19 @@ class PreferencesCubit extends Cubit<PreferencesState> {
   }
 
   void updateVibrationStrength(double value) {
-    SharedPrefsHelper.updateAndSaveDeviceConfig(vibrationStrength: value);
     emit(state.copyWith(vibrationStrength: value));
   }
 
+  void saveVibrationStrength(double value) {
+    SharedPrefsHelper.updateAndSaveDeviceConfig(vibrationStrength: value);
+  }
+
   void updateLedIntensity(double value) {
-    SharedPrefsHelper.updateAndSaveDeviceConfig(ledIntensity: value);
     emit(state.copyWith(ledIntensity: value));
+  }
+
+  void saveLedIntensity(double value) {
+    SharedPrefsHelper.updateAndSaveDeviceConfig(ledIntensity: value);
   }
 
   void updateLedHue(double value) {

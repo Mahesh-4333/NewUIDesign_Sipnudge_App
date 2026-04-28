@@ -1211,6 +1211,7 @@ class _WaterIntakeTimelineState extends State<WaterIntakeTimelineScreen> {
                         newEnd: tempEndTime!,
                       );
 
+                  SharedPrefsHelper.updateAndSaveDeviceConfig();
                   setState(() => _expandedIndex = null);
                 },
                 child: Container(

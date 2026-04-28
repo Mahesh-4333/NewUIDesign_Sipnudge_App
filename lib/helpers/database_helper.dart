@@ -3,13 +3,16 @@ import 'package:hydrify/helpers/logger.dart';
 
 import 'package:flutter/material.dart';
 import 'package:hydrify/cubit/user_info/user_info_cubit.dart';
-import 'package:hydrify/helpers/logger.dart';
 import 'package:hydrify/models/bottle_data.dart';
 import 'package:hydrify/models/hydration_entry.dart';
 import 'package:hydrify/models/hydration_summary.dart';
 import 'package:path/path.dart' as path;
 import 'package:sqflite/sqflite.dart';
 import 'package:flutter_timezone/flutter_timezone.dart';
+import 'package:health/health.dart';
+import 'package:hydrify/services/pedometer_service.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'dart:io';
 
 class DatabaseHelper {
   static Database? _database;
@@ -24,6 +27,8 @@ class DatabaseHelper {
   static const String foodScannerTableName = 'user_food_scanner';
   static const String aiHydrationTableName = 'ai_hydration_engine';
   static const String dailyWaterGoalsTableName = 'daily_water_goals';
+  static const String appMetadataTableName = 'app_metadata';
+  static const String dailyStepsTableName = 'daily_steps';
 
   // REPLACE your old getter with this one:
   Future<Database> get database async {
@@ -58,7 +63,7 @@ class DatabaseHelper {
     String finalPath = path.join(await getDatabasesPath(), 'bottle_history.db');
     return await openDatabase(
       finalPath,
-      version: 14,
+      version: 17,
       onUpgrade: (db, oldVersion, newVersion) async {
         if (oldVersion < 2) {
           await db.execute('ALTER TABLE user ADD COLUMN stepGoal INTEGER');
@@ -167,10 +172,38 @@ class DatabaseHelper {
         }
         if (oldVersion < 14) {
           try {
-            await db.execute('ALTER TABLE user ADD COLUMN typicalWaterIntake REAL');
+            await db
+                .execute('ALTER TABLE user ADD COLUMN typicalWaterIntake REAL');
             await db.execute('ALTER TABLE user ADD COLUMN waterUnit TEXT');
           } catch (_) {
             // Safe to ignore if columns already exist
+          }
+        }
+        if (oldVersion < 15) {
+          try {
+            await db.execute(
+                'ALTER TABLE $tableName ADD COLUMN temp REAL DEFAULT 0');
+            await db.execute(
+                'ALTER TABLE $tableName ADD COLUMN bqTemp REAL DEFAULT 0');
+          } catch (_) {
+            // Safe to ignore if columns already exist
+          }
+        }
+        if (oldVersion < 16) {
+          await db.execute('''
+            CREATE TABLE IF NOT EXISTS $dailyStepsTableName (
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              date TEXT UNIQUE,
+              steps INTEGER
+            )
+          ''');
+        }
+        if (oldVersion < 17) {
+          try {
+            await db.execute(
+                'ALTER TABLE $foodScannerTableName ADD COLUMN image_base64 TEXT');
+          } catch (_) {
+            // Already exists
           }
         }
       },
@@ -182,6 +215,8 @@ class DatabaseHelper {
             liquidPercent INTEGER NOT NULL,
             battery INTEGER NOT NULL,
             refills INTEGER DEFAULT 0,
+            temp REAL DEFAULT 0,
+            bqTemp REAL DEFAULT 0,
             timestamp TEXT NOT NULL
           )
         ''');
@@ -239,7 +274,7 @@ CREATE TABLE IF NOT EXISTS $hydrationSummaryTableName (
 ''');
 
         await db.execute('''
-CREATE TABLE IF NOT EXISTS app_metadata (
+CREATE TABLE IF NOT EXISTS $appMetadataTableName (
   key TEXT PRIMARY KEY,
   value TEXT
 );
@@ -262,6 +297,7 @@ CREATE TABLE IF NOT EXISTS app_metadata (
               id INTEGER PRIMARY KEY AUTOINCREMENT,
               dish_name TEXT,
               image_path TEXT,
+              image_base64 TEXT,
               weight_g REAL,
               water_content_ml REAL,
               water_percentage REAL,
@@ -299,8 +335,16 @@ CREATE TABLE IF NOT EXISTS app_metadata (
         await db.execute('''
           CREATE TABLE IF NOT EXISTS $dailyWaterGoalsTableName (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            date TEXT NOT NULL UNIQUE,
+            date TEXT UNIQUE,
             goal INTEGER NOT NULL
+          )
+        ''');
+
+        await db.execute('''
+          CREATE TABLE IF NOT EXISTS $dailyStepsTableName (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            date TEXT UNIQUE,
+            steps INTEGER
           )
         ''');
       },
@@ -311,7 +355,7 @@ CREATE TABLE IF NOT EXISTS app_metadata (
     final db = await database;
 
     await db.insert(
-      'app_metadata',
+      appMetadataTableName,
       {
         'key': 'last_hydration_sync',
         'value': date.toIso8601String(),
@@ -328,7 +372,7 @@ CREATE TABLE IF NOT EXISTS app_metadata (
     final db = await database;
 
     final result = await db.query(
-      'app_metadata',
+      appMetadataTableName,
       where: 'key = ?',
       whereArgs: ['last_hydration_sync'],
       limit: 1,
@@ -337,6 +381,53 @@ CREATE TABLE IF NOT EXISTS app_metadata (
     if (result.isEmpty) return null;
 
     return DateTime.parse(result.first['value'] as String);
+  }
+
+  Future<void> saveLastResetDate(DateTime date) async {
+    final db = await database;
+
+    await db.insert(
+      appMetadataTableName,
+      {
+        'key': 'last_reset_date',
+        'value': date.toIso8601String(),
+      },
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+
+    Console.log(
+        tag: "APP",
+        value: '[DB] Last reset date saved: ${date.toIso8601String()}');
+  }
+
+  Future<DateTime?> getLastResetDate() async {
+    final db = await database;
+
+    final result = await db.query(
+      appMetadataTableName,
+      where: 'key = ?',
+      whereArgs: ['last_reset_date'],
+      limit: 1,
+    );
+
+    if (result.isEmpty) return null;
+
+    return DateTime.parse(result.first['value'] as String);
+  }
+
+  Future<void> clearAppMetadata() async {
+    try {
+      final db = await database;
+      final count = await db.delete(appMetadataTableName);
+      Console.log(
+          tag: "APP",
+          value:
+              "[DB] Cleared $appMetadataTableName table. Rows deleted: $count");
+    } catch (e) {
+      Console.log(
+          tag: "APP",
+          value: "[DB] Error clearing $appMetadataTableName table: $e");
+    }
   }
 
   Future<void> insertOrUpdateSlot(HydrationEntry entry,
@@ -530,7 +621,7 @@ CREATE TABLE IF NOT EXISTS app_metadata (
       {double? percentage, double? remaining, double? totalAtTime}) async {
     final db = await database;
     final timezone = (await FlutterTimezone.getLocalTimezone()).identifier;
-    final id = await db.insert(
+    await db.insert(
       todayHydrationHistoryTableName,
       {
         'timestamp': timestamp.toIso8601String(),
@@ -750,16 +841,17 @@ CREATE TABLE IF NOT EXISTS app_metadata (
     }
   }
 
-  Future<void> insertFoodScan(Map<String, dynamic> data) async {
+  Future<int> insertFoodScan(Map<String, dynamic> data) async {
     final db = await database;
-    await db.insert(
+    final id = await db.insert(
       foodScannerTableName,
       data,
       conflictAlgorithm: ConflictAlgorithm.replace,
     );
     Console.log(
         tag: "APP",
-        value: "[DB] Inserted food scan data for ${data['dish_name']}");
+        value: "[DB] Inserted food scan data for ${data['dish_name']} with id $id");
+    return id;
   }
 
   Future<List<Map<String, dynamic>>> getAllFoodScans() async {
@@ -796,7 +888,7 @@ CREATE TABLE IF NOT EXISTS app_metadata (
   Future<void> saveDailyWaterGoal(DateTime date, int goal) async {
     final db = await database;
     final dateString =
-        "\${date.year}-\${date.month.toString().padLeft(2, '0')}-\${date.day.toString().padLeft(2, '0')}";
+        "${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}";
     await db.insert(
       dailyWaterGoalsTableName,
       {
@@ -812,7 +904,7 @@ CREATE TABLE IF NOT EXISTS app_metadata (
   Future<int?> getDailyWaterGoal(DateTime date) async {
     final db = await database;
     final dateString =
-        "\${date.year}-\${date.month.toString().padLeft(2, '0')}-\${date.day.toString().padLeft(2, '0')}";
+        "${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}";
     final result = await db.query(
       dailyWaterGoalsTableName,
       where: 'date = ?',
@@ -823,5 +915,88 @@ CREATE TABLE IF NOT EXISTS app_metadata (
       return result.first['goal'] as int;
     }
     return null;
+  }
+
+  Future<void> saveDailySteps(DateTime date, int steps) async {
+    final db = await database;
+    final dateString =
+        "${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}";
+
+    // Check existing steps
+    final existing = await getDailySteps(date);
+    if (existing != null && steps <= existing) {
+      Console.log(
+          tag: "APP",
+          value:
+              "[DB] Skipping steps update: $steps <= $existing for $dateString");
+      return;
+    }
+
+    await db.insert(
+      dailyStepsTableName,
+      {
+        'date': dateString,
+        'steps': steps,
+      },
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+    Console.log(
+        tag: "APP", value: "[DB] Saved daily steps $steps for $dateString");
+  }
+
+  Future<int?> getDailySteps(DateTime date,
+      {bool fetchFromHealth = true}) async {
+    final db = await database;
+    final dateString =
+        "${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}";
+    final today = DateTime.now();
+    final isToday = dateString ==
+        "${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}";
+
+    // 1. Get current DB value
+    final result = await db.query(
+      dailyStepsTableName,
+      where: 'date = ?',
+      whereArgs: [dateString],
+      limit: 1,
+    );
+    int dbSteps = 0;
+    if (result.isNotEmpty) {
+      dbSteps = result.first['steps'] as int;
+    }
+
+    // 2. If it's today and we want real-time data, try to fetch and compare
+    if (isToday && fetchFromHealth) {
+      try {
+        int healthSteps = 0;
+        if (Platform.isAndroid) {
+          // Android: Use PedometerService (silently)
+          final status = await Permission.activityRecognition.status;
+          if (status.isGranted) {
+            healthSteps = await PedometerService().getTodaySteps();
+          }
+        } else {
+          // iOS: Use Health package (silently check)
+          final Health health = Health();
+          final types = [HealthDataType.STEPS];
+          bool? hasPermission = await health.hasPermissions(types);
+          if (hasPermission == true) {
+            final now = DateTime.now();
+            final startOfDay = DateTime(now.year, now.month, now.day);
+            final steps = await health.getTotalStepsInInterval(startOfDay, now);
+            healthSteps = steps ?? 0;
+          }
+        }
+
+        if (healthSteps > dbSteps) {
+          await saveDailySteps(date, healthSteps);
+          return healthSteps;
+        }
+      } catch (e) {
+        Console.log(tag: "DB_STEPS", value: "Error fetching health steps: $e");
+      }
+    }
+
+    return result.isNotEmpty ? dbSteps : null;
   }
 }

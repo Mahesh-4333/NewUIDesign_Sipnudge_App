@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -19,6 +20,7 @@ import 'package:hydrify/screens/widgets/health_permission_dialog.dart';
 import 'package:hydrify/services/health_service.dart';
 import 'package:hydrify/screens/water_intake_timeline/water_intake_timeline_screen.dart';
 import 'package:hydrify/screens/widgets/animated_bottom_navbar_widget.dart';
+import 'package:hydrify/screens/widgets/new_configuration_dialog.dart';
 
 class BottomNavScreenNew extends StatefulWidget {
   const BottomNavScreenNew({super.key});
@@ -35,6 +37,24 @@ class _BottomNavScreenNewState extends State<BottomNavScreenNew> {
     BottomNavTab.reports: GlobalKey<NavigatorState>(),
     BottomNavTab.settings: GlobalKey<NavigatorState>(),
   };
+
+  StreamSubscription<void>? _configSubscription;
+
+  @override
+  void initState() {
+    super.initState();
+    _configSubscription = SharedPrefsHelper.configUpdateStream.stream.listen((_) {
+      if (mounted) {
+        NewConfigurationDialog.show(context);
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _configSubscription?.cancel();
+    super.dispose();
+  }
 
   Future<bool> _onWillPop() async {
     final selectedTab = context.read<BottomNavCubit>().state.selectedTab;

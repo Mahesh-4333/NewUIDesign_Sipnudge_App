@@ -368,20 +368,16 @@ class _BottleInfoScreenState extends State<BottleInfoScreen> {
                       .battery
                       .toString(), '%', AssetsPath.sBattery,
                       subtitle: '30 days Left'),
-                  Consumer<WeatherProvider>(
-                      builder: (context, weatherProvider, child) {
-                        if (weatherProvider.isLoading) {
-                          return _buildSpecCard(
-                              'TEMP', '18', '°C', AssetsPath.sTemperature,
-                              subtitle: 'Range: 0-50°C');
-                        }
-
-                        final weatherData = weatherProvider.weatherData;
-                        return _buildSpecCard(
-                            'TEMP', weatherData!.temperature.toString(), '°C', AssetsPath.sTemperature,
-                            subtitle: 'Range: 0-50°C');
-                      })
-                  ,
+                  BlocBuilder<BottleDataCubit, BottleDataState>(
+                    builder: (context, state) {
+                      // Display actual temperature or fallback to "--" if null
+                      final tempDisplay =
+                      state.bqTemp != 0 ? "${state.bqTemp}" : "--";
+                      return _buildSpecCard(
+                          'TEMP', tempDisplay, '°C', AssetsPath.sTemperature,
+                          subtitle: 'Range: 0-50°C');
+                    },
+                  ),
                   _buildSpecCard('MATERIAL', 'SS304', '', AssetsPath.sMaterial,
                       isTextValue: true),
                   _buildSpecCard('WEIGHT', '250', 'g', AssetsPath.sWeight),

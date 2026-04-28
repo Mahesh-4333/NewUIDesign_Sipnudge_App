@@ -693,7 +693,7 @@ class _AnalysisHydrationSlotsWidgetState
                       ),
                     ),
                     Text(
-                      "${(percentage * 100).toInt()}%",
+                      "${(percentage).toStringAsFixed(0)}%",
                       style: TextStyle(
                         color: Colors.green,
                         fontSize: 12.sp,

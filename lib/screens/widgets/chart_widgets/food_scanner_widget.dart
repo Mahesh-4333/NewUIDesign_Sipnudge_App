@@ -14,6 +14,7 @@ import 'package:hydrify/helpers/logger.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:hydrify/constants/app_colors.dart';
 import 'package:hydrify/constants/app_dimensions.dart';
+import 'package:hydrify/helpers/shared_pref_helper.dart';
 import 'package:hydrify/constants/app_font_styles.dart';
 import 'package:hydrify/constants/app_api_constants.dart';
 import 'package:hydrify/helpers/database_helper.dart';
@@ -35,6 +36,7 @@ class _FoodScannerWidgetState extends State<FoodScannerWidget> {
   String? _errorMessage;
 
   // Food Data
+  int? _currentScanId;
   String? _dishName;
   double _currentWeight = 100.0;
   double _baseWeight = 100.0;
@@ -75,6 +77,7 @@ class _FoodScannerWidgetState extends State<FoodScannerWidget> {
           latest.timestamp.month == now.month &&
           latest.timestamp.day == now.day) {
         setState(() {
+          _currentScanId = latest.id;
           _dishName = latest.dishName;
           _currentWeight = latest.weightG;
           _baseWeight = latest.weightG;
@@ -155,6 +158,7 @@ class _FoodScannerWidgetState extends State<FoodScannerWidget> {
         _imageBytes = bytes;
         _isAnalyzing = true;
         _errorMessage = null;
+        _currentScanId = null;
       });
 
       await _analyzeWithGemini(photo);
@@ -286,6 +290,7 @@ class _FoodScannerWidgetState extends State<FoodScannerWidget> {
     if (_dishName == null) return;
     try {
       final scan = FoodScanData(
+        id: _currentScanId,
         dishName: _dishName!,
         imagePath: _image?.path,
         weightG: _currentWeight,
@@ -303,7 +308,11 @@ class _FoodScannerWidgetState extends State<FoodScannerWidget> {
         imageBase64: _imageBytes != null ? base64Encode(_imageBytes!) : null,
         timestamp: DateTime.now(),
       );
-      await DatabaseHelper().insertFoodScan(scan.toMap());
+      final id = await DatabaseHelper().insertFoodScan(scan.toMap());
+      setState(() {
+        _currentScanId = id;
+      });
+      await SharedPrefsHelper.setAiHydrationGoalShown(true);
       Console.log(
           tag: 'FoodScanner', value: '[DB] Food scan saved: ${scan.dishName}');
     } catch (e, st) {
@@ -470,7 +479,7 @@ class _FoodScannerWidgetState extends State<FoodScannerWidget> {
                   child: Column(
                     children: [
                       // Confidence Badge
-                      _buildConfidenceBadge(),
+                      if (_confidenceScore != '0%') _buildConfidenceBadge(),
                       SizedBox(height: 10.h),
 
                       // Title
@@ -621,9 +630,11 @@ class _FoodScannerWidgetState extends State<FoodScannerWidget> {
             ),
             child: ClipRRect(
               borderRadius: BorderRadius.circular(25.r),
-              child: (_imageBytes != null || _image != null)
-                  ? Container(color: Colors.transparent)
-                  : Container(color: Colors.white),
+            child: _imageBytes != null
+                ? Image.memory(_imageBytes!, fit: BoxFit.cover)
+                : _image != null
+                    ? Image.file(_image!, fit: BoxFit.cover)
+                    : Container(color: Colors.white),
             ),
           ),
           // Scanner Corners
@@ -636,7 +647,8 @@ class _FoodScannerWidgetState extends State<FoodScannerWidget> {
                         ? Colors.white
                         : Colors.grey.withOpacity(0.4))),
           ),
-          Image.asset(AssetsPath.camera_food_scn, width: 50.sp, height: 50.sp),
+          if (_imageBytes == null && _image == null)
+            Image.asset(AssetsPath.camera_food_scn, width: 50.sp, height: 50.sp),
           if (_isAnalyzing)
             const CircularProgressIndicator(color: AppColors.blueWaterIntake),
         ],

@@ -10,6 +10,7 @@ class PreferencesState {
   final double ledIntensity;
   final double ledHue;
   final bool uvCleaning;
+  final DateTime? lastResetDate;
 
   PreferencesState({
     required this.hapticFeedback,
@@ -21,6 +22,7 @@ class PreferencesState {
     this.ledIntensity = 0.8,
     this.ledHue = 0.6,
     this.uvCleaning = false,
+    this.lastResetDate,
   });
 
   PreferencesState copyWith({
@@ -33,6 +35,7 @@ class PreferencesState {
     double? ledIntensity,
     double? ledHue,
     bool? uvCleaning,
+    DateTime? lastResetDate,
   }) {
     return PreferencesState(
       hapticFeedback: hapticFeedback ?? this.hapticFeedback,
@@ -44,6 +47,7 @@ class PreferencesState {
       ledIntensity: ledIntensity ?? this.ledIntensity,
       ledHue: ledHue ?? this.ledHue,
       uvCleaning: uvCleaning ?? this.uvCleaning,
+      lastResetDate: lastResetDate ?? this.lastResetDate,
     );
   }
 }

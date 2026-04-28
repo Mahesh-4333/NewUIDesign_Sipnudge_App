@@ -933,25 +933,45 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
     double? volume;
     int? percent;
     int? refill;
+    double? temp;
+    double? bqTemp;
     DateTime? ts;
+    Console.log(tag: "Raw TS from bottle parts: $parts", value: 'BLE_Cubit');
     for (var p in parts) {
-      if (p.contains('battery=')) battery = int.tryParse(p.split('=')[1]);
-      if (p.contains('volume=')) volume = double.tryParse(p.split('=')[1]);
-      if (p.contains('percent=')) percent = int.tryParse(p.split('=')[1]);
-      if (p.contains('refills=')) refill = int.tryParse(p.split('=')[1]);
-      if (p.contains('ts=')) {
-        String tsStr = p.split('=')[1].trim();
-        Console.log(tag: "Raw TS from bottle: $tsStr", value: 'BLE_Cubit');
+      final kv = p.split('=');
+      if (kv.length < 2) continue;
+
+      final key = kv[0].trim();
+      String value = kv[1].trim();
+
+      // Clean value from trailing garbage (like the ']' in "34.55] BLE_Cubit")
+      if (value.contains(']')) {
+        value = value.split(']').first.trim();
+      }
+
+      if (key == 'battery') {
+        battery = int.tryParse(value);
+      } else if (key == 'volume') {
+        volume = double.tryParse(value);
+      } else if (key == 'percent') {
+        percent = int.tryParse(value);
+      } else if (key == 'refills') {
+        refill = int.tryParse(value);
+      } else if (key == 'temp') {
+        temp = double.tryParse(value);
+        Console.log(
+            tag: "Raw TS from bottle_temp:  $temp ",
+            value: 'BLE_Cubit');
+      } else if (key == 'bq_temp') {
+        bqTemp = double.tryParse(value);
+      } else if (key == 'ts') {
+        String tsStr = value;
+        Console.log(
+            tag: "Raw TS from bottle: $tsStr $temp $refill $kv",
+            value: 'BLE_Cubit');
 
         // Format: "2026-03-13 13:06:08" -> "2026-03-13T13:06:08"
         tsStr = tsStr.replaceFirst(' ', 'T');
-
-        // If the string doesn't have a timezone offset, append IST (+05:30)
-        if (!tsStr.contains('+') &&
-            !tsStr.contains('-') &&
-            !tsStr.endsWith('Z')) {
-          // tsStr = '$tsStr+05:30';
-        }
 
         try {
           ts = DateTime.parse(tsStr).toUtc();
@@ -960,7 +980,6 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
               value: 'BLE_Cubit');
 
           final nowUtc = DateTime.now().toUtc();
-
           final difference = nowUtc.difference(ts).inMinutes.abs();
 
           if (difference >= 1) {
@@ -979,6 +998,8 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
         volume: volume,
         refill: refill,
         percent: percent,
+        temp: temp,
+        bqTemp: bqTemp,
         ts: ts,
         bottleData: data));
   }

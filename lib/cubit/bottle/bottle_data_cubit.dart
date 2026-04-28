@@ -43,13 +43,17 @@ class BottleDataCubit extends Cubit<BottleDataState> {
               "volume=${lastData.liquidVolume}, "
               "percent=${lastData.liquidPercent}, "
               "battery=${lastData.battery}, "
-              "timestamp=${lastData.timestamp}");
+              "timestamp=${lastData.timestamp}"
+              "temp=${lastData.temp},"
+              "bq_temp=${lastData.bqTemp}");
 
       emit(state.copyWith(
         volume: lastData.liquidVolume,
         volumePercent: lastData.liquidPercent,
         battery: lastData.battery,
         refills: lastData.refills,
+        temp: lastData.temp,
+        bqTemp: lastData.bqTemp,
       ));
     } else {
       Console.log(
@@ -60,7 +64,7 @@ class BottleDataCubit extends Cubit<BottleDataState> {
 
   Future<void> _handleBleStateChange(BleState bleState) async {
     Console.log(
-        tag: "BottleDataCubit", value: "BLE state changed: ${bleState.status}");
+        tag: "BottleDataCubit", value: "BLE state changed: ${bleState.temp}");
     // if (bleState.status != BleStatus.connected &&
     //     bleState.status != BleStatus.ready) {
     //   Console.log(
@@ -76,12 +80,16 @@ class BottleDataCubit extends Cubit<BottleDataState> {
     final newPercent = bleState.percent ?? state.volumePercent;
     final newBattery = bleState.battery ?? state.battery;
     final newRefills = bleState.refill ?? state.refills;
+    final newTemp = bleState.temp ?? state.temp;
+    final newBqTemp = bleState.bqTemp ?? state.bqTemp;
 
     final newData = BottleData(
       liquidVolume: newVolume,
       liquidPercent: newPercent,
       battery: newBattery,
       refills: newRefills,
+      temp: newTemp ?? 0,
+      bqTemp: newBqTemp ?? 0,
       timestamp: DateTime.now(),
     );
 
@@ -101,6 +109,8 @@ class BottleDataCubit extends Cubit<BottleDataState> {
       volumePercent: newPercent,
       battery: newBattery,
       refills: newRefills,
+      temp: newTemp,
+      bqTemp: newBqTemp,
       currentPage: state.currentPage,
       currentPageData: pageData,
     ));

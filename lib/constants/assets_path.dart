@@ -148,4 +148,10 @@ class AssetsPath {
   static const String ai_back = "assets/ai_goal/glassmorphism.svg";
   static const String refill = "assets/refill.png";
   static const String temperature_ambient = "assets/temperature_ambient.png";
+  static const String touchBottle = "assets/touch_bottle.png";
+  static const String leftArrow = "assets/ai_goal/left_arrow.png";
+  static const String rightArrow = "assets/ai_goal/right_arrow.png";
+  static const String increaseAi = "assets/ai_goal/increase.png";
+  static const String dicreaseAi = "assets/ai_goal/decrease.png";
+  static const String healthTip = "assets/ai_goal/health_tip.png";
 }

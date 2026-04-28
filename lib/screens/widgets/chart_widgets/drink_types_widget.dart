@@ -95,6 +95,10 @@ class _DrinkTypesWidgetState extends State<DrinkTypesWidget>
           _stepGoal = userInfo.stepGoal ?? 1000;
           _isLoading = false;
         });
+
+        if (_stepCount > 0) {
+          await SharedPrefsHelper.setAiHydrationGoalShown(true);
+        }
       }
     } catch (e) {
       if (mounted) {

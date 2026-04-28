@@ -1,4 +1,5 @@
-import 'package:flutter_blue_plus/flutter_blue_plus.dart';
+import 'dart:ui';
+import 'package:hydrify/constants/assets_path.dart';
 import 'package:hydrify/cubit/hydration/hydration_cubit.dart';
 import 'package:hydrify/helpers/logger.dart';
 
@@ -17,16 +18,13 @@ import 'package:hydrify/helpers/shared_pref_helper.dart';
 import 'package:hydrify/models/hydration_entry.dart';
 import 'package:hydrify/models/hydration_summary.dart';
 import 'package:hydrify/screens/bottom_nav_screen_new.dart';
-import 'package:hydrify/screens/qr_scanning.dart';
 import 'package:hydrify/screens/widgets/auth_button_widget.dart';
-import 'package:hydrify/screens/widgets/user_info_input_widgets/custom_gradient_slider_widget.dart';
-import 'package:hydrify/screens/widgets/water_wave_widget.dart';
 import 'package:hydrify/helpers/hydration_helper.dart';
 import 'package:hydrify/services/notification/notification_service.dart';
 import 'package:hydrify/services/ui_utils_service.dart';
 import 'package:provider/provider.dart';
-
-import '../services/google_calendar_manager.dart';
+import 'package:syncfusion_flutter_gauges/gauges.dart';
+import 'dart:math' as math;
 
 class UserInfoDailyGoalScreen extends StatefulWidget {
   const UserInfoDailyGoalScreen({
@@ -40,49 +38,18 @@ class UserInfoDailyGoalScreen extends StatefulWidget {
 
   @override
   State<UserInfoDailyGoalScreen> createState() =>
-      _UserInfoDailyGoalScreenState();
+      _UserInfoDailyGoalScreenNewState();
 }
 
-class _UserInfoDailyGoalScreenState extends State<UserInfoDailyGoalScreen> {
+class _UserInfoDailyGoalScreenNewState extends State<UserInfoDailyGoalScreen> {
   late double convertedWaterGoal;
   String unit = "mL";
-  String displayWaterGoal = "";
-  late double initialSliderValue;
-  List<double> tickValues = [];
-  double widgetMaxGoal = 0;
-
   bool isButtonClicked = false;
 
   @override
   void initState() {
     super.initState();
     convertedWaterGoal = widget.waterGoal;
-    _setupDynamicSlider();
-    updateDisplayWaterGoal();
-  }
-
-  void updateDisplayWaterGoal() {
-    if (unit == "L") {
-      displayWaterGoal = convertedWaterGoal.toStringAsFixed(1);
-    } else {
-      displayWaterGoal = convertedWaterGoal.toInt().toString();
-    }
-  }
-
-  void _setupDynamicSlider() {
-    double goalInLiters = widget.waterGoal / 1000;
-
-    // Fixed range from 0.5L to 10.0L with 0.5L steps
-    tickValues = [];
-    for (double val = 0.5; val <= 10.0; val += 0.5) {
-      tickValues.add(val);
-    }
-
-    initialSliderValue = goalInLiters;
-    widgetMaxGoal = 10000.0;
-
-    Console.log(tag: "APP", value: "Slider setup: 0.5L to 10.0L");
-    Console.log(tag: "APP", value: "Initial slider value: $initialSliderValue");
   }
 
   @override
@@ -92,10 +59,9 @@ class _UserInfoDailyGoalScreenState extends State<UserInfoDailyGoalScreen> {
       extendBody: true,
       body: Container(
         width: double.maxFinite,
-        decoration: BoxDecoration(
+        decoration: const BoxDecoration(
           image: DecorationImage(
-            image: AssetImage(
-                "assets/images/app_background.png"), // your image path
+            image: AssetImage("assets/images/app_background.png"),
             fit: BoxFit.cover,
           ),
         ),
@@ -108,160 +74,475 @@ class _UserInfoDailyGoalScreenState extends State<UserInfoDailyGoalScreen> {
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             Text(
-              AppStrings.yourDailyGoalIs,
+              "Your Daily goal",
               style: TextStyle(
                   color: AppColors.bluegray,
-                  fontSize: AppFontStyles.fontSize_24,
+                  fontSize: 24.sp,
                   fontFamily: AppFontStyles.museoModernoFontFamily,
                   fontVariations: [
                     AppFontStyles.boldFontVariation,
                   ]),
             ),
-            SizedBox(
-              height: AppDimensions.dim117.h,
+            SizedBox(height: 10.h),
+            Text(
+              "Rotate bezel to adjust volume",
+              style: TextStyle(
+                  color: AppColors.bluegray,
+                  fontSize: 18.sp,
+                  fontFamily: AppFontStyles.urbanistFontFamily,
+                  fontVariations: [
+                    AppFontStyles.boldFontVariation,
+                  ]),
             ),
+            SizedBox(height: 50.h),
+
+            // The Gauge Section
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Text(
-                  displayWaterGoal,
-                  style: TextStyle(
-                    color: AppColors.bluegray,
-                    fontSize: AppFontStyles.fontSize_36,
-                    fontFamily: AppFontStyles.urbanistFontFamily,
-                    fontVariations: [AppFontStyles.boldFontVariation],
-                    shadows: [
-                      Shadow(
-                        blurRadius: AppDimensions.dim5,
-                        color: Colors.black.withOpacity(.2),
-                        offset: Offset(0, AppDimensions.dim4),
-                      )
+                // Minus button
+                GestureDetector(
+                  onTap: () {
+                    setState(() {
+                      if (convertedWaterGoal > 500) {
+                        convertedWaterGoal -= 50;
+                        HapticFeedback.selectionClick();
+                      }
+                    });
+                  },
+                  child: Column(
+                    children: [
+                      Image.asset(
+                        AssetsPath.leftArrow,
+                        width: 24.sp,
+                        height: 22.sp,
+                      ),
+                      SizedBox(height: 8.h),
+                      Image.asset(
+                        AssetsPath.dicreaseAi,
+                        width: 44.sp,
+                        height: 44.sp,
+                      ),
                     ],
                   ),
                 ),
-                Text(
-                  " $unit",
-                  style: TextStyle(
-                    color: AppColors.bluegray,
-                    fontSize: AppFontStyles.fontSize_32,
-                    fontFamily: AppFontStyles.museoModernoFontFamily,
-                    fontVariations: [AppFontStyles.regularFontVariation],
-                    shadows: [
-                      Shadow(
-                        blurRadius: AppDimensions.dim5,
-                        color: Colors.black.withOpacity(.2),
-                        offset: Offset(0, AppDimensions.dim4),
-                      )
+
+                SizedBox(width: 15.w),
+
+                // Gauge with Glassmorphism Overlay
+                Expanded(
+                  child: SizedBox(
+                    width: 290.w,
+                    height: 290.w,
+                    child: Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        // The Visual Gauge
+                        Container(
+                          width: 290.w,
+                          height: 290.w,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            boxShadow: [
+                              BoxShadow(
+                                  color:
+                                      Color(0xff00A3FF).withValues(alpha: 0.1),
+                                  blurRadius: 20,
+                                  spreadRadius: 10,
+                                  blurStyle: BlurStyle.normal),
+                            ],
+                          ),
+                          child: ClipOval(
+                            child: BackdropFilter(
+                              filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                              child: Container(
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color: Colors.white.withValues(alpha: 0.26),
+                                  border: Border.all(
+                                    color: Colors.white.withValues(alpha: 0.8),
+                                    width: 1.5,
+                                  ),
+                                ),
+                                child: Center(
+                                  child: IgnorePointer(
+                                    child: SizedBox(
+                                      width: 270.w,
+                                      height: 270.w,
+                                      child: SfRadialGauge(
+                                        enableLoadingAnimation: true,
+                                        axes: <RadialAxis>[
+                                          RadialAxis(
+                                            minimum: 500,
+                                            maximum: 10000,
+                                            startAngle: 270,
+                                            endAngle: 270,
+                                            showLabels: false,
+                                            showTicks: true,
+                                            interval: 500,
+                                            minorTicksPerInterval: 4,
+                                            tickOffset: 0.10,
+                                            ticksPosition:
+                                                ElementsPosition.outside,
+                                            offsetUnit: GaugeSizeUnit.factor,
+                                            majorTickStyle: MajorTickStyle(
+                                                length: 7,
+                                                thickness: 3,
+                                                color: const Color(0xff6F7883)),
+                                            minorTickStyle: MinorTickStyle(
+                                                length: 3,
+                                                thickness: 1,
+                                                color: AppColors.greyColor
+                                                    .withValues(alpha: 0.5)),
+                                            axisLineStyle: AxisLineStyle(
+                                              thickness: 0.12,
+                                              thicknessUnit:
+                                                  GaugeSizeUnit.factor,
+                                              color: Colors.grey
+                                                  .withValues(alpha: 0.2),
+                                            ),
+                                            pointers: <GaugePointer>[
+                                              RangePointer(
+                                                value: convertedWaterGoal,
+                                                width: 0.12,
+                                                sizeUnit: GaugeSizeUnit.factor,
+                                                color: const Color(0xff1d8dbb),
+                                                cornerStyle:
+                                                    CornerStyle.bothCurve,
+                                                enableAnimation: true,
+                                                animationDuration: 1200,
+                                                animationType:
+                                                    AnimationType.easeOutBack,
+                                              ),
+                                              MarkerPointer(
+                                                value: convertedWaterGoal,
+                                                enableDragging: false,
+                                                enableAnimation: false,
+                                                markerHeight: 38.w,
+                                                markerWidth: 38.w,
+                                                markerType: MarkerType.circle,
+                                                color: Colors.white
+                                                    .withValues(alpha: 0.8),
+                                                borderWidth: 1,
+                                                borderColor:
+                                                    const Color(0xff1C8DBB),
+                                                elevation: 5,
+                                              ),
+                                            ],
+                                            annotations: <GaugeAnnotation>[
+                                              GaugeAnnotation(
+                                                widget: Container(
+                                                  width: 170.w,
+                                                  height: 170.w,
+                                                  padding:
+                                                      const EdgeInsets.all(10),
+                                                  decoration: BoxDecoration(
+                                                    shape: BoxShape.circle,
+                                                    color: Colors.white
+                                                        .withValues(alpha: 0.1),
+                                                    border: Border.all(
+                                                        color: Colors.white
+                                                            .withValues(
+                                                                alpha: 0.6),
+                                                        width: 1),
+                                                  ),
+                                                  child: Column(
+                                                    mainAxisAlignment:
+                                                        MainAxisAlignment
+                                                            .center,
+                                                    children: [
+                                                      Text(
+                                                        "NEW GOAL",
+                                                        style: TextStyle(
+                                                          color: AppColors
+                                                              .color_414755,
+                                                          fontSize: 12.sp,
+                                                          letterSpacing: 1.2,
+                                                          fontFamily: AppFontStyles
+                                                              .urbanistFontFamily,
+                                                          fontVariations: [
+                                                            AppFontStyles
+                                                                .boldFontVariation
+                                                          ],
+                                                        ),
+                                                      ),
+                                                      SizedBox(height: 5.h),
+                                                      Text(
+                                                        "${convertedWaterGoal.toInt()}",
+                                                        style: TextStyle(
+                                                          color: AppColors
+                                                              .raisinblack,
+                                                          fontSize: 30.sp,
+                                                          fontFamily: AppFontStyles
+                                                              .urbanistFontFamily,
+                                                          fontVariations: [
+                                                            AppFontStyles
+                                                                .boldFontVariation
+                                                          ],
+                                                        ),
+                                                      ),
+                                                      Text(
+                                                        "mL / day",
+                                                        style: TextStyle(
+                                                          color: AppColors
+                                                              .color_414755,
+                                                          fontSize: 14.sp,
+                                                          fontFamily: AppFontStyles
+                                                              .urbanistFontFamily,
+                                                          fontVariations: [
+                                                            AppFontStyles
+                                                                .boldFontVariation
+                                                          ],
+                                                        ),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                ),
+                                                positionFactor: 0.0,
+                                                angle: 90,
+                                              )
+                                            ],
+                                          )
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+
+                        // The Interaction Overlay
+                        Positioned.fill(
+                          child: LayoutBuilder(builder: (context, constraints) {
+                            return GestureDetector(
+                              behavior: HitTestBehavior.opaque,
+                              onPanStart: (details) => _updateGoalFromOffset(
+                                  details.localPosition, constraints.biggest),
+                              onPanUpdate: (details) => _updateGoalFromOffset(
+                                  details.localPosition, constraints.biggest),
+                              onPanEnd: (_) => HapticFeedback.selectionClick(),
+                              child: Container(
+                                color: Colors.transparent,
+                              ),
+                            );
+                          }),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+
+                SizedBox(width: 15.w),
+
+                // Plus button
+                GestureDetector(
+                  onTap: () {
+                    setState(() {
+                      if (convertedWaterGoal < 10000) {
+                        convertedWaterGoal += 50;
+                        HapticFeedback.selectionClick();
+                      }
+                    });
+                  },
+                  child: Column(
+                    children: [
+                      Image.asset(
+                        AssetsPath.rightArrow,
+                        color: AppColors.lightSkyBlue,
+                        width: 24.sp,
+                        height: 22.sp,
+                      ),
+                      SizedBox(height: 8.h),
+                      Image.asset(
+                        AssetsPath.increaseAi,
+                        width: 40.sp,
+                        height: 40.sp,
+                      ),
                     ],
                   ),
                 ),
               ],
             ),
-            SizedBox(
-              height: AppDimensions.dim32.h,
-            ),
-            Container(
-              decoration: BoxDecoration(
-                color: AppColors.white,
-                borderRadius: BorderRadius.circular(100),
-                boxShadow: [
-                  BoxShadow(
-                    blurRadius: AppDimensions.radius_5,
-                    color: Colors.black.withOpacity(.4),
-                    offset: Offset(AppDimensions.dim5, AppDimensions.dim5),
-                  )
-                ],
-              ),
-              width: AppDimensions.dim379.w,
-              height: AppDimensions.dim79.h,
-              child: WaterWaveWidget(
-                waveCount: 4,
-                // fillPercent: ((convertedWaterGoal / 1000) - tickValues.first) /
-                //     (tickValues.last - tickValues.first),
-                fillPercent: (((convertedWaterGoal / 1000) - tickValues.first) /
-                        (tickValues.last - tickValues.first))
-                    .clamp(0.0, 1.0),
 
-                orientation: Axis.horizontal,
-                amplitude: 8.0,
-                speed: Duration(seconds: 5),
-              ),
-            ),
-            SizedBox(
-              height: AppDimensions.dim114.h,
-            ),
-            Container(
-              padding: EdgeInsets.only(
-                left: AppDimensions.defaultPadding.w,
-                right: AppDimensions.defaultPadding.w,
-              ),
-              child: CustomGradientSlider(
-                tickValues: tickValues,
-                initialValue: initialSliderValue,
-                onChanged: (val) {
-                  setState(() {
-                    HapticFeedback.selectionClick();
-                    convertedWaterGoal = val * 1000;
-                    updateDisplayWaterGoal();
-                  });
-                },
-              ),
-            ),
-            SizedBox(
-              height: AppDimensions.dim50.h,
-            ),
-            GestureDetector(
-              onTap: () {
-                setState(() {
-                  if (unit == "mL") {
-                    // mL → Liters
-                    convertedWaterGoal = convertedWaterGoal / 1000;
-                    unit = "L";
-                  } else {
-                    // Liters → mL
-                    convertedWaterGoal = convertedWaterGoal * 1000;
-                    unit = "mL";
-                  }
+            SizedBox(height: 50.h),
 
-                  updateDisplayWaterGoal();
-                  HapticFeedback.selectionClick();
-                });
-              },
-              child: Container(
-                width: AppDimensions.dim92.w,
-                height: AppDimensions.dim46.h,
-                decoration: BoxDecoration(
-                  color: AppColors.white,
-                  borderRadius:
-                      BorderRadius.circular(AppDimensions.radius_50.r),
-                  border: Border.all(
-                    color: AppColors.greywith80,
-                    width: 1.w,
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.25),
-                      blurRadius: AppDimensions.radius_5,
-                      offset: Offset(AppDimensions.dim3, AppDimensions.dim3),
+            Text(
+              "Target Calibration",
+              style: TextStyle(
+                color: AppColors.raisinblack,
+                fontSize: 22.sp,
+                fontFamily: AppFontStyles.urbanistFontFamily,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            SizedBox(height: 10.h),
+            Text(
+              "Adjust your daily intake goal based on precision metrics.",
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                  color: AppColors.color_414755,
+                  fontSize: 14.sp,
+                  fontFamily: AppFontStyles.urbanistFontFamily,
+                  fontVariations: [AppFontStyles.semiBoldFontVariation]),
+            ),
+
+            SizedBox(height: 25.h),
+
+            Row(
+              children: [
+                Expanded(
+                  child: Container(
+                    padding: EdgeInsets.symmetric(vertical: 5.h),
+                    decoration: BoxDecoration(
+                      color: AppColors.lightSkyBlue.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(90.r),
                     ),
-                  ],
-                ),
-                alignment: Alignment.center,
-                child: Text(
-                  unit == "mL" ? "Litres" : "mL",
-                  style: TextStyle(
-                    color: AppColors.greywith80,
-                    fontSize: AppFontStyles.fontSize_16,
-                    fontFamily: AppFontStyles.urbanistFontFamily,
-                    fontVariations: [AppFontStyles.semiBoldFontVariation],
+                    child: Column(
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.history,
+                                color: AppColors.lightSkyBlue, size: 16.sp),
+                            SizedBox(width: 5.w),
+                            Text(
+                              "Avg Intake",
+                              style: TextStyle(
+                                  color: AppColors.lightSkyBlue,
+                                  fontSize: 12.sp,
+                                  fontFamily: AppFontStyles.urbanistFontFamily,
+                                  fontVariations: [
+                                    AppFontStyles.boldFontVariation
+                                  ]),
+                            ),
+                          ],
+                        ),
+                        SizedBox(height: 4.h),
+                        Text(
+                          "${widget.waterGoal.toStringAsFixed(0)} mL",
+                          style: TextStyle(
+                            color: AppColors.raisinblack,
+                            fontSize: 18.sp,
+                            fontFamily: AppFontStyles.urbanistFontFamily,
+                            fontVariations: [AppFontStyles.boldFontVariation],
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
+                SizedBox(width: 15.w),
+                Expanded(
+                  child: Container(
+                    padding: EdgeInsets.symmetric(vertical: 5.h),
+                    decoration: BoxDecoration(
+                      color: AppColors.lightSkyBlue.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(90.r),
+                    ),
+                    child: Column(
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                                (convertedWaterGoal - widget.waterGoal) >= 0
+                                    ? Icons.trending_up
+                                    : Icons.trending_down,
+                                color:
+                                    (convertedWaterGoal - widget.waterGoal) >= 0
+                                        ? Colors.green
+                                        : Colors.red,
+                                size: 16.sp),
+                            SizedBox(width: 5.w),
+                            Text(
+                              (convertedWaterGoal - widget.waterGoal) >= 0
+                                  ? "Increase"
+                                  : "Decrease",
+                              style: TextStyle(
+                                  color: AppColors.lightSkyBlue,
+                                  fontSize: 12.sp,
+                                  fontFamily: AppFontStyles.urbanistFontFamily,
+                                  fontVariations: [
+                                    AppFontStyles.boldFontVariation
+                                  ]),
+                            ),
+                          ],
+                        ),
+                        SizedBox(height: 4.h),
+                        Text(
+                          "${(convertedWaterGoal - widget.waterGoal) >= 0 ? "+" : ""}${(convertedWaterGoal - widget.waterGoal).abs().toStringAsFixed(0)} mL",
+                          style: TextStyle(
+                            color: AppColors.raisinblack,
+                            fontSize: 18.sp,
+                            fontFamily: AppFontStyles.urbanistFontFamily,
+                            fontVariations: [AppFontStyles.boldFontVariation],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            SizedBox(height: 25.h),
+            Container(
+              margin: EdgeInsets.symmetric(horizontal: 0.w),
+              decoration: BoxDecoration(
+                color: const Color(0xffE1F5FE).withValues(alpha: 0.4),
+                borderRadius: BorderRadius.circular(100.r),
+                border: Border.all(
+                  color: const Color(0xffB3E5FC),
+                  width: 1,
+                ),
+              ),
+              padding: EdgeInsets.symmetric(horizontal: 15.w, vertical: 5.h),
+              child: Row(
+                children: [
+                  Image.asset(
+                    AssetsPath.healthTip,
+                    height: 60.h,
+                    width: 60.w,
+                  ),
+                  SizedBox(width: 12.w),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          "Health Tip",
+                          style: TextStyle(
+                            color: AppColors.darkgray,
+                            fontSize: 18.sp,
+                            fontFamily: AppFontStyles.urbanistFontFamily,
+                            fontVariations: [AppFontStyles.boldFontVariation],
+                          ),
+                        ),
+                        SizedBox(height: 2.h),
+                        Text(
+                          "Drinking water before meals can \nboost your metabolism by up to \n30%.",
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            color:
+                                const Color(0xff003D51).withValues(alpha: 0.7),
+                            fontSize: 13.sp,
+                            fontFamily: AppFontStyles.urbanistFontFamily,
+                            fontVariations: [AppFontStyles.boldFontVariation],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  SizedBox(width: 40.w), // Offset icon
+                ],
               ),
             ),
           ],
         ),
       ),
-      bottomNavigationBar: Container(
+      bottomNavigationBar: SizedBox(
         height: AppDimensions.dim85.h,
         child: Column(
           mainAxisAlignment: MainAxisAlignment.start,
@@ -274,23 +555,19 @@ class _UserInfoDailyGoalScreenState extends State<UserInfoDailyGoalScreen> {
                 Console.log(
                     tag: "APP",
                     value: "isViaSettingsScreen ${widget.isViaSettingsScreen}");
-                if (widget.isViaSettingsScreen == false) {
-                  // var response = await showGoogleCalendarDialog();
-                  // if (response == false) {
-                  //   return;
-                  // }
-                  // if (isButtonClicked == true) {
-                  //   return;
-                  // }
-                }
 
                 setState(() {
                   isButtonClicked = true;
                 });
+
+                final userInfoCubit = context.read<UserInfoCubit>();
+                final bleCubit = context.read<BleCubit>();
+                final hydrationCubit = context.read<HydrationCubit>();
+                final bottomNavCubit = context.read<BottomNavCubit>();
+                final navigator = Navigator.of(context, rootNavigator: true);
+
                 UiUtilsService.showLoading(context, "Please wait");
-                await context
-                    .read<UserInfoCubit>()
-                    .saveUser(context.read<UserInfoCubit>().state);
+                await userInfoCubit.saveUser(userInfoCubit.state);
                 await SharedPrefsHelper.setPersonalInfoSubmitted(true);
                 await SharedPrefsHelper.setWaterGoal(
                     convertedWaterGoal.toInt());
@@ -313,7 +590,7 @@ class _UserInfoDailyGoalScreenState extends State<UserInfoDailyGoalScreen> {
                   for (var slot in slots) {
                     await dbHelper.insertOrUpdateSlot(slot);
                   }
-                  await context.read<BleCubit>().queueHydrationSlots(slots);
+                  await bleCubit.queueHydrationSlots(slots);
                 } else {
                   List<HydrationEntry> updatedSlots = [];
                   for (var existingSlot in isSlotAvailableInDb) {
@@ -324,9 +601,7 @@ class _UserInfoDailyGoalScreenState extends State<UserInfoDailyGoalScreen> {
                     await dbHelper.insertOrUpdateSlot(updatedSlot);
                     updatedSlots.add(updatedSlot);
                   }
-                  await context
-                      .read<BleCubit>()
-                      .queueHydrationSlots(updatedSlots);
+                  await bleCubit.queueHydrationSlots(updatedSlots);
                 }
 
                 await SharedPrefsHelper.setLastLevelUpDate("");
@@ -334,6 +609,7 @@ class _UserInfoDailyGoalScreenState extends State<UserInfoDailyGoalScreen> {
                 // Initialize notification service before scheduling, to ensure plugin is ready and permissions are requested on first launch
                 await NotificationService().init();
 
+                if (!context.mounted) return;
                 UiUtilsService.dismissLoading(context);
                 setState(() {
                   isButtonClicked = false;
@@ -360,13 +636,13 @@ class _UserInfoDailyGoalScreenState extends State<UserInfoDailyGoalScreen> {
 
                 await dbHelper.bulkUpsert30Days(updatedSummaries);
 
-                await context.read<HydrationCubit>().refreshAchievementStats(
-                    updateUnlock:
-                        context.read<UserInfoCubit>().state.hideAchievement);
+                await hydrationCubit.refreshAchievementStats(
+                    updateUnlock: userInfoCubit.state.hideAchievement);
+
                 SharedPrefsHelper.updateAndSaveDeviceConfig(
                     waterGoal: convertedWaterGoal.toInt());
-                context.read<BottomNavCubit>().showBar();
-                Navigator.of(context, rootNavigator: true).pushAndRemoveUntil(
+                bottomNavCubit.showBar();
+                navigator.pushAndRemoveUntil(
                     MaterialPageRoute(
                       builder: (context) => BottomNavScreenNew(),
                     ),
@@ -377,6 +653,33 @@ class _UserInfoDailyGoalScreenState extends State<UserInfoDailyGoalScreen> {
         ),
       ),
     );
+  }
+
+  void _updateGoalFromOffset(Offset position, Size size) {
+    Console.log(tag: "_updateGoalFromOffset_position", value: position);
+    Console.log(tag: "_updateGoalFromOffset_size", value: size);
+    final center = Offset(size.width / 2, size.height / 2);
+    final dx = position.dx - center.dx;
+    final dy = position.dy - center.dy;
+
+    // Angle clockwise from right (Syncfusion convention), in degrees
+    double angle = math.atan2(dy, dx) * 180 / math.pi;
+    if (angle < 0) angle += 360;
+
+    // startAngle is 270 (top). Convert gauge angle fraction:
+    // fraction = (angle - startAngle + 360) % 360 / 360
+    final double fraction = ((angle - 270 + 360) % 360) / 360;
+
+    // Map fraction to water value
+    double rawValue = 500 + fraction * 9500;
+    double snapped = (rawValue / 50).round() * 50.0;
+    snapped = snapped.clamp(500.0, 10000.0);
+
+    if (snapped != convertedWaterGoal) {
+      setState(() {
+        convertedWaterGoal = snapped;
+      });
+    }
   }
 
   Future<bool?> showGoogleCalendarDialog() async {

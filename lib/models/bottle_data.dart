@@ -5,6 +5,8 @@ class BottleData {
   final int liquidPercent;
   final int battery;
   final int refills;
+  final double temp;
+  final double bqTemp;
   final DateTime timestamp;
 
   BottleData({
@@ -12,6 +14,8 @@ class BottleData {
     required this.liquidPercent,
     required this.battery,
     required this.refills,
+    required this.temp,
+    required this.bqTemp,
     required this.timestamp,
   });
 
@@ -21,6 +25,8 @@ class BottleData {
       'liquidPercent': liquidPercent,
       'battery': battery,
       'refills': refills,
+      'temp': temp,
+      'bqTemp': bqTemp,
       'timestamp': timestamp.toIso8601String(),
     };
   }
@@ -31,6 +37,8 @@ class BottleData {
       liquidPercent: map['liquidPercent'] as int,
       battery: map['battery'] as int,
       refills: map['refills'] as int? ?? 0,
+      temp: map['temp'] as double? ?? 0,
+      bqTemp: map['bqTemp'] as double? ?? 0,
       timestamp: DateTime.parse(map['timestamp'] as String),
     );
   }
@@ -47,6 +55,8 @@ List<BottleData> generateDummyWeeklyData() {
       liquidPercent: random.nextInt(101), // 0–100%
       battery: 50 + random.nextInt(51), // 50–100%
       refills: random.nextInt(5),
+      temp: random.nextInt(30).toDouble(), // 0–30°C
+      bqTemp: random.nextInt(30).toDouble(), // 0–30°C
       timestamp: date,
     );
   });
@@ -64,6 +74,8 @@ List<BottleData> generateDummyMonthlyData() {
       liquidPercent: random.nextInt(101),
       battery: 40 + random.nextInt(61),
       refills: random.nextInt(5),
+      temp: random.nextInt(30).toDouble(), // 0–30°C
+      bqTemp: random.nextInt(30).toDouble(), // 0–30°C
       timestamp: date,
     );
   });

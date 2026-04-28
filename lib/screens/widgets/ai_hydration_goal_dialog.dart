@@ -9,6 +9,7 @@ import 'package:hydrify/services/ai_hydration_engine.dart';
 import 'package:hydrify/helpers/database_helper.dart';
 import 'package:hydrify/helpers/shared_pref_helper.dart';
 import 'package:glassmorphism/glassmorphism.dart';
+import 'package:hydrify/helpers/logger.dart';
 
 class AiHydrationGoalDialog extends StatelessWidget {
   final AiHydrationResult result;
@@ -23,223 +24,256 @@ class AiHydrationGoalDialog extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      decoration: BoxDecoration(
-        color: Color(0xff82bcea).withValues(alpha: 0.2)
-      ),
+      decoration:
+          BoxDecoration(color: Color(0xff82bcea).withValues(alpha: 0.2)),
       child: BackdropFilter(
         filter: ImageFilter.blur(sigmaX: 30, sigmaY: 30),
-        child: Dialog(
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(40.r)),
-          backgroundColor: Colors.transparent,
-          insetPadding: EdgeInsets.symmetric(horizontal: 24.w),
-          child: Container(
-            width: double.infinity,
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [
-                  Color(0xFF96D6F4), // More prominent blue at the top right
-                  Color(0xFFE0EFF4), // So
-                  Color(0xFFE0EFF4), // Soft transition
-                  Color(0xFFD8EFF3), // Bottom left
-                  Color(0xFFe0edf0), // Bottom left
-                ],
-                stops: [0.0, 0.2, 0.4, 1.0, 0.9],
-                begin: Alignment.topRight,
-                end: Alignment.bottomLeft,
-              ),
-              borderRadius: BorderRadius.circular(40.r),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.1),
-                  blurRadius: 30,
-                  offset: const Offset(0, 10),
+        child: Transform.scale(
+          scale: 0.95,
+          child: Dialog(
+            shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(40.r)),
+            backgroundColor: Colors.transparent,
+            insetPadding: EdgeInsets.symmetric(horizontal: 24.w),
+            child: Container(
+              width: double.infinity,
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [
+                    Color(0xFF96D6F4), // More prominent blue at the top right
+                    Color(0xFFE0EFF4), // So
+                    Color(0xFFE0EFF4), // Soft transition
+                    Color(0xFFD8EFF3), // Bottom left
+                    Color(0xFFe0edf0), // Bottom left
+                  ],
+                  stops: [0.0, 0.2, 0.4, 1.0, 0.9],
+                  begin: Alignment.topRight,
+                  end: Alignment.bottomLeft,
                 ),
-              ],
-            ),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(40.r),
-              child: Stack(
-                children: [
-                  Positioned(
-                    top: -100.w,
-                    right:-100.w,
-                    child: Container(
-                      width: 200.w,
-                      height: 200.h,
-                      padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 40.h),
-                      decoration: BoxDecoration(
-                        boxShadow: [
-                          BoxShadow(
-                            color: Color(0xFF96D6F4),
-                            blurRadius: 30,
-                            offset: const Offset(-30, 5),
-                          ),
-                        ],
-                        borderRadius: BorderRadius.circular(100.r),
+                borderRadius: BorderRadius.circular(40.r),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.1),
+                    blurRadius: 30,
+                    offset: const Offset(0, 10),
+                  ),
+                ],
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(40.r),
+                child: Stack(
+                  children: [
+                    Positioned(
+                      top: -100.w,
+                      right: -100.w,
+                      child: Container(
+                        width: 200.w,
+                        height: 200.h,
+                        padding: EdgeInsets.symmetric(
+                            horizontal: 24.w, vertical: 40.h),
+                        decoration: BoxDecoration(
+                          boxShadow: [
+                            BoxShadow(
+                              color: Color(0xFF96D6F4),
+                              blurRadius: 30,
+                              offset: const Offset(-30, 5),
+                            ),
+                          ],
+                          borderRadius: BorderRadius.circular(100.r),
+                        ),
                       ),
                     ),
-                  ),
-                  Center(
-                    child: Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 16.w),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          // Title
-                          Text(
-                            "AI Goal Update",
-                            style: TextStyle(
-                              color: AppColors.bluegray,
-                              fontSize: 30.sp,
-                              fontFamily: AppFontStyles.urbanistFontFamily,
-                              fontVariations: [AppFontStyles.boldFontVariation],
-                            ),
-                          ),
-                          SizedBox(height: 8.h),
-
-                          // Main Goal Value
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            crossAxisAlignment: CrossAxisAlignment.baseline,
-                            textBaseline: TextBaseline.alphabetic,
-                            children: [
-                              Text(
-                                _formatNumber(result.totalGoalMl.toInt()),
-                                style: TextStyle(
-                                  color: AppColors.blueWaterIntake,
-                                  fontSize: 54.sp,
-                                  fontFamily: AppFontStyles.urbanistFontFamily,
-                                  fontVariations: [AppFontStyles.extraBoldFontVariation],
-                                ),
-                              ),
-                              SizedBox(width: 8.w),
-                              Text(
-                                "mL",
-                                style: TextStyle(
-                                  color: Color(0xff00629D),
-                                  fontSize: 22.sp,
-                                  fontFamily: AppFontStyles.urbanistFontFamily,
-                                  fontVariations: [AppFontStyles.boldFontVariation],
-                                ),
-                              ),
-                            ],
-                          ),
-                          SizedBox(height: 4.h),
-
-                          // Comparison Badge
-                          if (result.totalGoalMl > previousDayGoal)
-                            Container(
-                              padding:
-                                  EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFD5E3FC),
-                                borderRadius: BorderRadius.circular(20.r),
-                                border: Border.all(color: AppColors.greyColorText1.withValues(alpha: 0.4), width: 1.8)
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Icon(Icons.trending_up,
-                                      color: const Color(0xFF10B981), size: 18.sp),
-                                  SizedBox(width: 8.w),
-                                  Text(
-                                    "+${(result.totalGoalMl - previousDayGoal).toInt()} mL from yesterday",
-                                    style: TextStyle(
-                                      color: AppColors.bluegray,
-                                      fontSize: 13.sp,
-                                      fontFamily: AppFontStyles.urbanistFontFamily,
-                                      fontVariations: [AppFontStyles.boldFontVariation],
-                                    ),
-                                  ),
+                    Center(
+                      child: Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 16.w),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            // Title
+                            Text(
+                              "AI Goal Update",
+                              style: TextStyle(
+                                color: AppColors.bluegray,
+                                fontSize: 30.sp,
+                                fontFamily: AppFontStyles.urbanistFontFamily,
+                                fontVariations: [
+                                  AppFontStyles.boldFontVariation
                                 ],
                               ),
                             ),
-                          SizedBox(height: 20.h),
+                            SizedBox(height: 8.h),
 
-                          // Base Needs Card (Wide)
-                          _buildBaseNeedsCard(),
-                          SizedBox(height: 20.h),
+                            // Main Goal Value
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              crossAxisAlignment: CrossAxisAlignment.baseline,
+                              textBaseline: TextBaseline.alphabetic,
+                              children: [
+                                Text(
+                                  _formatNumber(result.totalGoalMl.toInt()),
+                                  style: TextStyle(
+                                    color: AppColors.blueWaterIntake,
+                                    fontSize: 54.sp,
+                                    fontFamily:
+                                        AppFontStyles.urbanistFontFamily,
+                                    fontVariations: [
+                                      AppFontStyles.extraBoldFontVariation
+                                    ],
+                                  ),
+                                ),
+                                SizedBox(width: 8.w),
+                                Text(
+                                  "mL",
+                                  style: TextStyle(
+                                    color: Color(0xff00629D),
+                                    fontSize: 22.sp,
+                                    fontFamily:
+                                        AppFontStyles.urbanistFontFamily,
+                                    fontVariations: [
+                                      AppFontStyles.boldFontVariation
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                            SizedBox(height: 4.h),
 
-                          // Grid Section (2x2)
-                          Row(
-                            children: [
-                              Expanded(
-                                child: _buildMetricCard(
-                                  path: AssetsPath.aiSteps,
-                                  iconColor: const Color(0xFFFB7185),
-                                  label: "Steps",
-                                  value: "${(result.steps / 1000).toStringAsFixed(1)}k",
-                                  adjustment: "+${result.stepsAdjMl.toInt()}mL",
-                                  adjColor: const Color(0xFF0D9488),
+                            // Comparison Badge
+                            if (result.totalGoalMl > previousDayGoal)
+                              Container(
+                                padding: EdgeInsets.symmetric(
+                                    horizontal: 16.w, vertical: 8.h),
+                                decoration: BoxDecoration(
+                                    color: const Color(0xFFD5E3FC),
+                                    borderRadius: BorderRadius.circular(20.r),
+                                    border: Border.all(
+                                        color: AppColors.greyColorText1
+                                            .withValues(alpha: 0.4),
+                                        width: 1.8)),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(Icons.trending_up,
+                                        color: const Color(0xFF10B981),
+                                        size: 18.sp),
+                                    SizedBox(width: 8.w),
+                                    Text(
+                                      "+${(result.totalGoalMl - previousDayGoal).toInt()} mL from yesterday",
+                                      style: TextStyle(
+                                        color: AppColors.bluegray,
+                                        fontSize: 13.sp,
+                                        fontFamily:
+                                            AppFontStyles.urbanistFontFamily,
+                                        fontVariations: [
+                                          AppFontStyles.boldFontVariation
+                                        ],
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
-                              SizedBox(width: 16.w),
-                              Expanded(
-                                child: _buildMetricCard(
-                                  path: AssetsPath.aiTemp,
-                                  iconColor: const Color(0xFFEF4444),
-                                  label: "Temp",
-                                  value: "${result.temperatureC.toInt()}°C",
-                                  adjustment: "+${result.tempAdjMl.toInt()}mL",
-                                  adjColor: const Color(0xFFEF4444),
-                                ),
-                              ),
-                            ],
-                          ),
-                          SizedBox(height: 16.h),
-                          Row(
-                            children: [
-                              Expanded(
-                                child: _buildMetricCard(
-                                  path: AssetsPath.caffiene,
-                                  iconColor: const Color(0xFF6366F1),
-                                  label: "Caffeine",
-                                  value: "${(result.caffeineMg / 60).toInt()} Cups",
-                                  adjustment: "+${result.caffeineAdjMl.toInt()}mL",
-                                  adjColor: const Color(0xFF0D9488),
-                                ),
-                              ),
-                              SizedBox(width: 16.w),
-                              Expanded(
-                                child: _buildMetricCard(
-                                  path: AssetsPath.foodWater,
-                                  iconColor: const Color(0xFFFBBF24),
-                                  label: "Food Water",
-                                  value: "Est.",
-                                  adjustment: "-${result.foodWaterMl.toInt()}mL",
-                                  adjColor: const Color(0xFF6B7280),
-                                ),
-                              ),
-                            ],
-                          ),
-                          SizedBox(height: 40.h),
+                            SizedBox(height: 20.h),
 
-                          // Action Buttons
-                          _buildButton(
-                            label: "Accept New Goal",
-                            onPressed: () async {
-                              await SharedPrefsHelper.setWaterGoal(
-                                  result.totalGoalMl.toInt());
-                              await DatabaseHelper().saveDailyWaterGoal(
-                                  DateTime.now(), result.totalGoalMl.toInt());
-                              await SharedPrefsHelper.updateAndSaveDeviceConfig(
-                                  waterGoal: result.totalGoalMl.toInt());
-                              if (context.mounted) Navigator.pop(context);
-                            },
-                            isPrimary: true,
-                          ),
-                          SizedBox(height: 16.h),
-                          _buildButton(
-                            label: "Keep Current Goal",
-                            onPressed: () => Navigator.pop(context),
-                            isPrimary: false,
-                          ),
-                        ],
+                            // Base Needs Card (Wide)
+                            _buildBaseNeedsCard(),
+                            SizedBox(height: 20.h),
+
+                            // Grid Section (2x2)
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: _buildMetricCard(
+                                    path: AssetsPath.aiSteps,
+                                    iconColor: const Color(0xFFFB7185),
+                                    label: "Steps",
+                                    value:
+                                        "${(result.steps / 1000).toStringAsFixed(1)}k",
+                                    adjustment:
+                                        "+${result.stepsAdjMl.toInt()}mL",
+                                    adjColor: const Color(0xFF0D9488),
+                                  ),
+                                ),
+                                SizedBox(width: 16.w),
+                                Expanded(
+                                  child: _buildMetricCard(
+                                    path: AssetsPath.aiTemp,
+                                    iconColor: const Color(0xFFEF4444),
+                                    label: "Temp",
+                                    value: "${result.temperatureC.toInt()}°C",
+                                    adjustment:
+                                        "+${result.tempAdjMl.toInt()}mL",
+                                    adjColor: const Color(0xFFEF4444),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            SizedBox(height: 16.h),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: _buildMetricCard(
+                                    path: AssetsPath.caffiene,
+                                    iconColor: const Color(0xFF6366F1),
+                                    label: "Caffeine",
+                                    value:
+                                        "${(result.caffeineMg / 60).toInt()} Cups",
+                                    adjustment:
+                                        "+${result.caffeineAdjMl.toInt()}mL",
+                                    adjColor: const Color(0xFF0D9488),
+                                  ),
+                                ),
+                                SizedBox(width: 16.w),
+                                Expanded(
+                                  child: _buildMetricCard(
+                                    path: AssetsPath.foodWater,
+                                    iconColor: const Color(0xFFFBBF24),
+                                    label: "Food Water",
+                                    value: "Est.",
+                                    adjustment:
+                                        "-${result.foodWaterMl.toInt()}mL",
+                                    adjColor: const Color(0xFF6B7280),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            SizedBox(height: 40.h),
+
+                            // Action Buttons
+                            _buildButton(
+                              label: "Accept New Goal",
+                              onPressed: () async {
+                                final goal = result.totalGoalMl.toInt();
+                                Navigator.of(context).pop(false);
+                                try {
+                                  await SharedPrefsHelper.setAiHydrationGoalShown(false);
+                                  await SharedPrefsHelper.setWaterGoal(goal);
+                                  await DatabaseHelper().saveDailyWaterGoal(DateTime.now(), goal);
+                                  await SharedPrefsHelper.updateAndSaveDeviceConfig(waterGoal: goal);
+                                } catch (e) {
+                                  Console.log(tag: "AI_GOAL_DIALOG", value: "Error accepting new goal: $e");
+                                }
+                              },
+                              isPrimary: true,
+                            ),
+                            SizedBox(height: 16.h),
+                            _buildButton(
+                              label: "Keep Current Goal",
+                              onPressed: () async {
+                                Navigator.of(context).pop(true);
+                                try {
+                                  await SharedPrefsHelper.setAiHydrationGoalShown(false);
+                                } catch (e) {
+                                  Console.log(tag: "AI_GOAL_DIALOG", value: "Error keeping current goal: $e");
+                                }
+                              },
+                              isPrimary: false,
+                            ),
+                          ],
+                        ),
                       ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),
@@ -315,7 +349,9 @@ class AiHydrationGoalDialog extends StatelessWidget {
               ),
             ],
           ),
-          SizedBox(width: 4.w,)
+          SizedBox(
+            width: 4.w,
+          )
         ],
       ),
     );

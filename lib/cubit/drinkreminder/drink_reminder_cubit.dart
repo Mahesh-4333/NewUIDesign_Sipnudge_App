@@ -40,8 +40,6 @@ class DrinkReminderCubit extends Cubit<DrinkReminderState> {
     // Slight delay to show the saving animation
     await Future.delayed(const Duration(seconds: 2));
 
-    await SharedPrefsHelper.updateAndSaveDeviceConfig();
-
     final notificationService = NotificationService();
 
     if (value) {
@@ -51,6 +49,8 @@ class DrinkReminderCubit extends Cubit<DrinkReminderState> {
     }
     
     emit(state.copyWith(isSaving: false));
+
+    await SharedPrefsHelper.updateAndSaveDeviceConfig();
   }
 
   Future<void> _rescheduleAllReminders() async {
@@ -70,7 +70,6 @@ class DrinkReminderCubit extends Cubit<DrinkReminderState> {
 
   Future<void> toggleStopWhenFull(bool value) async {
     emit(state.copyWith(stopWhenFull: value, isSaving: true));
-    await SharedPrefsHelper.updateAndSaveDeviceConfig();
     // Slight delay to show the saving animation
     await Future.delayed(const Duration(seconds: 2));
 
@@ -100,6 +99,7 @@ class DrinkReminderCubit extends Cubit<DrinkReminderState> {
     // }
     
     emit(state.copyWith(isSaving: false));
+    await SharedPrefsHelper.updateAndSaveDeviceConfig();
   }
 
   void cycleAlarmRepeat() async {
@@ -110,13 +110,14 @@ class DrinkReminderCubit extends Cubit<DrinkReminderState> {
     await Future.delayed(const Duration(seconds: 2));
 
     await SharedPrefsHelper.setAlarmRepeatIndex(nextIndex);
-    await SharedPrefsHelper.updateAndSaveDeviceConfig();
 
     if (state.reminderEnabled) {
       await _rescheduleAllRemindersRepeat();
     }
 
     emit(state.copyWith(isSaving: false));
+
+    await SharedPrefsHelper.updateAndSaveDeviceConfig();
   }
 
   void setReminderMode(String mode) => emit(state.copyWith(reminderMode: mode));

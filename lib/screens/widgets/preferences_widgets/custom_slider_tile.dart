@@ -7,6 +7,7 @@ class CustomSliderTile extends StatelessWidget {
   final String title;
   final double value;
   final ValueChanged<double> onChanged;
+  final ValueChanged<double>? onChangeEnd;
   final String suffix;
   final bool hideRightText;
   final EdgeInsets? sliderPadding;
@@ -18,6 +19,7 @@ class CustomSliderTile extends StatelessWidget {
     required this.title,
     required this.value,
     required this.onChanged,
+    this.onChangeEnd,
     this.suffix = "%",
     this.sliderPadding,
     this.hideRightText = false,
@@ -87,6 +89,7 @@ class CustomSliderTile extends StatelessWidget {
               child: Slider(
                 value: value,
                 onChanged: onChanged,
+                onChangeEnd: onChangeEnd,
               ),
             ),
           ),

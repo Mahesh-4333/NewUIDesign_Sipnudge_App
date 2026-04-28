@@ -159,6 +159,7 @@ class PreferencesPage extends StatelessWidget {
                             suffix: "%",
                             sliderPadding: EdgeInsets.only(right: 30.w),
                             onChanged: (v) => cubit.updateVibrationStrength(v),
+                            onChangeEnd: (v) => cubit.saveVibrationStrength(v),
                           ),
                           Divider(
                               height: 1,
@@ -198,6 +199,7 @@ class PreferencesPage extends StatelessWidget {
                                     1.0, state.ledHue * 360, 1.0, 1.0)
                                 .toColor(),
                             onChanged: (v) => cubit.updateLedIntensity(v),
+                            onChangeEnd: (v) => cubit.saveLedIntensity(v),
                           ),
                           Divider(
                               height: 1,
@@ -267,14 +269,18 @@ class PreferencesPage extends StatelessWidget {
                                           log("-=-=-=-=-=-=-=- Sending Commnand =-=-=-=-=-=-=-");
                                           var commandSent = await bleCubit
                                               .sendResetCommandWithStateCheck();
+                                          await DatabaseHelper()
+                                              .clearAppMetadata();
 
-                                          SharedPrefsHelper.updateAndSaveDeviceConfig();
+                                          SharedPrefsHelper
+                                              .updateAndSaveDeviceConfig();
+                                          await cubit.updateLastResetDate();
 
                                           Fluttertoast.showToast(
                                               msg: "Local data cleared.");
                                           Fluttertoast.showToast(
                                               msg:
-                                              "Tracking restarted. Connect your device again.");
+                                                  "Tracking restarted. Connect your device again.");
                                         } catch (e) {
                                           Fluttertoast.showToast(
                                               msg:
@@ -308,35 +314,63 @@ class PreferencesPage extends StatelessWidget {
                         ],
                       ),
                       SizedBox(height: 16.h),
-                      Center(
-                        child: FutureBuilder<DateTime?>(
-                          future: DatabaseHelper().getLastSyncDate(),
-                          builder: (context, snapshot) {
-                            if (!snapshot.hasData || snapshot.data == null) {
-                              return const SizedBox();
-                            }
-                            final time = snapshot.data!;
-                            final diff = DateTime.now().difference(time);
-                            String timeAgo = "";
-                            if (diff.inMinutes < 1) {
-                              timeAgo = "Just now";
-                            } else if (diff.inMinutes < 60) {
-                              timeAgo = "${diff.inMinutes} minutes ago";
-                            } else {
-                              timeAgo = DateFormat('h:mm a').format(time);
-                            }
+                      // Center(
+                      //   child: FutureBuilder<DateTime?>(
+                      //     future: DatabaseHelper().getLastSyncDate(),
+                      //     builder: (context, snapshot) {
+                      //       if (!snapshot.hasData || snapshot.data == null) {
+                      //         return const SizedBox();
+                      //       }
+                      //       final time = snapshot.data!;
+                      //       final diff = DateTime.now().difference(time);
+                      //       String timeAgo = "";
+                      //       if (diff.inMinutes < 1) {
+                      //         timeAgo = "Just now";
+                      //       } else if (diff.inMinutes < 60) {
+                      //         timeAgo = "${diff.inMinutes} minutes ago";
+                      //       } else {
+                      //         timeAgo = DateFormat('h:mm a').format(time);
+                      //       }
+                      //
+                      //       return Text(
+                      //         "${AppStrings.lastSynced} ${time.toString().split(" ")[0]} at ${timeAgo.toString()}",
+                      //         style: TextStyle(
+                      //           color: AppColors.bluegray.withOpacity(0.5),
+                      //           fontSize: 13.sp,
+                      //           fontFamily: AppFontStyles.urbanistFontFamily,
+                      //         ),
+                      //       );
+                      //     },
+                      //   ),
+                      // ),
+                      if (state.lastResetDate != null) ...[
+                        SizedBox(height: 8.h),
+                        Center(
+                          child: Builder(
+                            builder: (context) {
+                              final time = state.lastResetDate!;
+                              final diff = DateTime.now().difference(time);
+                              String timeAgo = "";
+                              if (diff.inMinutes < 1) {
+                                timeAgo = "Just now";
+                              } else if (diff.inMinutes < 60) {
+                                timeAgo = "${diff.inMinutes} minutes ago";
+                              } else {
+                                timeAgo = DateFormat('h:mm a').format(time);
+                              }
 
-                            return Text(
-                              "${AppStrings.lastSynced} $timeAgo",
-                              style: TextStyle(
-                                color: AppColors.bluegray.withOpacity(0.5),
-                                fontSize: 13.sp,
-                                fontFamily: AppFontStyles.urbanistFontFamily,
-                              ),
-                            );
-                          },
+                              return Text(
+                                "${AppStrings.lastReset} ${time.toString().split(" ")[0]} at $timeAgo",
+                                style: TextStyle(
+                                  color: AppColors.bluegray.withOpacity(0.8),
+                                  fontSize: 13.sp,
+                                  fontFamily: AppFontStyles.urbanistFontFamily,
+                                ),
+                              );
+                            },
+                          ),
                         ),
-                      ),
+                      ],
                       SizedBox(height: 150.h),
                     ],
                   ),

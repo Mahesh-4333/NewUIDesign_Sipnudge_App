@@ -1,8 +1,13 @@
+import 'dart:async';
 import 'package:hydrify/helpers/database_helper.dart';
 import 'package:hydrify/helpers/logger.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class SharedPrefsHelper {
+  // Config Update Stream
+  static final StreamController<void> configUpdateStream =
+      StreamController<void>.broadcast();
+
   // Existing Keys
   static const String _keyUserEmail = 'user_email';
   static const String _keyWaterGoal = 'water_goal';
@@ -41,6 +46,8 @@ class SharedPrefsHelper {
   static const String _keyHasRequestedHealthPermission =
       'has_requested_health_permission';
   static const String _keyFlushDelay = 'flush_delay';
+  static const String _keyAiHydrationGoalShownDate =
+      'ai_hydration_goal_shown_date';
 
   // ----------------------------
   // RINGTONE METHODS (NEW)
@@ -111,6 +118,20 @@ class SharedPrefsHelper {
     return prefs.getInt(_keyFlushDelay) ?? 100;
   }
 
+  static Future<void> setAiHydrationGoalShown(bool shown) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_keyAiHydrationGoalShownDate, shown);
+  }
+
+  static Future<bool> getAiHydrationGoalShown() async {
+    final prefs = await SharedPreferences.getInstance();
+    var goalHydration =  prefs.getBool(_keyAiHydrationGoalShownDate);
+    if(goalHydration == null){
+      return true;
+    }
+    return goalHydration;
+  }
+
   // ----------------------------
   // Existing Methods
   // ----------------------------
@@ -124,6 +145,7 @@ class SharedPrefsHelper {
   static Future<void> setWaterGoal(int goal) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setInt(_keyWaterGoal, goal);
+    // configUpdateStream.add(null);
   }
 
   static Future<void> setUserGoal(int goal) async {
@@ -433,7 +455,6 @@ class SharedPrefsHelper {
       quietEnd = quietEnd.add(const Duration(days: 1));
     }
 
-
     // 4. Construct Payload
     final payload = '0/${bedHour24 < 10 ? '0$bedHour24' : bedHour24}/'
         '${bedMinute < 10 ? '0$bedMinute' : bedMinute}/'
@@ -448,5 +469,18 @@ class SharedPrefsHelper {
 
     Console.log(tag: "pendingConfig_ld", value: payload.toString());
     await setPendingConfigData(payload);
+
+    // Check if this is the very first time the app is configuring
+    final prefs = await SharedPreferences.getInstance();
+    final isFirstTimeConfig = prefs.getBool('is_first_time_config') ?? true;
+
+    if (isFirstTimeConfig) {
+      await prefs.setBool('is_first_time_config', false);
+      await Future.delayed(Duration(seconds: 4));
+      configUpdateStream.add(null);
+    } else {
+      // Trigger the config update stream to show the UI dialog
+      configUpdateStream.add(null);
+    }
   }
 }

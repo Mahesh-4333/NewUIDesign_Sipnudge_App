@@ -49,8 +49,10 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   Timer? _timezoneTimer;
+  Timer? _aiHydrationEngineTimer;
   bool _isTimezoneDialogOpen = false;
-  bool _aiHydrationGoalShown = false;
+  bool _isAiEngineRunning = false;
+  StreamSubscription? _configSubscription;
 
   bool _isPickerShown = false;
   bool _isRetryDialogShown = false;
@@ -129,11 +131,20 @@ class _HomeScreenState extends State<HomeScreen> {
       await _checkAndScheduleHydrationReminders();
       await _initializeTimezoneDetector();
 
-      // ── AI Hydration Engine: runs 6 s after home loads ──────────
-      Future.delayed(const Duration(seconds: 6), () async {
-        if (!mounted || _aiHydrationGoalShown) return;
-        _aiHydrationGoalShown = true;
+      // ── AI Hydration Engine: runs every 6 s ──────────
+      _aiHydrationEngineTimer =
+          Timer.periodic(const Duration(seconds: 6), (timer) async {
+        if (_isAiEngineRunning) return;
+        _isAiEngineRunning = true;
         await _runAiHydrationEngine();
+        _isAiEngineRunning = false;
+      });
+
+      _configSubscription =
+          SharedPrefsHelper.configUpdateStream.stream.listen((_) {
+        if (mounted) {
+          setState(() {});
+        }
       });
     });
   }
@@ -142,6 +153,8 @@ class _HomeScreenState extends State<HomeScreen> {
   void dispose() {
     _timezoneTimer?.cancel();
     _statsToggleTimer?.cancel();
+    _aiHydrationEngineTimer?.cancel();
+    _configSubscription?.cancel();
     super.dispose();
   }
 
@@ -152,6 +165,8 @@ class _HomeScreenState extends State<HomeScreen> {
   /// Runs the AI Hydration Engine and shows the goal-breakdown dialog.
   Future<void> _runAiHydrationEngine() async {
     try {
+      final goalShown = await SharedPrefsHelper.getAiHydrationGoalShown();
+      if(!goalShown) return;
       // Fetch user weight from DB
       final userInfo = await DatabaseHelper().getUserInfo();
       if (userInfo == null || userInfo.weight == null) {
@@ -169,11 +184,17 @@ class _HomeScreenState extends State<HomeScreen> {
       if (!mounted) return;
       final weatherProvider =
           Provider.of<WeatherProvider>(context, listen: false);
+      final surroundingTemp = context.read<BottleDataCubit>().state.temp;
 
       final result = await AiHydrationEngine.calculate(
         weightKg: weightKg,
         weatherProvider: weatherProvider,
+        surroundingTemp: surroundingTemp,
       );
+
+      if (!result.shouldShowDialog) {
+        return;
+      }
 
       final dbHelper = DatabaseHelper();
       final yesterday = DateTime.now().subtract(const Duration(days: 1));
@@ -185,12 +206,12 @@ class _HomeScreenState extends State<HomeScreen> {
           tag: "check_water_goal_equal",
           value: "${result.totalGoalMl.toInt()} ${waterGoal}");
 
-      if ((result.totalGoalMl.toInt() - waterGoal!.toInt()).abs() <= 40) {
+      if ((result.totalGoalMl.toInt() - waterGoal!.toInt()).abs() <= 200) {
         return;
       }
 
       if (!mounted) return;
-      showDialog(
+      final bool? keepCurrent = await showDialog<bool>(
         context: context,
         barrierDismissible: false,
         builder: (_) => AiHydrationGoalDialog(
@@ -198,6 +219,10 @@ class _HomeScreenState extends State<HomeScreen> {
           previousDayGoal: previousDayGoal,
         ),
       );
+
+      if (keepCurrent == true) {
+        await SharedPrefsHelper.setAiHydrationGoalShown(false);
+      }
     } catch (e) {
       Console.log(tag: 'AI_ENGINE', value: 'Engine error: $e');
     }
@@ -975,7 +1000,9 @@ class _HomeScreenState extends State<HomeScreen> {
                         "$value%",
                         style: TextStyle(
                           color: Color(0xff252525),
-                          fontSize: AppFontStyles.fontSize_24,
+                          fontSize: value >= 100
+                              ? AppFontStyles.fontSize_22
+                              : AppFontStyles.fontSize_24,
                           fontVariations: [
                             AppFontStyles.semiBoldFontVariation,
                           ],
@@ -1064,13 +1091,13 @@ class _HomeScreenState extends State<HomeScreen> {
                 return TweenAnimationBuilder<double>(
                   tween: Tween<double>(
                     begin: 0.0,
-                    end: waterVolumeConsumed / 1000,
+                    end: completionPercent,
                   ),
                   duration: Duration(milliseconds: 500),
                   curve: Curves.fastEaseInToSlowEaseOut,
                   builder: (context, value, child) {
                     return Text(
-                      "${((value / userGoalLiters) * 100).toStringAsFixed(0)}%",
+                      "${(value).toStringAsFixed(0)}%",
                       style: TextStyle(
                         color: AppColors.black,
                         fontSize: 15.sp,
@@ -1322,14 +1349,22 @@ class _HomeScreenState extends State<HomeScreen> {
         textAlign: TextAlign.center,
         text: TextSpan(
           style: TextStyle(
-              fontSize: AppFontStyles.fontSize_16.sp,
+              fontSize: AppFontStyles.fontSize_19.sp,
               color: AppColors.bluegray,
               fontFamily: AppFontStyles.museoModernoFontFamily,
               fontVariations: [AppFontStyles.semiBoldFontVariation]),
           children: [
             TextSpan(
                 text:
-                    "You got ${todayConsumptionPercentage.toStringAsFixed(0)}% - "),
+                    "You have reached  ${todayConsumptionPercentage.toStringAsFixed(0)}% of today's goal"),
+            TextSpan(
+              text: "\n(",
+              style: TextStyle(
+                letterSpacing: 0,
+                color: AppColors.bluegray,
+                fontVariations: [AppFontStyles.boldFontVariation],
+              ),
+            ),
             TextSpan(
                 text: value.split("/")[0],
                 style: TextStyle(
@@ -1339,7 +1374,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
                 children: [
                   TextSpan(
-                    text: "/${value.split("/")[1]}",
+                    text: "/${value.split("/")[1]})",
                     style: TextStyle(
                       letterSpacing: 0,
                       color: AppColors.bluegray,
@@ -1347,8 +1382,8 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                   ),
                 ]),
-            const TextSpan(
-                text: " of today's goal, keep focusing on your health!"),
+            // const TextSpan(
+            //     text: " of today's \ngoal, keep focusing on your health!"),
           ],
         ),
       ),
@@ -1719,16 +1754,25 @@ class _HomeScreenState extends State<HomeScreen> {
                           ],
                         ),
                       ),
-                      Text(
-                        "25°C",
-                        style: TextStyle(
-                          fontFamily: AppFontStyles.urbanistFontFamily,
-                          color: AppColors.blueWaterIntake,
-                          fontSize: AppFontStyles.fontSize_18,
-                          fontVariations: [
-                            AppFontStyles.boldFontVariation,
-                          ],
-                        ),
+                      BlocBuilder<BottleDataCubit, BottleDataState>(
+                        builder: (context, state) {
+                          // Display actual temperature or fallback to "--" if null
+                          final tempDisplay =
+                              (state.temp != null && state.temp != 0)
+                                  ? "${state.temp}°C"
+                                  : "--°C";
+                          return Text(
+                            tempDisplay,
+                            style: TextStyle(
+                              fontFamily: AppFontStyles.urbanistFontFamily,
+                              color: AppColors.blueWaterIntake,
+                              fontSize: AppFontStyles.fontSize_18,
+                              fontVariations: [
+                                AppFontStyles.boldFontVariation,
+                              ],
+                            ),
+                          );
+                        },
                       ),
                     ],
                   ),

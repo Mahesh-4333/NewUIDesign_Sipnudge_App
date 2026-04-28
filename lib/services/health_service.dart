@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 import 'package:health/health.dart';
+import 'package:hydrify/helpers/database_helper.dart';
 import 'package:hydrify/helpers/logger.dart';
 import 'package:hydrify/helpers/shared_pref_helper.dart';
 import 'package:url_launcher/url_launcher_string.dart';
@@ -162,13 +163,20 @@ class HealthService {
 
   Future<int> getStepCount(
       {DateTime? start, DateTime? end, bool forcePermission = false}) async {
+    final today = DateTime.now();
+    final dbSteps = await DatabaseHelper().getDailySteps(today) ?? 0;
+
     try {
       if (Platform.isAndroid) {
-        // Request permission if not granted
         if (await Permission.activityRecognition.isDenied) {
           await Permission.activityRecognition.request();
         }
-        return await PedometerService().getTodaySteps();
+        final healthSteps = await PedometerService().getTodaySteps();
+        if (healthSteps > dbSteps) {
+          await DatabaseHelper().saveDailySteps(today, healthSteps);
+          return healthSteps;
+        }
+        return dbSteps;
       }
 
       final now = end ?? DateTime.now();
@@ -177,14 +185,25 @@ class HealthService {
       final types = [HealthDataType.STEPS];
 
       bool authorized = await _ensurePermissions(types, force: forcePermission);
-      Console.log(tag: "authorized_124", value: authorized);
-      if (!authorized) return 0;
+      if (!authorized) return dbSteps;
 
       final steps = await _health.getTotalStepsInInterval(startOfDay, now);
-      return steps!;
+      final healthSteps = steps ?? 0;
+
+      if (startOfDay.year == today.year &&
+          startOfDay.month == today.month &&
+          startOfDay.day == today.day) {
+        if (healthSteps > dbSteps) {
+          await DatabaseHelper().saveDailySteps(today, healthSteps);
+          return healthSteps;
+        }
+        return dbSteps;
+      }
+
+      return healthSteps;
     } catch (e) {
       Console.log(tag: "getStepCount Error", value: e.toString());
-      return 0;
+      return dbSteps;
     }
   }
 
