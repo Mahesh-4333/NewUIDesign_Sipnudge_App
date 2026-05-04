@@ -214,7 +214,7 @@ class AiHydrationGoalDialog extends StatelessWidget {
                                   child: _buildMetricCard(
                                     path: AssetsPath.caffiene,
                                     iconColor: const Color(0xFF6366F1),
-                                    label: "Caffeine",
+                                    label: "Caffeine/Tea",
                                     value:
                                         "${(result.caffeineMg / 60).toInt()} Cups",
                                     adjustment:
@@ -245,12 +245,18 @@ class AiHydrationGoalDialog extends StatelessWidget {
                                 final goal = result.totalGoalMl.toInt();
                                 Navigator.of(context).pop(false);
                                 try {
-                                  await SharedPrefsHelper.setAiHydrationGoalShown(false);
+                                  await SharedPrefsHelper
+                                      .setAiHydrationGoalShown(false);
                                   await SharedPrefsHelper.setWaterGoal(goal);
-                                  await DatabaseHelper().saveDailyWaterGoal(DateTime.now(), goal);
-                                  await SharedPrefsHelper.updateAndSaveDeviceConfig(waterGoal: goal);
+                                  await DatabaseHelper()
+                                      .saveDailyWaterGoal(DateTime.now(), goal);
+                                  await SharedPrefsHelper
+                                      .updateAndSaveDeviceConfig(
+                                          waterGoal: goal);
                                 } catch (e) {
-                                  Console.log(tag: "AI_GOAL_DIALOG", value: "Error accepting new goal: $e");
+                                  Console.log(
+                                      tag: "AI_GOAL_DIALOG",
+                                      value: "Error accepting new goal: $e");
                                 }
                               },
                               isPrimary: true,
@@ -261,9 +267,12 @@ class AiHydrationGoalDialog extends StatelessWidget {
                               onPressed: () async {
                                 Navigator.of(context).pop(true);
                                 try {
-                                  await SharedPrefsHelper.setAiHydrationGoalShown(false);
+                                  await SharedPrefsHelper
+                                      .setAiHydrationGoalShown(false);
                                 } catch (e) {
-                                  Console.log(tag: "AI_GOAL_DIALOG", value: "Error keeping current goal: $e");
+                                  Console.log(
+                                      tag: "AI_GOAL_DIALOG",
+                                      value: "Error keeping current goal: $e");
                                 }
                               },
                               isPrimary: false,

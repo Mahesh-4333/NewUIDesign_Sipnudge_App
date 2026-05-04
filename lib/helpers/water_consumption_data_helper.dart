@@ -96,47 +96,47 @@ class WaterConsumptionCalculator {
     }
 
     // Base calculation: 30-35ml per kg (using 32ml as middle ground)
-    double baseIntake = weightInKg * 30.0;
+    double baseIntake = weightInKg * 32.5;
 
     Console.log(tag: "APP", value: "baseIntake is $baseIntake");
     // Activity level adjustment (based on step ranges from guide)
     double activityAdjustment = 0.0;
-    switch (state.activityLevel) {
-      case ActivityLevel.sedentary:
-        activityAdjustment = 0.0;
-        break;
-      case ActivityLevel.lightActivity:
-        activityAdjustment = 200.0;
-        break;
-      case ActivityLevel.midActive:
-        activityAdjustment = 400.0;
-        break;
-      case ActivityLevel.veryActive:
-        activityAdjustment = 700.0;
-        break;
-      case null:
-        activityAdjustment = 200.0; // Default to light activity
-        break;
-    }
+    // switch (state.activityLevel) {
+    //   case ActivityLevel.sedentary:
+    //     activityAdjustment = 0.0;
+    //     break;
+    //   case ActivityLevel.lightActivity:
+    //     activityAdjustment = 200.0;
+    //     break;
+    //   case ActivityLevel.midActive:
+    //     activityAdjustment = 400.0;
+    //     break;
+    //   case ActivityLevel.veryActive:
+    //     activityAdjustment = 700.0;
+    //     break;
+    //   case null:
+    //     activityAdjustment = 200.0; // Default to light activity
+    //     break;
+    // }
 
     double dietAdjustment = 0.0;
-    switch (state.dietType) {
-      case DietType.balanced:
-        dietAdjustment = 0.0; // Baseline
-        break;
-      case DietType.vegetarian:
-        dietAdjustment = -300.0; // Water-rich plant foods
-        break;
-      case DietType.highProtein:
-        dietAdjustment = 500.0; // Increased kidney workload
-        break;
-      case DietType.processed:
-        dietAdjustment = 200.0; // High sodium needs more water
-        break;
-      case null:
-        dietAdjustment = 0.0; // Default to balanced
-        break;
-    }
+    // switch (state.dietType) {
+    //   case DietType.balanced:
+    //     dietAdjustment = 0.0; // Baseline
+    //     break;
+    //   case DietType.vegetarian:
+    //     dietAdjustment = -300.0; // Water-rich plant foods
+    //     break;
+    //   case DietType.highProtein:
+    //     dietAdjustment = 500.0; // Increased kidney workload
+    //     break;
+    //   case DietType.processed:
+    //     dietAdjustment = 200.0; // High sodium needs more water
+    //     break;
+    //   case null:
+    //     dietAdjustment = 0.0; // Default to balanced
+    //     break;
+    // }
 
     double ageAdjustment = 0.0;
     if (state.age != null) {
@@ -185,12 +185,7 @@ class WaterConsumptionCalculator {
         break;
     }
 
-    double totalIntake = baseIntake +
-        activityAdjustment +
-        dietAdjustment +
-        ageAdjustment +
-        coffeeAdjustment +
-        teaAdjustment;
+    double totalIntake = baseIntake;
 
     // Optional: Adjust based on typical intake if it's significantly higher
     // if (state.typicalWaterIntake != null) {

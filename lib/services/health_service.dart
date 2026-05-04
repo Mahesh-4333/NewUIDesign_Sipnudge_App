@@ -163,15 +163,18 @@ class HealthService {
 
   Future<int> getStepCount(
       {DateTime? start, DateTime? end, bool forcePermission = false}) async {
+    Console.log(tag: "getStepCount", value: "dbSteps123");
     final today = DateTime.now();
     final dbSteps = await DatabaseHelper().getDailySteps(today) ?? 0;
 
+    Console.log(tag: "getStepCount", value: "dbSteps : $dbSteps");
     try {
       if (Platform.isAndroid) {
         if (await Permission.activityRecognition.isDenied) {
           await Permission.activityRecognition.request();
         }
         final healthSteps = await PedometerService().getTodaySteps();
+        Console.log(tag: "healthSteps", value: healthSteps.toString());
         if (healthSteps > dbSteps) {
           await DatabaseHelper().saveDailySteps(today, healthSteps);
           return healthSteps;

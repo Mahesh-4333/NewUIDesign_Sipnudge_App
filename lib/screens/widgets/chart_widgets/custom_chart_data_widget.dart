@@ -63,7 +63,7 @@ class _CustomChartDataWidgetState extends State<CustomChartDataWidget>
           // borderRadius: BorderRadius.circular(
           //   AppDimensions.radius_10,
           // ),
-          borderRadius: BorderRadius.circular(AppDimensions.radius_16.r),
+          borderRadius: BorderRadius.circular(AppDimensions.radius_15.r),
           border: Border.all(color: AppColors.greywith80, width: 1.w),
           //color: Colors.transparent,
           color: AppColors.white),

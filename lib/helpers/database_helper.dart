@@ -922,8 +922,8 @@ CREATE TABLE IF NOT EXISTS $appMetadataTableName (
     final dateString =
         "${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}";
 
-    // Check existing steps
-    final existing = await getDailySteps(date);
+    // Check existing steps - avoid recursion by setting fetchFromHealth: false
+    final existing = await getDailySteps(date, fetchFromHealth: false);
     if (existing != null && steps <= existing) {
       Console.log(
           tag: "APP",
@@ -964,6 +964,7 @@ CREATE TABLE IF NOT EXISTS $appMetadataTableName (
     if (result.isNotEmpty) {
       dbSteps = result.first['steps'] as int;
     }
+    Console.log(tag: "getDailySteps", value: "DB steps for $dateString: $dbSteps");
 
     // 2. If it's today and we want real-time data, try to fetch and compare
     if (isToday && fetchFromHealth) {
@@ -974,6 +975,7 @@ CREATE TABLE IF NOT EXISTS $appMetadataTableName (
           final status = await Permission.activityRecognition.status;
           if (status.isGranted) {
             healthSteps = await PedometerService().getTodaySteps();
+            Console.log(tag: "getDailySteps", value: "Pedometer steps: $healthSteps");
           }
         } else {
           // iOS: Use Health package (silently check)

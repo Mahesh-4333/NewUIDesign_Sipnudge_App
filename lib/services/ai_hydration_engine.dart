@@ -90,15 +90,17 @@ class AiHydrationEngine {
     final userInfo = await DatabaseHelper().getUserInfo();
     double caffeineMg = 0.0;
     if (userInfo != null) {
+      // 1 Cup = 200ml.
+      // Standard caffeine: Coffee ~80mg/200ml, Tea ~40mg/200ml.
       switch (userInfo.coffeeIntake) {
         case BeverageIntake.oneToTwo:
-          caffeineMg += 1.5 * 95;
+          caffeineMg += 1.5 * 80;
           break;
         case BeverageIntake.threeToFour:
-          caffeineMg += 3.5 * 95;
+          caffeineMg += 3.5 * 80;
           break;
         case BeverageIntake.fivePlus:
-          caffeineMg += 5.0 * 95;
+          caffeineMg += 5.0 * 80;
           break;
         case BeverageIntake.none:
         default:
@@ -106,13 +108,13 @@ class AiHydrationEngine {
       }
       switch (userInfo.teaIntake) {
         case BeverageIntake.oneToTwo:
-          caffeineMg += 1.5 * 47;
+          caffeineMg += 1.5 * 40;
           break;
         case BeverageIntake.threeToFour:
-          caffeineMg += 3.5 * 47;
+          caffeineMg += 3.5 * 40;
           break;
         case BeverageIntake.fivePlus:
-          caffeineMg += 5.0 * 47;
+          caffeineMg += 5.0 * 40;
           break;
         case BeverageIntake.none:
         default:

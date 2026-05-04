@@ -60,6 +60,7 @@ class _HomeScreenState extends State<HomeScreen> {
   bool isGuest = false;
   String selectedBottle = 'purple';
   BottleInfo? bottleInfo;
+  int? currentWaterGoal = 0;
 
   Timer? _statsToggleTimer;
   final ValueNotifier<bool> _showAmbientTemp = ValueNotifier<bool>(false);
@@ -74,6 +75,11 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
+    SharedPrefsHelper.getWaterGoal().then((e){
+      setState(() {
+        currentWaterGoal = e;
+      });
+    });
     _timezoneTimer = Timer.periodic(const Duration(seconds: 3), (timer) {
       _checkTimezoneChange();
     });
@@ -184,7 +190,7 @@ class _HomeScreenState extends State<HomeScreen> {
       if (!mounted) return;
       final weatherProvider =
           Provider.of<WeatherProvider>(context, listen: false);
-      final surroundingTemp = context.read<BottleDataCubit>().state.temp;
+      final surroundingTemp = context.read<BottleDataCubit>().state.bqTemp;
 
       final result = await AiHydrationEngine.calculate(
         weightKg: weightKg,
@@ -206,7 +212,7 @@ class _HomeScreenState extends State<HomeScreen> {
           tag: "check_water_goal_equal",
           value: "${result.totalGoalMl.toInt()} ${waterGoal}");
 
-      if ((result.totalGoalMl.toInt() - waterGoal!.toInt()).abs() <= 200) {
+      if ((result.totalGoalMl.toInt() - waterGoal!.toInt()).abs() <= 500) {
         return;
       }
 
@@ -521,6 +527,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
             // Percentage from HydrationCubit (slot-based)
             final percentage = hydrationState.currentSlotPercentage;
+            final totalRefill = (currentWaterGoal! / 600).toStringAsFixed(0);
 
             Console.log(
                 tag: "_currentSlotInfoWidget",
@@ -531,6 +538,7 @@ class _HomeScreenState extends State<HomeScreen> {
               refillCount,
               percentage,
               slotName,
+              totalRefill
             );
           },
         );
@@ -577,7 +585,7 @@ class _HomeScreenState extends State<HomeScreen> {
             return _buildGoalText(
               completionPercent,
               isGuest,
-              value: "${consumed.toInt()} / $goal ml",
+              value: "${consumed.toInt()}/$goal mL",
             );
           },
         );
@@ -1001,10 +1009,10 @@ class _HomeScreenState extends State<HomeScreen> {
                         style: TextStyle(
                           color: Color(0xff252525),
                           fontSize: value >= 100
-                              ? AppFontStyles.fontSize_22
+                              ? AppFontStyles.fontSize_20
                               : AppFontStyles.fontSize_24,
                           fontVariations: [
-                            AppFontStyles.semiBoldFontVariation,
+                            AppFontStyles.boldFontVariation,
                           ],
                         ),
                       );
@@ -1067,7 +1075,7 @@ class _HomeScreenState extends State<HomeScreen> {
           offset: Offset(AppDimensions.dim2.w, AppDimensions.dim2.h),
         ),
       ],
-      backgroundColor: Color(0xffbfbfbf),
+      backgroundColor: Color(0xffB8B8B8),
       progressBackgroundColor: Color(0xffB3FF4A),
       //needsInnerShadow: false,
       percentageValue: completionPercent,
@@ -1100,7 +1108,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       "${(value).toStringAsFixed(0)}%",
                       style: TextStyle(
                         color: AppColors.black,
-                        fontSize: 15.sp,
+                        fontSize: value >= 100 ? 13.sp : 15.sp,
                         fontVariations: [AppFontStyles.boldFontVariation],
                       ),
                     );
@@ -1115,7 +1123,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildTodayStats(double todayConsumption,
-      double todayConsumptionPercentage, String slotName) {
+      double todayConsumptionPercentage, String slotName, String totalRefill) {
     return Container(
       margin: EdgeInsets.symmetric(horizontal: AppDimensions.dim20.w),
       decoration: BoxDecoration(
@@ -1186,7 +1194,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           color: AppColors.bluegray,
                           fontSize: AppFontStyles.fontSize_12,
                           fontVariations: [
-                            AppFontStyles.semiBoldFontVariation,
+                            AppFontStyles.boldFontVariation,
                           ],
                         ),
                       ),
@@ -1217,13 +1225,42 @@ class _HomeScreenState extends State<HomeScreen> {
                                 ),
                               ),
                               Text(
+                                "/",
+                                overflow: TextOverflow.ellipsis,
+                                textAlign: TextAlign.center,
+                                maxLines: 1,
+                                style: TextStyle(
+                                  fontFamily: AppFontStyles.urbanistFontFamily,
+                                  color: AppColors.bluegray,
+                                  fontSize: AppFontStyles.fontSize_16,
+                                  fontVariations: [
+                                    AppFontStyles.boldFontVariation,
+                                  ],
+                                  fontStyle: FontStyle.italic
+                                ),
+                              ),
+                              Text(
+                                " "+totalRefill,
+                                overflow: TextOverflow.ellipsis,
+                                textAlign: TextAlign.center,
+                                maxLines: 1,
+                                style: TextStyle(
+                                  fontFamily: AppFontStyles.urbanistFontFamily,
+                                  color: AppColors.bluegray,
+                                  fontSize: AppFontStyles.fontSize_15,
+                                  fontVariations: [
+                                    AppFontStyles.boldFontVariation,
+                                  ],
+                                ),
+                              ),
+                              Text(
                                 " Times",
                                 style: TextStyle(
                                   fontFamily: AppFontStyles.urbanistFontFamily,
                                   color: AppColors.bluegray,
                                   fontSize: AppFontStyles.fontSize_14,
                                   fontVariations: [
-                                    AppFontStyles.boldFontVariation,
+                                    AppFontStyles.extraBoldFontVariation,
                                   ],
                                 ),
                               ),
@@ -1294,7 +1331,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           color: AppColors.bluegray,
                           fontSize: AppFontStyles.fontSize_12,
                           fontVariations: [
-                            AppFontStyles.semiBoldFontVariation,
+                            AppFontStyles.boldFontVariation,
                           ],
                         ),
                       ),
@@ -1362,7 +1399,7 @@ class _HomeScreenState extends State<HomeScreen> {
               style: TextStyle(
                 letterSpacing: 0,
                 color: AppColors.bluegray,
-                fontVariations: [AppFontStyles.boldFontVariation],
+                fontVariations: [AppFontStyles.semiBoldFontVariation],
               ),
             ),
             TextSpan(
@@ -1370,7 +1407,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 style: TextStyle(
                   letterSpacing: 0,
                   color: AppColors.lightBlue400,
-                  fontVariations: [AppFontStyles.boldFontVariation],
+                  fontVariations: [AppFontStyles.semiBoldFontVariation],
                 ),
                 children: [
                   TextSpan(
@@ -1378,7 +1415,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     style: TextStyle(
                       letterSpacing: 0,
                       color: AppColors.bluegray,
-                      fontVariations: [AppFontStyles.boldFontVariation],
+                      fontVariations: [AppFontStyles.semiBoldFontVariation],
                     ),
                   ),
                 ]),
@@ -1733,10 +1770,10 @@ class _HomeScreenState extends State<HomeScreen> {
                     "AMBIENT TEMPERATURE",
                     style: TextStyle(
                       fontFamily: AppFontStyles.urbanistFontFamily,
-                      color: AppColors.bluegray,
+                      color: Color(0xff515F74),
                       fontSize: AppFontStyles.fontSize_12,
                       fontVariations: [
-                        AppFontStyles.semiBoldFontVariation,
+                        AppFontStyles.extraBoldFontVariation,
                       ],
                       letterSpacing: 0.5,
                     ),
@@ -1758,8 +1795,8 @@ class _HomeScreenState extends State<HomeScreen> {
                         builder: (context, state) {
                           // Display actual temperature or fallback to "--" if null
                           final tempDisplay =
-                              (state.temp != null && state.temp != 0)
-                                  ? "${state.temp}°C"
+                              (state.bqTemp != null && state.bqTemp != 0)
+                                  ? "${state.bqTemp}°C"
                                   : "--°C";
                           return Text(
                             tempDisplay,

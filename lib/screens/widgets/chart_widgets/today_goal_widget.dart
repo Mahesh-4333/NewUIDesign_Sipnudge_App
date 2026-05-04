@@ -67,7 +67,7 @@ class _TodayGoalWidgetState extends State<TodayGoalWidget>
                     )
                   ],
                   borderRadius: BorderRadius.circular(
-                    AppDimensions.radius_10.w,
+                    AppDimensions.radius_15,
                   ),
                   color: Color(0XFFFFFFFF),
                   border: Border.all(color: AppColors.greywith80),
@@ -139,7 +139,7 @@ class _TodayGoalWidgetState extends State<TodayGoalWidget>
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
                                 Text(
-                                  "${(intakeMl).toStringAsFixed(0)}ML",
+                                  "${(intakeMl).toStringAsFixed(0)}mL",
                                   style: TextStyle(
                                     color: AppColors.bluegray,
                                     fontSize: 30.sp,

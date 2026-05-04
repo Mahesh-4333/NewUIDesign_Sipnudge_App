@@ -323,8 +323,8 @@ class _FoodScannerWidgetState extends State<FoodScannerWidget> {
   void _showWeightPicker() async {
     context.read<BottomNavCubit>().hideBar();
 
-    // Calculate initial item index
-    final int initialItem = (_currentWeight.toInt() - 1).clamp(0, 2999);
+    // Calculate initial item index (interval of 50)
+    final int initialItem = ((_currentWeight / 50).round() - 1).clamp(0, 2999);
     final FixedExtentScrollController scrollController =
         FixedExtentScrollController(initialItem: initialItem);
 
@@ -393,13 +393,13 @@ class _FoodScannerWidgetState extends State<FoodScannerWidget> {
                       diameterRatio: 1.5,
                       physics: const FixedExtentScrollPhysics(),
                       onSelectedItemChanged: (index) {
-                        _recalculate((index + 1).toDouble());
+                        _recalculate(((index + 1) * 50).toDouble());
                       },
                       childDelegate: ListWheelChildBuilderDelegate(
                         builder: (context, index) {
                           return Center(
                             child: Text(
-                              "${index + 1} g",
+                              "${(index + 1) * 50} g",
                               style: TextStyle(
                                 fontSize: 22.sp,
                                 fontVariations: [
@@ -436,7 +436,16 @@ class _FoodScannerWidgetState extends State<FoodScannerWidget> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20.r),
-        boxShadow: AppStyle.boxShadowVariation3,
+        boxShadow: [
+          BoxShadow(
+            blurRadius: AppDimensions.radius_4,
+            color: AppColors.black.withAlpha((0.25 * 255).round()),
+            offset: Offset(
+              AppDimensions.dim2,
+              AppDimensions.dim2,
+            ),
+          )
+        ],
       ),
       child: Stack(
         children: [

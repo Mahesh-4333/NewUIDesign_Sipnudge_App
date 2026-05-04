@@ -32,7 +32,8 @@ class BeverageIntakeWidget extends StatelessWidget {
             context: context,
             isCoffee: true,
             title: "Daily Coffee Intake",
-            subtitle: "Caffeine affects hydration. Help us\nadjust your goals.",
+            subtitle:
+                "Caffeine affects hydration. Help us\nadjust your goals.(1 Cup = 200ml)",
             icon: Icons.local_cafe_rounded,
           ),
           Padding(
@@ -43,7 +44,8 @@ class BeverageIntakeWidget extends StatelessWidget {
             context: context,
             isCoffee: false,
             title: "Daily Tea Intake",
-            subtitle: "Tea also impacts your daily water\nneeds.",
+            subtitle:
+                "Tea also impacts your daily water\nneeds.(1 Cup = 200ml)",
             icon: Icons.emoji_food_beverage_rounded,
           ),
         ],

@@ -1,6 +1,6 @@
 import 'dart:async';
 import 'dart:math';
-import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -55,6 +55,7 @@ class _DrinkTypesWidgetState extends State<DrinkTypesWidget>
   }
 
   Future<void> _fetchWaterIntake({bool forcePermission = false}) async {
+    Console.log(tag: "steps_124", value: _isFetching);
     if (_isFetching) return;
     _isFetching = true;
 
@@ -64,7 +65,7 @@ class _DrinkTypesWidgetState extends State<DrinkTypesWidget>
           await context.read<BottleDataCubit>().getCurrentDayHistory();
 
       int steps = 0;
-      double healthWaterMl = 0.0;
+
       bool hasPermission =
           await SharedPrefsHelper.getHasRequestedHealthPermission();
       Console.log(
@@ -73,23 +74,23 @@ class _DrinkTypesWidgetState extends State<DrinkTypesWidget>
       // On Android, we use pedometer for steps, which has its own permission handling.
       // We still want to call getStepCount() to trigger the pedometer logic.
       if (hasPermission || forcePermission) {
+        Console.log(tag: "steps_124", value: "steps_124123");
         steps = await HealthService()
             .getStepCount(forcePermission: forcePermission);
         Console.log(tag: "steps_124", value: steps.toString());
 
         // Water intake still comes from Health Connect on Android
-        if (Platform.isAndroid && (hasPermission || forcePermission)) {
-          final waterLiters = await HealthService()
-              .getWaterIntakeLiters(forcePermission: forcePermission);
-          healthWaterMl = waterLiters;
-        }
+        // if (Platform.isAndroid && (hasPermission || forcePermission)) {
+        //   final waterLiters = await HealthService()
+        //       .getWaterIntakeLiters(forcePermission: forcePermission);
+        //   healthWaterMl = waterLiters;
+        // }
       }
 
       final userInfo = context.read<UserInfoCubit>().state;
       if (mounted) {
         setState(() {
-          _waterIntake =
-              Platform.isAndroid ? max(history, healthWaterMl) : history;
+          _waterIntake = history;
           _waterGoal = waterGoalParams;
           _stepCount = steps;
           _stepGoal = userInfo.stepGoal ?? 1000;
@@ -134,7 +135,7 @@ class _DrinkTypesWidgetState extends State<DrinkTypesWidget>
             boxShadow: [
               BoxShadow(
                 blurRadius: AppDimensions.radius_4,
-                color: AppColors.black.withOpacity(.25),
+                color: AppColors.black.withValues(alpha: .25),
                 offset: Offset(
                   AppDimensions.dim2,
                   AppDimensions.dim2,
@@ -142,7 +143,7 @@ class _DrinkTypesWidgetState extends State<DrinkTypesWidget>
               )
             ],
             borderRadius: BorderRadius.circular(
-              AppDimensions.radius_10.w,
+              AppDimensions.radius_15,
             ),
             color: Color(0XFFFFFFFF),
             border: Border.all(color: AppColors.greywith80)),
@@ -187,22 +188,30 @@ class _DrinkTypesWidgetState extends State<DrinkTypesWidget>
                             AppDimensions.dim110.w, AppDimensions.dim110.w),
                         painter: _DoubleProgressPainter(
                           outerProgress: _waterGoal > 0
-                              ? (_waterIntake / _waterGoal).clamp(0.0, 1.0)
+                              ? (_waterIntake / _waterGoal).clamp(0.0, 0.95)
                               : 0,
                           innerProgress: _stepGoal > 0
-                              ? (_stepCount / _stepGoal).clamp(0.0, 1.0)
+                              ? (_stepCount / _stepGoal).clamp(0.0, 0.95)
                               : 0,
-                          outerTrackColor: Color(0xFFECECEC),
-                          outerGradient: LinearGradient(
-                            colors: [Color(0xFF369FFF), Color(0xFFC8E2FB)],
-                            begin: Alignment.topCenter,
-                            end: Alignment.bottomCenter,
+                          outerTrackColor: const Color(0xFFECECEC),
+                          outerGradient: SweepGradient(
+                            colors: [
+                              const Color(0xFF369FFF),
+                              const Color(0xFFC3E0FF),
+                            ],
+                            stops: const [0.0, 1.0],
+                            transform: const GradientRotation(-pi / 2 -
+                                0.2), // Extra rotation to cover the start cap
                           ),
-                          innerTrackColor: Color(0xFFECECEC),
-                          innerGradient: LinearGradient(
-                            colors: [Color(0xFF00BA88), Color(0xFFFFFFFF)],
-                            begin: Alignment.topCenter,
-                            end: Alignment.bottomCenter,
+                          innerTrackColor: const Color(0xFFECECEC),
+                          innerGradient: SweepGradient(
+                            colors: [
+                              const Color(0xFF00BA88),
+                              const Color(0xFFC1FFF5),
+                            ],
+                            stops: const [0.0, 1.0],
+                            transform: const GradientRotation(-pi / 2 -
+                                0.2), // Extra rotation to cover the start cap
                           ),
                           strokeWidth: 12.w,
                         ),
@@ -330,9 +339,9 @@ class _DoubleProgressPainter extends CustomPainter {
   final double outerProgress;
   final double innerProgress;
   final Color outerTrackColor;
-  final LinearGradient outerGradient;
+  final Gradient outerGradient;
   final Color innerTrackColor;
-  final LinearGradient innerGradient;
+  final Gradient innerGradient;
   final double strokeWidth;
 
   _DoubleProgressPainter({
@@ -361,16 +370,14 @@ class _DoubleProgressPainter extends CustomPainter {
       ..style = PaintingStyle.stroke
       ..strokeWidth = strokeWidth
       ..strokeCap = StrokeCap.round
-      ..color = Colors.black.withOpacity(0.2)
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4);
+      ..color = Colors.black.withValues(alpha: 0);
 
     final Paint progressPaint = Paint()
       ..style = PaintingStyle.stroke
       ..strokeWidth = strokeWidth
       ..strokeCap = StrokeCap.round;
 
-    void drawRing(
-        double radius, double progress, Color trackC, LinearGradient grad,
+    void drawRing(double radius, double progress, Color trackC, Gradient grad,
         {bool hasBorder = false}) {
       final rect = Rect.fromCircle(center: center, radius: radius);
 
@@ -388,18 +395,41 @@ class _DoubleProgressPainter extends CustomPainter {
         canvas.drawArc(shadowRect, -pi / 2, sweepAngle, false, shadowPaint);
 
         // 3. Draw white border if required
-        //if (hasBorder) {
-        final borderPaint = Paint()
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = strokeWidth + 2.0 // Thicker to create border effect
-          ..strokeCap = StrokeCap.round
-          ..color = Colors.white;
-        canvas.drawArc(rect, -pi / 2, sweepAngle, false, borderPaint);
-        //}
+        if (hasBorder) {
+          final borderPaint = Paint()
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = strokeWidth + 2.0 // Thicker to create border effect
+            ..strokeCap = StrokeCap.round
+            ..color = Colors.white;
+          canvas.drawArc(rect, -pi / 2, sweepAngle, false, borderPaint);
+        }
 
-        // 4. Draw gradient progress
+        // 4. Draw gradient progress with flat caps to avoid overlap issues at 1.0
+        progressPaint.strokeCap = StrokeCap.butt;
         progressPaint.shader = grad.createShader(rect);
         canvas.drawArc(rect, -pi / 2, sweepAngle, false, progressPaint);
+
+        // 5. Draw rounded caps manually for better control
+        final capPaint = Paint()
+          ..style = PaintingStyle.fill
+          ..shader = grad.createShader(rect);
+
+        // Draw end cap (faded)
+        final endAngle = -pi / 2 + sweepAngle;
+        canvas.drawCircle(
+          Offset(center.dx + radius * cos(endAngle),
+              center.dy + radius * sin(endAngle)),
+          strokeWidth / 2,
+          capPaint,
+        );
+
+        // Draw start cap (solid) last so it stays on top at 100% progress
+        canvas.drawCircle(
+          Offset(center.dx + radius * cos(-pi / 2),
+              center.dy + radius * sin(-pi / 2)),
+          strokeWidth / 2,
+          capPaint,
+        );
       }
     }
 

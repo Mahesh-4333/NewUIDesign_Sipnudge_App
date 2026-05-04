@@ -11,6 +11,7 @@ import 'package:hydrify/constants/app_font_styles.dart';
 import 'package:hydrify/constants/assets_path.dart';
 import 'package:hydrify/cubit/hydration/hydration_cubit.dart';
 import 'package:hydrify/cubit/hydration/hydration_state.dart';
+import 'package:hydrify/helpers/shared_pref_helper.dart';
 import 'package:hydrify/models/hydration_entry.dart';
 import 'package:intl/intl.dart';
 
@@ -42,14 +43,17 @@ class _AnalysisHydrationSlotsWidgetState
               EdgeInsets.symmetric(horizontal: AppDimensions.defaultPadding.w),
           padding: EdgeInsets.symmetric(vertical: AppDimensions.dim20.h),
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(AppDimensions.radius_16.r),
+            borderRadius: BorderRadius.circular(AppDimensions.radius_15.r),
             color: Colors.white,
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.05),
-                blurRadius: 10,
-                offset: Offset(0, 4),
-              ),
+                blurRadius: AppDimensions.radius_4,
+                color: AppColors.black.withAlpha((0.25 * 255).round()),
+                offset: Offset(
+                  AppDimensions.dim2,
+                  AppDimensions.dim2,
+                ),
+              )
             ],
             border: Border.all(
                 color: AppColors.bluegray.withOpacity(0.1), width: 1.w),
@@ -493,108 +497,90 @@ class _AnalysisHydrationSlotsWidgetState
                   ),
                 ),
                 GestureDetector(
-                  onTap: () {
-                    showDialog(
-                      context: context,
-                      builder: (context) => AlertDialog(
-                        title: Text(
-                          "Clear History",
-                          style: TextStyle(
-                              fontVariations: [AppFontStyles.boldFontVariation],
-                              fontSize: 16.sp),
-                        ),
-                        content: Text(
-                          "Are you sure you want to clear today's hydration history? This action cannot be undone.",
-                          style: TextStyle(
-                              fontVariations: [AppFontStyles.boldFontVariation],
-                              fontSize: 16.sp),
-                        ),
-                        actions: [
-                          TextButton(
-                            onPressed: () => Navigator.pop(context),
-                            child: Text(
-                              "CANCEL",
-                              style: TextStyle(fontVariations: [
-                                AppFontStyles.boldFontVariation
-                              ], fontSize: 16.sp),
-                            ),
-                          ),
-                          TextButton(
-                            onPressed: () {
-                              context
-                                  .read<HydrationCubit>()
-                                  .clearTodayHistory();
-                              Navigator.pop(context);
-                            },
-                            child: Text(
-                              "CLEAR",
-                              style: TextStyle(
-                                  color: Colors.red,
-                                  fontVariations: [
-                                    AppFontStyles.boldFontVariation
-                                  ],
-                                  fontSize: 16.sp),
-                            ),
-                          ),
+                  onTap: () async {
+                    var totalGoal = await SharedPrefsHelper.getWaterGoal();
+                    _showHistoryBottomSheet(context, totalGoal!);
+                  },
+                  child: Container(
+                    padding:
+                        EdgeInsets.symmetric(horizontal: 10.w, vertical: 6.h),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(25.r),
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                          AppColors.white,
+                          AppColors.white,
+                          AppColors.bottomnavbar
                         ],
                       ),
-                    );
-                  },
-                  child: Text(
-                    "CLEAR",
-                    style: TextStyle(
-                      color: AppColors.bluegray.withOpacity(0.7),
-                      fontSize: AppFontStyles.fontSize_12,
-                      fontFamily: AppFontStyles.urbanistFontFamily,
-                      fontVariations: [AppFontStyles.boldFontVariation],
-                      letterSpacing: 1.0,
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.2),
+                          blurRadius: 7,
+                          offset: Offset(1, 2),
+                        ),
+                      ],
+                      border: Border.all(color: Color(0xff4D758B)),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          "DETAIL",
+                          style: TextStyle(
+                            color: AppColors.bluegray,
+                            fontSize: AppFontStyles.fontSize_12,
+                            fontFamily: AppFontStyles.urbanistFontFamily,
+                            fontVariations: [AppFontStyles.boldFontVariation],
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                        SizedBox(width: 4.w),
+                        Icon(
+                          Icons.arrow_forward_ios,
+                          size: 10.sp,
+                          color: AppColors.bluegray,
+                        ),
+                      ],
                     ),
                   ),
                 ),
               ],
             ),
-            SizedBox(height: AppDimensions.dim16.h),
+            SizedBox(
+              height: 25.h,
+            ),
             if (state.todayHydrationHistory.isEmpty)
               _buildSlotItemIndicator(
                   "No History", "Record your sips", "0 ml", false)
-            else ...[
-              () {
-                final groupedHistory = _getGroupedHistory(
-                    state.entries, state.todayHydrationHistory);
-                final slotsWithHistory = groupedHistory.entries
-                    .where((entry) => entry.value.isNotEmpty)
-                    .toList();
-
-                return Column(
-                  children: slotsWithHistory.map((group) {
-                    final slotType = group.key;
-                    final sips = group.value;
-
-                    return Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _buildSlotGroupHeader(slotType, state.entries),
-                        ...sips.asMap().entries.map((sipEntry) {
-                          final i = sipEntry.key + 1;
-                          final e = sipEntry.value;
-                          final dt = DateTime.parse(e['timestamp']).toLocal();
-                          final time = DateFormat('hh:mm:ss a').format(dt);
-                          final date = DateFormat('dd/MM/yyyy').format(dt);
-                          return _buildHistoryItemCard(
-                            index: i,
-                            time: "$time - ${e['timezone'] ?? ''}",
-                            date: date,
-                            amount:
-                                "C - ${(e['consumed'] as num).toInt()} mL R-${(e['remaining'] as num?)?.toInt() ?? 0} mL",
-                            percentage: e['percentage'] as double? ?? 0.0,
-                          );
-                        }),
-                      ],
+            else
+              ...state.todayHydrationHistory
+                  .take(4)
+                  .toList()
+                  .asMap()
+                  .entries
+                  .map((entry) {
+                    final e = entry.value;
+                    final dt = DateTime.parse(e['timestamp']).toLocal();
+                    final time = DateFormat('hh:mm a').format(dt);
+                    final date = DateFormat('dd MMM').format(dt);
+                    final actualIndex = state.todayHydrationHistory.length < 4
+                        ? state.todayHydrationHistory.length - entry.key
+                        : 4 - entry.key;
+                    return _buildHistoryItemCard(
+                      index: actualIndex,
+                      time: "$time - ${e['timezone'] ?? ''}",
+                      date: date,
+                      amount:
+                          "C - ${(e['consumed'] as num).toInt()} mL R-${(e['remaining'] as num?)?.toInt() ?? 0} mL",
+                      percentage: e['percentage'] as double? ?? 0.0,
                     );
-                  }).toList(),
-                );
-              }(),
-            ],
+                  })
+                  .toList()
+                  .reversed,
             SizedBox(height: AppDimensions.dim25.h),
           ],
           if (_activeTabIndex == 2 || _activeTabIndex == 1) ...[
@@ -927,5 +913,277 @@ class _AnalysisHydrationSlotsWidgetState
   int _minMinutesBetween(int m1, int m2) {
     final diff = (m1 - m2).abs();
     return math.min(diff, 1440 - diff);
+  }
+
+  void _showHistoryBottomSheet(BuildContext context, int totalGoal) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return BlocBuilder<HydrationCubit, HydrationState>(
+          builder: (context, state) {
+            return Container(
+              height: MediaQuery.of(context).size.height * 0.90,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(30.r)),
+              ),
+              child: Column(
+                children: [
+                  SizedBox(height: 12.h),
+                  Container(
+                    width: 40.w,
+                    height: 4.h,
+                    decoration: BoxDecoration(
+                      color: Colors.grey.withOpacity(0.3),
+                      borderRadius: BorderRadius.circular(2.r),
+                    ),
+                  ),
+                  Padding(
+                    padding:
+                        EdgeInsets.symmetric(horizontal: AppDimensions.dim20.w),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          "History Details",
+                          style: TextStyle(
+                            color: AppColors.bluegray,
+                            fontSize: AppFontStyles.fontSize_22,
+                            fontFamily: AppFontStyles.urbanistFontFamily,
+                            fontVariations: [AppFontStyles.boldFontVariation],
+                          ),
+                        ),
+                        GestureDetector(
+                          onTap: () => _showClearConfirmationDialog(context),
+                          child: Container(
+                            padding: EdgeInsets.symmetric(
+                                horizontal: 12.w, vertical: 6.h),
+                            decoration: BoxDecoration(
+                              color: Colors.red.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(15.r),
+                            ),
+                            child: Text(
+                              "CLEAR",
+                              style: TextStyle(
+                                color: Colors.red,
+                                fontSize: AppFontStyles.fontSize_12,
+                                fontFamily: AppFontStyles.urbanistFontFamily,
+                                fontVariations: [
+                                  AppFontStyles.boldFontVariation
+                                ],
+                                letterSpacing: 1.0,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  if (state.todayHydrationHistory.isNotEmpty) ...[
+                    SizedBox(height: 80.h),
+                    Center(
+                      child: Stack(
+                        alignment: Alignment.center,
+                        children: [
+                          SizedBox(
+                            width: 140.w,
+                            height: 140.w,
+                            child: CircularProgressIndicator(
+                              value: totalGoal > 0
+                                  ? (state.todayHydrationHistory.fold<double>(
+                                              0,
+                                              (sum, item) =>
+                                                  sum +
+                                                  (item['consumed'] as num)
+                                                      .toDouble()) /
+                                          totalGoal)
+                                      .clamp(0, 1)
+                                  : 0,
+                              strokeWidth: 12.w,
+                              backgroundColor:
+                                  AppColors.blueWaterIntake.withOpacity(0.1),
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                  AppColors.blueWaterIntake),
+                              strokeCap: StrokeCap.round,
+                            ),
+                          ),
+                          SizedBox(
+                            height: 10.h,
+                          ),
+                          Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                "${state.todayHydrationHistory.fold<double>(0, (sum, item) => sum + (item['consumed'] as num).toDouble()).toInt()}",
+                                style: TextStyle(
+                                  color: AppColors.bluegray,
+                                  fontSize: 28.sp,
+                                  fontFamily: AppFontStyles.urbanistFontFamily,
+                                  fontVariations: [
+                                    AppFontStyles.boldFontVariation
+                                  ],
+                                ),
+                              ),
+                              Text(
+                                "of $totalGoal ml",
+                                style: TextStyle(
+                                  color: Colors.grey,
+                                  fontSize: 14.sp,
+                                  fontFamily: AppFontStyles.urbanistFontFamily,
+                                  fontVariations: [
+                                    AppFontStyles.semiBoldFontVariation
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                    SizedBox(height: 20.h),
+                  ],
+                  Expanded(
+                    child: state.todayHydrationHistory.isEmpty
+                        ? Center(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(Icons.history,
+                                    size: 60.sp,
+                                    color: AppColors.bluegray.withOpacity(0.1)),
+                                SizedBox(height: 16.h),
+                                Text(
+                                  "No history records found",
+                                  style: TextStyle(
+                                    color: AppColors.bluegray.withOpacity(0.5),
+                                    fontFamily:
+                                        AppFontStyles.urbanistFontFamily,
+                                    fontSize: 16.sp,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          )
+                        : SingleChildScrollView(
+                            padding: EdgeInsets.only(
+                                left: AppDimensions.dim20.w,
+                                right: AppDimensions.dim20.w,
+                                bottom: 200.h),
+                            child: () {
+                              final groupedHistory = _getGroupedHistory(
+                                  state.entries, state.todayHydrationHistory);
+                              final slotsWithHistory = groupedHistory.entries
+                                  .where((entry) => entry.value.isNotEmpty)
+                                  .toList();
+
+                              return Column(
+                                children: [
+                                  ...slotsWithHistory.map((group) {
+                                    final slotType = group.key;
+                                    final sips = group.value;
+
+                                    return Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        _buildSlotGroupHeader(
+                                            slotType, state.entries),
+                                        ...sips.asMap().entries.map((sipEntry) {
+                                          final i = sipEntry.key + 1;
+                                          final e = sipEntry.value;
+                                          final dt =
+                                              DateTime.parse(e['timestamp'])
+                                                  .toLocal();
+                                          final time = DateFormat('hh:mm:ss a')
+                                              .format(dt);
+                                          final date = DateFormat('dd/MM/yyyy')
+                                              .format(dt);
+                                          return _buildHistoryItemCard(
+                                            index: i,
+                                            time:
+                                                "$time - ${e['timezone'] ?? ''}",
+                                            date: date,
+                                            amount:
+                                                "C - ${(e['consumed'] as num).toInt()} mL R-${(e['remaining'] as num?)?.toInt() ?? 0} mL",
+                                            percentage:
+                                                e['percentage'] as double? ??
+                                                    0.0,
+                                          );
+                                        }),
+                                      ],
+                                    );
+                                  }).toList(),
+                                  SizedBox(height: 30.h),
+                                ],
+                              );
+                            }(),
+                          ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  void _showClearConfirmationDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape:
+            RoundedRectangleBorder(borderRadius: BorderRadius.circular(20.r)),
+        title: Text(
+          "Clear History",
+          style: TextStyle(
+            color: AppColors.bluegray,
+            fontFamily: AppFontStyles.urbanistFontFamily,
+            fontVariations: [AppFontStyles.boldFontVariation],
+            fontSize: 18.sp,
+          ),
+        ),
+        content: Text(
+          "Are you sure you want to clear today's hydration history? This action cannot be undone.",
+          style: TextStyle(
+            color: Colors.grey.shade700,
+            fontFamily: AppFontStyles.urbanistFontFamily,
+            fontVariations: [AppFontStyles.semiBoldFontVariation],
+            fontSize: 14.sp,
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(
+              "CANCEL",
+              style: TextStyle(
+                color: AppColors.bluegray,
+                fontFamily: AppFontStyles.urbanistFontFamily,
+                fontVariations: [AppFontStyles.boldFontVariation],
+                fontSize: 14.sp,
+              ),
+            ),
+          ),
+          TextButton(
+            onPressed: () {
+              context.read<HydrationCubit>().clearTodayHistory();
+              Navigator.pop(context);
+            },
+            child: Text(
+              "CLEAR",
+              style: TextStyle(
+                color: Colors.red,
+                fontFamily: AppFontStyles.urbanistFontFamily,
+                fontVariations: [AppFontStyles.boldFontVariation],
+                fontSize: 14.sp,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }

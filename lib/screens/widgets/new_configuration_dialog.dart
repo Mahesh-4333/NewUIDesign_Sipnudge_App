@@ -7,9 +7,11 @@ import 'package:hydrify/constants/app_font_styles.dart';
 import 'package:hydrify/constants/assets_path.dart';
 import 'package:hydrify/cubit/ble/ble_cubit.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:hydrify/cubit/bottle/bottle_data_cubit.dart';
+import 'package:hydrify/helpers/shared_pref_helper.dart';
+import 'package:hydrify/models/bottle_info.dart';
 
 class NewConfigurationDialog extends StatelessWidget {
-
   const NewConfigurationDialog({super.key});
 
   static bool _isShowing = false;
@@ -18,6 +20,14 @@ class NewConfigurationDialog extends StatelessWidget {
     if (_isShowing) return;
     _isShowing = true;
 
+    final color = await SharedPrefsHelper.getBottleColor() ?? 'black';
+    final bottleState = context.read<BottleDataCubit>().state;
+    final bottleInfo = BottleInfo.getByColor(
+      color,
+      currentWater: bottleState.volume,
+      waterPercentage: bottleState.volumePercent,
+    );
+
     await showGeneralDialog(
       context: context,
       barrierDismissible: true,
@@ -25,10 +35,93 @@ class NewConfigurationDialog extends StatelessWidget {
       pageBuilder: (context, animation, secondaryAnimation) {
         return BackdropFilter(
           filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
-          child: const Center(
+          child: Center(
             child: Material(
               color: Colors.transparent,
-              child: NewConfigurationDialogContent(),
+              child: Container(
+                width: 340.w,
+                decoration: BoxDecoration(
+                  // color: Colors.white,
+                  borderRadius: BorderRadius.circular(32.r),
+                  gradient: const LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      Color.fromARGB(254, 217, 225, 232),
+                      Color.fromARGB(67, 181, 194, 205),
+                    ],
+                  ),
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Top Gradient Section with Bottle Image
+                    Container(
+                      width: double.infinity,
+                      height: 220.h,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.only(
+                          topLeft: Radius.circular(32.r),
+                          topRight: Radius.circular(32.r),
+                        ),
+                      ),
+                      child: Stack(
+                        alignment: Alignment.center,
+                        children: [
+                          // SYSTEM ALERT Label
+                          Positioned(
+                            top: 16.h,
+                            child: Row(
+                              children: [
+                                Icon(
+                                  Icons.sensors,
+                                  size: 14.sp,
+                                  color: const Color(0xFF00A3FF),
+                                ),
+                                SizedBox(width: 4.w),
+                                Text(
+                                  "SYSTEM ALERT",
+                                  style: TextStyle(
+                                    fontSize: 10.sp,
+                                    fontVariations: [
+                                      AppFontStyles.boldFontVariation
+                                    ],
+                                    fontFamily:
+                                        AppFontStyles.urbanistFontFamily,
+                                    color: const Color(0xFF4A6B7C),
+                                    letterSpacing: 1.2,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          // Circular Bottle Background
+                          Container(
+                            width: 150.w,
+                            height: 150.w,
+                            margin: EdgeInsets.only(top: 20.h),
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: const Color(0xFF6D8C94),
+                              border: Border.all(
+                                color: Colors.white.withOpacity(0.2),
+                                width: 1,
+                              ),
+                            ),
+                            child: Center(
+                              child: Image.asset(
+                                bottleInfo.imagePath,
+                                fit: BoxFit.scaleDown,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const NewConfigurationDialogContent(),
+                  ],
+                ),
+              ),
             ),
           ),
         );
@@ -67,7 +160,7 @@ class NewConfigurationDialogContent extends StatelessWidget {
       padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 32.h),
       decoration: BoxDecoration(
         color: const Color.fromARGB(
-            221, 226, 226, 226), // Light grey matching the image
+            190, 226, 226, 226), // Light grey matching the image
         borderRadius: BorderRadius.circular(32.r),
         boxShadow: [
           BoxShadow(
@@ -131,7 +224,7 @@ class NewConfigurationDialogContent extends StatelessWidget {
           // Sync Now Button
           Container(
             width: double.infinity,
-            height: 54.h,
+            height: 48.h,
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(27.h),
               color: Color(0xFF00A3FF),
@@ -177,12 +270,12 @@ class NewConfigurationDialogContent extends StatelessWidget {
           // Later Button
           Container(
             width: double.infinity,
-            height: 54.h,
+            height: 48.h,
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(27.h),
-              color: Colors.white.withOpacity(0.3),
+              color: const Color.fromARGB(122, 255, 255, 255).withOpacity(0.3),
               border:
-                  Border.all(color: Colors.white.withOpacity(0.5), width: 1.5),
+                  Border.all(color: Colors.white.withOpacity(0.5), width: 0.8),
             ),
             child: ClipRRect(
               borderRadius: BorderRadius.circular(27.h),
