@@ -75,7 +75,7 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
-    SharedPrefsHelper.getWaterGoal().then((e){
+    SharedPrefsHelper.getWaterGoal().then((e) {
       setState(() {
         currentWaterGoal = e;
       });
@@ -172,7 +172,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> _runAiHydrationEngine() async {
     try {
       final goalShown = await SharedPrefsHelper.getAiHydrationGoalShown();
-      if(!goalShown) return;
+      if (!goalShown) return;
       // Fetch user weight from DB
       final userInfo = await DatabaseHelper().getUserInfo();
       if (userInfo == null || userInfo.weight == null) {
@@ -190,7 +190,7 @@ class _HomeScreenState extends State<HomeScreen> {
       if (!mounted) return;
       final weatherProvider =
           Provider.of<WeatherProvider>(context, listen: false);
-      final surroundingTemp = context.read<BottleDataCubit>().state.bqTemp;
+      final surroundingTemp = context.read<BottleDataCubit>().state.temp;
 
       final result = await AiHydrationEngine.calculate(
         weightKg: weightKg,
@@ -228,6 +228,12 @@ class _HomeScreenState extends State<HomeScreen> {
 
       if (keepCurrent == true) {
         await SharedPrefsHelper.setAiHydrationGoalShown(false);
+      } else {
+        Future.delayed(Duration(seconds: 2), () async {
+          final updatedGoal = await SharedPrefsHelper.getWaterGoal();
+          Console.log(tag: "keepCurrent", value: "${updatedGoal}");
+          context.read<HydrationCubit>().setGoal(updatedGoal!);
+        });
       }
     } catch (e) {
       Console.log(tag: 'AI_ENGINE', value: 'Engine error: $e');
@@ -510,38 +516,34 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _currentSlotInfoWidget() {
+    // Compute totalRefill here — outside the BlocBuilders — so it always
+    // reflects the latest currentWaterGoal regardless of buildWhen filtering.
+
     return BlocBuilder<HydrationCubit, HydrationState>(
-      buildWhen: (p, c) =>
-          p.currentSlotConsumption != c.currentSlotConsumption ||
-          p.currentSlotPercentage != c.currentSlotPercentage ||
-          p.currentSlotEntry != c.currentSlotEntry,
+      buildWhen: (p, c) {
+        Console.log(
+            tag: "_currentSlotInfoWidget_buildWhen",
+            value:
+                "${p.goal} :: ${c.goal} :: ${c.currentSlotConsumption} :: ${c.currentSlotPercentage} :: ${c.currentSlotEntry}");
+        return p.goal != c.goal ||
+            p.currentSlotConsumption != c.currentSlotConsumption ||
+            p.currentSlotPercentage != c.currentSlotPercentage ||
+            p.currentSlotEntry != c.currentSlotEntry;
+      },
       builder: (context, hydrationState) {
-        return BlocBuilder<BleCubit, BleState>(
-          buildWhen: (p, c) => p.refill != c.refill,
-          builder: (context, bleState) {
-            final slotName =
-                hydrationState.currentSlotEntry?.slot.label ?? "Off-Slot Time";
+        final slotName =
+            hydrationState.currentSlotEntry?.slot.label ?? "Off-Slot Time";
 
-            // Refill count from BLE state
-            final refillCount = (bleState.refill ?? 0).toDouble();
+        final totalRefill =
+            ((hydrationState.goal ?? 0) / 600).toStringAsFixed(1);
 
-            // Percentage from HydrationCubit (slot-based)
-            final percentage = hydrationState.currentSlotPercentage;
-            final totalRefill = (currentWaterGoal! / 600).toStringAsFixed(0);
+        final percentage = (hydrationState.currentSlotPercentage);
 
-            Console.log(
-                tag: "_currentSlotInfoWidget",
-                value:
-                    "slotName : $slotName , refill : $refillCount , percentage : $percentage");
+        Console.log(
+            tag: "_currentSlotInfoWidget",
+            value: "slotName : $slotName  , percentage : $percentage");
 
-            return _buildTodayStats(
-              refillCount,
-              percentage,
-              slotName,
-              totalRefill
-            );
-          },
-        );
+        return _buildTodayStats(percentage, slotName, totalRefill);
       },
     );
   }
@@ -552,9 +554,10 @@ class _HomeScreenState extends State<HomeScreen> {
         Console.log(
             tag: "home_Screen_biuld",
             value:
-                "${previous.currentHydrationValue} : ${current.currentHydrationValue}");
+                "${previous.currentHydrationValue} : ${current.currentHydrationValue} : ${current.refreshTrigger}");
 
-        if (previous.currentHydrationValue != current.currentHydrationValue) {
+        if (previous.currentHydrationValue != current.currentHydrationValue ||
+            previous.refreshTrigger != current.refreshTrigger) {
           return true;
         }
         return false;
@@ -920,9 +923,10 @@ class _HomeScreenState extends State<HomeScreen> {
                 Console.log(
                     tag: "current_hyderation_buildWhen",
                     value:
-                        "${previous.currentHydrationValue} :: ${current.currentHydrationValue}");
+                        "${previous.currentHydrationValue} :: ${current.currentHydrationValue} :: ${current.refreshTrigger}");
                 if (previous.currentHydrationValue !=
-                    current.currentHydrationValue) {
+                        current.currentHydrationValue ||
+                    previous.refreshTrigger != current.refreshTrigger) {
                   return true;
                 }
                 return false;
@@ -1122,7 +1126,7 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildTodayStats(double todayConsumption,
+  Widget _buildTodayStats(
       double todayConsumptionPercentage, String slotName, String totalRefill) {
     return Container(
       margin: EdgeInsets.symmetric(horizontal: AppDimensions.dim20.w),
@@ -1198,75 +1202,73 @@ class _HomeScreenState extends State<HomeScreen> {
                           ],
                         ),
                       ),
-                      TweenAnimationBuilder<int>(
-                        tween: IntTween(
-                          begin: 0,
-                          end: todayConsumption.toInt(),
-                        ),
-                        duration: const Duration(milliseconds: 600),
-                        curve: Curves.fastEaseInToSlowEaseOut,
-                        builder: (context, value, child) {
-                          String displayValue = "$value";
-                          return Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Text(
-                                displayValue,
-                                overflow: TextOverflow.ellipsis,
-                                textAlign: TextAlign.center,
-                                maxLines: 1,
-                                style: TextStyle(
-                                  fontFamily: AppFontStyles.urbanistFontFamily,
-                                  color: AppColors.blueWaterIntake,
-                                  fontSize: AppFontStyles.fontSize_15,
-                                  fontVariations: [
-                                    AppFontStyles.boldFontVariation,
-                                  ],
-                                ),
-                              ),
-                              Text(
-                                "/",
-                                overflow: TextOverflow.ellipsis,
-                                textAlign: TextAlign.center,
-                                maxLines: 1,
-                                style: TextStyle(
-                                  fontFamily: AppFontStyles.urbanistFontFamily,
-                                  color: AppColors.bluegray,
-                                  fontSize: AppFontStyles.fontSize_16,
-                                  fontVariations: [
-                                    AppFontStyles.boldFontVariation,
-                                  ],
-                                  fontStyle: FontStyle.italic
-                                ),
-                              ),
-                              Text(
-                                " "+totalRefill,
-                                overflow: TextOverflow.ellipsis,
-                                textAlign: TextAlign.center,
-                                maxLines: 1,
-                                style: TextStyle(
-                                  fontFamily: AppFontStyles.urbanistFontFamily,
-                                  color: AppColors.bluegray,
-                                  fontSize: AppFontStyles.fontSize_15,
-                                  fontVariations: [
-                                    AppFontStyles.boldFontVariation,
-                                  ],
-                                ),
-                              ),
-                              Text(
-                                " Times",
-                                style: TextStyle(
-                                  fontFamily: AppFontStyles.urbanistFontFamily,
-                                  color: AppColors.bluegray,
-                                  fontSize: AppFontStyles.fontSize_14,
-                                  fontVariations: [
-                                    AppFontStyles.extraBoldFontVariation,
-                                  ],
-                                ),
-                              ),
-                            ],
-                          );
-                        },
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          BlocBuilder<BleCubit, BleState>(
+                              buildWhen: (p, c) => p.refill != c.refill,
+                              builder: (context, bleState) {
+                                // Refill count from BLE state
+                                final refillCount =
+                                    (bleState.refill ?? 0).toDouble();
+                                return Text(
+                                  refillCount % 1 == 0
+                                      ? refillCount.toInt().toString()
+                                      : refillCount.toStringAsFixed(1),
+                                  overflow: TextOverflow.ellipsis,
+                                  textAlign: TextAlign.center,
+                                  maxLines: 1,
+                                  style: TextStyle(
+                                    fontFamily:
+                                        AppFontStyles.urbanistFontFamily,
+                                    color: AppColors.blueWaterIntake,
+                                    fontSize: AppFontStyles.fontSize_15,
+                                    fontVariations: [
+                                      AppFontStyles.boldFontVariation,
+                                    ],
+                                  ),
+                                );
+                              }),
+                          Text(
+                            "/",
+                            overflow: TextOverflow.ellipsis,
+                            textAlign: TextAlign.center,
+                            maxLines: 1,
+                            style: TextStyle(
+                                fontFamily: AppFontStyles.urbanistFontFamily,
+                                color: AppColors.bluegray,
+                                fontSize: AppFontStyles.fontSize_16,
+                                fontVariations: [
+                                  AppFontStyles.boldFontVariation,
+                                ],
+                                fontStyle: FontStyle.italic),
+                          ),
+                          Text(
+                            " " + totalRefill,
+                            overflow: TextOverflow.ellipsis,
+                            textAlign: TextAlign.center,
+                            maxLines: 1,
+                            style: TextStyle(
+                              fontFamily: AppFontStyles.urbanistFontFamily,
+                              color: AppColors.bluegray,
+                              fontSize: AppFontStyles.fontSize_15,
+                              fontVariations: [
+                                AppFontStyles.boldFontVariation,
+                              ],
+                            ),
+                          ),
+                          Text(
+                            " Times",
+                            style: TextStyle(
+                              fontFamily: AppFontStyles.urbanistFontFamily,
+                              color: AppColors.bluegray,
+                              fontSize: AppFontStyles.fontSize_14,
+                              fontVariations: [
+                                AppFontStyles.extraBoldFontVariation,
+                              ],
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ),
@@ -1795,8 +1797,8 @@ class _HomeScreenState extends State<HomeScreen> {
                         builder: (context, state) {
                           // Display actual temperature or fallback to "--" if null
                           final tempDisplay =
-                              (state.bqTemp != null && state.bqTemp != 0)
-                                  ? "${state.bqTemp}°C"
+                              (state.temp != null && state.temp != 0)
+                                  ? "${state.temp}°C"
                                   : "--°C";
                           return Text(
                             tempDisplay,

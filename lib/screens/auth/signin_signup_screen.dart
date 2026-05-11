@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_svg/svg.dart';
@@ -7,6 +8,7 @@ import 'package:hydrify/constants/app_colors.dart';
 import 'package:hydrify/constants/app_dimensions.dart';
 import 'package:hydrify/constants/app_font_styles.dart';
 import 'package:hydrify/constants/app_strings.dart';
+import 'package:hydrify/helpers/logger.dart';
 import 'package:hydrify/helpers/shared_pref_helper.dart';
 import 'package:hydrify/screens/auth/forgot_password_screen.dart';
 import 'package:hydrify/screens/auth/otp_verification_screen.dart';
@@ -16,6 +18,7 @@ import 'package:hydrify/screens/user_personal_info_input_screen..dart';
 import 'package:hydrify/screens/widgets/auth_button_widget.dart';
 import 'package:hydrify/screens/widgets/custom_textfield.dart';
 import 'package:hydrify/services/firebase_functions_service.dart';
+import 'package:hydrify/services/api_service.dart';
 import 'package:hydrify/services/ui_utils_service.dart';
 
 class SigninSignupScreen extends StatefulWidget {
@@ -411,6 +414,7 @@ class _SigninSignupScreenState extends State<SigninSignupScreen> {
               var responseSigninResponse =
                   await FirebaseFunctionsService.signIn(
                       _emailController.text, _passwordController.text);
+              if (!mounted) return;
               UiUtilsService.dismissLoading(context);
 
               if (responseSigninResponse["status"] == "success" &&
@@ -421,6 +425,8 @@ class _SigninSignupScreenState extends State<SigninSignupScreen> {
                 final hasUserSelectedPersonalGoal =
                     await SharedPrefsHelper.getUserGoal();
 
+                if (!mounted) return;
+                
                 if (hasUserFilledInPersonalInfo &&
                     hasUserSelectedPersonalGoal != null) {
                   Navigator.pushAndRemoveUntil(
@@ -490,6 +496,7 @@ class _SigninSignupScreenState extends State<SigninSignupScreen> {
               var sendOtpResponse =
                   await FirebaseFunctionsService.requestSignupOTP(
                       _emailController.text, _passwordController.text);
+              if (!mounted) return;
               UiUtilsService.dismissLoading(context);
 
               if (sendOtpResponse["status"] == "success" &&
@@ -614,9 +621,28 @@ class _SigninSignupScreenState extends State<SigninSignupScreen> {
                   var signInWithAppleRes =
                       await FirebaseFunctionsService.signInWithApple();
 
+                  if (!mounted) return;
+
                   UiUtilsService.dismissLoading(context);
 
                   if (signInWithAppleRes['success'] == true) {
+                    // Fetch userId from backend using email
+                    final userCredential =
+                        signInWithAppleRes['userCredential'] as UserCredential?;
+                    final email = userCredential?.user?.email;
+                    if (email != null) {
+                      final userData = await ApiService().getUserByEmail(email);
+                      if (userData != null && userData['_id'] != null) {
+                        await SharedPrefsHelper.setUserId(userData['_id']);
+                        Console.log(
+                            tag: "AUTH",
+                            value:
+                                "Social Login (Apple): UserId saved: ${userData['_id']}");
+                      }
+                    }
+
+                    if (!mounted) return;
+
                     UiUtilsService.showToast(
                         context: context, text: "Signin Successful");
 
@@ -647,8 +673,24 @@ class _SigninSignupScreenState extends State<SigninSignupScreen> {
             UiUtilsService.showLoading(context, "Signing you in via Google");
             var signInWithGoogleRes =
                 await FirebaseFunctionsService.signInWithGoogle();
+            if (!mounted) return;
             UiUtilsService.dismissLoading(context);
+
             if (signInWithGoogleRes != null) {
+              // Fetch userId from backend using email
+              final email = signInWithGoogleRes.user?.email;
+              if (email != null) {
+                final userData = await ApiService().getUserByEmail(email);
+                if (userData != null && userData['_id'] != null) {
+                  await SharedPrefsHelper.setUserId(userData['_id']);
+                  Console.log(
+                      tag: "AUTH",
+                      value: "Social Login: UserId saved: ${userData['_id']}");
+                }
+              }
+
+              if (!mounted) return;
+
               UiUtilsService.showToast(
                   context: context, text: "Signin Successful");
               Navigator.pushAndRemoveUntil(

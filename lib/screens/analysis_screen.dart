@@ -12,6 +12,8 @@ import 'package:hydrify/screens/widgets/chart_widgets/drink_types_widget.dart';
 import 'package:hydrify/screens/widgets/chart_widgets/today_goal_widget.dart';
 import 'package:hydrify/screens/widgets/chart_widgets/analysis_hydration_slots_widget.dart';
 import 'package:hydrify/screens/widgets/chart_widgets/food_scanner_widget.dart';
+import 'package:hydrify/screens/widgets/chart_widgets/water_card_widget.dart';
+import 'package:hydrify/screens/widgets/chart_widgets/log_hydration_widget.dart';
 import 'package:hydrify/screens/widgets/date_filter_widget.dart';
 
 class AnalysisScreen extends StatefulWidget {
@@ -23,6 +25,7 @@ class AnalysisScreen extends StatefulWidget {
 
 class _AnalysisScreenState extends State<AnalysisScreen> {
   bool? isGuest;
+  bool isLoggingActive = false;
 
   @override
   void initState() {
@@ -91,23 +94,58 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
                 child: ListView(
                   physics: NeverScrollableScrollPhysics(),
                   children: [
-                    DateFilterWidget(),
-                    SizedBox(
-                      height: AppDimensions.dim25.h,
+                    if (!isLoggingActive) ...[
+                      const DateFilterWidget(),
+                      SizedBox(height: AppDimensions.dim25.h),
+                    ],
+                    WaterCardWidget(
+                      isExpanded: isLoggingActive,
+                      onTap: () {
+                        setState(() {
+                          isLoggingActive = !isLoggingActive;
+                        });
+                      },
                     ),
-                    CustomChartDataWidget(),
-                    SizedBox(
-                      height: AppDimensions.dim25.h,
+                    AnimatedSize(
+                      duration: const Duration(milliseconds: 400),
+                      curve: Curves.easeInOut,
+                      child: AnimatedSwitcher(
+                        duration: const Duration(milliseconds: 400),
+                        switchInCurve: Curves.easeIn,
+                        switchOutCurve: Curves.easeOut,
+                        layoutBuilder: (Widget? currentChild,
+                            List<Widget> previousChildren) {
+                          return Stack(
+                            alignment: Alignment.topCenter,
+                            children: <Widget>[
+                              ...previousChildren,
+                              if (currentChild != null) currentChild,
+                            ],
+                          );
+                        },
+                        child: isLoggingActive
+                            ? Column(
+                                key: const ValueKey('logging'),
+                                children: [
+                                  SizedBox(height: AppDimensions.dim20.h),
+                                  const LogHydrationWidget(),
+                                ],
+                              )
+                            : Column(
+                                key: const ValueKey('dashboard'),
+                                children: [
+                                  SizedBox(height: AppDimensions.dim25.h),
+                                  const CustomChartDataWidget(),
+                                  SizedBox(height: AppDimensions.dim25.h),
+                                  const DrinkTypesWidget(),
+                                  SizedBox(height: AppDimensions.dim25.h),
+                                  const TodayGoalWidget(),
+                                  SizedBox(height: AppDimensions.dim25.h),
+                                  const AnalysisHydrationSlotsWidget(),
+                                ],
+                              ),
+                      ),
                     ),
-                    DrinkTypesWidget(),
-                    SizedBox(
-                      height: AppDimensions.dim25.h,
-                    ),
-                    TodayGoalWidget(),
-                    SizedBox(
-                      height: AppDimensions.dim25.h,
-                    ),
-                    AnalysisHydrationSlotsWidget(),
                   ],
                 ),
               ),
@@ -189,27 +227,86 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
             child: ListView(
               cacheExtent: 1000,
               children: [
-                DateFilterWidget(),
-                SizedBox(
-                  height: AppDimensions.dim25.h,
+                AnimatedSize(
+                  duration: const Duration(milliseconds: 400),
+                  curve: Curves.easeInOut,
+                  child: !isLoggingActive
+                      ? Column(
+                          children: [
+                            const DateFilterWidget(),
+                            SizedBox(height: AppDimensions.dim25.h),
+                          ],
+                        )
+                      : const SizedBox.shrink(),
                 ),
-                CustomChartDataWidget(),
-                SizedBox(
-                  height: AppDimensions.dim25.h,
+                WaterCardWidget(
+                  isExpanded: isLoggingActive,
+                  onTap: () {
+                    setState(() {
+                      isLoggingActive = !isLoggingActive;
+                    });
+                  },
                 ),
-                DrinkTypesWidget(),
-                SizedBox(
-                  height: AppDimensions.dim25.h,
+                AnimatedSize(
+                  duration: const Duration(milliseconds: 300),
+                  curve: Curves.easeInOut,
+                  child: AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 100),
+                    reverseDuration: const Duration(milliseconds: 300),
+                    switchInCurve: Curves.easeIn,
+                    switchOutCurve: Curves.easeOut,
+                    // transitionBuilder:
+                    //     (Widget child, Animation<double> animation) {
+                    //   final isOpening =
+                    //       child.key == const ValueKey('logging_reg');
+
+                    //   return SlideTransition(
+                    //     position: Tween<Offset>(
+                    //       begin:
+                    //           isOpening ? const Offset(0, -0.01) : Offset.zero,
+                    //       end: Offset.zero,
+                    //     ).animate(animation),
+                    //     child: FadeTransition(
+                    //       opacity: animation,
+                    //       child: child,
+                    //     ),
+                    //   );
+                    // },
+                    // layoutBuilder:
+                    //     (Widget? currentChild, List<Widget> previousChildren) {
+                    //   return Stack(
+                    //     alignment: Alignment.topCenter,
+                    //     children: <Widget>[
+                    //       ...previousChildren,
+                    //       if (currentChild != null) currentChild,
+                    //     ],
+                    //   );
+                    // },
+                    child: isLoggingActive
+                        ? Column(
+                            key: const ValueKey('logging_reg'),
+                            children: [
+                              SizedBox(height: AppDimensions.dim20.h),
+                              const LogHydrationWidget(),
+                            ],
+                          )
+                        : Column(
+                            key: const ValueKey('dashboard_reg'),
+                            children: [
+                              SizedBox(height: AppDimensions.dim25.h),
+                              const CustomChartDataWidget(),
+                              SizedBox(height: AppDimensions.dim25.h),
+                              const DrinkTypesWidget(),
+                              SizedBox(height: AppDimensions.dim25.h),
+                              const TodayGoalWidget(),
+                              SizedBox(height: AppDimensions.dim25.h),
+                              const FoodScannerWidget(),
+                              SizedBox(height: AppDimensions.dim25.h),
+                              const AnalysisHydrationSlotsWidget(),
+                            ],
+                          ),
+                  ),
                 ),
-                TodayGoalWidget(),
-                SizedBox(
-                  height: AppDimensions.dim25.h,
-                ),
-                FoodScannerWidget(),
-                SizedBox(
-                  height: AppDimensions.dim25.h,
-                ),
-                AnalysisHydrationSlotsWidget(),
                 SizedBox(
                   height: AppDimensions.dim120.h,
                 ),

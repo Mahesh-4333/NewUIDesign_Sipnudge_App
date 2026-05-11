@@ -372,7 +372,7 @@ class _BottleInfoScreenState extends State<BottleInfoScreen> {
                     builder: (context, state) {
                       // Display actual temperature or fallback to "--" if null
                       final tempDisplay =
-                      state.temp != 0 ? "${state.temp}" : "--";
+                      state.bqTemp != 0 ? "${state.bqTemp}" : "--";
                       return _buildSpecCard(
                           'TEMP', tempDisplay, '°C', AssetsPath.sTemperature,
                           subtitle: 'Range: 0-50°C');

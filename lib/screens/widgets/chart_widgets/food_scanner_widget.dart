@@ -19,6 +19,7 @@ import 'package:hydrify/constants/app_font_styles.dart';
 import 'package:hydrify/constants/app_api_constants.dart';
 import 'package:hydrify/helpers/database_helper.dart';
 import 'package:hydrify/models/food_scan_data.dart';
+import 'package:hydrify/services/database_sync_service.dart';
 import 'package:fl_chart/fl_chart.dart';
 
 class FoodScannerWidget extends StatefulWidget {
@@ -312,6 +313,10 @@ class _FoodScannerWidgetState extends State<FoodScannerWidget> {
       setState(() {
         _currentScanId = id;
       });
+      
+      // Sync to backend
+      await DatabaseSyncService().syncFoodScan(scan.toMap());
+
       await SharedPrefsHelper.setAiHydrationGoalShown(true);
       Console.log(
           tag: 'FoodScanner', value: '[DB] Food scan saved: ${scan.dishName}');

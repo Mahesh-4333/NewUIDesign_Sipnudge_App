@@ -17,7 +17,7 @@ class BleState {
   final String message;
   final int? battery;
   final double? volume;
-  final int? refill;
+  final double? refill;
   final int? percent;
   final double? temp;
   final double? bqTemp;
@@ -33,6 +33,7 @@ class BleState {
   final String? lastCommandSent;
   final bool? isServiceDiscoveryDone;
   final bool manualRetryRequired;
+  final int refreshTrigger;
 
   const BleState({
     this.status = BleStatus.idle,
@@ -55,6 +56,7 @@ class BleState {
     this.lastCommandSent,
     this.isServiceDiscoveryDone,
     this.manualRetryRequired = false,
+    this.refreshTrigger = 0,
   });
 
   BleState copyWith({
@@ -62,7 +64,7 @@ class BleState {
     String? message,
     int? battery,
     double? volume,
-    int? refill,
+    double? refill,
     int? percent,
     double? temp,
     double? bqTemp,
@@ -78,6 +80,7 @@ class BleState {
     String? lastCommandSent,
     bool? isServiceDiscoveryDone,
     bool? manualRetryRequired,
+    int? refreshTrigger,
   }) {
     return BleState(
       status: status ?? this.status,
@@ -103,6 +106,7 @@ class BleState {
       isServiceDiscoveryDone:
           isServiceDiscoveryDone ?? this.isServiceDiscoveryDone,
       manualRetryRequired: manualRetryRequired ?? this.manualRetryRequired,
+      refreshTrigger: refreshTrigger ?? this.refreshTrigger,
     );
   }
 }

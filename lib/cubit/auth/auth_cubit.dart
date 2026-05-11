@@ -3,6 +3,7 @@ import 'package:hydrify/helpers/logger.dart';
 import 'package:bloc/bloc.dart';
 import 'package:hydrify/models/responses/signin_response_model.dart';
 import 'package:hydrify/services/api_service.dart';
+import 'package:hydrify/helpers/shared_pref_helper.dart';
 import 'package:local_auth/local_auth.dart';
 
 part 'auth_state.dart';
@@ -167,6 +168,13 @@ class AuthCubit extends Cubit<AuthState> {
       }
 
       var signInResult = await _apiService.signIn(email, password);
+
+      // Save userId to SharedPrefs
+      final userId = signInResult.data?.userDetails?.id;
+      if (userId != null) {
+        await SharedPrefsHelper.setUserId(userId);
+        Console.log(tag: "AUTH", value: "UserId saved: $userId");
+      }
 
       emit(state.copyWith(
         isLoading: false,

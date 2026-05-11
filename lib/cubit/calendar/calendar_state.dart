@@ -13,6 +13,7 @@ class CalendarState extends Equatable {
 
   final bool isSyncing;
   final String? errorMessage;
+  final Set<HydrationSlot> unsilencedSlots;
 
   const CalendarState({
     this.status = CalendarStatus.initial,
@@ -24,6 +25,7 @@ class CalendarState extends Equatable {
     this.selectedDayEvents = const [],
     this.isSyncing = false,
     this.errorMessage,
+    this.unsilencedSlots = const {},
   });
 
   CalendarState copyWith({
@@ -36,6 +38,7 @@ class CalendarState extends Equatable {
     List<GoogleEvent>? selectedDayEvents,
     bool? isSyncing,
     String? errorMessage,
+    Set<HydrationSlot>? unsilencedSlots,
   }) {
     return CalendarState(
       status: status ?? this.status,
@@ -48,6 +51,7 @@ class CalendarState extends Equatable {
 
       isSyncing: isSyncing ?? this.isSyncing,
       errorMessage: errorMessage ?? this.errorMessage,
+      unsilencedSlots: unsilencedSlots ?? this.unsilencedSlots,
     );
   }
 
@@ -60,5 +64,6 @@ class CalendarState extends Equatable {
         selectedDayEvents, // 5. ADD TO PROPS FOR EQUATABLE
         isSyncing,
         errorMessage,
+        unsilencedSlots,
       ];
 }

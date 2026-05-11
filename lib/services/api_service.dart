@@ -43,7 +43,8 @@ class ApiService {
 
       return signinResponseModelFromJson(response.data);
     } on DioException catch (e) {
-      Console.log(tag: "APP", value: "Exception occurred : signIn || ${e.toString()} ");
+      Console.log(
+          tag: "APP", value: "Exception occurred : signIn || ${e.toString()} ");
       throw _handleError(e);
     }
   }
@@ -60,8 +61,21 @@ class ApiService {
 
       return signUpResponseModelFromJson(response.data);
     } on DioException catch (e) {
-      Console.log(tag: "APP", value: "Exception occurred : signIn || ${e.toString()} ");
+      Console.log(
+          tag: "APP", value: "Exception occurred : signIn || ${e.toString()} ");
       throw _handleError(e);
+    }
+  }
+
+  Future<Map<String, dynamic>?> getUserByEmail(String email) async {
+    try {
+      final response = await _dio.get('/api/user/email/$email');
+      return response.data;
+    } on DioException catch (e) {
+      Console.log(
+          tag: "APP",
+          value: "Exception occurred : getUserByEmail || ${e.toString()} ");
+      return null;
     }
   }
 
@@ -76,7 +90,8 @@ class ApiService {
 
       return otpResponseModelFromJson(response.data);
     } on DioException catch (e) {
-      Console.log(tag: "APP", value: "Exception occurred : signIn || ${e.toString()} ");
+      Console.log(
+          tag: "APP", value: "Exception occurred : signIn || ${e.toString()} ");
       throw _handleError(e);
     }
   }
@@ -92,7 +107,8 @@ class ApiService {
 
       return otpResponseModelFromJson(response.data);
     } on DioException catch (e) {
-      Console.log(tag: "APP", value: "Exception occurred : signIn || ${e.toString()} ");
+      Console.log(
+          tag: "APP", value: "Exception occurred : signIn || ${e.toString()} ");
       throw _handleError(e);
     }
   }
@@ -106,7 +122,8 @@ class ApiService {
 
       return otpResponseModelFromJson(response.data);
     } on DioException catch (e) {
-      Console.log(tag: "APP", value: "Exception occurred : signIn || ${e.toString()} ");
+      Console.log(
+          tag: "APP", value: "Exception occurred : signIn || ${e.toString()} ");
       throw _handleError(e);
     }
   }
@@ -132,8 +149,202 @@ class ApiService {
 
       return SignUpResponseModel.fromJson(response.data);
     } on DioException catch (e) {
-      Console.log(tag: "APP", value: "Exception occurred : submitLoginDetails || ${e.toString()} ");
+      Console.log(
+          tag: "APP",
+          value: "Exception occurred : submitLoginDetails || ${e.toString()} ");
       throw _handleError(e);
+    }
+  }
+
+  // --- Database Sync Methods ---
+
+  Future<Map<String, dynamic>?> syncUserInfoData(
+      Map<String, dynamic> data) async {
+    try {
+      final response = await _dio.post(
+        '/api/database/sync-user',
+        data: data,
+      );
+      if (response.data['success'] == true) {
+        return response.data['data'];
+      }
+      return null;
+    } on DioException catch (e) {
+      Console.log(tag: "APP", value: "Exception in syncUserInfoData: $e");
+      return null;
+    }
+  }
+
+  Future<bool> syncUserInfo(
+      String userId, Map<String, dynamic> userData) async {
+    try {
+      final response = await _dio.post(
+        '/api/database/sync-user',
+        data: {'userId': userId, ...userData},
+      );
+      return response.data['success'] == true;
+    } on DioException catch (e) {
+      Console.log(tag: "APP", value: "Exception in syncUserInfo: $e");
+      return false;
+    }
+  }
+
+  Future<bool> syncBottleHistory(
+      String userId, List<Map<String, dynamic>> logs) async {
+    try {
+      final response = await _dio.post(
+        '/api/database/sync-bottle-history',
+        data: {'userId': userId, 'logs': logs},
+      );
+      return response.data['success'] == true;
+    } on DioException catch (e) {
+      Console.log(tag: "APP", value: "Exception in syncBottleHistory: $e");
+      return false;
+    }
+  }
+
+  Future<bool> syncManualLogs(
+      String userId, List<Map<String, dynamic>> logs) async {
+    try {
+      final response = await _dio.post(
+        '/api/database/sync-manual-logs',
+        data: {'userId': userId, 'logs': logs},
+      );
+      return response.data['success'] == true;
+    } on DioException catch (e) {
+      Console.log(tag: "APP", value: "Exception in syncManualLogs: $e");
+      return false;
+    }
+  }
+
+  Future<bool> syncDailySummaries(
+      String userId, List<Map<String, dynamic>> summaries) async {
+    try {
+      final response = await _dio.post(
+        '/api/database/sync-daily-summaries',
+        data: {'userId': userId, 'summaries': summaries},
+      );
+      return response.data['success'] == true;
+    } on DioException catch (e) {
+      Console.log(tag: "APP", value: "Exception in syncDailySummaries: $e");
+      return false;
+    }
+  }
+
+  Future<bool> syncFoodScans(
+      String userId, List<Map<String, dynamic>> scans) async {
+    try {
+      final response = await _dio.post(
+        '/api/database/sync-food-scans',
+        data: {'userId': userId, 'scans': scans},
+      );
+      return response.data['success'] == true;
+    } on DioException catch (e) {
+      Console.log(tag: "APP", value: "Exception in syncFoodScans: $e");
+      return false;
+    }
+  }
+
+  Future<bool> syncAiLogs(
+      String userId, List<Map<String, dynamic>> logs) async {
+    try {
+      final response = await _dio.post(
+        '/api/database/sync-ai-logs',
+        data: {'userId': userId, 'logs': logs},
+      );
+      return response.data['success'] == true;
+    } on DioException catch (e) {
+      Console.log(tag: "APP", value: "Exception in syncAiLogs: $e");
+      return false;
+    }
+  }
+
+  Future<bool> syncDailyGoals(
+      String userId, List<Map<String, dynamic>> goals) async {
+    try {
+      final response = await _dio.post(
+        '/api/database/sync-daily-goals',
+        data: {'userId': userId, 'goals': goals},
+      );
+      return response.data['success'] == true;
+    } on DioException catch (e) {
+      Console.log(tag: "APP", value: "Exception in syncDailyGoals: $e");
+      return false;
+    }
+  }
+
+  Future<bool> syncDailySteps(
+      String userId, List<Map<String, dynamic>> steps) async {
+    try {
+      final response = await _dio.post(
+        '/api/database/sync-daily-steps',
+        data: {'userId': userId, 'steps': steps},
+      );
+      return response.data['success'] == true;
+    } on DioException catch (e) {
+      Console.log(tag: "APP", value: "Exception in syncDailySteps: $e");
+      return false;
+    }
+  }
+
+  Future<bool> syncTodayHistory(
+      String userId, List<Map<String, dynamic>> history) async {
+    try {
+      final response = await _dio.post(
+        '/api/database/sync-today-history',
+        data: {'userId': userId, 'history': history},
+      );
+      return response.data['success'] == true;
+    } on DioException catch (e) {
+      Console.log(tag: "APP", value: "Exception in syncTodayHistory: $e");
+      return false;
+    }
+  }
+
+  Future<bool> syncSlots(
+      String userId, List<Map<String, dynamic>> slots) async {
+    try {
+      final response = await _dio.post(
+        '/api/database/sync-slots',
+        data: {'userId': userId, 'slots': slots},
+      );
+      return response.data['success'] == true;
+    } on DioException catch (e) {
+      Console.log(tag: "APP", value: "Exception in syncSlots: $e");
+      return false;
+    }
+  }
+
+  Future<bool> syncMetadata(
+      String userId, List<Map<String, dynamic>> metadata) async {
+    try {
+      final response = await _dio.post(
+        '/api/database/sync-metadata',
+        data: {'userId': userId, 'metadata': metadata},
+      );
+      return response.data['success'] == true;
+    } on DioException catch (e) {
+      Console.log(tag: "APP", value: "Exception in syncMetadata: $e");
+      return false;
+    }
+  }
+
+  Future<Map<String, dynamic>?> getAnalytics(String userId, int year, {int? month}) async {
+    try {
+      final queryParams = {'year': year.toString()};
+      if (month != null) queryParams['month'] = month.toString();
+      
+      final response = await _dio.get(
+        '/api/database/analytics/$userId',
+        queryParameters: queryParams,
+      );
+      if (response.statusCode == 200) {
+        return response.data;
+      }
+      return null;
+    } on DioException catch (e) {
+      Console.log(tag: "APP", value: "Exception in getAnalytics: $e");
+      return null;
     }
   }
 }

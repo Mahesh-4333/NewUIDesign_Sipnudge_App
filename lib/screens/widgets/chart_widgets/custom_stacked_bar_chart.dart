@@ -3,6 +3,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:hydrify/constants/app_colors.dart';
 import 'package:hydrify/constants/app_font_styles.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 class CapsuleBarPainter extends CustomPainter {
   final double fgValue;
@@ -55,7 +56,7 @@ class CapsuleBarPainter extends CustomPainter {
   bool shouldRepaint(covariant CapsuleBarPainter oldDelegate) => true;
 }
 
-class CustomStackedBarChart extends StatelessWidget {
+class CustomStackedBarChart extends StatefulWidget {
   final List<ChartData> data;
   final double chartHeight;
   final double barWidth;
@@ -70,23 +71,71 @@ class CustomStackedBarChart extends StatelessWidget {
   });
 
   @override
+  State<CustomStackedBarChart> createState() => _CustomStackedBarChartState();
+}
+
+class _CustomStackedBarChartState extends State<CustomStackedBarChart> {
+  int? _selectedIndex;
+
+  @override
   Widget build(BuildContext context) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
       crossAxisAlignment: CrossAxisAlignment.end,
-      children: data.map((item) {
+      children: List.generate(widget.data.length, (index) {
+        final item = widget.data[index];
+        final isSelected = _selectedIndex == index;
+
         return Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            CustomPaint(
-              size: Size(barWidth, chartHeight),
-              painter: CapsuleBarPainter(
-                fgValue: item.foregroundValue,
-                bgValue: item.backgroundValue,
-                maxValue: maxValue,
-                backgroundColor: const Color(0xFF4A90F5),
-                foregroundColor: const Color(0xFFA6CCF8),
-              ),
+            Stack(
+              clipBehavior: Clip.none,
+              alignment: Alignment.bottomCenter,
+              children: [
+                GestureDetector(
+                  onTap: () {
+                    setState(() {
+                      if (_selectedIndex == index) {
+                        _selectedIndex = null;
+                      } else {
+                        _selectedIndex = index;
+                      }
+                    });
+                  },
+                  child: CustomPaint(
+                    size: Size(widget.barWidth, widget.chartHeight),
+                    painter: CapsuleBarPainter(
+                      fgValue: item.foregroundValue,
+                      bgValue: item.backgroundValue,
+                      maxValue: widget.maxValue,
+                      backgroundColor: const Color(0xFF4A90F5),
+                      foregroundColor: const Color(0xFFA6CCF8),
+                    ),
+                  ),
+                ),
+                if (isSelected)
+                  Positioned(
+                    top: -15.h,
+                    child: Container(
+                      padding:
+                          EdgeInsets.symmetric(horizontal: 6.w, vertical: 4.h),
+                      decoration: BoxDecoration(
+                        color: AppColors.bluegray,
+                        borderRadius: BorderRadius.circular(6.r),
+                      ),
+                      child: Text(
+                        "${item.backgroundValue}L",
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 10.sp,
+                          fontFamily: AppFontStyles.urbanistFontFamily,
+                          fontVariations: [AppFontStyles.boldFontVariation],
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
             ),
             const SizedBox(height: 12),
             Text(
@@ -100,7 +149,7 @@ class CustomStackedBarChart extends StatelessWidget {
             ),
           ],
         );
-      }).toList(),
+      }),
     );
   }
 }

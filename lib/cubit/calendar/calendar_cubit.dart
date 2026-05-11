@@ -8,6 +8,8 @@ import 'package:hydrify/models/google_event.dart';
 import 'package:hydrify/models/hydration_entry.dart';
 import 'package:hydrify/models/schedule_timeline_item.dart';
 import 'package:hydrify/services/google_calendar_manager.dart';
+import 'package:hydrify/services/notification/notification_service.dart';
+import 'package:hydrify/helpers/shared_pref_helper.dart';
 
 part 'calendar_state.dart';
 
@@ -119,6 +121,7 @@ class CalendarCubit extends Cubit<CalendarState> {
           .add(const Duration(days: 1))
           .subtract(const Duration(milliseconds: 1));
 
+      log("Fetched start ${startOfDay} end {$endOfDay} Google Events");
       final rawEvents =
           await _calendarManager.fetchEventsForRange(startOfDay, endOfDay);
       final googleEvents = _parseRawEvents(rawEvents);
@@ -127,17 +130,37 @@ class CalendarCubit extends Cubit<CalendarState> {
       final hydrationSlots = await _databaseHelper.getAllSlots();
       log("Fetched ${hydrationSlots.length} Hydration Slots");
 
+      final unsnoozedSlotIndices = await SharedPrefsHelper.getUnsnoozedSlots();
+      final Set<HydrationSlot> unsilenced = unsnoozedSlotIndices
+          .map((idx) => HydrationSlot.values[idx])
+          .toSet();
+
       final List<ScheduleTimelineItem> timeline = [];
 
+      final now = DateTime.now();
+      final isToday = targetDate.year == now.year &&
+          targetDate.month == now.month &&
+          targetDate.day == now.day;
+
       for (final entry in hydrationSlots) {
+        final slotStartDateTime = _timeOfDayToDateTime(targetDate, entry.startTime);
         final slotEndDateTime = _timeOfDayToDateTime(targetDate, entry.endTime);
-        final reminderTime =
-            slotEndDateTime.subtract(const Duration(minutes: 10));
 
         final overlapping = googleEvents.where((event) {
-          return event.startTime.isBefore(reminderTime) &&
-              event.endTime.isAfter(reminderTime);
+          // Check if the event overlaps with the entire hydration slot duration
+          return event.startTime.isBefore(slotEndDateTime) &&
+              event.endTime.isAfter(slotStartDateTime);
         }).toList();
+
+        if (isToday) {
+          final isManuallyUnsilenced = unsilenced.contains(entry.slot);
+          final shouldSilence = overlapping.isNotEmpty && !isManuallyUnsilenced;
+
+          // Dynamically update the notification to be silent if there's an overlap today
+          // but respect the manual 'unsilenced' state if the user chose to unmute.
+          await NotificationService()
+              .updateSlotSilenceState(entry, shouldSilence);
+        }
 
         timeline.add(ScheduleTimelineItem(
           entry: entry,
@@ -157,8 +180,8 @@ class CalendarCubit extends Cubit<CalendarState> {
         dailySchedule: timeline,
         selectedDayEvents: googleEvents,
         isSyncing: false,
+        unsilencedSlots: unsilenced,
       ));
-
       log("--- Load Complete ---");
     } catch (e, stacktrace) {
       log("Error in _loadDataForDate: $e");
@@ -169,6 +192,17 @@ class CalendarCubit extends Cubit<CalendarState> {
         isSyncing: false,
       ));
     }
+  }
+
+  void unsnoozeSlot(HydrationEntry entry) async {
+    // Persist to shared prefs
+    await SharedPrefsHelper.saveUnsnoozedSlot(entry.slot.index);
+    
+    final updatedUnsilenced = Set<HydrationSlot>.from(state.unsilencedSlots);
+    updatedUnsilenced.add(entry.slot);
+    emit(state.copyWith(unsilencedSlots: updatedUnsilenced));
+    // Re-trigger load to refresh UI after unsilencing
+    _loadDataForDate(state.selectedDate, displayedMonth: state.displayedMonth);
   }
 
   List<GoogleEvent> _parseRawEvents(List<Map<String, dynamic>> rawData) {

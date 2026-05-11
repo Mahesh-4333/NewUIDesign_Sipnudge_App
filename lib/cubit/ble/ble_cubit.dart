@@ -813,6 +813,12 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
               _hydrationController.add([]);
               // _syncWithHealth(history);
               _syncWithLocalConsumption(history, historyPrevious);
+
+              // Update all historical summaries with manual logs
+              await dbHelper.syncAllSummariesWithLogs();
+
+              final updatedHistory = await getCurrentDayHistory();
+              emit(state.copyWith(currentHydrationValue: updatedHistory));
             } else {
               final history = await getCurrentDayHistory();
               emit(state.copyWith(currentHydrationValue: history));
@@ -932,7 +938,7 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
     int? battery;
     double? volume;
     int? percent;
-    int? refill;
+    double? refill;
     double? temp;
     double? bqTemp;
     DateTime? ts;
@@ -956,12 +962,13 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
       } else if (key == 'percent') {
         percent = int.tryParse(value);
       } else if (key == 'refills') {
-        refill = int.tryParse(value);
+        final parsedInt = int.tryParse(value);
+        refill =
+            parsedInt != null ? parsedInt.toDouble() : double.tryParse(value);
       } else if (key == 'temp') {
         temp = double.tryParse(value);
         Console.log(
-            tag: "Raw TS from bottle_temp:  $temp ",
-            value: 'BLE_Cubit');
+            tag: "Raw TS from bottle_temp:  $temp ", value: 'BLE_Cubit');
       } else if (key == 'bq_temp') {
         bqTemp = double.tryParse(value);
       } else if (key == 'ts') {
@@ -1653,5 +1660,9 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
       Console.log(
           tag: "[LocalSync] Error syncing locally: $e", value: "BLE_Cubit");
     }
+  }
+
+  void triggerRefresh() {
+    emit(state.copyWith(refreshTrigger: state.refreshTrigger + 1));
   }
 }

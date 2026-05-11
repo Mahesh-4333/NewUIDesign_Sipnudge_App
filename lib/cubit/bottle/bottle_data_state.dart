@@ -5,7 +5,7 @@ class BottleDataState extends Equatable {
   final int volumePercent;
   final int currentPage;
   final int battery;
-  final int refills;
+  final double refills;
   final double? temp;
   final double? bqTemp;
   final List<BottleData> currentPageData;
@@ -28,7 +28,7 @@ class BottleDataState extends Equatable {
       volume: 0.0,
       volumePercent: 0,
       battery: 0,
-      refills: 0,
+      refills: 0.0,
       temp: null,
       bqTemp: null,
       currentPage: 0,
@@ -43,7 +43,7 @@ class BottleDataState extends Equatable {
     int? currentPage,
     List<BottleData>? currentPageData,
     int? battery,
-    int? refills,
+    double? refills,
     double? temp,
     double? bqTemp,
     DateTime? lastRefreshed,

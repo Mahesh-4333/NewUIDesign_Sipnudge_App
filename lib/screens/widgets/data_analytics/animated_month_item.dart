@@ -107,20 +107,27 @@ class _AnimatedMonthItemState extends State<AnimatedMonthItem>
               child: Container(
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(AppDimensions.dim15.r),
-                  color: widget.status == MonthGoalCompletionStatus.Completed
+                  color: widget.isSelected
                       ? AppColors.color_136DEC
-                      // You can add a check here for widget.isSelected if you want a different color when active
                       : widget.status == MonthGoalCompletionStatus.Partial
                           ? AppColors.color_D0E2FB
                           : AppColors.white,
+                  border: widget.isSelected
+                      ? null
+                      : Border.all(
+                          color: AppColors.color_136DEC0D,
+                          width: 1,
+                        ),
                 ),
                 alignment: Alignment.center,
                 child: Text(
                   widget.monthName,
                   style: TextStyle(
-                    color: widget.status != MonthGoalCompletionStatus.Completed
-                        ? AppColors.steelblue
-                        : AppColors.white,
+                    color: widget.isSelected
+                        ? AppColors.white
+                        : widget.status == MonthGoalCompletionStatus.Partial
+                            ? AppColors.color_136DEC
+                            : AppColors.steelblue,
                     fontSize: AppFontStyles.fontSize_10,
                     fontFamily: AppFontStyles.urbanistFontFamily,
                     fontVariations: [AppFontStyles.boldFontVariation],

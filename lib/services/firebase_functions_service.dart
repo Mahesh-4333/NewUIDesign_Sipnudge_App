@@ -99,7 +99,12 @@ class FirebaseFunctionsService {
 
   static Future<UserCredential?> signInWithGoogle() async {
     try {
-      final GoogleSignInAccount? googleUser = await GoogleSignIn().signIn();
+      final GoogleSignInAccount? googleUser = await GoogleSignIn(
+        scopes: [
+          'https://www.googleapis.com/auth/calendar.readonly',
+          'https://www.googleapis.com/auth/calendar.events.readonly',
+        ],
+      ).signIn();
 
       if (googleUser == null) return null; // Cancelled
 

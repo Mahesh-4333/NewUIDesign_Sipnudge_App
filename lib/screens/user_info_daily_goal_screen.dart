@@ -573,6 +573,9 @@ class _UserInfoDailyGoalScreenNewState extends State<UserInfoDailyGoalScreen> {
                     convertedWaterGoal.toInt());
                 await DatabaseHelper().saveDailyWaterGoal(
                     DateTime.now(), convertedWaterGoal.toInt());
+                context
+                    .read<HydrationCubit>()
+                    .setGoal(convertedWaterGoal.toInt());
 
                 final slots =
                     HydrationHelper.generateHydrationSlots(convertedWaterGoal);

@@ -346,15 +346,47 @@ class NotificationService {
   Future<void> rescheduleSlotForFuture(
     HydrationEntry updatedEntry,
   ) async {
-    // With the daily-repeating system, all IDs use dayOffset=0.
-    // Cancel at most 10 repeat IDs (the maximum alarmRepeatTimes).
-    // No dayOffset loop needed — other day offsets don't exist anymore.
     for (int repeat = 0; repeat < 10; repeat++) {
       final id = _buildNotificationId(updatedEntry.slot, 0, repeat);
       await _plugin.cancel(id : id);
     }
-
     await scheduleHydrationRemindersForFuture([updatedEntry]);
+  }
+
+  /// Updates a specific slot to be silent (e.g. if there's a Google Calendar overlap).
+  /// Note: Since notifications are daily-repeating, this updates the repeating alarm.
+  /// It will remain silent every day until this method is called again with shouldSilence=false.
+  Future<void> updateSlotSilenceState(HydrationEntry entry, bool shouldSilence) async {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final alarmRepeatIndex = await SharedPrefsHelper.getAlarmRepeatIndex();
+    final alarmRepeatTimes = [1, 3, 5, 10][alarmRepeatIndex];
+
+    final endDateTime = today.add(Duration(
+      hours: entry.endTime.hour,
+      minutes: entry.endTime.minute,
+    ));
+
+    final baseAlarmTime = endDateTime.subtract(const Duration(minutes: 10));
+    final double intervalMinutes = 10.0 / alarmRepeatTimes;
+
+    for (int repeat = 0; repeat < alarmRepeatTimes; repeat++) {
+      var notifyAt = baseAlarmTime.add(Duration(
+        seconds: (repeat * intervalMinutes * 60).toInt(),
+      ));
+
+      while (notifyAt.isBefore(now) || notifyAt.difference(now).inSeconds < 5) {
+        notifyAt = notifyAt.add(const Duration(days: 1));
+      }
+
+      await _scheduleSingleReminder(
+        entry: entry,
+        notifyAt: notifyAt,
+        shouldSilence: shouldSilence,
+        dayOffset: 0,
+        repeatIndex: repeat,
+      );
+    }
   }
 
   int _buildNotificationId(

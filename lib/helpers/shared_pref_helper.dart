@@ -10,6 +10,7 @@ class SharedPrefsHelper {
 
   // Existing Keys
   static const String _keyUserEmail = 'user_email';
+  static const String _keyUserId = 'user_id';
   static const String _keyWaterGoal = 'water_goal';
   static const _keyUserGoal = 'user_goal';
   static const String _keyPersonalInfoSubmitted = 'personal_info_submitted';
@@ -48,6 +49,8 @@ class SharedPrefsHelper {
   static const String _keyFlushDelay = 'flush_delay';
   static const String _keyAiHydrationGoalShownDate =
       'ai_hydration_goal_shown_date';
+  static const String _keyUnsnoozedSlots = 'unsnoozed_slots';
+  static const String _keyUnsnoozedDate = 'unsnoozed_date';
 
   // ----------------------------
   // RINGTONE METHODS (NEW)
@@ -96,6 +99,44 @@ class SharedPrefsHelper {
   }
 
   // ----------------------------
+  // UNSNOOZED SLOTS PERSISTENCE
+  // ----------------------------
+  static Future<void> saveUnsnoozedSlot(int slotIndex) async {
+    final prefs = await SharedPreferences.getInstance();
+    final now = DateTime.now();
+    final today = "${now.year}-${now.month}-${now.day}";
+    
+    // Clear if it's a new day
+    final savedDate = prefs.getString(_keyUnsnoozedDate);
+    List<String> list = [];
+    if (savedDate == today) {
+      list = prefs.getStringList(_keyUnsnoozedSlots) ?? [];
+    } else {
+      await prefs.setString(_keyUnsnoozedDate, today);
+    }
+    
+    if (!list.contains(slotIndex.toString())) {
+      list.add(slotIndex.toString());
+      await prefs.setStringList(_keyUnsnoozedSlots, list);
+    }
+  }
+
+  static Future<Set<int>> getUnsnoozedSlots() async {
+    final prefs = await SharedPreferences.getInstance();
+    final now = DateTime.now();
+    final today = "${now.year}-${now.month}-${now.day}";
+    
+    final savedDate = prefs.getString(_keyUnsnoozedDate);
+    if (savedDate != today) {
+      await prefs.remove(_keyUnsnoozedSlots);
+      return {};
+    }
+    
+    final list = prefs.getStringList(_keyUnsnoozedSlots) ?? [];
+    return list.map((e) => int.parse(e)).toSet();
+  }
+
+  // ----------------------------
   // HEALTH PERMISSION METHODS
   // ----------------------------
   static Future<void> setHasRequestedHealthPermission(bool requested) async {
@@ -140,6 +181,16 @@ class SharedPrefsHelper {
   static Future<void> setUserEmail(String email) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_keyUserEmail, email);
+  }
+
+  static Future<void> setUserId(String userId) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_keyUserId, userId);
+  }
+
+  static Future<String?> getUserId() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_keyUserId);
   }
 
   static Future<void> setWaterGoal(int goal) async {

@@ -3,6 +3,7 @@ import 'package:hydrify/helpers/logger.dart';
 
 import 'package:flutter/material.dart';
 import 'package:hydrify/cubit/user_info/user_info_cubit.dart';
+import 'package:hydrify/helpers/shared_pref_helper.dart';
 import 'package:hydrify/models/bottle_data.dart';
 import 'package:hydrify/models/hydration_entry.dart';
 import 'package:hydrify/models/hydration_summary.dart';
@@ -29,6 +30,7 @@ class DatabaseHelper {
   static const String dailyWaterGoalsTableName = 'daily_water_goals';
   static const String appMetadataTableName = 'app_metadata';
   static const String dailyStepsTableName = 'daily_steps';
+  static const String logHydrationTableName = 'log_hydration';
 
   // REPLACE your old getter with this one:
   Future<Database> get database async {
@@ -63,7 +65,7 @@ class DatabaseHelper {
     String finalPath = path.join(await getDatabasesPath(), 'bottle_history.db');
     return await openDatabase(
       finalPath,
-      version: 17,
+      version: 19,
       onUpgrade: (db, oldVersion, newVersion) async {
         if (oldVersion < 2) {
           await db.execute('ALTER TABLE user ADD COLUMN stepGoal INTEGER');
@@ -80,7 +82,7 @@ class DatabaseHelper {
         }
         if (oldVersion < 4) {
           await db.execute(
-              'ALTER TABLE $tableName ADD COLUMN refills INTEGER DEFAULT 0');
+              'ALTER TABLE $tableName ADD COLUMN refills REAL DEFAULT 0.0');
         }
         if (oldVersion < 5) {
           await db.execute(
@@ -206,6 +208,16 @@ class DatabaseHelper {
             // Already exists
           }
         }
+        if (oldVersion < 18) {
+          await db.execute('''
+            CREATE TABLE IF NOT EXISTS $logHydrationTableName (
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              type TEXT NOT NULL,
+              consumed REAL NOT NULL,
+              timestamp TEXT NOT NULL
+            )
+          ''');
+        }
       },
       onCreate: (Database db, int version) async {
         await db.execute('''
@@ -214,7 +226,7 @@ class DatabaseHelper {
             liquidVolume REAL NOT NULL,
             liquidPercent INTEGER NOT NULL,
             battery INTEGER NOT NULL,
-            refills INTEGER DEFAULT 0,
+            refills REAL DEFAULT 0.0,
             temp REAL DEFAULT 0,
             bqTemp REAL DEFAULT 0,
             timestamp TEXT NOT NULL
@@ -347,6 +359,15 @@ CREATE TABLE IF NOT EXISTS $appMetadataTableName (
             steps INTEGER
           )
         ''');
+
+        await db.execute('''
+            CREATE TABLE IF NOT EXISTS $logHydrationTableName (
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              type TEXT NOT NULL,
+              consumed REAL NOT NULL,
+              timestamp TEXT NOT NULL
+            )
+          ''');
       },
     );
   }
@@ -658,6 +679,118 @@ CREATE TABLE IF NOT EXISTS $appMetadataTableName (
     }
   }
 
+  Future<void> insertHydrationLog(
+      String type, double consumed, DateTime timestamp) async {
+    final db = await database;
+    await db.insert(
+      logHydrationTableName,
+      {
+        'type': type,
+        'consumed': consumed,
+        'timestamp': timestamp.toIso8601String(),
+      },
+    );
+    Console.log(
+        tag: "APP",
+        value:
+            "[DB] Inserted hydration log: $consumed mL of $type at $timestamp");
+  }
+
+  Future<List<Map<String, dynamic>>> getHydrationLogs({DateTime? date}) async {
+    final db = await database;
+    if (date != null) {
+      final startOfDay = DateTime(date.year, date.month, date.day).toIso8601String();
+      final endOfDay = DateTime(date.year, date.month, date.day, 23, 59, 59, 999).toIso8601String();
+      return await db.query(
+        logHydrationTableName,
+        where: 'timestamp >= ? AND timestamp <= ?',
+        whereArgs: [startOfDay, endOfDay],
+        orderBy: 'timestamp DESC',
+      );
+    }
+    return await db.query(logHydrationTableName, orderBy: 'timestamp DESC');
+  }
+
+  Future<void> deleteHydrationLog(int id, double amount, String type) async {
+    final db = await database;
+    await db.delete(
+      logHydrationTableName,
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+    if (type == 'Water') {
+      await updateHydrationDaySummary(-amount);
+    }
+  }
+
+  Future<double> getTodayLoggedHydration() async {
+    final db = await database;
+    final now = DateTime.now();
+    final startOfDay = DateTime(now.year, now.month, now.day).toIso8601String();
+
+    final result = await db.rawQuery(
+      'SELECT SUM(consumed) as total FROM $logHydrationTableName WHERE timestamp >= ? AND type = ?',
+      [startOfDay, 'Water'],
+    );
+
+    if (result.isNotEmpty && result.first['total'] != null) {
+      return (result.first['total'] as num).toDouble();
+    }
+    return 0.0;
+  }
+
+  Future<void> clearHydrationLogs() async {
+    try {
+      final db = await database;
+      final count = await db.delete(logHydrationTableName);
+      Console.log(
+          tag: "APP",
+          value: "[DB] Cleared $logHydrationTableName. Rows deleted: $count");
+    } catch (e) {
+      Console.log(
+          tag: "APP", value: "[DB] Error clearing $logHydrationTableName: $e");
+    }
+  }
+
+  Future<Map<String, dynamic>?> getLatestHydrationLog() async {
+    final db = await database;
+    final result = await db.query(
+      logHydrationTableName,
+      orderBy: 'timestamp DESC',
+      limit: 1,
+    );
+    if (result.isEmpty) return null;
+    return result.first;
+  }
+
+  Future<double> getTodayBeverageCaffeine() async {
+    final db = await database;
+    final now = DateTime.now();
+    final startOfDay = DateTime(now.year, now.month, now.day).toIso8601String();
+
+    // Query logs for today that are 'Coffee' or 'Tea'
+    final logs = await db.query(
+      logHydrationTableName,
+      where: 'timestamp >= ? AND (type = ? OR type = ?)',
+      whereArgs: [startOfDay, 'Coffee', 'Tea'],
+    );
+
+    double totalCaffeineMg = 0.0;
+    for (var log in logs) {
+      final type = log['type'] as String;
+      final consumedMl = (log['consumed'] as num).toDouble();
+
+      if (type == 'Coffee') {
+        // Standard: 80mg caffeine per 200ml -> 0.4mg per ml
+        totalCaffeineMg += consumedMl * 0.4;
+      } else if (type == 'Tea') {
+        // Standard: 40mg caffeine per 200ml -> 0.2mg per ml
+        totalCaffeineMg += consumedMl * 0.2;
+      }
+    }
+    return totalCaffeineMg;
+  }
+
   Future<void> clearAllSlots() async {
     // You can also clear `bottle_history` or `user` table if needed
     final db = await database;
@@ -688,6 +821,12 @@ CREATE TABLE IF NOT EXISTS $appMetadataTableName (
       whereArgs: [start.toIso8601String(), end.toIso8601String()],
     );
     return result.map((e) => BottleData.fromMap(e)).toList();
+  }
+
+  Future<List<Map<String, dynamic>>> getAllBottleHistory({int? limit}) async {
+    final db = await database;
+    return await db.query('bottle_history',
+        orderBy: 'timestamp DESC', limit: limit);
   }
 
 // Bulk upsert list (fast)
@@ -762,6 +901,128 @@ CREATE TABLE IF NOT EXISTS $appMetadataTableName (
 
     if (result.isEmpty) return null;
     return HydrationDaySummary.fromMap(result.first);
+  }
+
+  Future<void> updateHydrationDaySummary(double consumedDelta) async {
+    final db = await database;
+    final now = DateTime.now();
+    final midnight =
+        DateTime(now.year, now.month, now.day).millisecondsSinceEpoch;
+
+    // 1. Check if record exists
+    final result = await db.query(
+      hydrationSummaryTableName,
+      where: 'date = ?',
+      whereArgs: [midnight],
+      limit: 1,
+    );
+
+    if (result.isNotEmpty) {
+      // 2. Update existing
+      final currentConsumed = (result.first['consumed'] as num).toDouble();
+      final newConsumed = currentConsumed + consumedDelta;
+      await db.update(
+        hydrationSummaryTableName,
+        {
+          'consumed': newConsumed,
+          'updated_at': DateTime.now().millisecondsSinceEpoch
+        },
+        where: 'date = ?',
+        whereArgs: [midnight],
+      );
+      Console.log(
+          tag: "APP", value: "[DB] Updated daily consumption: $newConsumed");
+    } else {
+      // 3. Create new if missing (should normally be handled by sync/init)
+      final waterGoal = await SharedPrefsHelper.getWaterGoal() ?? 2500;
+      final newSummary = HydrationDaySummary(
+        date: DateTime(now.year, now.month, now.day),
+        dayIndex: 0,
+        target: waterGoal.toDouble(),
+        consumed: consumedDelta,
+        createdAt: DateTime.now(),
+      );
+      await db.insert(hydrationSummaryTableName, newSummary.toMap());
+      Console.log(
+          tag: "APP",
+          value: "[DB] Created new daily summary with: $consumedDelta");
+    }
+  }
+
+  Future<void> syncAllSummariesWithLogs() async {
+    final db = await database;
+
+    // 1. Get all logs from log_hydration where type is Water
+    final logs = await db.query(
+      logHydrationTableName,
+      where: 'type = ?',
+      whereArgs: ['Water'],
+    );
+    if (logs.isEmpty) return;
+
+    // 2. Aggregate logs by date (midnight)
+    Map<int, double> dateTotals = {};
+    for (var log in logs) {
+      try {
+        final timestampStr = log['timestamp'] as String;
+        final timestamp = DateTime.parse(timestampStr);
+        final midnight =
+            DateTime(timestamp.year, timestamp.month, timestamp.day)
+                .millisecondsSinceEpoch;
+        final consumed = (log['consumed'] as num).toDouble();
+
+        dateTotals[midnight] = (dateTotals[midnight] ?? 0.0) + consumed;
+      } catch (e) {
+        Console.log(tag: "SYNC_LOGS", value: "Error parsing log: $e");
+      }
+    }
+
+    // 3. Update each summary entry
+    for (var entry in dateTotals.entries) {
+      final midnight = entry.key;
+      final logTotal = entry.value;
+
+      final result = await db.query(
+        hydrationSummaryTableName,
+        where: 'date = ?',
+        whereArgs: [midnight],
+        limit: 1,
+      );
+
+      if (result.isNotEmpty) {
+        final currentConsumed = (result.first['consumed'] as num).toDouble();
+        // Since this is called after bulkUpsert30Days, currentConsumed is the bottle total.
+        // We add the log total to it.
+        final newTotal = currentConsumed + logTotal;
+
+        await db.update(
+          hydrationSummaryTableName,
+          {
+            'consumed': newTotal,
+            'updated_at': DateTime.now().millisecondsSinceEpoch
+          },
+          where: 'date = ?',
+          whereArgs: [midnight],
+        );
+        Console.log(
+            tag: "SYNC_LOGS",
+            value: "Updated summary for $midnight with logs: $newTotal");
+      } else {
+        // Create a new summary if it doesn't exist (manual logs only day)
+        final waterGoal = await SharedPrefsHelper.getWaterGoal() ?? 2500;
+        final newSummary = HydrationDaySummary(
+          date: DateTime.fromMillisecondsSinceEpoch(midnight),
+          dayIndex: 0,
+          target: waterGoal.toDouble(),
+          consumed: logTotal,
+          createdAt: DateTime.now(),
+        );
+        await db.insert(hydrationSummaryTableName, newSummary.toMap());
+        Console.log(
+            tag: "SYNC_LOGS",
+            value: "Created new summary for $midnight with logs: $logTotal");
+      }
+    }
   }
 
   Future<void> clearHydrationDaySummaries() async {
@@ -850,7 +1111,8 @@ CREATE TABLE IF NOT EXISTS $appMetadataTableName (
     );
     Console.log(
         tag: "APP",
-        value: "[DB] Inserted food scan data for ${data['dish_name']} with id $id");
+        value:
+            "[DB] Inserted food scan data for ${data['dish_name']} with id $id");
     return id;
   }
 
@@ -964,7 +1226,8 @@ CREATE TABLE IF NOT EXISTS $appMetadataTableName (
     if (result.isNotEmpty) {
       dbSteps = result.first['steps'] as int;
     }
-    Console.log(tag: "getDailySteps", value: "DB steps for $dateString: $dbSteps");
+    Console.log(
+        tag: "getDailySteps", value: "DB steps for $dateString: $dbSteps");
 
     // 2. If it's today and we want real-time data, try to fetch and compare
     if (isToday && fetchFromHealth) {
@@ -975,7 +1238,8 @@ CREATE TABLE IF NOT EXISTS $appMetadataTableName (
           final status = await Permission.activityRecognition.status;
           if (status.isGranted) {
             healthSteps = await PedometerService().getTodaySteps();
-            Console.log(tag: "getDailySteps", value: "Pedometer steps: $healthSteps");
+            Console.log(
+                tag: "getDailySteps", value: "Pedometer steps: $healthSteps");
           }
         } else {
           // iOS: Use Health package (silently check)
@@ -1000,5 +1264,20 @@ CREATE TABLE IF NOT EXISTS $appMetadataTableName (
     }
 
     return result.isNotEmpty ? dbSteps : null;
+  }
+
+  Future<List<Map<String, dynamic>>> getAllDailyWaterGoals() async {
+    final db = await database;
+    return await db.query(dailyWaterGoalsTableName, orderBy: 'date DESC');
+  }
+
+  Future<List<Map<String, dynamic>>> getAllDailySteps() async {
+    final db = await database;
+    return await db.query(dailyStepsTableName, orderBy: 'date DESC');
+  }
+
+  Future<List<Map<String, dynamic>>> getAllMetadata() async {
+    final db = await database;
+    return await db.query(appMetadataTableName);
   }
 }

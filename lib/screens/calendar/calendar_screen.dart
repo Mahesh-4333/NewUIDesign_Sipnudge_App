@@ -8,6 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_svg/svg.dart';
+import 'package:fluttertoast/fluttertoast.dart';
 import 'package:hydrify/constants/app_colors.dart';
 import 'package:hydrify/constants/app_dimensions.dart';
 import 'package:hydrify/constants/app_font_styles.dart';
@@ -18,6 +19,7 @@ import 'package:hydrify/helpers/vibration_helper.dart';
 import 'package:hydrify/models/google_event.dart';
 import 'package:hydrify/models/hydration_entry.dart';
 import 'package:hydrify/models/schedule_timeline_item.dart';
+import 'package:hydrify/services/notification/notification_service.dart';
 import 'package:intl/intl.dart';
 import 'package:timelines_plus/timelines_plus.dart';
 
@@ -28,66 +30,97 @@ class CalendarScreen extends StatefulWidget {
   State<CalendarScreen> createState() => _CalendarScreenState();
 }
 
-class _CalendarScreenState extends State<CalendarScreen> {
+class _CalendarScreenState extends State<CalendarScreen>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _rotationController;
   int _selectedMonth = DateTime.now().month - 1;
   int _selectedYear = DateTime.now().year;
 
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      body: Container(
-        width: double.infinity,
-        // padding: EdgeInsets.only(
-        //   top: AppDimensions.dim100.h,
-        // ),
-        decoration: BoxDecoration(
-          image: DecorationImage(
-            image: AssetImage("assets/images/app_background.png"),
-            fit: BoxFit.cover,
-          ),
-        ),
-        child: SafeArea(
-          child: Column(
-            children: [
-              _titleWidget(context),
-              Expanded(
-                child: SingleChildScrollView(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      SizedBox(
-                        height: AppDimensions.dim33.h,
-                      ),
-                      Align(
-                        alignment: Alignment.center,
-                        child: getTitleCard(),
-                      ),
-                      SizedBox(
-                        height: AppDimensions.dim49.h,
-                      ),
-                      CalendarWidget(
-                        onCalendarTap: _handleCalendarSelection,
-                      ),
-                      SizedBox(
-                        height: AppDimensions.dim42.h,
-                      ),
-                      getDailyScheduleTitle(),
-                      SizedBox(
-                        height: AppDimensions.dim19.h,
-                      ),
-                      getTimeLine(),
-                      SizedBox(
-                        height: AppDimensions.dim150.h,
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
+  void initState() {
+    super.initState();
+    _rotationController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 2),
     );
+    context.read<CalendarCubit>().init(DateTime.now());
+  }
+
+  @override
+  void dispose() {
+    _rotationController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocListener<CalendarCubit, CalendarState>(
+        listenWhen: (previous, current) =>
+            previous.isSyncing != current.isSyncing,
+        listener: (context, state) {
+          if (state.isSyncing) {
+            _rotationController.repeat();
+          } else {
+            _rotationController.stop();
+            _rotationController.reset();
+          }
+        },
+        child: Scaffold(
+          body: Container(
+            width: double.infinity,
+            // padding: EdgeInsets.only(
+            //   top: AppDimensions.dim100.h,
+            // ),
+            decoration: BoxDecoration(
+              image: DecorationImage(
+                image: AssetImage("assets/images/app_background.png"),
+                fit: BoxFit.cover,
+              ),
+            ),
+            child: SafeArea(
+              child: Column(
+                children: [
+                  _titleWidget(context),
+                  Expanded(
+                    child: SingleChildScrollView(
+                      padding: EdgeInsets.symmetric(horizontal: 30.w),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // SizedBox(
+                          //   height: AppDimensions.dim33.h,
+                          // ),
+                          // Align(
+                          //   alignment: Alignment.center,
+                          //   child: getTitleCard(),
+                          // ),
+                          SizedBox(
+                            height: AppDimensions.dim49.h,
+                          ),
+                          CalendarWidget(
+                            onCalendarTap: _handleCalendarSelection,
+                          ),
+                          SizedBox(
+                            height: AppDimensions.dim42.h,
+                          ),
+                          getDailyScheduleTitle(
+                              context.read<CalendarCubit>().state.selectedDate),
+                          SizedBox(
+                            height: AppDimensions.dim19.h,
+                          ),
+                          getTimeLine(),
+                          SizedBox(
+                            height: AppDimensions.dim150.h,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ));
   }
 
   Padding _titleWidget(BuildContext context) {
@@ -102,10 +135,12 @@ class _CalendarScreenState extends State<CalendarScreen> {
           Expanded(
             child: Center(
               child: Text(
-                'Calender',
+                'Calendar',
                 style: TextStyle(
                   fontSize: 22.sp,
-                  fontVariations: [AppFontStyles.boldFontVariation,],
+                  fontVariations: [
+                    AppFontStyles.boldFontVariation,
+                  ],
                   fontFamily: AppFontStyles.urbanistFontFamily,
                   color: Color(0xFF5D7B91),
                   letterSpacing: 0.5,
@@ -147,96 +182,101 @@ class _CalendarScreenState extends State<CalendarScreen> {
   }
 
   Widget getTitleCard() {
-    return SizedBox(
-      width: AppDimensions.dim350.w,
-      height: AppDimensions.dim75.h,
-      child: Stack(
-        children: [
-          Positioned.fill(
-            child: SvgPicture.asset(
-              "assets/images/calendar_sync_bg_image.svg",
-              fit: BoxFit.fill,
+    return InkWell(
+      onTap: () {
+        context.read<CalendarCubit>().syncGoogleCalendar();
+        // Navigator.pop(context);
+      },
+      child: SizedBox(
+        height: AppDimensions.dim75.h,
+        child: Stack(
+          children: [
+            Positioned.fill(
+              child: SvgPicture.asset(
+                "assets/images/calendar_sync_bg_image.svg",
+                fit: BoxFit.fill,
+              ),
             ),
-          ),
-          Padding(
-            padding: EdgeInsets.all(AppDimensions.dim16.w),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                SvgPicture.asset(
-                  "assets/images/google_calendar_image.svg",
-                  width: AppDimensions.dim38.w,
-                  height: AppDimensions.dim38.w,
-                ),
-                SizedBox(
-                  width: AppDimensions.dim16.w,
-                ),
-                Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      "Sync Google Calendar",
-                      style: TextStyle(
-                        color: AppColors.color_1E293B,
-                        fontSize: AppFontStyles.fontSize_14,
-                        fontFamily: AppFontStyles.urbanistFontFamily,
-                        fontVariations: [AppFontStyles.boldFontVariation],
+            Padding(
+              padding: EdgeInsets.all(AppDimensions.dim16.w),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  SvgPicture.asset(
+                    "assets/images/google_calendar_image.svg",
+                    width: AppDimensions.dim38.w,
+                    height: AppDimensions.dim38.w,
+                  ),
+                  SizedBox(
+                    width: AppDimensions.dim16.w,
+                  ),
+                  Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        "Sync Google Calendar",
+                        style: TextStyle(
+                          color: AppColors.color_1E293B,
+                          fontSize: AppFontStyles.fontSize_14,
+                          fontFamily: AppFontStyles.urbanistFontFamily,
+                          fontVariations: [AppFontStyles.boldFontVariation],
+                        ),
                       ),
+                      Text(
+                        "Add latest events to your workspace schedules",
+                        style: TextStyle(
+                          color: AppColors.color_64748B,
+                          fontSize: AppFontStyles.fontSize_11,
+                          fontFamily: AppFontStyles.urbanistFontFamily,
+                          fontVariations: [AppFontStyles.semiBoldFontVariation],
+                        ),
+                      )
+                    ],
+                  ),
+                  Spacer(),
+                  RotationTransition(
+                    turns: _rotationController,
+                    child: Icon(
+                      Icons.autorenew,
+                      color: AppColors.color_1A73E8,
+                      size: 22.w,
                     ),
-                    Text(
-                      "Add latest events to your workspace schedules",
-                      style: TextStyle(
-                        color: AppColors.color_64748B,
-                        fontSize: AppFontStyles.fontSize_11,
-                        fontFamily: AppFontStyles.urbanistFontFamily,
-                        fontVariations: [AppFontStyles.semiBoldFontVariation],
-                      ),
-                    )
-                  ],
-                ),
-                Spacer(),
-                Icon(
-                  Icons.autorenew,
-                  color: AppColors.color_1A73E8,
-                  size: 22.w,
-                )
-              ],
+                  )
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
 
-  Widget getDailyScheduleTitle() {
-    return Padding(
-      padding: EdgeInsets.symmetric(horizontal: AppDimensions.dim49.w),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          Text(
-            "Daily Schedule",
-            style: TextStyle(
-              color: AppColors.color_4D758B,
-              fontSize: AppFontStyles.fontSize_30,
-              fontFamily: AppFontStyles.urbanistFontFamily,
-              fontVariations: [AppFontStyles.boldFontVariation],
-            ),
+  Widget getDailyScheduleTitle(DateTime selectedDate) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Text(
+          "Daily Schedule",
+          style: TextStyle(
+            color: AppColors.color_4D758B,
+            fontSize: AppFontStyles.fontSize_30,
+            fontFamily: AppFontStyles.urbanistFontFamily,
+            fontVariations: [AppFontStyles.boldFontVariation],
           ),
-          Spacer(),
-          Text(
-            "Oct 13, 2026",
-            style: TextStyle(
-              color: AppColors.color_4D758B,
-              fontSize: AppFontStyles.fontSize_12,
-              fontFamily: AppFontStyles.urbanistFontFamily,
-              fontVariations: [AppFontStyles.fontWeightVariation600],
-            ),
+        ),
+        Spacer(),
+        Text(
+          selectedDate.toIso8601String(),
+          style: TextStyle(
+            color: AppColors.color_4D758B,
+            fontSize: AppFontStyles.fontSize_12,
+            fontFamily: AppFontStyles.urbanistFontFamily,
+            fontVariations: [AppFontStyles.fontWeightVariation600],
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
@@ -304,76 +344,69 @@ class _CalendarScreenState extends State<CalendarScreen> {
           );
         }
 
-        return Padding(
-          padding: EdgeInsets.symmetric(
-            horizontal: AppDimensions.dim23.w,
+        return Timeline.tileBuilder(
+          shrinkWrap: true,
+          padding: EdgeInsets.zero,
+          physics: const NeverScrollableScrollPhysics(),
+          theme: TimelineThemeData(
+            nodePosition: .12,
+            indicatorTheme: const IndicatorThemeData(
+              position: .4,
+              color: AppColors.color_D9D9D9,
+              size: AppDimensions.dim6,
+            ),
+            connectorTheme: const ConnectorThemeData(
+              color: AppColors.color_D9D9D9,
+              thickness: 1,
+            ),
           ),
-          child: Timeline.tileBuilder(
-            shrinkWrap: true,
-            padding: EdgeInsets.zero,
-            physics: const NeverScrollableScrollPhysics(),
-            theme: TimelineThemeData(
-              nodePosition: .12,
-              indicatorTheme: const IndicatorThemeData(
-                position: .4,
-                color: AppColors.color_D9D9D9,
-                size: AppDimensions.dim6,
-              ),
-              connectorTheme: const ConnectorThemeData(
-                color: AppColors.color_D9D9D9,
-                thickness: 1,
-              ),
-            ),
-            builder: TimelineTileBuilder.fromStyle(
-              contentsAlign: ContentsAlign.basic,
-              itemCount: combinedList.length,
-              contentsBuilder: (context, index) {
-                final itemData = combinedList[index];
+          builder: TimelineTileBuilder.fromStyle(
+            contentsAlign: ContentsAlign.basic,
+            itemCount: combinedList.length,
+            contentsBuilder: (context, index) {
+              final itemData = combinedList[index];
 
-                return Padding(
-                  padding: EdgeInsets.only(
-                      left: AppDimensions.dim12.w,
-                      bottom: AppDimensions.dim20.h),
-                  child: _buildRightSideContent(itemData),
-                );
-              },
-              oppositeContentsBuilder: (context, index) {
-                final itemData = combinedList[index];
-                final isSlot = itemData['isSlot'] as bool;
-                String timeText = "";
+              return Padding(
+                padding: EdgeInsets.only(
+                    left: AppDimensions.dim12.w, bottom: AppDimensions.dim20.h),
+                child: _buildRightSideContent(itemData),
+              );
+            },
+            oppositeContentsBuilder: (context, index) {
+              final itemData = combinedList[index];
+              final isSlot = itemData['isSlot'] as bool;
+              String timeText = "";
 
-                if (isSlot) {
-                  final slotItem = itemData['slotItem'] as ScheduleTimelineItem;
-                  final start = slotItem.entry.startTime.format(context);
-                  final end = slotItem.entry.endTime.format(context);
-                  // timeText = "$start - \n$end";
-                  timeText = "$start";
-                } else {
-                  final event = itemData['googleEvent'] as GoogleEvent;
-                  final start = DateFormat('h:mm a').format(event.startTime);
-                  final end = DateFormat('h:mm a').format(event.endTime);
-                  timeText = "$start - \n$end";
-                }
+              if (isSlot) {
+                final slotItem = itemData['slotItem'] as ScheduleTimelineItem;
+                final start = slotItem.entry.startTime.format(context);
+                final end = slotItem.entry.endTime.format(context);
+                // timeText = "$start - \n$end";
+                timeText = "$start";
+              } else {
+                final event = itemData['googleEvent'] as GoogleEvent;
+                final start = DateFormat('HH:mm').format(event.startTime);
+                final end = DateFormat('HH:mm').format(event.endTime);
+                timeText = "$start";
+              }
 
-                return Padding(
-                  padding: EdgeInsets.only(
-                      bottom: AppDimensions.dim14.h,
-                      right: AppDimensions.dim6.w),
-                  child: Text(
-                    timeText,
-                    textAlign: TextAlign.right,
-                    style: TextStyle(
-                      fontSize: AppFontStyles.fontSize_12,
-                      color: AppColors.color_00050C,
-                      fontFamily: AppFontStyles.urbanistFontFamily,
-                      fontVariations: [
-                        AppFontStyles.semiBoldFontVariation,
-                      ],
-                    ),
+              return Padding(
+                padding: EdgeInsets.only(
+                    bottom: AppDimensions.dim14.h, right: AppDimensions.dim6.w),
+                child: Text(
+                  timeText,
+                  textAlign: TextAlign.right,
+                  style: TextStyle(
+                    fontSize: AppFontStyles.fontSize_12,
+                    color: AppColors.color_00050C,
+                    fontFamily: AppFontStyles.urbanistFontFamily,
+                    fontVariations: [
+                      AppFontStyles.semiBoldFontVariation,
+                    ],
                   ),
-                );
-              },
-            ),
+                ),
+              );
+            },
           ),
         );
       },
@@ -389,45 +422,69 @@ class _CalendarScreenState extends State<CalendarScreen> {
       if (slotItem.overlappingEvents.isEmpty) {
         return getSlotDataContainer(slotData: slotItem.entry);
       } else {
-        return Row(
+        return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.max,
+          mainAxisSize: MainAxisSize.min,
           children: [
-            Expanded(
-              child: getSlotDataContainer(slotData: slotItem.entry),
-            ),
-            SizedBox(width: AppDimensions.dim4.w),
-            Expanded(
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(
-                    child: getGoogleEventContainer(
-                        events: slotItem.overlappingEvents),
-                  ),
-                  SizedBox(width: AppDimensions.dim4.w),
-                  Padding(
-                    padding: EdgeInsets.only(top: AppDimensions.dim12.h),
-                    child: GestureDetector(
-                      onTap: () {
-                        log("Overlapping button tapped!");
-                      },
+            getSlotDataContainer(slotData: slotItem.entry),
+            SizedBox(height: AppDimensions.dim8.h),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Expanded(
+                  child: getGoogleEventContainer(
+                      events: slotItem.overlappingEvents),
+                ),
+                SizedBox(width: AppDimensions.dim8.w),
+                 BlocBuilder<CalendarCubit, CalendarState>(
+                  buildWhen: (p, c) => p.unsilencedSlots != c.unsilencedSlots,
+                  builder: (context, state) {
+                    final isUnsilenced =
+                        state.unsilencedSlots.contains(slotItem.entry.slot);
+
+                    return GestureDetector(
+                      onTap: isUnsilenced
+                          ? null
+                          : () async {
+                              await NotificationService()
+                                  .updateSlotSilenceState(
+                                      slotItem.entry, false);
+                              if (mounted) {
+                                context
+                                    .read<CalendarCubit>()
+                                    .unsnoozeSlot(slotItem.entry);
+                                Fluttertoast.showToast(
+                                    msg:
+                                        "${slotItem.entry.slot.label} reminder unsilenced");
+                              }
+                            },
                       child: Container(
-                        padding: EdgeInsets.all(AppDimensions.dim4.w),
-                        decoration: const BoxDecoration(
-                          color: AppColors.color_3B82F6,
-                          shape: BoxShape.circle,
+                        padding: EdgeInsets.symmetric(
+                            horizontal: AppDimensions.dim12.w,
+                            vertical: AppDimensions.dim8.h),
+                        decoration: BoxDecoration(
+                          color: isUnsilenced
+                              ? AppColors.color_22C55E
+                              : AppColors.color_3B82F6,
+                          borderRadius:
+                              BorderRadius.circular(AppDimensions.dim20.w),
                         ),
-                        child: Icon(
-                          Icons.add,
-                          color: AppColors.white,
-                          size: AppDimensions.dim16.w,
+                        child: Text(
+                          isUnsilenced ? "Unsilenced" : "Unsnooze",
+                          style: TextStyle(
+                            color: AppColors.white,
+                            fontSize: AppFontStyles.fontSize_12,
+                            fontFamily: AppFontStyles.urbanistFontFamily,
+                            fontVariations: [
+                              AppFontStyles.boldFontVariation,
+                            ],
+                          ),
                         ),
                       ),
-                    ),
-                  ),
-                ],
-              ),
+                    );
+                  },
+                ),
+              ],
             ),
           ],
         );
@@ -543,7 +600,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
             BoxShadow(
                 offset: Offset(0, 0),
                 blurRadius: AppDimensions.dim7.w,
-                color: AppColors.black.withOpacity(.4))
+                color: AppColors.black.withOpacity(.1))
           ]),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -574,17 +631,15 @@ class _CalendarScreenState extends State<CalendarScreen> {
           SizedBox(
             height: AppDimensions.dim13.h,
           ),
-          Expanded(
-            child: Text(
-              "${slotData.slot.label} - intake",
-              style: TextStyle(
-                  fontSize: AppFontStyles.fontSize_15,
-                  color: AppColors.color_00050C,
-                  fontFamily: AppFontStyles.urbanistFontFamily,
-                  fontVariations: [
-                    AppFontStyles.boldFontVariation,
-                  ]),
-            ),
+          Text(
+            "${slotData.slot.label} - intake",
+            style: TextStyle(
+                fontSize: AppFontStyles.fontSize_15,
+                color: AppColors.color_00050C,
+                fontFamily: AppFontStyles.urbanistFontFamily,
+                fontVariations: [
+                  AppFontStyles.boldFontVariation,
+                ]),
           ),
           SizedBox(
             height: AppDimensions.dim4.h,
@@ -801,17 +856,14 @@ class CalendarWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: EdgeInsets.symmetric(horizontal: AppDimensions.dim49.w),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          _buildHeader(context),
-          SizedBox(height: AppDimensions.dim24.h),
-          _buildCalendarBody(),
-        ],
-      ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        _buildHeader(context),
+        SizedBox(height: AppDimensions.dim24.h),
+        _buildCalendarBody(),
+      ],
     );
   }
 

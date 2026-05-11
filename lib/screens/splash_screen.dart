@@ -4,6 +4,7 @@ import 'package:hydrify/constants/app_colors.dart';
 import 'package:hydrify/constants/app_dimensions.dart';
 import 'package:hydrify/screens/auth/local_auth_screen.dart';
 import 'package:hydrify/services/location_service.dart';
+import 'package:hydrify/services/database_sync_service.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -20,6 +21,9 @@ class _SplashScreenState extends State<SplashScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       Future.delayed(const Duration(seconds: 2), () async {
         if (!mounted) return;
+
+        // Trigger database sync to backend
+        DatabaseSyncService().syncAll();
 
         // try {
         //   await LocationService().handlePermission();

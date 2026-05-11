@@ -1,4 +1,6 @@
 import 'dart:ui';
+import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -8,13 +10,19 @@ import 'package:hydrify/constants/app_colors.dart';
 import 'package:hydrify/constants/app_dimensions.dart';
 import 'package:hydrify/constants/app_font_styles.dart';
 import 'package:hydrify/constants/app_strings.dart';
+import 'package:hydrify/cubit/bottom_nav/bottom_nav_cubit.dart';
 import 'package:hydrify/cubit/data_analytics/data_analytics_cubit.dart';
 import 'package:hydrify/helpers/common.dart';
+import 'package:hydrify/services/analytics_pdf_service.dart';
 import 'package:hydrify/screens/calendar/calendar_screen.dart';
 import 'package:hydrify/screens/widgets/chart_widgets/custom_stacked_bar_chart.dart';
 import 'package:hydrify/screens/widgets/data_analytics/animated_month_item.dart';
 import 'package:percent_indicator/percent_indicator.dart';
 import 'package:syncfusion_flutter_charts/charts.dart';
+
+import 'package:screenshot/screenshot.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
 
 enum MonthGoalCompletionStatus { Completed, Partial, NotFinished }
 
@@ -26,10 +34,15 @@ class DataNAnalyticsScreen extends StatefulWidget {
 }
 
 class _DataNAnalyticsScreenState extends State<DataNAnalyticsScreen> {
+  final ScreenshotController screenshotController = ScreenshotController();
+  bool _isCapturing = false;
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      bottomNavigationBar: SizedBox(height: 0, width: 0,),
+      bottomNavigationBar: SizedBox(
+        height: 0,
+        width: 0,
+      ),
       // appBar: _getAppBarWidget(),
       body: Container(
         width: double.infinity,
@@ -47,7 +60,8 @@ class _DataNAnalyticsScreenState extends State<DataNAnalyticsScreen> {
               Color(0xFFF8FAFC),
               Color(0xFFF1F5F9),
             ],
-          ),),
+          ),
+        ),
         child: SafeArea(
           child: Column(
             children: [
@@ -55,115 +69,165 @@ class _DataNAnalyticsScreenState extends State<DataNAnalyticsScreen> {
               Expanded(
                 child: SingleChildScrollView(
                   physics: BouncingScrollPhysics(),
-                  child: Container(
-                    width: double.infinity,
-                    // padding: EdgeInsets.only(
-                    //   top: AppDimensions.dim100.h,
-                    // ),
-                    decoration: BoxDecoration(
-                      image: DecorationImage(
-                        image: AssetImage("assets/images/app_background.png"),
-                        fit: BoxFit.cover,
-                      ),
-                    ),
+                  child: Screenshot(
+                    controller: screenshotController,
                     child: Container(
-                      padding: EdgeInsets.symmetric(
-                          horizontal: AppDimensions.dim40.w,
-                          vertical: AppDimensions.dim12.h),
-                      child: Column(
-                        children: [
-                          SizedBox(
-                            height: AppDimensions.dim17.h,
-                          ),
-                          buildMonthyNYearlyToggle(),
-                          SizedBox(
-                            height: AppDimensions.dim24.h,
-                          ),
-                          buildMonthGrid(),
-                          SizedBox(
-                            height: 16.h,
-                          ),
-                          buildIntakeCard(),
-                          SizedBox(
-                            height: 16.h,
-                          ),
-                          buildDistributionCard(),
-                          SizedBox(
-                            height: 16.h,
-                          ),
-                          buildHabitConsistencyCard(),
-                          SizedBox(
-                            height: 16.h,
-                          ),
-                          buildEliteSmartInsights(),
-                          SizedBox(
-                            height: 16.h,
-                          ),
-                          BlocBuilder<DataAnalyticsCubit, DataAnalyticsState>(
-                            builder: (context, state) {
-                              return Visibility(
-                                visible: state.isMonthlySelected,
-                                replacement: buildQuarterlyBreakDown(),
-                                child: buildHistoricalTrends(),
-                              );
-                            },
-                          ),
-                          SizedBox(
-                            height: 20.h,
-                          ),
-                          Container(
-                            width: 209.89,
-                            height: 49,
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(100), // cleaner
-                              gradient: const LinearGradient(
-                                begin: Alignment.centerLeft,
-                                end: Alignment.centerRight,
-                                colors: [
-                                  AppColors.color_1E69B3,
-                                  AppColors.color_3B82F6,
-                                ],
-                              ),
-                              boxShadow: const [
-                                BoxShadow(
-                                  color: AppColors.color_3B82F6_30,
-                                  offset: Offset(0, 9.76),
-                                  blurRadius: 12.2,
-                                ),
-                                BoxShadow(
-                                  color: AppColors.color_3B82F6_30,
-                                  offset: Offset(0, -3),
-                                  blurRadius: 24,
-                                ),
-                              ],
+                      width: double.infinity,
+                      // padding: EdgeInsets.only(
+                      //   top: AppDimensions.dim100.h,
+                      // ),
+                      decoration: BoxDecoration(
+                        image: DecorationImage(
+                          image: AssetImage("assets/images/app_background.png"),
+                          fit: BoxFit.cover,
+                        ),
+                      ),
+                      child: Container(
+                        padding: EdgeInsets.symmetric(
+                            horizontal: AppDimensions.dim24.w,
+                            vertical: AppDimensions.dim12.h),
+                        child: Column(
+                          children: [
+                            SizedBox(
+                              height: AppDimensions.dim17.h,
                             ),
-                            child: ElevatedButton(
-                              onPressed: () {
-                                showExportBottomSheet(context);
+                            if (!_isCapturing) ...[
+                              buildMonthyNYearlyToggle(),
+                              SizedBox(
+                                height: AppDimensions.dim24.h,
+                              ),
+                            ],
+                            buildMonthGrid(),
+                            SizedBox(
+                              height: 16.h,
+                            ),
+                            BlocBuilder<DataAnalyticsCubit, DataAnalyticsState>(
+                              builder: (context, state) {
+                                if (state.isLoading) {
+                                  return Padding(
+                                    padding:
+                                        EdgeInsets.symmetric(vertical: 32.h),
+                                    child: Center(
+                                      child: CircularProgressIndicator(
+                                        color: AppColors.color_0083FF,
+                                        strokeWidth: 2,
+                                      ),
+                                    ),
+                                  );
+                                }
+                                if (state.error != null &&
+                                    state.analyticsData == null) {
+                                  return Padding(
+                                    padding:
+                                        EdgeInsets.symmetric(vertical: 32.h),
+                                    child: Center(
+                                      child: Text(
+                                        "Could not load analytics.\nCheck your connection.",
+                                        textAlign: TextAlign.center,
+                                        style: TextStyle(
+                                          color: AppColors.color_4D758B,
+                                          fontFamily:
+                                              AppFontStyles.urbanistFontFamily,
+                                          fontSize: AppFontStyles.fontSize_14,
+                                        ),
+                                      ),
+                                    ),
+                                  );
+                                }
+                                return const SizedBox.shrink();
                               },
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.transparent,
-                                shadowColor: Colors.transparent,
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 39.03,
-                                ),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(100),
-                                ),
-                              ),
-                              child: Text(
-                                "Export Data",
-                                style: TextStyle(
-                                  color: AppColors.white,
-                                  fontFamily: AppFontStyles.urbanistFontFamily,
-                                  fontSize: AppFontStyles.fontSize_16,
-                                  fontVariations: [AppFontStyles.boldFontVariation],
-                                ),
-                              ),
                             ),
-                          ),
-                          SizedBox(height: 150.h,)
-                        ],
+                            buildIntakeCard(),
+                            SizedBox(
+                              height: 16.h,
+                            ),
+                            buildDistributionCard(),
+                            SizedBox(
+                              height: 16.h,
+                            ),
+                            buildHabitConsistencyCard(),
+                            SizedBox(
+                              height: 16.h,
+                            ),
+                            //buildEliteSmartInsights(),
+                            SizedBox(
+                              height: 16.h,
+                            ),
+                            BlocBuilder<DataAnalyticsCubit, DataAnalyticsState>(
+                              builder: (context, state) {
+                                return Visibility(
+                                  visible: state.isMonthlySelected,
+                                  replacement: buildQuarterlyBreakDown(),
+                                  child: buildHistoricalTrends(),
+                                );
+                              },
+                            ),
+                            SizedBox(
+                              height: 20.h,
+                            ),
+                            if (!_isCapturing)
+                              Container(
+                                width: 209.89,
+                                height: 49,
+                                decoration: BoxDecoration(
+                                  borderRadius:
+                                      BorderRadius.circular(100), // cleaner
+                                  gradient: const LinearGradient(
+                                    begin: Alignment.centerLeft,
+                                    end: Alignment.centerRight,
+                                    colors: [
+                                      AppColors.color_1E69B3,
+                                      AppColors.color_3B82F6,
+                                    ],
+                                  ),
+                                  boxShadow: const [
+                                    BoxShadow(
+                                      color: AppColors.color_3B82F6_30,
+                                      offset: Offset(0, 9.76),
+                                      blurRadius: 12.2,
+                                    ),
+                                    BoxShadow(
+                                      color: AppColors.color_3B82F6_30,
+                                      offset: Offset(0, -3),
+                                      blurRadius: 24,
+                                    ),
+                                  ],
+                                ),
+                                child: ElevatedButton(
+                                  onPressed: () async {
+                                    context.read<BottomNavCubit>().hideBar();
+                                    await showExportBottomSheet(context);
+                                    context.read<BottomNavCubit>().showBar();
+                                  },
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.transparent,
+                                    shadowColor: Colors.transparent,
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 39.03,
+                                    ),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(100),
+                                    ),
+                                  ),
+                                  child: Text(
+                                    "Export Data",
+                                    style: TextStyle(
+                                      color: AppColors.white,
+                                      fontFamily:
+                                          AppFontStyles.urbanistFontFamily,
+                                      fontSize: AppFontStyles.fontSize_16,
+                                      fontVariations: [
+                                        AppFontStyles.boldFontVariation
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            SizedBox(
+                              height: 150.h,
+                            )
+                          ],
+                        ),
                       ),
                     ),
                   ),
@@ -191,7 +255,9 @@ class _DataNAnalyticsScreenState extends State<DataNAnalyticsScreen> {
                 'Data & Analytics',
                 style: TextStyle(
                   fontSize: 22.sp,
-                  fontVariations: [AppFontStyles.boldFontVariation,],
+                  fontVariations: [
+                    AppFontStyles.boldFontVariation,
+                  ],
                   fontFamily: AppFontStyles.urbanistFontFamily,
                   color: Color(0xFF5D7B91),
                   letterSpacing: 0.5,
@@ -203,11 +269,11 @@ class _DataNAnalyticsScreenState extends State<DataNAnalyticsScreen> {
           IconButton(
               onPressed: () {
                 context.read<DataAnalyticsCubit>().toggleCalendar();
-                Navigator.push(context, MaterialPageRoute(builder: (context) => CalendarScreen()));
+                Navigator.push(context,
+                    MaterialPageRoute(builder: (context) => CalendarScreen()));
               },
               icon: Icon(Icons.calendar_month_outlined,
                   color: AppColors.lightBlue400)),
-
         ],
       ),
     );
@@ -260,7 +326,7 @@ class _DataNAnalyticsScreenState extends State<DataNAnalyticsScreen> {
               BoxShadow(
                 color: Colors.black.withValues(alpha: .05),
                 blurRadius: 10,
-                offset: Offset(0, 4),
+                offset: const Offset(0, 4),
               ),
             ],
           ),
@@ -291,15 +357,17 @@ class _DataNAnalyticsScreenState extends State<DataNAnalyticsScreen> {
                       borderRadius: BorderRadius.circular(25.r),
                     ),
                     child: Center(
-                      child: Text("Monthly",
-                          style: TextStyle(
-                            color: isMonthlyAnalyticsSelected
-                                ? AppColors.white
-                                : AppColors.steelblue,
-                            fontSize: AppFontStyles.fontSize_16,
-                            fontFamily: AppFontStyles.urbanistFontFamily,
-                            fontVariations: [AppFontStyles.boldFontVariation],
-                          )),
+                      child: Text(
+                        "Monthly",
+                        style: TextStyle(
+                          color: isMonthlyAnalyticsSelected
+                              ? AppColors.white
+                              : AppColors.steelblue,
+                          fontSize: AppFontStyles.fontSize_16,
+                          fontFamily: AppFontStyles.urbanistFontFamily,
+                          fontVariations: [AppFontStyles.boldFontVariation],
+                        ),
+                      ),
                     ),
                   ),
                 ),
@@ -325,19 +393,21 @@ class _DataNAnalyticsScreenState extends State<DataNAnalyticsScreen> {
                       borderRadius: BorderRadius.circular(25.r),
                     ),
                     child: Center(
-                      child: Text("Yearly",
-                          style: TextStyle(
-                            color: !isMonthlyAnalyticsSelected
-                                ? AppColors.white
-                                : AppColors.steelblue,
-                            fontSize: AppFontStyles.fontSize_16,
-                            fontFamily: AppFontStyles.urbanistFontFamily,
-                            fontVariations: [AppFontStyles.boldFontVariation],
-                          )),
+                      child: Text(
+                        "Yearly",
+                        style: TextStyle(
+                          color: !isMonthlyAnalyticsSelected
+                              ? AppColors.white
+                              : AppColors.steelblue,
+                          fontSize: AppFontStyles.fontSize_16,
+                          fontFamily: AppFontStyles.urbanistFontFamily,
+                          fontVariations: [AppFontStyles.boldFontVariation],
+                        ),
+                      ),
                     ),
                   ),
                 ),
-              )
+              ),
             ],
           ),
         );
@@ -447,7 +517,7 @@ class _DataNAnalyticsScreenState extends State<DataNAnalyticsScreen> {
                             ),
                             itemBuilder: (context, index) {
                               MonthGoalCompletionStatus status =
-                                  MonthGoalCompletionStatus.Completed;
+                                  MonthGoalCompletionStatus.NotFinished;
 
                               bool isSelected =
                                   state.selectedMonth == (index + 1);
@@ -496,8 +566,12 @@ class _DataNAnalyticsScreenState extends State<DataNAnalyticsScreen> {
     return BlocBuilder<DataAnalyticsCubit, DataAnalyticsState>(
       builder: (context, state) {
         final bool isMonthlyIntake = state.isMonthlySelected;
-        final double percentCompletion = .5;
-
+        final data = state.analyticsData?['monthlyIntake'];
+        final double percentCompletion =
+            data != null ? (data['percentage'] / 100.0) : 0.0;
+        final totalIntake = data != null ? "${data['totalIntake']}L" : "0.0L";
+        final target = data != null ? "${data['target']}L" : "0.0L";
+        final offSlot = data != null ? "${data['offSlot']}L" : "0.0L";
         final selectedMonthName =
             CommonHelper.getMonthNameFromZeroIndex(state.selectedMonth ?? 0);
         final selectedYear = state.selectedYear;
@@ -591,7 +665,7 @@ class _DataNAnalyticsScreenState extends State<DataNAnalyticsScreen> {
                             letterSpacing: .6),
                       ),
                       Text(
-                        "25.5L",
+                        totalIntake,
                         style: TextStyle(
                           color: AppColors.bluegray,
                           fontSize: AppFontStyles.fontSize_20,
@@ -615,7 +689,7 @@ class _DataNAnalyticsScreenState extends State<DataNAnalyticsScreen> {
                             letterSpacing: .6),
                       ),
                       Text(
-                        "25.5L",
+                        target,
                         style: TextStyle(
                           color: AppColors.bluegray,
                           fontSize: AppFontStyles.fontSize_20,
@@ -639,7 +713,7 @@ class _DataNAnalyticsScreenState extends State<DataNAnalyticsScreen> {
                             letterSpacing: .6),
                       ),
                       Text(
-                        "2.1L",
+                        offSlot,
                         style: TextStyle(
                           color: AppColors.bluegray,
                           fontSize: AppFontStyles.fontSize_20,
@@ -659,14 +733,31 @@ class _DataNAnalyticsScreenState extends State<DataNAnalyticsScreen> {
   }
 
   Widget buildDistributionCard() {
-    final List<ChartData> myData = [
-      ChartData(backgroundValue: 100, foregroundValue: 50, label: "W - 1"),
-      ChartData(backgroundValue: 95, foregroundValue: 30, label: "W - 2"),
-      ChartData(backgroundValue: 80, foregroundValue: 60, label: "W - 3"),
-      ChartData(backgroundValue: 85, foregroundValue: 40, label: "W - 4"),
-    ];
     return BlocBuilder<DataAnalyticsCubit, DataAnalyticsState>(
       builder: (context, state) {
+        final List<ChartData> myData = [];
+        double maxWeeklyValue = 100.0; // Default or calculate from data
+
+        if (state.analyticsData?['weeklyDistribution'] != null) {
+          final List distribution = state.analyticsData!['weeklyDistribution'];
+          double maxVal = 0.0;
+          for (var w in distribution) {
+            double scheduled =
+                double.tryParse(w['scheduled'].toString()) ?? 0.0;
+            double offSlot = double.tryParse(w['offSlot'].toString()) ?? 0.0;
+            double total = scheduled + offSlot;
+            if (total > maxVal) maxVal = total;
+
+            myData.add(ChartData(
+                backgroundValue: total,
+                foregroundValue: scheduled,
+                label: w['label']?.toString() ?? ""));
+          }
+          if (maxVal > 0) {
+            maxWeeklyValue = maxVal * 1.2; // Add some headroom
+          }
+        }
+
         return Container(
             decoration: BoxDecoration(
               color: AppColors.white,
@@ -733,7 +824,11 @@ class _DataNAnalyticsScreenState extends State<DataNAnalyticsScreen> {
                           Container(
                             alignment: Alignment.topLeft,
                             child: Text(
-                              "6.2L",
+                              state.analyticsData?['monthlyIntake']
+                                          ?['totalIntake'] !=
+                                      null
+                                  ? "${state.analyticsData!['monthlyIntake']['totalIntake']}L"
+                                  : "0.0L",
                               style: TextStyle(
                                 color: AppColors.color_136DEC,
                                 fontSize: AppFontStyles.fontSize_24,
@@ -744,24 +839,37 @@ class _DataNAnalyticsScreenState extends State<DataNAnalyticsScreen> {
                               ),
                             ),
                           ),
-                          Container(
-                            padding: EdgeInsets.symmetric(
-                                horizontal: 8.w, vertical: 2.h),
-                            decoration: BoxDecoration(
-                                color: AppColors.color_F0FDF4,
-                                borderRadius: BorderRadius.circular(360)),
-                            child: Text(
-                              "+12% vs last month",
-                              style: TextStyle(
-                                color: AppColors.color_16A34A,
-                                fontSize: AppFontStyles.fontSize_10,
-                                fontFamily: AppFontStyles.urbanistFontFamily,
-                                fontVariations: [
-                                  AppFontStyles.boldFontVariation
-                                ],
+                          Builder(builder: (context) {
+                            final vsLastMonth =
+                                state.analyticsData?['vsLastMonth'] ?? 0;
+                            final isPositive = vsLastMonth >= 0;
+                            final color = isPositive
+                                ? AppColors.color_16A34A
+                                : AppColors.redAccent;
+                            final bgColor = isPositive
+                                ? AppColors.color_F0FDF4
+                                : AppColors.redAccent.withOpacity(0.1);
+                            final sign = isPositive ? "+" : "";
+
+                            return Container(
+                              padding: EdgeInsets.symmetric(
+                                  horizontal: 8.w, vertical: 2.h),
+                              decoration: BoxDecoration(
+                                  color: bgColor,
+                                  borderRadius: BorderRadius.circular(360)),
+                              child: Text(
+                                "$sign$vsLastMonth% vs last ${state.isMonthlySelected ? 'month' : 'year'}",
+                                style: TextStyle(
+                                  color: color,
+                                  fontSize: AppFontStyles.fontSize_10,
+                                  fontFamily: AppFontStyles.urbanistFontFamily,
+                                  fontVariations: [
+                                    AppFontStyles.boldFontVariation
+                                  ],
+                                ),
                               ),
-                            ),
-                          ),
+                            );
+                          }),
                         ],
                       ),
                     ],
@@ -773,7 +881,7 @@ class _DataNAnalyticsScreenState extends State<DataNAnalyticsScreen> {
                     data: myData,
                     chartHeight: 192.h,
                     barWidth: 60.w,
-                    maxValue: 100,
+                    maxValue: maxWeeklyValue,
                   ),
                   SizedBox(
                     height: 16.h,
@@ -792,112 +900,133 @@ class _DataNAnalyticsScreenState extends State<DataNAnalyticsScreen> {
   }
 
   Widget buildHabitConsistencyCard() {
-    return Container(
-      decoration: BoxDecoration(
-        color: AppColors.white,
-        borderRadius: BorderRadius.circular(AppDimensions.dim12.r),
-        border: Border.all(color: AppColors.color_136DEC0D),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.black40,
-            offset: const Offset(0, 1),
-            blurRadius: 10,
-            spreadRadius: 0,
-          ),
-        ],
-      ),
-      padding: EdgeInsets.symmetric(
-          vertical: AppDimensions.dim16.h, horizontal: AppDimensions.dim24.w),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Container(
-                alignment: Alignment.topLeft,
-                child: Text(
-                  "Habit Consistency",
-                  style: TextStyle(
-                    color: AppColors.bluegray,
-                    fontSize: AppFontStyles.fontSize_18,
-                    fontFamily: AppFontStyles.urbanistFontFamily,
-                    fontVariations: [AppFontStyles.boldFontVariation],
-                  ),
-                ),
-              ),
-              Container(
-                padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 2.h),
-                decoration: BoxDecoration(
-                    color: AppColors.color_136DEC.withOpacity(.1),
-                    borderRadius: BorderRadius.circular(4)),
-                child: Text(
-                  "Elite Tier",
-                  style: TextStyle(
-                    color: AppColors.color_136DEC,
-                    fontSize: AppFontStyles.fontSize_10,
-                    fontFamily: AppFontStyles.urbanistFontFamily,
-                    fontVariations: [AppFontStyles.boldFontVariation],
-                  ),
-                ),
+    return BlocBuilder<DataAnalyticsCubit, DataAnalyticsState>(
+      builder: (context, state) {
+        final habit = state.analyticsData?['habitConsistency'];
+        final efficiency = habit?['efficiency']?.toString() ?? '0';
+        final streak = habit?['streak']?.toString() ?? '0';
+        final insight =
+            habit?['insight'] as String? ?? 'Keep up your hydration habits!';
+        final percentage =
+            state.analyticsData?['monthlyIntake']?['percentage'] ?? 0;
+        final tierLabel = percentage >= 80
+            ? 'Elite Tier'
+            : percentage >= 60
+                ? 'Good'
+                : 'Improving';
+
+        return Container(
+          decoration: BoxDecoration(
+            color: AppColors.white,
+            borderRadius: BorderRadius.circular(AppDimensions.dim12.r),
+            border: Border.all(color: AppColors.color_136DEC0D),
+            boxShadow: [
+              BoxShadow(
+                color: AppColors.black40,
+                offset: const Offset(0, 1),
+                blurRadius: 10,
+                spreadRadius: 0,
               ),
             ],
           ),
-          SizedBox(
-            height: 16.h,
-          ),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          padding: EdgeInsets.symmetric(
+              vertical: AppDimensions.dim16.h,
+              horizontal: AppDimensions.dim24.w),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              Expanded(
-                child: buildConsistencyWidget(isStreak: false, value: "92"),
-              ),
-              SizedBox(width: 16.w),
-              Expanded(
-                child: buildConsistencyWidget(isStreak: true, value: "18"),
-              ),
-            ],
-          ),
-          SizedBox(
-            height: 8.h,
-          ),
-          Divider(
-            color: AppColors.color_F8FAFC,
-          ),
-          SizedBox(
-            height: 8.h,
-          ),
-          Row(
-            children: [
-              Container(
-                decoration: BoxDecoration(
-                    shape: BoxShape.circle, color: AppColors.color_EFF6FF),
-                width: 32.w,
-                height: 32.h,
-                child: Icon(
-                  Icons.lightbulb_rounded,
-                  color: AppColors.color_136DEC,
-                  size: 18,
-                ),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Container(
+                    alignment: Alignment.topLeft,
+                    child: Text(
+                      "Habit Consistency",
+                      style: TextStyle(
+                        color: AppColors.bluegray,
+                        fontSize: AppFontStyles.fontSize_18,
+                        fontFamily: AppFontStyles.urbanistFontFamily,
+                        fontVariations: [AppFontStyles.boldFontVariation],
+                      ),
+                    ),
+                  ),
+                  Container(
+                    padding:
+                        EdgeInsets.symmetric(horizontal: 8.w, vertical: 2.h),
+                    decoration: BoxDecoration(
+                        color: AppColors.color_136DEC.withOpacity(.1),
+                        borderRadius: BorderRadius.circular(4)),
+                    child: Text(
+                      tierLabel,
+                      style: TextStyle(
+                        color: AppColors.color_136DEC,
+                        fontSize: AppFontStyles.fontSize_10,
+                        fontFamily: AppFontStyles.urbanistFontFamily,
+                        fontVariations: [AppFontStyles.boldFontVariation],
+                      ),
+                    ),
+                  ),
+                ],
               ),
               SizedBox(
-                width: 12.w,
+                height: 16.h,
               ),
-              Expanded(
-                child: Text(
-                  "Most off-slot drinking happens at 11PM. Try hydrating more during dinner.",
-                  style: TextStyle(
-                    color: AppColors.color_4D758B,
-                    fontSize: AppFontStyles.fontSize_12,
-                    fontFamily: AppFontStyles.urbanistFontFamily,
-                    fontVariations: [AppFontStyles.regularFontVariation],
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: buildConsistencyWidget(
+                        isStreak: false, value: efficiency),
                   ),
-                ),
+                  SizedBox(width: 16.w),
+                  Expanded(
+                    child:
+                        buildConsistencyWidget(isStreak: true, value: streak),
+                  ),
+                ],
+              ),
+              SizedBox(
+                height: 8.h,
+              ),
+              Divider(
+                color: AppColors.color_F8FAFC,
+              ),
+              SizedBox(
+                height: 8.h,
+              ),
+              Row(
+                children: [
+                  Container(
+                    decoration: BoxDecoration(
+                        shape: BoxShape.circle, color: AppColors.color_EFF6FF),
+                    width: 32.w,
+                    height: 32.h,
+                    child: Icon(
+                      Icons.lightbulb_rounded,
+                      color: AppColors.color_136DEC,
+                      size: 18,
+                    ),
+                  ),
+                  SizedBox(
+                    width: 12.w,
+                  ),
+                  Expanded(
+                    child: Text(
+                      insight,
+                      style: TextStyle(
+                        color: AppColors.color_4D758B,
+                        fontSize: AppFontStyles.fontSize_12,
+                        fontFamily: AppFontStyles.urbanistFontFamily,
+                        fontVariations: [AppFontStyles.regularFontVariation],
+                      ),
+                    ),
+                  )
+                ],
               )
             ],
-          )
-        ],
-      ),
+          ),
+        );
+      },
     );
   }
 
@@ -1065,8 +1194,8 @@ class _DataNAnalyticsScreenState extends State<DataNAnalyticsScreen> {
     );
   }
 
-  void showExportBottomSheet(BuildContext context) {
-    showModalBottomSheet(
+  Future<void> showExportBottomSheet(BuildContext context) async {
+    await showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent, // IMPORTANT
@@ -1136,8 +1265,53 @@ class _DataNAnalyticsScreenState extends State<DataNAnalyticsScreen> {
                     ),
                     SizedBox(height: 17.h),
                     GestureDetector(
-                      onTap: () {
-                        ////TODO : Save the current screenshot as JPG
+                      onTap: () async {
+                        try {
+                          final RenderBox? box =
+                              context.findRenderObject() as RenderBox?;
+                          final Rect? shareRect = box != null
+                              ? box.localToGlobal(Offset.zero) & box.size
+                              : null;
+
+                          // 1. Hide buttons for screenshot
+                          setState(() => _isCapturing = true);
+
+                          // 2. Short delay to ensure UI rebuilds
+                          await Future.delayed(
+                              const Duration(milliseconds: 100));
+
+                          final Uint8List? imageBytes =
+                              await screenshotController.capture(
+                            pixelRatio: 2.0,
+                          );
+
+                          // 3. Show buttons back
+                          setState(() => _isCapturing = false);
+
+                          if (imageBytes != null) {
+                            final directory =
+                                await getApplicationDocumentsDirectory();
+                            final imagePath =
+                                await File('${directory.path}/analytics.jpg')
+                                    .create();
+                            await imagePath.writeAsBytes(imageBytes);
+
+                            await Share.shareXFiles(
+                              [XFile(imagePath.path)],
+                              text: 'Check out my hydration analytics!',
+                              sharePositionOrigin: shareRect,
+                            );
+                          }
+                        } catch (e) {
+                          setState(() => _isCapturing = false);
+                          debugPrint("Error capturing screenshot: $e");
+                          if (mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                  content: Text("Failed to export JPG")),
+                            );
+                          }
+                        }
                       },
                       child: Container(
                         padding: EdgeInsets.symmetric(
@@ -1211,8 +1385,19 @@ class _DataNAnalyticsScreenState extends State<DataNAnalyticsScreen> {
                     ),
                     SizedBox(height: 17.h),
                     GestureDetector(
-                      onTap: () {
-                        ////TODO : Download and save current screenshot as PDF
+                      onTap: () async {
+                        final cubitState =
+                            context.read<DataAnalyticsCubit>().state;
+                        final data = cubitState.analyticsData;
+                        if (data == null) return;
+                        Navigator.of(context).pop();
+                        await AnalyticsPdfService.generateAndShare(
+                          analyticsData: data,
+                          year: cubitState.selectedYear,
+                          month: cubitState.isMonthlySelected
+                              ? cubitState.selectedMonth
+                              : null,
+                        );
                       },
                       child: Container(
                         padding: EdgeInsets.symmetric(
@@ -1340,281 +1525,297 @@ class _DataNAnalyticsScreenState extends State<DataNAnalyticsScreen> {
   }
 
   Widget buildEliteSmartInsights() {
-    return Container(
-      padding: EdgeInsets.all(AppDimensions.dim20.w),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(AppDimensions.dim15.w),
-        color: AppColors.color_369FFF,
-      ),
-      child: Column(
-        children: [
-          Row(
+    return BlocBuilder<DataAnalyticsCubit, DataAnalyticsState>(
+      builder: (context, state) {
+        final insights = state.analyticsData?['eliteSmartInsights'];
+        final title = insights?['title'] as String? ?? 'Keep Going!';
+        final description = insights?['description'] as String? ??
+            'Stay consistent with your hydration habits.';
+        final optimalWindow = insights?['optimalWindow'] as String? ?? '--:--';
+
+        return Container(
+          padding: EdgeInsets.all(AppDimensions.dim20.w),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(AppDimensions.dim15.w),
+            color: AppColors.color_369FFF,
+          ),
+          child: Column(
             children: [
-              Container(
-                height: AppDimensions.dim32.h,
-                width: AppDimensions.dim32.h,
-                decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: AppColors.white.withOpacity(.1)),
-                child: Icon(
-                  Icons.lightbulb_rounded,
-                  size: 20.w,
-                  color: AppColors.white,
+              Row(
+                children: [
+                  Container(
+                    height: AppDimensions.dim32.h,
+                    width: AppDimensions.dim32.h,
+                    decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: AppColors.white.withOpacity(.1)),
+                    child: Icon(
+                      Icons.lightbulb_rounded,
+                      size: 20.w,
+                      color: AppColors.white,
+                    ),
+                  ),
+                  SizedBox(
+                    width: AppDimensions.dim12.w,
+                  ),
+                  Text(
+                    "Elite Smart Insights",
+                    style: TextStyle(
+                      color: AppColors.white,
+                      fontFamily: AppFontStyles.urbanistFontFamily,
+                      fontSize: AppFontStyles.fontSize_16,
+                      fontVariations: [AppFontStyles.boldFontVariation],
+                    ),
+                  )
+                ],
+              ),
+              SizedBox(
+                height: AppDimensions.dim11.h,
+              ),
+              RichText(
+                text: TextSpan(
+                  style: TextStyle(
+                    color: AppColors.white,
+                    fontFamily: AppFontStyles.urbanistFontFamily,
+                    fontSize: AppFontStyles.fontSize_14,
+                    fontVariations: [AppFontStyles.regularFontVariation],
+                    height: 1.625,
+                  ),
+                  children: [
+                    TextSpan(text: 'Your hydration consistency is '),
+                    TextSpan(
+                      text: title,
+                      style: TextStyle(
+                          color: AppColors.white,
+                          fontFamily: AppFontStyles.urbanistFontFamily,
+                          fontSize: AppFontStyles.fontSize_14,
+                          fontVariations: [AppFontStyles.boldFontVariation],
+                          decoration: TextDecoration.underline,
+                          decorationColor: AppColors.white),
+                    ),
+                    TextSpan(text: '.\n$description'),
+                  ],
                 ),
               ),
               SizedBox(
-                width: AppDimensions.dim12.w,
+                height: AppDimensions.dim11.h,
               ),
-              Text(
-                "Elite Smart Insights",
-                style: TextStyle(
-                  color: AppColors.white,
-                  fontFamily: AppFontStyles.urbanistFontFamily,
-                  fontSize: AppFontStyles.fontSize_16,
-                  fontVariations: [AppFontStyles.boldFontVariation],
+              Container(
+                padding: EdgeInsets.all(AppDimensions.dim12.w),
+                decoration: BoxDecoration(
+                  color: AppColors.white.withOpacity(.1),
+                  borderRadius: BorderRadius.circular(
+                    AppDimensions.dim8,
+                  ),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      "Optimal Window: $optimalWindow",
+                      style: TextStyle(
+                        color: AppColors.white,
+                        fontFamily: AppFontStyles.urbanistFontFamily,
+                        fontSize: AppFontStyles.fontSize_12,
+                        fontVariations: [AppFontStyles.boldFontVariation],
+                      ),
+                    ),
+                    Icon(
+                      Icons.trending_up,
+                      size: AppDimensions.dim15.w,
+                      color: AppColors.white,
+                    )
+                  ],
                 ),
               )
             ],
           ),
-          SizedBox(
-            height: AppDimensions.dim11.h,
-          ),
-          RichText(
-            text: TextSpan(
-              style: TextStyle(
-                color: AppColors.white,
-                fontFamily: AppFontStyles.urbanistFontFamily,
-                fontSize: AppFontStyles.fontSize_14,
-                fontVariations: [AppFontStyles.regularFontVariation],
-                height: 1.625,
-              ),
-              children: [
-                TextSpan(text: 'Your hydration consistency is '),
-                TextSpan(
-                  text: 'Peak Performing',
-                  style: TextStyle(
-                      color: AppColors.white,
-                      fontFamily: AppFontStyles.urbanistFontFamily,
-                      fontSize: AppFontStyles.fontSize_14,
-                      fontVariations: [AppFontStyles.boldFontVariation],
-                      decoration: TextDecoration.underline,
-                      decorationColor: AppColors.white),
-                ),
-                const TextSpan(
-                  text:
-                      '.\nMorning intake is up by 14%, significantly reducing mid-day fatigue markers.',
-                ),
-              ],
-            ),
-          ),
-          SizedBox(
-            height: AppDimensions.dim11.h,
-          ),
-          Container(
-            padding: EdgeInsets.all(AppDimensions.dim12.w),
-            decoration: BoxDecoration(
-              color: AppColors.white.withOpacity(.1),
-              borderRadius: BorderRadius.circular(
-                AppDimensions.dim8,
-              ),
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  "Optimal Window: 08:00 - 11:30",
-                  style: TextStyle(
-                    color: AppColors.white,
-                    fontFamily: AppFontStyles.urbanistFontFamily,
-                    fontSize: AppFontStyles.fontSize_12,
-                    fontVariations: [AppFontStyles.boldFontVariation],
-                  ),
-                ),
-                Icon(
-                  Icons.trending_up,
-                  size: AppDimensions.dim15.w,
-                  color: AppColors.white,
-                )
-              ],
-            ),
-          )
-        ],
-      ),
+        );
+      },
     );
   }
 
   Widget buildHistoricalTrends() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          "Historical Trends",
-          style: TextStyle(
-            color: AppColors.color_4D758B,
-            fontFamily: AppFontStyles.urbanistFontFamily,
-            fontSize: AppFontStyles.fontSize_18,
-            fontVariations: [AppFontStyles.boldFontVariation],
-          ),
-        ),
-        SizedBox(
-          height: 8.h,
-        ),
-        Container(
-          padding: EdgeInsets.all(AppDimensions.dim16.w),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(AppDimensions.dim15.w),
-            boxShadow: [
-              BoxShadow(
-                color: const Color(0x40000000),
-                offset: const Offset(0, 2),
-                blurRadius: 10.0,
-                spreadRadius: 0.0,
+    return BlocBuilder<DataAnalyticsCubit, DataAnalyticsState>(
+      builder: (context, state) {
+        final trends = state.analyticsData?['historicalTrends'];
+        final avgDaily = trends != null ? "${trends['averageDaily']}L" : "0.0L";
+        final peakStreak =
+            trends != null ? "${trends['peakStreak']} Days" : "0 Days";
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              "Historical Trends",
+              style: TextStyle(
+                color: AppColors.color_4D758B,
+                fontFamily: AppFontStyles.urbanistFontFamily,
+                fontSize: AppFontStyles.fontSize_18,
+                fontVariations: [AppFontStyles.boldFontVariation],
               ),
-            ],
-            border: Border.all(
-              color: AppColors.color_F1F5F9,
-              width: AppDimensions.dim1.w,
             ),
-          ),
-          child: Row(
-            children: [
-              Container(
-                height: AppDimensions.dim40.h,
-                width: AppDimensions.dim40.h,
-                decoration: BoxDecoration(
-                    shape: BoxShape.circle, color: AppColors.color_F8FAFC),
-                child: Icon(
-                  Icons.water_drop_outlined,
-                  size: 20.w,
-                  color: AppColors.color_136DEC,
+            SizedBox(
+              height: 8.h,
+            ),
+            Container(
+              padding: EdgeInsets.all(AppDimensions.dim16.w),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(AppDimensions.dim15.w),
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0x40000000),
+                    offset: const Offset(0, 2),
+                    blurRadius: 10.0,
+                    spreadRadius: 0.0,
+                  ),
+                ],
+                border: Border.all(
+                  color: AppColors.color_F1F5F9,
+                  width: AppDimensions.dim1.w,
                 ),
               ),
-              SizedBox(
-                width: AppDimensions.dim16.w,
-              ),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+              child: Row(
                 children: [
+                  Container(
+                    height: AppDimensions.dim40.h,
+                    width: AppDimensions.dim40.h,
+                    decoration: BoxDecoration(
+                        shape: BoxShape.circle, color: AppColors.color_F8FAFC),
+                    child: Icon(
+                      Icons.water_drop_outlined,
+                      size: 20.w,
+                      color: AppColors.color_136DEC,
+                    ),
+                  ),
+                  SizedBox(
+                    width: AppDimensions.dim16.w,
+                  ),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        "Average Daily",
+                        style: TextStyle(
+                          color: AppColors.color_4D758B,
+                          fontFamily: AppFontStyles.urbanistFontFamily,
+                          fontSize: AppFontStyles.fontSize_18,
+                          fontVariations: [
+                            AppFontStyles.boldFontVariation,
+                          ],
+                        ),
+                      ),
+                      Text(
+                        "Based on last 30 days",
+                        style: TextStyle(
+                          color: AppColors.color_4D758B,
+                          fontFamily: AppFontStyles.urbanistFontFamily,
+                          fontSize: AppFontStyles.fontSize_12,
+                          fontVariations: [
+                            AppFontStyles.regularFontVariation,
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  Spacer(),
                   Text(
-                    "Average Daily",
+                    avgDaily,
                     style: TextStyle(
                       color: AppColors.color_4D758B,
                       fontFamily: AppFontStyles.urbanistFontFamily,
                       fontSize: AppFontStyles.fontSize_18,
                       fontVariations: [
-                        AppFontStyles.boldFontVariation,
-                      ],
-                    ),
-                  ),
-                  Text(
-                    "Based on last 30 days",
-                    style: TextStyle(
-                      color: AppColors.color_4D758B,
-                      fontFamily: AppFontStyles.urbanistFontFamily,
-                      fontSize: AppFontStyles.fontSize_12,
-                      fontVariations: [
-                        AppFontStyles.regularFontVariation,
+                        AppFontStyles.fontWeightVariation600,
                       ],
                     ),
                   ),
                 ],
               ),
-              Spacer(),
-              Text(
-                "2.1L",
-                style: TextStyle(
-                  color: AppColors.color_4D758B,
-                  fontFamily: AppFontStyles.urbanistFontFamily,
-                  fontSize: AppFontStyles.fontSize_18,
-                  fontVariations: [
-                    AppFontStyles.fontWeightVariation600,
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-        SizedBox(
-          height: 8.h,
-        ),
-        Container(
-          padding: EdgeInsets.all(AppDimensions.dim16.w),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(AppDimensions.dim15.w),
-            boxShadow: [
-              BoxShadow(
-                color: const Color(0x40000000),
-                offset: const Offset(0, 2),
-                blurRadius: 10.0,
-                spreadRadius: 0.0,
-              ),
-            ],
-            border: Border.all(
-              color: AppColors.color_F1F5F9,
-              width: AppDimensions.dim1.w,
             ),
-          ),
-          child: Row(
-            children: [
-              Container(
-                height: AppDimensions.dim40.h,
-                width: AppDimensions.dim40.h,
-                decoration: BoxDecoration(
-                    shape: BoxShape.circle, color: AppColors.color_F8FAFC),
-                child: Icon(
-                  Icons.water_drop_outlined,
-                  size: 20.w,
-                  color: AppColors.color_136DEC,
+            SizedBox(
+              height: 8.h,
+            ),
+            Container(
+              padding: EdgeInsets.all(AppDimensions.dim16.w),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(AppDimensions.dim15.w),
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0x40000000),
+                    offset: const Offset(0, 2),
+                    blurRadius: 10.0,
+                    spreadRadius: 0.0,
+                  ),
+                ],
+                border: Border.all(
+                  color: AppColors.color_F1F5F9,
+                  width: AppDimensions.dim1.w,
                 ),
               ),
-              SizedBox(
-                width: AppDimensions.dim16.w,
-              ),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+              child: Row(
                 children: [
+                  Container(
+                    height: AppDimensions.dim40.h,
+                    width: AppDimensions.dim40.h,
+                    decoration: BoxDecoration(
+                        shape: BoxShape.circle, color: AppColors.color_F8FAFC),
+                    child: Icon(
+                      Icons.bolt_rounded,
+                      size: 20.w,
+                      color: AppColors.color_136DEC,
+                    ),
+                  ),
+                  SizedBox(
+                    width: AppDimensions.dim16.w,
+                  ),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        "Peak Streak",
+                        style: TextStyle(
+                          color: AppColors.color_4D758B,
+                          fontFamily: AppFontStyles.urbanistFontFamily,
+                          fontSize: AppFontStyles.fontSize_18,
+                          fontVariations: [
+                            AppFontStyles.boldFontVariation,
+                          ],
+                        ),
+                      ),
+                      Text(
+                        "Goal met consecutive days",
+                        style: TextStyle(
+                          color: AppColors.color_4D758B,
+                          fontFamily: AppFontStyles.urbanistFontFamily,
+                          fontSize: AppFontStyles.fontSize_12,
+                          fontVariations: [
+                            AppFontStyles.regularFontVariation,
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  Spacer(),
                   Text(
-                    "Peak Streak",
+                    peakStreak,
                     style: TextStyle(
                       color: AppColors.color_4D758B,
                       fontFamily: AppFontStyles.urbanistFontFamily,
                       fontSize: AppFontStyles.fontSize_18,
                       fontVariations: [
-                        AppFontStyles.boldFontVariation,
-                      ],
-                    ),
-                  ),
-                  Text(
-                    "Goal met consecutive days",
-                    style: TextStyle(
-                      color: AppColors.color_4D758B,
-                      fontFamily: AppFontStyles.urbanistFontFamily,
-                      fontSize: AppFontStyles.fontSize_12,
-                      fontVariations: [
-                        AppFontStyles.regularFontVariation,
+                        AppFontStyles.fontWeightVariation600,
                       ],
                     ),
                   ),
                 ],
               ),
-              Spacer(),
-              Text(
-                "18 Days",
-                style: TextStyle(
-                  color: AppColors.color_4D758B,
-                  fontFamily: AppFontStyles.urbanistFontFamily,
-                  fontSize: AppFontStyles.fontSize_18,
-                  fontVariations: [
-                    AppFontStyles.fontWeightVariation600,
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
+            ),
+          ],
+        );
+      },
     );
   }
 

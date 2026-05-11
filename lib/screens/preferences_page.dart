@@ -271,6 +271,8 @@ class PreferencesPage extends StatelessWidget {
                                               .sendResetCommandWithStateCheck();
                                           await DatabaseHelper()
                                               .clearAppMetadata();
+                                          await DatabaseHelper()
+                                              .clearHydrationLogs();
 
                                           SharedPrefsHelper
                                               .updateAndSaveDeviceConfig();

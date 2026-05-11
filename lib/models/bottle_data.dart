@@ -4,7 +4,7 @@ class BottleData {
   final double liquidVolume;
   final int liquidPercent;
   final int battery;
-  final int refills;
+  final double refills;
   final double temp;
   final double bqTemp;
   final DateTime timestamp;
@@ -36,7 +36,7 @@ class BottleData {
       liquidVolume: map['liquidVolume'] as double,
       liquidPercent: map['liquidPercent'] as int,
       battery: map['battery'] as int,
-      refills: map['refills'] as int? ?? 0,
+      refills: (map['refills'] as num?)?.toDouble() ?? 0.0,
       temp: map['temp'] as double? ?? 0,
       bqTemp: map['bqTemp'] as double? ?? 0,
       timestamp: DateTime.parse(map['timestamp'] as String),
@@ -54,7 +54,7 @@ List<BottleData> generateDummyWeeklyData() {
       liquidVolume: random.nextDouble() * 1000, // ml (0–1000ml)
       liquidPercent: random.nextInt(101), // 0–100%
       battery: 50 + random.nextInt(51), // 50–100%
-      refills: random.nextInt(5),
+      refills: 1.0 + random.nextInt(4),
       temp: random.nextInt(30).toDouble(), // 0–30°C
       bqTemp: random.nextInt(30).toDouble(), // 0–30°C
       timestamp: date,
@@ -73,7 +73,7 @@ List<BottleData> generateDummyMonthlyData() {
       liquidVolume: random.nextDouble() * 1000,
       liquidPercent: random.nextInt(101),
       battery: 40 + random.nextInt(61),
-      refills: random.nextInt(5),
+      refills: 1.0 + random.nextInt(4),
       temp: random.nextInt(30).toDouble(), // 0–30°C
       bqTemp: random.nextInt(30).toDouble(), // 0–30°C
       timestamp: date,

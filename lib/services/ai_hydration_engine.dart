@@ -85,40 +85,44 @@ class AiHydrationEngine {
 
     // ------------------------------------------------------------------
     // Step B3: Caffeine adjustment  Cadj = caffeine(mg) × 2.0 ml
-    // Calculated from user's coffee and tea intake preferences.
+    // Prioritize today's manual logs, fallback to user preferences.
     // ------------------------------------------------------------------
-    final userInfo = await DatabaseHelper().getUserInfo();
-    double caffeineMg = 0.0;
-    if (userInfo != null) {
-      // 1 Cup = 200ml.
-      // Standard caffeine: Coffee ~80mg/200ml, Tea ~40mg/200ml.
-      switch (userInfo.coffeeIntake) {
-        case BeverageIntake.oneToTwo:
-          caffeineMg += 1.5 * 80;
-          break;
-        case BeverageIntake.threeToFour:
-          caffeineMg += 3.5 * 80;
-          break;
-        case BeverageIntake.fivePlus:
-          caffeineMg += 5.0 * 80;
-          break;
-        case BeverageIntake.none:
-        default:
-          break;
-      }
-      switch (userInfo.teaIntake) {
-        case BeverageIntake.oneToTwo:
-          caffeineMg += 1.5 * 40;
-          break;
-        case BeverageIntake.threeToFour:
-          caffeineMg += 3.5 * 40;
-          break;
-        case BeverageIntake.fivePlus:
-          caffeineMg += 5.0 * 40;
-          break;
-        case BeverageIntake.none:
-        default:
-          break;
+    double caffeineMg = await DatabaseHelper().getTodayBeverageCaffeine();
+
+    // If no manual logs for today, use fallback from userInfo preferences
+    if (caffeineMg == 0.0) {
+      final userInfo = await DatabaseHelper().getUserInfo();
+      if (userInfo != null) {
+        // 1 Cup = 200ml.
+        // Standard caffeine: Coffee ~80mg/200ml, Tea ~40mg/200ml.
+        switch (userInfo.coffeeIntake) {
+          case BeverageIntake.oneToTwo:
+            caffeineMg += 1.5 * 80;
+            break;
+          case BeverageIntake.threeToFour:
+            caffeineMg += 3.5 * 80;
+            break;
+          case BeverageIntake.fivePlus:
+            caffeineMg += 5.0 * 80;
+            break;
+          case BeverageIntake.none:
+          default:
+            break;
+        }
+        switch (userInfo.teaIntake) {
+          case BeverageIntake.oneToTwo:
+            caffeineMg += 1.5 * 40;
+            break;
+          case BeverageIntake.threeToFour:
+            caffeineMg += 3.5 * 40;
+            break;
+          case BeverageIntake.fivePlus:
+            caffeineMg += 5.0 * 40;
+            break;
+          case BeverageIntake.none:
+          default:
+            break;
+        }
       }
     }
 

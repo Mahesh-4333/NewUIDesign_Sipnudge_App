@@ -154,4 +154,15 @@ class AssetsPath {
   static const String increaseAi = "assets/ai_goal/increase.png";
   static const String dicreaseAi = "assets/ai_goal/decrease.png";
   static const String healthTip = "assets/ai_goal/health_tip.png";
+
+  static const String hyderationSlot = "assets/ai_goal/hyderation_slot.png";
+  static const String meetingOverlap = "assets/ai_goal/meeting_overlap.png";
+  static const String syncCalendar = "assets/ai_goal/sync_calendar.png";
+
+  static const String awCoffee = "assets/aw_coffe.png";
+  static const String awWater = "assets/aw_water.png";
+  static const String awJuice = "assets/aw_juice.png";
+  static const String awTea = "assets/aw_tea.png";
+  static const String awGlass = "assets/aw_glass.png";
+  static const String awMilk = "assets/aw_milk.png";
 }

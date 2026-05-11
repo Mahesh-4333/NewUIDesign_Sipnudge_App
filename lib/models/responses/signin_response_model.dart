@@ -57,6 +57,7 @@ class Data {
 }
 
 class UserDetails {
+  String? id;
   String? gender;
   String? firstName;
   String? lastName;
@@ -85,6 +86,7 @@ class UserDetails {
   bool? hasBiometrics;
 
   UserDetails({
+    this.id,
     this.gender,
     this.firstName,
     this.lastName,
@@ -114,6 +116,7 @@ class UserDetails {
   });
 
   factory UserDetails.fromJson(Map<String, dynamic> json) => UserDetails(
+        id: json["_id"] ?? json["id"],
         gender: json["gender"],
         firstName: json["first_name"],
         lastName: json["last_name"],
@@ -143,6 +146,7 @@ class UserDetails {
       );
 
   Map<String, dynamic> toJson() => {
+        "_id": id,
         "gender": gender,
         "first_name": firstName,
         "last_name": lastName,

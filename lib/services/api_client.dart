@@ -11,7 +11,7 @@ class ApiClient {
 
   ApiClient._internal() {
     BaseOptions options = BaseOptions(
-      baseUrl: 'http://3.110.103.187:8080/api/v1/',
+      baseUrl: 'https://api.sipnudge.com/',
       connectTimeout: const Duration(seconds: 10),
       receiveTimeout: const Duration(seconds: 10),
       sendTimeout: const Duration(seconds: 10),
@@ -28,6 +28,15 @@ class ApiClient {
       error: true,
       compact: true,
       maxWidth: 90,
+    ));
+
+    dio.interceptors.add(LogInterceptor(
+      request: true,
+      requestHeader: true,
+      requestBody: true,
+      responseHeader: true,
+      responseBody: true,
+      error: true,
     ));
 
     dio.interceptors.add(InterceptorsWrapper(

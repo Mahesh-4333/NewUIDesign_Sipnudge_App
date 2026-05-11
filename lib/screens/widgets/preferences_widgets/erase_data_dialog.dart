@@ -309,39 +309,67 @@ class _EraseDataDialogState extends State<EraseDataDialog> {
               ),
               SizedBox(height: 20.h),
 
-              // Cancel Button
-              GestureDetector(
-                onTap: () {
-                  _timer?.cancel();
-                  Navigator.pop(context);
-                },
-                child: Container(
-                  padding: EdgeInsets.only(
-                      bottom: 1.h), // Adds space between text and underline
-                  decoration: BoxDecoration(
-                    border: Border(
-                      bottom: BorderSide(
+                // Cancel Button
+                GestureDetector(
+                  onTap: () {
+                    _timer?.cancel();
+                    Navigator.pop(context);
+                  },
+                  child: Container(
+                    padding: EdgeInsets.only(
+                        bottom: 1.h), // Adds space between text and underline
+                    decoration: BoxDecoration(
+                      border: Border(
+                        bottom: BorderSide(
+                          color: AppColors.bluegray,
+                          width: 1.0,
+                        ),
+                      ),
+                    ),
+                    child: Text(
+                      "Cancel Action",
+                      style: TextStyle(
                         color: AppColors.bluegray,
-                        width: 1.0,
+                        fontSize: 15.sp,
+                        fontFamily: AppFontStyles.urbanistFontFamily,
+                        fontVariations: [AppFontStyles.semiBoldFontVariation],
                       ),
                     ),
                   ),
-                  child: Text(
-                    "Cancel Action",
-                    style: TextStyle(
-                      color: AppColors.bluegray,
-                      fontSize: 15.sp,
-                      fontFamily: AppFontStyles.urbanistFontFamily,
-                      fontVariations: [AppFontStyles.semiBoldFontVariation],
-                    ),
-                  ),
                 ),
-              ),
-              SizedBox(height: 10.h),
-            ],
+                SizedBox(height: 10.h),
+              ],
+            ),
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildErasedDataItem(IconData icon, String text) {
+    return Padding(
+      padding: EdgeInsets.only(bottom: 12.h),
+      child: Row(
+        children: [
+          Icon(
+            icon,
+            color: const Color(0xffB91C1C),
+            size: 22.sp,
+          ),
+          SizedBox(width: 15.w),
+          Expanded(
+            child: Text(
+              text,
+              style: TextStyle(
+                color: AppColors.bluegray,
+                fontSize: 16.sp,
+                fontFamily: AppFontStyles.urbanistFontFamily,
+                fontWeight: FontWeight.w600,
+                fontVariations: [AppFontStyles.boldFontVariation],
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

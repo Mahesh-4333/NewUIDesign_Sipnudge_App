@@ -53,7 +53,7 @@ class HydrationCubit extends Cubit<HydrationState> {
 
       final streak = await _dbHelper.getConsistencyStreak();
       final history = await _dbHelper.getTodayHydrationHistory();
-      
+
       emit(state.copyWith(
         entries: slotsFromDb,
         goal: dailyGoal.round(),
@@ -301,7 +301,7 @@ class HydrationCubit extends Cubit<HydrationState> {
 
     final int streak = await _dbHelper.getConsistencyStreak();
     final history = await _dbHelper.getTodayHydrationHistory();
-    
+
     // 4. Emit the updated state
     log("[HydrationCubit] Emitting state with ${currentEntries.length} entries and totalDrank $totalDrankToday",
         name: "CUBIT_DEBUG");
@@ -468,6 +468,10 @@ class HydrationCubit extends Cubit<HydrationState> {
     } catch (e) {
       log("ERROR in refreshAchievementStats: $e");
     }
+  }
+
+  void setGoal(int goal) {
+    emit(state.copyWith(goal: goal));
   }
 
   Future<void> resetUI() async {

@@ -17,32 +17,37 @@ class GoogleCalendarManager {
 
   static const _logTag = '[GoogleCalendarManager]';
 
-  /// Google Sign-In with Calendar scope
+  /// Google Sign-In with Calendar scopes
   final GoogleSignIn _googleSignIn = GoogleSignIn(
     scopes: const [
       'https://www.googleapis.com/auth/calendar.readonly',
+      'https://www.googleapis.com/auth/calendar.events.readonly',
     ],
   );
 
+  bool _isSignedIn = false;
   GoogleSignInAccount? _currentUser;
 
   /// Ensures the user is signed in
   Future<bool> ensureSignedIn() async {
     try {
-      debugPrint('$_logTag ensureSignedIn() called');
+    // If already signed in, no need to sign in again
+    if (_isSignedIn && _currentUser != null) {
+      debugPrint('$_logTag Already signed in, skipping sign-in');
+      return true;
+    }
 
-      _currentUser ??= await _googleSignIn.signInSilently();
-      debugPrint(
-        '$_logTag Silent sign-in result: ${_currentUser?.email}',
-      );
+    // Try silent sign‑in first; if that fails, fall back to interactive sign‑in which will request the required scopes
+    _currentUser ??= await _googleSignIn.signInSilently();
+    if (_currentUser == null) {
+      _currentUser = await _googleSignIn.signIn();
+    }
 
-      _currentUser ??= await _googleSignIn.signIn();
-      debugPrint(
-        '$_logTag Interactive sign-in result: ${_currentUser?.email}',
-      );
-
-      final isSignedIn = _currentUser != null;
-      debugPrint('$_logTag Signed in: $isSignedIn');
+    final isSignedIn = _currentUser != null;
+    if (isSignedIn) {
+      _isSignedIn = true;
+    }
+    debugPrint('$_logTag Signed in: $isSignedIn');
 
       return isSignedIn;
     } catch (e, s) {
@@ -85,7 +90,10 @@ class GoogleCalendarManager {
     debugPrint(
       '$_logTag Calendar API status: ${response.statusCode}',
     );
-    Console.log(tag: "APP", value: "=-=-=-=-=-=-=-=-=-=-=- response is ${response.body} =-=-=-=-=-=-=-=-=-=-=-");
+    Console.log(
+        tag: "APP",
+        value:
+            "=-=-=-=-=-=-=-=-=-=-=- response is ${response.body} =-=-=-=-=-=-=-=-=-=-=-");
 
     if (response.statusCode != 200) {
       debugPrint(
@@ -148,7 +156,8 @@ class GoogleCalendarManager {
 
     final response = await http.get(uri, headers: authHeaders);
 
-    Console.log(tag: "APP", value: "📡 Response status: ${response.statusCode}");
+    Console.log(
+        tag: "APP", value: "📡 Response status: ${response.statusCode}");
     Console.log(tag: "APP", value: "📡 Raw response body:");
     Console.log(tag: "APP", value: response.body);
 
@@ -192,12 +201,18 @@ class GoogleCalendarManager {
           eventStart.isBefore(slotEnd) && eventEnd.isAfter(slotStart);
 
       Console.log(tag: "APP", value: "🔍 Overlap check:");
-      Console.log(tag: "APP", value: "    eventStart < slotEnd  → ${eventStart.isBefore(slotEnd)}");
-      Console.log(tag: "APP", value: "    eventEnd   > slotStart→ ${eventEnd.isAfter(slotStart)}");
+      Console.log(
+          tag: "APP",
+          value: "    eventStart < slotEnd  → ${eventStart.isBefore(slotEnd)}");
+      Console.log(
+          tag: "APP",
+          value: "    eventEnd   > slotStart→ ${eventEnd.isAfter(slotStart)}");
       Console.log(tag: "APP", value: "    👉 OVERLAPS = $overlaps");
 
       if (overlaps) {
-        Console.log(tag: "APP", value: "⚠️ CONFLICT FOUND with event: ${event['summary']}");
+        Console.log(
+            tag: "APP",
+            value: "⚠️ CONFLICT FOUND with event: ${event['summary']}");
         return true;
       }
     }
@@ -218,18 +233,32 @@ class GoogleCalendarManager {
       final uri = Uri.parse(
         'https://www.googleapis.com/calendar/v3/calendars/primary/events'
         '?timeMin=${start.toUtc().toIso8601String()}'
-        '&timeMax=${end.toUtc().toIso8601String()}'
-        '&singleEvents=true'
-        '&orderBy=startTime',
+        '\u0026timeMax=${end.toUtc().toIso8601String()}'
+        '\u0026singleEvents=true'
+        '\u0026orderBy=startTime',
       );
 
       final response = await http.get(uri, headers: authHeaders);
-      if (response.statusCode != 200) return [];
+
+      // Log the raw response for debugging
+      debugPrint('[$_logTag] fetchEventsForRange response status: ${response.statusCode}');
+      debugPrint('[$_logTag] fetchEventsForRange body: ${response.body}');
+
+      if (response.statusCode != 200) {
+        debugPrint('[$_logTag] Calendar API error: ${response.statusCode}');
+        return [];
+      }
 
       final data = json.decode(response.body);
-      return List<Map<String, dynamic>>.from(data['items'] ?? []);
+      final List events = data['items'] ?? [];
+      if (events.isEmpty) {
+        debugPrint('[$_logTag] No calendar events found for the requested range.');
+      } else {
+        debugPrint('[$_logTag] Retrieved ${events.length} events.');
+      }
+      return List<Map<String, dynamic>>.from(events);
     } catch (e) {
-      Console.log(tag: "APP", value: "Exception occurred in fetchingEventsForRange ${e.toString()}");
+      debugPrint('[$_logTag] Exception in fetchEventsForRange: $e');
       return [];
     }
   }
@@ -258,7 +287,10 @@ class GoogleCalendarManager {
           eventStart.isBefore(slotEnd) && eventEnd.isAfter(slotStart);
 
       if (overlaps) {
-        Console.log(tag: "APP", value: "⚠️ Local Conflict: '${event['summary']}' overlaps with slot.");
+        Console.log(
+            tag: "APP",
+            value:
+                "⚠️ Local Conflict: '${event['summary']}' overlaps with slot.");
         return true;
       }
     }
@@ -268,10 +300,12 @@ class GoogleCalendarManager {
   Future<void> signOut() async {
     try {
       debugPrint('$_logTag Signing out');
-      _currentUser = null;
-      await _googleSignIn.signOut();
+    _currentUser = null;
+    _isSignedIn = false;
+    await _googleSignIn.signOut();
     } catch (e) {
-      Console.log(tag: "APP", value: "Exception occurred in signOut ${e.toString()}");
+      Console.log(
+          tag: "APP", value: "Exception occurred in signOut ${e.toString()}");
     }
   }
 }

@@ -208,7 +208,7 @@ class AppStrings {
   static const predictiveHydration = "Predictive Hydration";
   static const adaptsToYourScheduleWeatherAndActivity =
       "Adapts to your schedule, weather, and activity";
-  static const syncsWithGoogleCalender = "Syncs with Google Calendar";
+  static const syncsWithGoogleCalendar = "Syncs with Google Calendar";
   static const smartSnoozeAndPersonalizedTips =
       "Smart snooze and personalized tips";
   static const steadySipReminder = "Steady Sip Reminder";
