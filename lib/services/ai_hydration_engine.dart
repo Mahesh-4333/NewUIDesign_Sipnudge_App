@@ -14,8 +14,8 @@ class AiHydrationResult {
   final double stepsAdjMl;
   final double temperatureC;
   final double tempAdjMl;
-  final double caffeineMg;
-  final double caffeineAdjMl;
+  final double beverageCups;
+  final double beverageAdjMl;
   final double foodWaterMl;
   final double totalGoalMl;
   final bool shouldShowDialog;
@@ -27,8 +27,8 @@ class AiHydrationResult {
     required this.stepsAdjMl,
     required this.temperatureC,
     required this.tempAdjMl,
-    required this.caffeineMg,
-    required this.caffeineAdjMl,
+    required this.beverageCups,
+    required this.beverageAdjMl,
     required this.foodWaterMl,
     required this.totalGoalMl,
     required this.shouldShowDialog,
@@ -42,8 +42,8 @@ class AiHydrationResult {
         'steps_adj_ml': stepsAdjMl,
         'temperature_c': temperatureC,
         'temp_adj_ml': tempAdjMl,
-        'caffeine_mg': caffeineMg,
-        'caffeine_adj_ml': caffeineAdjMl,
+        'caffeine_mg': beverageCups * 60, // Keep legacy field name for DB
+        'caffeine_adj_ml': beverageAdjMl, // Keep legacy field name for DB
         'food_water_ml': foodWaterMl,
         'total_goal_ml': totalGoalMl,
         'created_at': DateTime.now().toIso8601String(),
@@ -84,49 +84,83 @@ class AiHydrationEngine {
         temperatureC > 25 ? (temperatureC - 25) * 50.0 : 0.0;
 
     // ------------------------------------------------------------------
-    // Step B3: Caffeine adjustment  Cadj = caffeine(mg) × 2.0 ml
-    // Prioritize today's manual logs, fallback to user preferences.
+    // Step B3: Beverage hydration adjustment
     // ------------------------------------------------------------------
-    double caffeineMg = await DatabaseHelper().getTodayBeverageCaffeine();
+    double beverageAdjMl = 0.0;
+    double beverageCups = 0.0;
 
-    // If no manual logs for today, use fallback from userInfo preferences
-    if (caffeineMg == 0.0) {
+    final List<Map<String, dynamic>> todayLogs =
+        await DatabaseHelper().getHydrationLogs(date: DateTime.now());
+
+    if (todayLogs.isNotEmpty) {
+      for (final log in todayLogs) {
+        final type = log['type'] as String;
+        final consumedMl = (log['consumed'] as num).toDouble();
+        final coef = _beverageCoefficients[type] ?? 1.0;
+
+        // Adjustment = Volume * (1 - Coef)
+        // If Coef < 1, Adj is positive (increases goal)
+        // If Coef > 1, Adj is negative (decreases goal)
+        beverageAdjMl += consumedMl * (1.0 - coef);
+
+        if (type != 'Water') {
+          // Estimate cups based on standard sizes used in LogHydrationWidget
+          double cupSize = 250.0; // Default for Tea
+          if (type == 'Coffee') cupSize = 150.0;
+          if (type == 'Milk') cupSize = 200.0;
+          if (type == 'Juice') cupSize = 250.0;
+          beverageCups += consumedMl / cupSize;
+
+          Console.log(
+            tag: 'AI_ENGINE',
+            value:
+                'Beverage Logged: $type, Vol: $consumedMl mL, Coef: $coef, Adj: ${(consumedMl * (1.0 - coef)).toInt()} mL',
+          );
+        }
+      }
+    } else {
+      // Fallback: use user preferences if no manual logs exist today
       final userInfo = await DatabaseHelper().getUserInfo();
       if (userInfo != null) {
-        // 1 Cup = 200ml.
-        // Standard caffeine: Coffee ~80mg/200ml, Tea ~40mg/200ml.
+        // Coffee Adjustment (Coef: 0.8)
+        double coffeeCupSize = 150.0;
         switch (userInfo.coffeeIntake) {
           case BeverageIntake.oneToTwo:
-            caffeineMg += 1.5 * 80;
+            beverageAdjMl += 1.5 * coffeeCupSize * (1.0 - 0.8);
+            beverageCups += 1.5;
             break;
           case BeverageIntake.threeToFour:
-            caffeineMg += 3.5 * 80;
+            beverageAdjMl += 3.5 * coffeeCupSize * (1.0 - 0.8);
+            beverageCups += 3.5;
             break;
           case BeverageIntake.fivePlus:
-            caffeineMg += 5.0 * 80;
+            beverageAdjMl += 5.0 * coffeeCupSize * (1.0 - 0.8);
+            beverageCups += 5.0;
             break;
-          case BeverageIntake.none:
           default:
             break;
         }
+
+        // Tea Adjustment (Coef: 0.85)
+        double teaCupSize = 250.0;
         switch (userInfo.teaIntake) {
           case BeverageIntake.oneToTwo:
-            caffeineMg += 1.5 * 40;
+            beverageAdjMl += 1.5 * teaCupSize * (1.0 - 0.85);
+            beverageCups += 1.5;
             break;
           case BeverageIntake.threeToFour:
-            caffeineMg += 3.5 * 40;
+            beverageAdjMl += 3.5 * teaCupSize * (1.0 - 0.85);
+            beverageCups += 3.5;
             break;
           case BeverageIntake.fivePlus:
-            caffeineMg += 5.0 * 40;
+            beverageAdjMl += 5.0 * teaCupSize * (1.0 - 0.85);
+            beverageCups += 5.0;
             break;
-          case BeverageIntake.none:
           default:
             break;
         }
       }
     }
-
-    final double caffeineAdjMl = caffeineMg * 2.0;
 
     // ------------------------------------------------------------------
     // Step B4: Food water deduction (today's scans only)
@@ -134,10 +168,10 @@ class AiHydrationEngine {
     final double foodWaterMl = await _fetchTodayFoodWater();
 
     // ------------------------------------------------------------------
-    // Total  Gtotal = Gbase + Stepsadj + Tempadj + Cadj - Foodwater
+    // Total  Gtotal = Gbase + Stepsadj + Tempadj + Beverageadj - Foodwater
     // ------------------------------------------------------------------
     final double totalGoalMl =
-        baseGoalMl + stepsAdjMl + tempAdjMl + caffeineAdjMl - foodWaterMl;
+        baseGoalMl + stepsAdjMl + tempAdjMl + beverageAdjMl - foodWaterMl;
 
     final result = AiHydrationResult(
       weightKg: weightKg,
@@ -146,8 +180,8 @@ class AiHydrationEngine {
       stepsAdjMl: stepsAdjMl,
       temperatureC: temperatureC,
       tempAdjMl: tempAdjMl,
-      caffeineMg: caffeineMg,
-      caffeineAdjMl: caffeineAdjMl,
+      beverageCups: beverageCups,
+      beverageAdjMl: beverageAdjMl,
       foodWaterMl: foodWaterMl,
       totalGoalMl: totalGoalMl > 0 ? totalGoalMl : 1500.0,
       shouldShowDialog: steps > 0,
@@ -161,7 +195,7 @@ class AiHydrationEngine {
         tag: 'AI_ENGINE',
         value:
             'Calculation → Base: ${baseGoalMl.toInt()} | Steps(+${stepsAdjMl.toInt()}) | '
-            'Temp(+${tempAdjMl.toInt()}) | Caffeine(+${caffeineAdjMl.toInt()}) | '
+            'Temp(+${tempAdjMl.toInt()}) | Beverages(+${beverageAdjMl.toInt()}) | '
             'Food(-${foodWaterMl.toInt()}) = TOTAL: ${result.totalGoalMl.toInt()} mL');
 
     // ------------------------------------------------------------------
@@ -216,6 +250,14 @@ class AiHydrationEngine {
       return 0.0;
     }
   }
+
+  static const Map<String, double> _beverageCoefficients = {
+    'Tea': 0.85,
+    'Coffee': 0.8,
+    'Juice': 0.9,
+    'Milk': 1.5,
+    'Water': 1.0,
+  };
 
   static String _todayKey() {
     final now = DateTime.now();

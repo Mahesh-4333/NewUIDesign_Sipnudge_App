@@ -411,14 +411,23 @@ class _SigninSignupScreenState extends State<SigninSignupScreen> {
               }
 
               UiUtilsService.showLoading(context, "Sign in");
-              var responseSigninResponse =
-                  await FirebaseFunctionsService.signIn(
+              final responseSigninResponse =
+                  await ApiService().signIn(
                       _emailController.text, _passwordController.text);
               if (!mounted) return;
               UiUtilsService.dismissLoading(context);
 
-              if (responseSigninResponse["status"] == "success" &&
-                  responseSigninResponse["statusCode"] == 200) {
+              if (responseSigninResponse.status == "success" &&
+                  responseSigninResponse.statusCode == 200) {
+                
+                final bool shutdownApp = responseSigninResponse.data?.userDetails?.shutdownApp ?? false;
+                if (shutdownApp) {
+                  await SharedPrefsHelper.setAppShutdownStatus(true);
+                  if (!mounted) return;
+                  UiUtilsService.showTrialRestrictionDialog(context);
+                  return;
+                }
+
                 SharedPrefsHelper.setUserEmail(_emailController.text);
                 final hasUserFilledInPersonalInfo =
                     await SharedPrefsHelper.isPersonalInfoSubmitted();
@@ -445,8 +454,8 @@ class _SigninSignupScreenState extends State<SigninSignupScreen> {
                 }
               } else {
                 // Error handling
-                final statusCode = responseSigninResponse["statusCode"];
-                final message = responseSigninResponse["message"] ??
+                final statusCode = responseSigninResponse.statusCode;
+                final message = responseSigninResponse.message ??
                     "Unexpected error occurred";
 
                 if (statusCode == 401) {

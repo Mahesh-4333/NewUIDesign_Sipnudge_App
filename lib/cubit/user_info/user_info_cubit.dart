@@ -125,7 +125,7 @@ class UserInfoCubit extends Cubit<UserInfoState> {
   void setTeaIntake(BeverageIntake intake) {
     emit(state.copyWith(teaIntake: intake));
   }
-  
+
   void setTypicalWaterIntake(double intake) {
     emit(state.copyWith(typicalWaterIntake: intake));
   }

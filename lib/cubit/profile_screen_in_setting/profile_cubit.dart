@@ -1,4 +1,5 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:hydrify/constants/assets_path.dart';
 import 'package:hydrify/cubit/profile_screen_in_setting/profile_state.dart';
 
 class ProfileCubit extends Cubit<ProfileState> {
@@ -26,6 +27,10 @@ class ProfileCubit extends Cubit<ProfileState> {
               ProfileMenuItem(
                 iconPath: "assets/bottle_icon11.png",
                 title: "Sipnudge Bottle",
+              ),
+              ProfileMenuItem(
+                iconPath: AssetsPath.calendar,
+                title: "Calendar",
               ),
               ProfileMenuItem(
                 iconPath: "assets/data_analytics_icon.png",

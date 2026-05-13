@@ -214,11 +214,11 @@ class AiHydrationGoalDialog extends StatelessWidget {
                                   child: _buildMetricCard(
                                     path: AssetsPath.caffiene,
                                     iconColor: const Color(0xFF6366F1),
-                                    label: "Caffeine/Tea",
+                                    label: "Beverages",
                                     value:
-                                        "${(result.caffeineMg / 60).toInt()} Cups",
+                                        "${result.beverageCups.toInt()} Cups",
                                     adjustment:
-                                        "+${result.caffeineAdjMl.toInt()}mL",
+                                        "${result.beverageAdjMl >= 0 ? '+' : ''}${result.beverageAdjMl.toInt()}mL",
                                     adjColor: const Color(0xFF0D9488),
                                   ),
                                 ),

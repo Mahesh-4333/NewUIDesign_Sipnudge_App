@@ -68,19 +68,6 @@ class HydrationCubit extends Cubit<HydrationState> {
     }
   }
 
-  // -------------------- DAILY GOAL UPDATE --------------------
-  Future<void> updateDailyGoal(double newGoal) async {
-    await SharedPrefsHelper.setWaterGoal(newGoal.round());
-    final updatedSlots = generateDefaultHydrationSlots(newGoal);
-
-    for (final entry in updatedSlots) {
-      await _dbHelper.insertOrUpdateSlot(entry);
-    }
-
-    emit(state.copyWith(goal: newGoal.round(), entries: updatedSlots));
-    _calculateCurrentSlotStatus();
-  }
-
   // -------------------- SLOT STATUS CALCULATION --------------------
   void _calculateCurrentSlotStatus() {
     final now = TimeOfDay.now();

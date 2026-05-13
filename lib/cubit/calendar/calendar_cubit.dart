@@ -194,14 +194,38 @@ class CalendarCubit extends Cubit<CalendarState> {
     }
   }
 
+  void toggleSlotSilence(HydrationEntry entry) async {
+    final slot = entry.slot;
+    final isCurrentlyUnsilenced = state.unsilencedSlots.contains(slot);
+
+    if (isCurrentlyUnsilenced) {
+      // User wants to SILENCE it
+      await SharedPrefsHelper.removeUnsnoozedSlot(slot.index);
+      await NotificationService().updateSlotSilenceState(entry, true);
+    } else {
+      // User wants to UNSILENCE it
+      await SharedPrefsHelper.saveUnsnoozedSlot(slot.index);
+      await NotificationService().updateSlotSilenceState(entry, false);
+    }
+
+    // Refresh the set of unsilenced slots from storage
+    final unsnoozedSlotIndices = await SharedPrefsHelper.getUnsnoozedSlots();
+    final Set<HydrationSlot> unsilenced = unsnoozedSlotIndices
+        .map((idx) => HydrationSlot.values[idx])
+        .toSet();
+
+    emit(state.copyWith(unsilencedSlots: unsilenced));
+    // Re-trigger load to refresh UI and notification states
+    _loadDataForDate(state.selectedDate, displayedMonth: state.displayedMonth);
+  }
+
   void unsnoozeSlot(HydrationEntry entry) async {
-    // Persist to shared prefs
+    // This is now replaced by toggleSlotSilence but keeping for compatibility if needed elsewhere
     await SharedPrefsHelper.saveUnsnoozedSlot(entry.slot.index);
-    
+
     final updatedUnsilenced = Set<HydrationSlot>.from(state.unsilencedSlots);
     updatedUnsilenced.add(entry.slot);
     emit(state.copyWith(unsilencedSlots: updatedUnsilenced));
-    // Re-trigger load to refresh UI after unsilencing
     _loadDataForDate(state.selectedDate, displayedMonth: state.displayedMonth);
   }
 

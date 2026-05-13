@@ -51,6 +51,20 @@ class SharedPrefsHelper {
       'ai_hydration_goal_shown_date';
   static const String _keyUnsnoozedSlots = 'unsnoozed_slots';
   static const String _keyUnsnoozedDate = 'unsnoozed_date';
+  static const String _keyShutdownApp = 'shutdown_app';
+
+  // ----------------------------
+  // APP SHUTDOWN (TRIAL RESTRICTION)
+  // ----------------------------
+  static Future<void> setAppShutdownStatus(bool shutdown) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_keyShutdownApp, shutdown);
+  }
+
+  static Future<bool> isAppShutdown() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool(_keyShutdownApp) ?? false;
+  }
 
   // ----------------------------
   // RINGTONE METHODS (NEW)
@@ -117,6 +131,15 @@ class SharedPrefsHelper {
     
     if (!list.contains(slotIndex.toString())) {
       list.add(slotIndex.toString());
+      await prefs.setStringList(_keyUnsnoozedSlots, list);
+    }
+  }
+
+  static Future<void> removeUnsnoozedSlot(int slotIndex) async {
+    final prefs = await SharedPreferences.getInstance();
+    final list = prefs.getStringList(_keyUnsnoozedSlots) ?? [];
+    if (list.contains(slotIndex.toString())) {
+      list.remove(slotIndex.toString());
       await prefs.setStringList(_keyUnsnoozedSlots, list);
     }
   }

@@ -234,7 +234,7 @@ class _AchievementsBadgeScreenState extends State<AchievementsBadgeScreen> {
                                         confettiController: _confettiController,
                                         createParticlePath: drawRandomShape,
                                         onShare: (dialogContext) async {
-                                          _confettiController.stop();
+                                      _confettiController.stop();
                                       try {
                                         // Capture the dialog as image bytes
                                         final Uint8List? imageBytes =

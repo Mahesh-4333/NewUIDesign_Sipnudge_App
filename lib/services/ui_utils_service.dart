@@ -1,5 +1,7 @@
+import 'dart:io';
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:hydrify/constants/app_colors.dart';
 import 'package:hydrify/constants/app_dimensions.dart';
@@ -131,6 +133,58 @@ class UiUtilsService {
           ),
         ),
       ),
+    );
+  }
+
+  static void showTrialRestrictionDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) {
+        return PopScope(
+          canPop: false,
+          child: AlertDialog(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20.r),
+            ),
+            title: Text(
+              "Trial Ended",
+              style: TextStyle(
+                  fontVariations: [AppFontStyles.boldFontVariation],
+                  fontSize: AppFontStyles.fontSize_24.sp,
+                  fontFamily: AppFontStyles.urbanistFontFamily,
+                  color: AppColors.bluegray),
+            ),
+            content: Text(
+              "Trial testing period has ended. Please uninstall this version and install the official app from the App Store or Play Store to continue using Sipnudge.",
+              style: TextStyle(
+                  fontSize: AppFontStyles.fontSize_16.sp,
+                  fontFamily: AppFontStyles.urbanistFontFamily,
+                  fontVariations: [AppFontStyles.boldFontVariation],
+                  color: AppColors.bluegray),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  if (Platform.isAndroid) {
+                    SystemNavigator.pop();
+                  } else {
+                    exit(0);
+                  }
+                },
+                child: Text(
+                  "Exit",
+                  style: TextStyle(
+                    color: AppColors.errorRedColor,
+                    fontFamily: AppFontStyles.urbanistFontFamily,
+                    fontVariations: [AppFontStyles.boldFontVariation],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 }

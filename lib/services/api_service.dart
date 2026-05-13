@@ -38,6 +38,7 @@ class ApiService {
         data: {
           'email': email,
           'password': password,
+          'user_type': 'trail',
         },
       );
 
@@ -64,6 +65,37 @@ class ApiService {
       Console.log(
           tag: "APP", value: "Exception occurred : signIn || ${e.toString()} ");
       throw _handleError(e);
+    }
+  }
+
+  Future<Map<String, dynamic>?> checkTrialStatus(String email) async {
+    try {
+      final response = await _dio.post(
+        'checkTrialStatus',
+        data: {
+          'email': email,
+          'user_type': 'trail',
+        },
+      );
+      return response.data;
+    } on DioException catch (e) {
+      Console.log(tag: "APP", value: "Exception in checkTrialStatus: $e");
+      return null;
+    }
+  }
+
+  Future<Map<String, dynamic>?> shutdownTrialUser(String email) async {
+    try {
+      final response = await _dio.post(
+        'shutdownTrialUser',
+        data: {
+          'email': email,
+        },
+      );
+      return response.data;
+    } on DioException catch (e) {
+      Console.log(tag: "APP", value: "Exception in shutdownTrialUser: $e");
+      return null;
     }
   }
 

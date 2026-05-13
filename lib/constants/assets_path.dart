@@ -165,4 +165,6 @@ class AssetsPath {
   static const String awTea = "assets/aw_tea.png";
   static const String awGlass = "assets/aw_glass.png";
   static const String awMilk = "assets/aw_milk.png";
+
+  static const String calendar = "assets/calendar.png";
 }

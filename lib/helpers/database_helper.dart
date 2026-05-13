@@ -467,6 +467,39 @@ CREATE TABLE IF NOT EXISTS $appMetadataTableName (
     //     tag: "APP",
     //     value:
     //         "[DB] Inserting slot: ${entry.slot.label}, amount: ${entry.amount} mL ${entry.waterDrank} mL startEpoch ${startEpoch} endEpoch ${endEpoch}");
+
+    final List<Map<String, dynamic>> todayLogs =
+        await DatabaseHelper().getHydrationLogs(date: DateTime.now());
+
+    double manualWaterDrank = 0.0;
+    final startMinutes = entry.startTime.hour * 60 + entry.startTime.minute;
+    final endMinutes = entry.endTime.hour * 60 + entry.endTime.minute;
+
+    for (final log in todayLogs) {
+      final logTimestamp = DateTime.parse(log['timestamp'] as String);
+      final logTime = TimeOfDay.fromDateTime(logTimestamp);
+      final logMinutes = logTime.hour * 60 + logTime.minute;
+
+      final logConsumed = (log['consumed'] as num).toDouble();
+
+      if (logMinutes >= startMinutes && logMinutes <= endMinutes) {
+        if (logConsumed > 0) {
+          Console.log(
+              tag: "APP",
+              value:
+                  "[DB] Processing Log: ${log['type']} | Amount: $logConsumed mL | Time: $logTime ($logMinutes min) | Range: ${entry.startTime} - ${entry.endTime} ($startMinutes - $endMinutes min)");
+        }
+        final type = log['type'] as String;
+        if (type == 'Water') {
+          manualWaterDrank += logConsumed;
+        }
+      }
+    }
+
+    Console.log(
+        tag: "APP",
+        value: "[DB] manualWaterDrank for slot: $manualWaterDrank mL");
+
     await db.insert(
       'hydration_slots',
       {
@@ -475,20 +508,18 @@ CREATE TABLE IF NOT EXISTS $appMetadataTableName (
         'startEpoch': startEpoch,
         'endEpoch': endEpoch,
         'waterGoal': entry.amount,
-        'waterDrank': entry.waterDrank,
-        'status': entry.status.toString().split('.').last,
+        'waterDrank': entry.waterDrank + manualWaterDrank,
+        'status': (entry.waterDrank + manualWaterDrank) >= entry.amount
+            ? 'completed'
+            : 'pending',
       },
       conflictAlgorithm: ConflictAlgorithm.replace,
     );
 
-    final allSlots = await db.query('hydration_slots');
-    //Console.log(tag: "APP", value: "[DB] Current slots in DB:");
-    for (var s in allSlots) {
-      Console.log(
-          tag: "APP",
-          value:
-              "  ${s['slotName']} - waterGoal: ${s['waterGoal']}, status: ${s['status']}");
-    }
+    Console.log(
+        tag: "APP",
+        value:
+            "  ${entry.slot.label} - waterGoal: ${entry.amount}, waterDrank: ${entry.waterDrank + manualWaterDrank}, status: ${(entry.waterDrank + manualWaterDrank) >= entry.amount}");
   }
 
   Future<void> clearHydrationSlots() async {
@@ -699,8 +730,11 @@ CREATE TABLE IF NOT EXISTS $appMetadataTableName (
   Future<List<Map<String, dynamic>>> getHydrationLogs({DateTime? date}) async {
     final db = await database;
     if (date != null) {
-      final startOfDay = DateTime(date.year, date.month, date.day).toIso8601String();
-      final endOfDay = DateTime(date.year, date.month, date.day, 23, 59, 59, 999).toIso8601String();
+      final startOfDay =
+          DateTime(date.year, date.month, date.day).toIso8601String();
+      final endOfDay =
+          DateTime(date.year, date.month, date.day, 23, 59, 59, 999)
+              .toIso8601String();
       return await db.query(
         logHydrationTableName,
         where: 'timestamp >= ? AND timestamp <= ?',
@@ -718,9 +752,17 @@ CREATE TABLE IF NOT EXISTS $appMetadataTableName (
       where: 'id = ?',
       whereArgs: [id],
     );
-    if (type == 'Water') {
-      await updateHydrationDaySummary(-amount);
-    }
+
+    // Subtract the effective water equivalent for all beverage types.
+    const Map<String, double> hydrationCoefficients = {
+      'Water': 1.0,
+      'Tea': 0.85,
+      'Coffee': 0.8,
+      'Juice': 0.9,
+      'Milk': 1.5,
+    };
+    final double coefficient = hydrationCoefficients[type] ?? 1.0;
+    await updateHydrationDaySummary(-(amount * coefficient));
   }
 
   Future<double> getTodayLoggedHydration() async {
@@ -920,11 +962,14 @@ CREATE TABLE IF NOT EXISTS $appMetadataTableName (
     if (result.isNotEmpty) {
       // 2. Update existing
       final currentConsumed = (result.first['consumed'] as num).toDouble();
+      final target = (result.first['target'] as num).toDouble();
       final newConsumed = currentConsumed + consumedDelta;
+      final isPerfect = newConsumed >= target ? 1 : 0;
       await db.update(
         hydrationSummaryTableName,
         {
           'consumed': newConsumed,
+          'is_perfect': isPerfect,
           'updated_at': DateTime.now().millisecondsSinceEpoch
         },
         where: 'date = ?',
@@ -940,6 +985,7 @@ CREATE TABLE IF NOT EXISTS $appMetadataTableName (
         dayIndex: 0,
         target: waterGoal.toDouble(),
         consumed: consumedDelta,
+        isPerfect: consumedDelta >= waterGoal.toDouble(),
         createdAt: DateTime.now(),
       );
       await db.insert(hydrationSummaryTableName, newSummary.toMap());
@@ -991,14 +1037,17 @@ CREATE TABLE IF NOT EXISTS $appMetadataTableName (
 
       if (result.isNotEmpty) {
         final currentConsumed = (result.first['consumed'] as num).toDouble();
+        final target = (result.first['target'] as num).toDouble();
         // Since this is called after bulkUpsert30Days, currentConsumed is the bottle total.
         // We add the log total to it.
         final newTotal = currentConsumed + logTotal;
+        final isPerfect = newTotal >= target ? 1 : 0;
 
         await db.update(
           hydrationSummaryTableName,
           {
             'consumed': newTotal,
+            'is_perfect': isPerfect,
             'updated_at': DateTime.now().millisecondsSinceEpoch
           },
           where: 'date = ?',
@@ -1010,11 +1059,13 @@ CREATE TABLE IF NOT EXISTS $appMetadataTableName (
       } else {
         // Create a new summary if it doesn't exist (manual logs only day)
         final waterGoal = await SharedPrefsHelper.getWaterGoal() ?? 2500;
+        final isPerfect = logTotal >= waterGoal ? 1 : 0;
         final newSummary = HydrationDaySummary(
           date: DateTime.fromMillisecondsSinceEpoch(midnight),
           dayIndex: 0,
           target: waterGoal.toDouble(),
           consumed: logTotal,
+          isPerfect: isPerfect == 1,
           createdAt: DateTime.now(),
         );
         await db.insert(hydrationSummaryTableName, newSummary.toMap());

@@ -125,10 +125,10 @@ class _CustomStackedBarChartState extends State<CustomStackedBarChart> {
                         borderRadius: BorderRadius.circular(6.r),
                       ),
                       child: Text(
-                        "${item.backgroundValue}L",
+                        "On: ${item.foregroundValue}L | Off: ${(item.backgroundValue - item.foregroundValue).toStringAsFixed(1)}L",
                         style: TextStyle(
                           color: Colors.white,
-                          fontSize: 10.sp,
+                          fontSize: 9.sp,
                           fontFamily: AppFontStyles.urbanistFontFamily,
                           fontVariations: [AppFontStyles.boldFontVariation],
                         ),

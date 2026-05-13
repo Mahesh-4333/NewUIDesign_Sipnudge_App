@@ -4,10 +4,13 @@ import 'package:hydrify/constants/app_colors.dart';
 import 'package:hydrify/constants/app_font_styles.dart';
 import 'package:hydrify/constants/assets_path.dart';
 import 'package:hydrify/cubit/ble/ble_cubit.dart';
+import 'package:hydrify/cubit/hydration/hydration_cubit.dart';
+import 'package:hydrify/models/hydration_entry.dart';
 import 'package:hydrify/helpers/database_helper.dart';
 import 'package:hydrify/helpers/shared_pref_helper.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:hydrify/screens/widgets/water_wave_widget.dart';
+import 'package:hydrify/services/database_sync_service.dart';
 import 'package:intl/intl.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 
@@ -26,6 +29,16 @@ class _LogHydrationWidgetState extends State<LogHydrationWidget> {
   List<Map<String, dynamic>> _recentLogs = [];
   DateTime _selectedDate = DateUtils.dateOnly(DateTime.now());
   double _dragTempAmount = 0;
+
+  /// Hydration coefficients — how much effective water each ml of a drink
+  /// contributes toward the daily goal.
+  static const Map<String, double> _hydrationCoefficients = {
+    'Water': 1.0,
+    'Tea': 0.85,
+    'Coffee': 0.8,
+    'Juice': 0.9,
+    'Milk': 1.5,
+  };
 
   List<DateTime> get _dates {
     final today = DateUtils.dateOnly(DateTime.now());
@@ -99,11 +112,14 @@ class _LogHydrationWidgetState extends State<LogHydrationWidget> {
 
   _deleteLog(int id, double amount, String type) async {
     await DatabaseHelper().deleteHydrationLog(id, amount, type);
-    if (type == 'Water' && mounted) {
+    // Refresh home screen for all drink types since every beverage
+    // now contributes to the day summary via its hydration coefficient.
+    if (mounted) {
       context.read<BleCubit>().triggerRefresh();
     }
     Fluttertoast.showToast(msg: "Log deleted");
     _fetchLogs();
+    context.read<HydrationCubit>().refreshAchievementStats();
   }
 
   _saveLog() async {
@@ -111,27 +127,72 @@ class _LogHydrationWidgetState extends State<LogHydrationWidget> {
       Fluttertoast.showToast(msg: "Please select an amount");
       return;
     }
+
+    final hydrationCubit = context.read<HydrationCubit>();
+    final bleCubit = context.read<BleCubit>();
+
     await DatabaseHelper().insertHydrationLog(
       _selectedDrink,
       _currentAmount,
       DateTime.now(),
     );
 
-    // Update daily total in hydration_day_summaries if it's Water
-    if (_selectedDrink == 'Water') {
-      await DatabaseHelper().updateHydrationDaySummary(_currentAmount);
-      // Trigger Home Screen refresh
-      if (mounted) {
-        context.read<BleCubit>().triggerRefresh();
+    // All beverages contribute to hydration via their coefficient.
+    // effectiveWater = actual ml × hydration coefficient.
+    final double coefficient = _hydrationCoefficients[_selectedDrink] ?? 1.0;
+    final double effectiveWater = _currentAmount * coefficient;
+
+    await DatabaseHelper().updateHydrationDaySummary(effectiveWater);
+
+    // Update the matching time slot with the effective water amount.
+    final entries = hydrationCubit.state.entries;
+    final now = DateTime.now();
+    final nowTime = TimeOfDay.fromDateTime(now);
+    final nowMinutes = nowTime.hour * 60 + nowTime.minute;
+
+    HydrationEntry? targetEntry;
+    for (final entry in entries) {
+      final startMin = entry.startTime.hour * 60 + entry.startTime.minute;
+      final endMin = entry.endTime.hour * 60 + entry.endTime.minute;
+
+      bool isWithin;
+      if (startMin < endMin) {
+        isWithin = nowMinutes >= startMin && nowMinutes < endMin;
+      } else {
+        // Crosses midnight
+        isWithin = nowMinutes >= startMin || nowMinutes < endMin;
+      }
+
+      if (isWithin) {
+        targetEntry = entry;
+        break;
       }
     }
 
+    if (targetEntry != null) {
+      final updatedEntry = targetEntry.copyWith(
+        waterDrank: targetEntry.waterDrank + effectiveWater,
+      );
+      await hydrationCubit.markCompletedByEntries([updatedEntry]);
+    } else {
+      // No slot matched — still refresh achievement stats.
+      await hydrationCubit.markCompletedByEntries([]);
+    }
+
+    // Trigger Home Screen refresh for all drink types.
+    bleCubit.triggerRefresh();
+    hydrationCubit.refreshAchievementStats();
+    DatabaseSyncService().syncAll();
+
     Fluttertoast.showToast(
-        msg: "Logged ${_currentAmount.toInt()}ml of $_selectedDrink");
+        msg: "Logged ${_currentAmount.toInt()}ml of $_selectedDrink"
+            " (${effectiveWater.toInt()}ml water equivalent)");
     _fetchLogs();
-    setState(() {
-      _currentAmount = 0;
-    });
+    if (mounted) {
+      setState(() {
+        _currentAmount = 0;
+      });
+    }
   }
 
   @override

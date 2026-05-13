@@ -22,6 +22,7 @@ import 'package:hydrify/screens/bottle_info_page.dart';
 import 'package:hydrify/screens/contact_support_page.dart';
 import 'package:hydrify/screens/drink_reminder_page.dart';
 import 'package:hydrify/screens/faq_page.dart';
+import 'package:hydrify/screens/calendar/calendar_screen.dart';
 import 'package:hydrify/screens/help&support_page.dart';
 import 'package:hydrify/screens/preferences_page.dart';
 import 'package:hydrify/screens/user_personal_info_input_screen..dart';
@@ -190,6 +191,14 @@ class _SettingScreenState extends State<SettingScreen> {
           navigator.push(
             MaterialPageRoute(
               builder: (_) => const ActiveNotificationsScreen(),
+            ),
+          );
+          break;
+
+        case AppStrings.calendar:
+          navigator.push(
+            MaterialPageRoute(
+              builder: (_) => const CalendarScreen(),
             ),
           );
           break;

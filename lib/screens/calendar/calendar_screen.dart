@@ -13,6 +13,7 @@ import 'package:hydrify/constants/app_colors.dart';
 import 'package:hydrify/constants/app_dimensions.dart';
 import 'package:hydrify/constants/app_font_styles.dart';
 import 'package:hydrify/constants/app_strings.dart';
+import 'package:hydrify/cubit/bottom_nav/bottom_nav_cubit.dart';
 import 'package:hydrify/cubit/calendar/calendar_cubit.dart';
 import 'package:hydrify/helpers/common.dart';
 import 'package:hydrify/helpers/vibration_helper.dart';
@@ -268,7 +269,7 @@ class _CalendarScreenState extends State<CalendarScreen>
         ),
         Spacer(),
         Text(
-          selectedDate.toIso8601String(),
+          DateFormat('EEE, MMM d, yyyy').format(selectedDate),
           style: TextStyle(
             color: AppColors.color_4D758B,
             fontSize: AppFontStyles.fontSize_12,
@@ -436,28 +437,25 @@ class _CalendarScreenState extends State<CalendarScreen>
                       events: slotItem.overlappingEvents),
                 ),
                 SizedBox(width: AppDimensions.dim8.w),
-                 BlocBuilder<CalendarCubit, CalendarState>(
+                BlocBuilder<CalendarCubit, CalendarState>(
                   buildWhen: (p, c) => p.unsilencedSlots != c.unsilencedSlots,
                   builder: (context, state) {
                     final isUnsilenced =
                         state.unsilencedSlots.contains(slotItem.entry.slot);
 
                     return GestureDetector(
-                      onTap: isUnsilenced
-                          ? null
-                          : () async {
-                              await NotificationService()
-                                  .updateSlotSilenceState(
-                                      slotItem.entry, false);
-                              if (mounted) {
-                                context
-                                    .read<CalendarCubit>()
-                                    .unsnoozeSlot(slotItem.entry);
-                                Fluttertoast.showToast(
-                                    msg:
-                                        "${slotItem.entry.slot.label} reminder unsilenced");
-                              }
-                            },
+                      onTap: () async {
+                        context
+                            .read<CalendarCubit>()
+                            .toggleSlotSilence(slotItem.entry);
+
+                        if (mounted) {
+                          Fluttertoast.showToast(
+                              msg: isUnsilenced
+                                  ? "${slotItem.entry.slot.label} reminder silenced"
+                                  : "${slotItem.entry.slot.label} reminder unsilenced");
+                        }
+                      },
                       child: Container(
                         padding: EdgeInsets.symmetric(
                             horizontal: AppDimensions.dim12.w,
@@ -470,7 +468,7 @@ class _CalendarScreenState extends State<CalendarScreen>
                               BorderRadius.circular(AppDimensions.dim20.w),
                         ),
                         child: Text(
-                          isUnsilenced ? "Unsilenced" : "Unsnooze",
+                          isUnsilenced ? "Silence" : "Unsilence",
                           style: TextStyle(
                             color: AppColors.white,
                             fontSize: AppFontStyles.fontSize_12,
@@ -663,12 +661,14 @@ class _CalendarScreenState extends State<CalendarScreen>
     final currentState = context.read<CalendarCubit>().state;
     final int pickerInitialMonth = currentState.displayedMonth.month - 1;
 
+    context.read<BottomNavCubit>().hideBar();
     final result = await showMonthYearPickerBottomSheet(
       context: context,
       title: "Select Month",
       initialMonth: pickerInitialMonth,
       initialYear: currentState.displayedMonth.year,
     );
+    context.read<BottomNavCubit>().showBar();
 
     if (result != null) {
       int year = result['year'];
@@ -1071,7 +1071,7 @@ class CalendarWidget extends StatelessWidget {
                 context.read<CalendarCubit>().selectDate(dateObj);
               },
               child: _buildDateCell(dateObj.day, isCurrentMonth, isSelected,
-                  googleEventsForSelectedDay?.length ?? 0),
+                  isSelected ? (googleEventsForSelectedDay?.length ?? 0) : 0),
             );
           },
         );
@@ -1152,13 +1152,13 @@ class CalendarWidget extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               _dot(),
-              if (displayCount > 1) ...[
+              if (displayCount >= 2) ...[
                 SizedBox(width: 2.w),
                 _dot(),
               ],
             ],
           ),
-          if (displayCount != 2) ...[
+          if (displayCount >= 3) ...[
             SizedBox(height: 1.5.h),
             Row(
               mainAxisSize: MainAxisSize.min,
@@ -1167,9 +1167,6 @@ class CalendarWidget extends StatelessWidget {
                 if (displayCount == 4) ...[
                   SizedBox(width: 2.w),
                   _dot(),
-                ],
-                if (displayCount == 3) ...[
-                  SizedBox(width: 2.w + 3.w),
                 ],
               ],
             ),

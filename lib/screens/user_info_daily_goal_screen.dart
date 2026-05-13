@@ -20,6 +20,7 @@ import 'package:hydrify/models/hydration_summary.dart';
 import 'package:hydrify/screens/bottom_nav_screen_new.dart';
 import 'package:hydrify/screens/widgets/auth_button_widget.dart';
 import 'package:hydrify/helpers/hydration_helper.dart';
+import 'package:hydrify/services/database_sync_service.dart';
 import 'package:hydrify/services/notification/notification_service.dart';
 import 'package:hydrify/services/ui_utils_service.dart';
 import 'package:provider/provider.dart';
@@ -645,6 +646,8 @@ class _UserInfoDailyGoalScreenNewState extends State<UserInfoDailyGoalScreen> {
                 SharedPrefsHelper.updateAndSaveDeviceConfig(
                     waterGoal: convertedWaterGoal.toInt());
                 bottomNavCubit.showBar();
+
+                DatabaseSyncService().syncAll();
                 navigator.pushAndRemoveUntil(
                     MaterialPageRoute(
                       builder: (context) => BottomNavScreenNew(),

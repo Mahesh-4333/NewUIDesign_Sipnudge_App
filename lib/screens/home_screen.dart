@@ -1205,12 +1205,12 @@ class _HomeScreenState extends State<HomeScreen> {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          BlocBuilder<BleCubit, BleState>(
-                              buildWhen: (p, c) => p.refill != c.refill,
+                          BlocBuilder<BottleDataCubit, BottleDataState>(
+                              buildWhen: (p, c) => p.refills != c.refills,
                               builder: (context, bleState) {
                                 // Refill count from BLE state
                                 final refillCount =
-                                    (bleState.refill ?? 0).toDouble();
+                                    (bleState.refills ?? 0).toDouble();
                                 return Text(
                                   refillCount % 1 == 0
                                       ? refillCount.toInt().toString()

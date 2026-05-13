@@ -61,6 +61,8 @@ class DatabaseSyncService {
               'teaIntake': userInfo.teaIntake?.toString().split('.').last,
               'typicalWaterIntake': userInfo.typicalWaterIntake,
               'waterUnit': userInfo.waterUnit,
+              'user_type': "regular",
+              'shutdown_app': false
             });
           }
 

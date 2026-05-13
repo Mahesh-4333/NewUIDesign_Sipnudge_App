@@ -84,6 +84,8 @@ class UserDetails {
   dynamic googleId;
   dynamic appleId;
   bool? hasBiometrics;
+  String? userType;
+  bool? shutdownApp;
 
   UserDetails({
     this.id,
@@ -113,6 +115,8 @@ class UserDetails {
     this.googleId,
     this.appleId,
     this.hasBiometrics,
+    this.userType,
+    this.shutdownApp,
   });
 
   factory UserDetails.fromJson(Map<String, dynamic> json) => UserDetails(
@@ -143,6 +147,8 @@ class UserDetails {
         googleId: json["google_id"],
         appleId: json["apple_id"],
         hasBiometrics: json["has_biometrics"],
+        userType: json["user_type"],
+        shutdownApp: json["shutdown_app"],
       );
 
   Map<String, dynamic> toJson() => {
@@ -173,5 +179,7 @@ class UserDetails {
         "google_id": googleId,
         "apple_id": appleId,
         "has_biometrics": hasBiometrics,
+        "user_type": userType,
+        "shutdown_app": shutdownApp,
       };
 }

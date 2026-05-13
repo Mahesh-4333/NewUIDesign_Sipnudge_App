@@ -7,8 +7,9 @@ import 'package:printing/printing.dart';
 
 class AnalyticsPdfService {
   // Brand colors
-  static const _blue = PdfColor.fromInt(0XFF32A6E9);
-  static const _darkBlue = PdfColor.fromInt(0x50369FFF);
+  var color1 = Color(0x20BEDCFF);
+  static const _blue = PdfColor.fromInt(0x20E0F3FF);
+  static const _darkBlue = PdfColor.fromInt(0x20BEDCFF);
   static const _steelBlue = PdfColor.fromInt(0xFF5D7B91);
   static const _lightBlue = PdfColor.fromInt(0xFFEBF2FE);
   static const _green = PdfColor.fromInt(0xFF16A34A);
@@ -23,7 +24,7 @@ class AnalyticsPdfService {
     required Map<String, dynamic> analyticsData,
     required int year,
     required int? month,
-    String userName = 'User',
+    String userEmail = 'User',
   }) async {
     final pdf = pw.Document(
       title: 'SipNudge Hydration Report',
@@ -35,7 +36,7 @@ class AnalyticsPdfService {
         await rootBundle.load('assets/fonts/Urbanist-VariableFont_wght.ttf');
     final ttf = pw.Font.ttf(fontData);
     final boldFontData =
-        await rootBundle.load('assets/fonts/Urbanist-VariableFont_wght.ttf');
+        await rootBundle.load('assets/fonts/Poppins-SemiBold.ttf');
     final boldTtf = pw.Font.ttf(boldFontData);
 
     // Load Logo
@@ -66,16 +67,18 @@ class AnalyticsPdfService {
     pdf.addPage(
       pw.MultiPage(
         pageFormat: PdfPageFormat.a4,
-        margin: const pw.EdgeInsets.all(36),
+        margin: const pw.EdgeInsets.all(24),
         theme: pw.ThemeData.withFont(base: ttf, bold: boldTtf),
-        header: (context) =>
-            _buildHeader(ttf, boldTtf, periodLabel, userName, logoImage),
+        header: (context) {
+          if (context.pageNumber > 1) return pw.SizedBox();
+          return _buildHeader(ttf, boldTtf, periodLabel, userEmail, logoImage);
+        },
         footer: (context) => _buildFooter(ttf, generatedDate, context),
         build: (context) => [
-          pw.SizedBox(height: 20),
+          pw.SizedBox(height: 10),
           // ── Summary Row
           _buildSummaryRow(monthlyIntake, ttf, boldTtf),
-          pw.SizedBox(height: 25),
+          pw.SizedBox(height: 15),
           // ── Distribution Graph
           if (weeklyDist.isNotEmpty) ...[
             _buildSectionTitle(
@@ -83,26 +86,29 @@ class AnalyticsPdfService {
                     ? 'Weekly Distribution'
                     : 'Quarterly Distribution',
                 boldTtf),
-            pw.SizedBox(height: 12),
+            pw.SizedBox(height: 8),
             _buildDistributionChart(weeklyDist, ttf, boldTtf),
-            pw.SizedBox(height: 25),
+            pw.SizedBox(height: 15),
           ],
           // ── Habit Consistency
           if (habitConsistency != null) ...[
             _buildSectionTitle('Habit Consistency', boldTtf),
-            pw.SizedBox(height: 8),
+            pw.SizedBox(height: 6),
             _buildHabitCard(habitConsistency, ttf, boldTtf),
-            pw.SizedBox(height: 20),
+            pw.SizedBox(height: 15),
           ],
-          // ── Elite Smart Insights
-          // if (eliteInsights != null) ...[
-          //   _buildEliteInsightsCard(eliteInsights, ttf, boldTtf),
-          //   pw.SizedBox(height: 25),
-          // ],
-          // ── Historical Trends
-          if (historicalTrends != null) ...[
-            _buildSectionTitle('Historical Trends (Last 30 Days)', boldTtf),
+          // ── Quarterly Breakdown (Only for Yearly)
+          if (month == null && weeklyDist.isNotEmpty) ...[
+            _buildSectionTitle('Quarterly Breakdown', boldTtf),
             pw.SizedBox(height: 8),
+            _buildQuarterlyBreakdown(weeklyDist, ttf, boldTtf),
+            pw.SizedBox(height: 15),
+          ],
+          // ── Historical Trends
+
+          if (month != null && historicalTrends != null) ...[
+            _buildSectionTitle('Historical Trends (Last 30 Days)', boldTtf),
+            pw.SizedBox(height: 6),
             _buildHistoricalCard(historicalTrends, ttf, boldTtf),
           ],
         ],
@@ -120,7 +126,7 @@ class AnalyticsPdfService {
 
   // ── Header ────────────────────────────────────────────────────────────────
   static pw.Widget _buildHeader(pw.Font ttf, pw.Font boldTtf,
-      String periodLabel, String userName, pw.ImageProvider? logo) {
+      String periodLabel, String userEmail, pw.ImageProvider? logo) {
     return pw.Column(
       crossAxisAlignment: pw.CrossAxisAlignment.start,
       children: [
@@ -148,7 +154,7 @@ class AnalyticsPdfService {
                       style: pw.TextStyle(
                         font: boldTtf,
                         fontSize: 22,
-                        color: _white,
+                        color: PdfColors.black,
                         letterSpacing: 0.5,
                       ),
                     ),
@@ -158,7 +164,7 @@ class AnalyticsPdfService {
                     style: pw.TextStyle(
                       font: ttf,
                       fontSize: 10,
-                      color: PdfColor.fromInt(0xFFBAD9FF),
+                      color: PdfColors.black,
                     ),
                   ),
                 ],
@@ -171,16 +177,16 @@ class AnalyticsPdfService {
                     style: pw.TextStyle(
                       font: boldTtf,
                       fontSize: 13,
-                      color: _white,
+                      color: PdfColors.black,
                     ),
                   ),
                   pw.SizedBox(height: 2),
                   pw.Text(
-                    userName,
+                    userEmail,
                     style: pw.TextStyle(
                       font: ttf,
                       fontSize: 10,
-                      color: PdfColor.fromInt(0xFFBAD9FF),
+                      color: PdfColors.black,
                     ),
                   ),
                 ],
@@ -231,7 +237,7 @@ class AnalyticsPdfService {
         pw.SizedBox(width: 10),
         _kpiCard('Target', '${target}L', ttf, boldTtf),
         pw.SizedBox(width: 10),
-        _kpiCard('Goal %', '$percentage%', ttf, boldTtf, highlight: true),
+        _kpiCard('Goal %', '$percentage%', ttf, boldTtf, highlight: false),
         pw.SizedBox(width: 10),
         _kpiCard('Off-Slot', '${offSlot}L', ttf, boldTtf),
       ],
@@ -254,7 +260,7 @@ class AnalyticsPdfService {
             pw.Text(
               label,
               style: pw.TextStyle(
-                font: ttf,
+                font: boldTtf,
                 fontSize: 9,
                 color: highlight ? _white : _textMuted,
               ),
@@ -289,9 +295,22 @@ class AnalyticsPdfService {
           xAxis: pw.FixedAxis.fromStrings(
             dist.map((d) => d['label'].toString()).toList(),
             textStyle: pw.TextStyle(font: ttf, fontSize: 8, color: _textMuted),
+            marginStart: 15,
           ),
           yAxis: pw.FixedAxis(
-            [0, 2, 4, 6, 8, 10],
+            () {
+              double maxVal = 2.0;
+              for (var d in dist) {
+                final s = double.tryParse(d['scheduled'].toString()) ?? 0.0;
+                final o = double.tryParse(d['offSlot'].toString()) ?? 0.0;
+                if (s > maxVal) maxVal = s;
+                if (o > maxVal) maxVal = o;
+              }
+              final double maxY = (maxVal * 1.15).ceilToDouble();
+              final double step =
+                  (maxY / 5).ceilToDouble() > 0 ? (maxY / 5).ceilToDouble() : 1.0;
+              return List.generate(6, (i) => i * step);
+            }(),
             textStyle: pw.TextStyle(font: ttf, fontSize: 8, color: _textMuted),
           ),
         ),
@@ -558,11 +577,95 @@ class AnalyticsPdfService {
       children: [
         pw.Text(
           title,
-          style: pw.TextStyle(font: boldTtf, fontSize: 13, color: _steelBlue),
+          style: pw.TextStyle(font: boldTtf, fontSize: 12, color: _steelBlue),
         ),
         pw.SizedBox(height: 4),
         pw.Container(height: 2, width: 32, color: _blue),
       ],
+    );
+  }
+
+  // ── Quarterly Breakdown ───────────────────────────────────────────────────
+  static pw.Widget _buildQuarterlyBreakdown(
+      List<dynamic> distribution, pw.Font ttf, pw.Font boldTtf) {
+    return pw.Column(
+      children: List.generate(distribution.length, (index) {
+        final qData = distribution[index];
+        final double target =
+            double.tryParse(qData['target'].toString()) ?? 0.0;
+        final double scheduled =
+            double.tryParse(qData['scheduled'].toString()) ?? 0.0;
+        final double offSlot =
+            double.tryParse(qData['offSlot'].toString()) ?? 0.0;
+        final double consumed = scheduled + offSlot;
+        final double percent =
+            target > 0 ? (consumed / target).clamp(0.0, 1.0) : 0.0;
+
+        return _buildQuarterlyItem(index, consumed, percent, ttf, boldTtf);
+      }),
+    );
+  }
+
+  static pw.Widget _buildQuarterlyItem(int quarterNumber, double consumed,
+      double percent, pw.Font ttf, pw.Font boldTtf) {
+    String quarterTitle;
+    String monthRange;
+    switch (quarterNumber) {
+      case 0:
+        quarterTitle = "First Quarter";
+        monthRange = "January to March";
+        break;
+      case 1:
+        quarterTitle = "Second Quarter";
+        monthRange = "April to June";
+        break;
+      case 2:
+        quarterTitle = "Third Quarter";
+        monthRange = "July to September";
+        break;
+      case 3:
+        quarterTitle = "Fourth Quarter";
+        monthRange = "October to December";
+        break;
+      default:
+        quarterTitle = "Quarter ${quarterNumber + 1}";
+        monthRange = "";
+    }
+
+    return pw.Container(
+      margin: const pw.EdgeInsets.only(bottom: 8),
+      padding: const pw.EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: pw.BoxDecoration(
+        color: _lightGrey,
+        borderRadius: const pw.BorderRadius.all(pw.Radius.circular(8)),
+      ),
+      child: pw.Row(
+        mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+        children: [
+          pw.Column(
+            crossAxisAlignment: pw.CrossAxisAlignment.start,
+            children: [
+              pw.Text(quarterTitle,
+                  style: pw.TextStyle(
+                      font: boldTtf, fontSize: 11, color: _textDark)),
+              pw.Text(monthRange,
+                  style:
+                      pw.TextStyle(font: ttf, fontSize: 9, color: _textMuted)),
+            ],
+          ),
+          pw.Row(
+            children: [
+              pw.Text("${(percent * 100).toStringAsFixed(0)}%",
+                  style:
+                      pw.TextStyle(font: boldTtf, fontSize: 12, color: _blue)),
+              pw.SizedBox(width: 25),
+              pw.Text("${consumed.toStringAsFixed(1)}L",
+                  style: pw.TextStyle(
+                      font: boldTtf, fontSize: 12, color: _textDark)),
+            ],
+          ),
+        ],
+      ),
     );
   }
 

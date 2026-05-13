@@ -256,4 +256,5 @@ class AppStrings {
   static const estimatedDailyWaterConsumption = "Estimated Daily Water Consumption";
   static const typicalIntakeSubtitle = "Your current typical intake before using the app.";
   static const savingReminder = "Saving reminder";
+  static const calendar = "Calendar";
 }

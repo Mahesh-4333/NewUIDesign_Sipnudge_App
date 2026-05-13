@@ -13,6 +13,7 @@ import 'package:hydrify/constants/app_strings.dart';
 import 'package:hydrify/cubit/bottom_nav/bottom_nav_cubit.dart';
 import 'package:hydrify/cubit/data_analytics/data_analytics_cubit.dart';
 import 'package:hydrify/helpers/common.dart';
+import 'package:hydrify/helpers/shared_pref_helper.dart';
 import 'package:hydrify/services/analytics_pdf_service.dart';
 import 'package:hydrify/screens/calendar/calendar_screen.dart';
 import 'package:hydrify/screens/widgets/chart_widgets/custom_stacked_bar_chart.dart';
@@ -541,16 +542,16 @@ class _DataNAnalyticsScreenState extends State<DataNAnalyticsScreen> {
                           ),
                           Divider(color: AppColors.color_136DEC0D),
                           SizedBox(height: 16.h),
-                          Row(
-                            mainAxisSize: MainAxisSize.min,
-                            spacing: AppDimensions.dim16.w,
-                            children: [
-                              buildLegendItem(
-                                  AppColors.lightBlue400, "Goal Met"),
-                              buildLegendItem(
-                                  AppColors.color_136DEC0D, "Partial")
-                            ],
-                          )
+                          // Row(
+                          //   mainAxisSize: MainAxisSize.min,
+                          //   spacing: AppDimensions.dim16.w,
+                          //   children: [
+                          //     buildLegendItem(
+                          //         AppColors.lightBlue400, "Goal Met"),
+                          //     buildLegendItem(
+                          //         AppColors.color_136DEC0D, "Partial")
+                          //   ],
+                          // )
                         ],
                       )
                     : const SizedBox.shrink(),
@@ -1391,12 +1392,15 @@ class _DataNAnalyticsScreenState extends State<DataNAnalyticsScreen> {
                         final data = cubitState.analyticsData;
                         if (data == null) return;
                         Navigator.of(context).pop();
+                        final userEmail =
+                            await SharedPrefsHelper.getUserEmail() ?? 'User';
                         await AnalyticsPdfService.generateAndShare(
                           analyticsData: data,
                           year: cubitState.selectedYear,
                           month: cubitState.isMonthlySelected
                               ? cubitState.selectedMonth
                               : null,
+                          userEmail: userEmail,
                         );
                       },
                       child: Container(
@@ -1820,35 +1824,57 @@ class _DataNAnalyticsScreenState extends State<DataNAnalyticsScreen> {
   }
 
   Widget buildQuarterlyBreakDown() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          "Quarterly Breakdown",
-          style: TextStyle(
-            color: AppColors.color_4D758B,
-            fontFamily: AppFontStyles.urbanistFontFamily,
-            fontSize: AppFontStyles.fontSize_18,
-            fontVariations: [AppFontStyles.boldFontVariation],
-          ),
-        ),
-        SizedBox(
-          height: 8.h,
-        ),
-        ...List.generate(
-            4,
-            (index) => Padding(
-                  padding: EdgeInsets.only(bottom: AppDimensions.dim12.h),
-                  child: buildQuarterlyItems(
-                      quarterNumber: index, goal: 237.8, percent: .22),
-                )),
-      ],
+    return BlocBuilder<DataAnalyticsCubit, DataAnalyticsState>(
+      builder: (context, state) {
+        final distribution =
+            state.analyticsData?['weeklyDistribution'] as List?;
+        if (distribution == null || distribution.isEmpty) {
+          return const SizedBox.shrink();
+        }
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              "Quarterly Breakdown",
+              style: TextStyle(
+                color: AppColors.color_4D758B,
+                fontFamily: AppFontStyles.urbanistFontFamily,
+                fontSize: AppFontStyles.fontSize_18,
+                fontVariations: [AppFontStyles.boldFontVariation],
+              ),
+            ),
+            SizedBox(height: 8.h),
+            ...List.generate(distribution.length, (index) {
+              final qData = distribution[index];
+              final double target =
+                  double.tryParse(qData['target'].toString()) ?? 0.0;
+              final double scheduled =
+                  double.tryParse(qData['scheduled'].toString()) ?? 0.0;
+              final double offSlot =
+                  double.tryParse(qData['offSlot'].toString()) ?? 0.0;
+              final double consumed = scheduled + offSlot;
+              final double percent =
+                  target > 0 ? (consumed / target).clamp(0.0, 1.0) : 0.0;
+
+              return Padding(
+                padding: EdgeInsets.only(bottom: AppDimensions.dim12.h),
+                child: buildQuarterlyItems(
+                  quarterNumber: index,
+                  consumed: consumed,
+                  percent: percent,
+                ),
+              );
+            }),
+          ],
+        );
+      },
     );
   }
 
   Widget buildQuarterlyItems(
       {required int quarterNumber,
-      required double goal,
+      required double consumed,
       required double percent}) {
     String quarterTitle;
     String monthRange;
@@ -1908,17 +1934,22 @@ class _DataNAnalyticsScreenState extends State<DataNAnalyticsScreen> {
             ),
             child: CircularPercentIndicator(
               radius: 23.w,
-              percent: .5,
-              progressColor: AppColors.color_0083FF,
+              percent: percent,
+              linearGradient: const LinearGradient(
+                colors: [
+                  Color(0xFF0058BC),
+                  Color(0xFF008284),
+                ],
+              ),
               backgroundColor: AppColors.white,
               circularStrokeCap: CircularStrokeCap.round,
               lineWidth: 3.w,
               animation: true,
               center: Text(
-                "${(percent * 100).toStringAsPrecision(2)}%",
+                "${(percent * 100).toStringAsFixed(0)}%",
                 style: TextStyle(
                   color: AppColors.color_4D758B,
-                  fontSize: AppFontStyles.fontSize_8,
+                  fontSize: AppFontStyles.fontSize_13,
                   fontFamily: AppFontStyles.urbanistFontFamily,
                   fontVariations: [AppFontStyles.boldFontVariation],
                 ),
@@ -1957,25 +1988,20 @@ class _DataNAnalyticsScreenState extends State<DataNAnalyticsScreen> {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Text(
-                goal.toString(),
+                "${consumed.toStringAsFixed(1)}L",
                 style: TextStyle(
                   color: AppColors.color_4D758B,
-                  fontFamily: AppFontStyles.urbanistFontFamily,
                   fontSize: AppFontStyles.fontSize_16,
                   fontVariations: [AppFontStyles.fontWeightVariation600],
                 ),
               ),
               Text(
-                goalCompletionStatus == 1
-                    ? "Goal reached"
-                    : goalCompletionStatus == 0
-                        ? "Goal Incomplete"
-                        : "Goal Exceeded",
+                "Goal Reached",
                 style: TextStyle(
-                  color: AppColors.color_006768,
+                  color: AppColors.bluegray,
+                  fontSize: AppFontStyles.fontSize_12,
                   fontFamily: AppFontStyles.urbanistFontFamily,
-                  fontSize: AppFontStyles.fontSize_10,
-                  fontVariations: [AppFontStyles.semiBoldFontVariation],
+                  fontVariations: [AppFontStyles.fontWeightVariation600],
                 ),
               ),
             ],

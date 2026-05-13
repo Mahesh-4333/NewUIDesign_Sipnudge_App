@@ -169,11 +169,14 @@ class AuthCubit extends Cubit<AuthState> {
 
       var signInResult = await _apiService.signIn(email, password);
 
-      // Save userId to SharedPrefs
+      // Save userId and shutdown status to SharedPrefs
       final userId = signInResult.data?.userDetails?.id;
+      final shouldShutdown = signInResult.data?.userDetails?.shutdownApp ?? false;
+      
       if (userId != null) {
         await SharedPrefsHelper.setUserId(userId);
-        Console.log(tag: "AUTH", value: "UserId saved: $userId");
+        await SharedPrefsHelper.setAppShutdownStatus(shouldShutdown);
+        Console.log(tag: "AUTH", value: "UserId saved: $userId, Shutdown: $shouldShutdown");
       }
 
       emit(state.copyWith(

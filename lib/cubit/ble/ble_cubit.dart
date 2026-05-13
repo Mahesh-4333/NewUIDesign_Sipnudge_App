@@ -840,9 +840,6 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
           if (updatedEntries.isNotEmpty) {
             await dbHelper.saveLastSyncDate(DateTime.now());
             _hydrationController.add(updatedEntries);
-            for (final updatedEntry in updatedEntries) {
-              await dbHelper.insertOrUpdateSlot(updatedEntry);
-            }
           }
           _sendAck(device);
         });
