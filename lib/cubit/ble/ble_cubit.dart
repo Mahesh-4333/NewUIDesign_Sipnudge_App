@@ -8,6 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:hydrify/cubit/hydration/hydration_sync.dart';
 import 'package:hydrify/helpers/database_helper.dart';
+import 'package:hydrify/helpers/hydration_helper.dart';
 import 'package:hydrify/helpers/logger.dart';
 import 'package:hydrify/helpers/shared_pref_helper.dart';
 import 'package:hydrify/helpers/water_consumption_data_helper.dart';
@@ -172,7 +173,7 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
       return;
     }
 
-    // await _checkAndResetForNewDay();
+    await checkAndResetForNewDay();
 
     // await _fetchInvestorDayIncrement();
 
@@ -233,11 +234,17 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
     _investorDayIncrement = 4;
   }
 
-  Future<void> checkAndResetForNewDay(List<HydrationEntry> entry) async {
+  Future<void> checkAndResetForNewDay() async {
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
 
-    final lastDate = await dbHelper.getLastSyncDate();
+    final lastDate = await DatabaseHelper().getLastSyncDate();
+
+    final dbHelper = DatabaseHelper();
+    var isSlotAvailableInDb = await dbHelper.getAllSlots();
+    var convertedWaterGoal = await SharedPrefsHelper.getWaterGoal();
+    final slots =
+        HydrationHelper.generateHydrationSlots(convertedWaterGoal!.toDouble());
 
     // First ever launch
     if (lastDate == null) {
@@ -245,8 +252,13 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
       await dbHelper.clearHydrationSlots();
       await dbHelper.clearTodayHydrationHistory();
 
-      for (final updatedEntry in entry) {
-        await dbHelper.insertOrUpdateSlot(updatedEntry);
+      for (var existingSlot in isSlotAvailableInDb) {
+        final newSlot = slots.firstWhere((s) => s.slot == existingSlot.slot);
+        final updatedSlot = existingSlot.copyWith(
+            amount: newSlot.amount,
+            waterDrank: 0,
+            status: HydrationStatus.pending);
+        await dbHelper.insertOrUpdateSlot(updatedSlot);
       }
       return;
     }
@@ -265,18 +277,28 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
     // 1️⃣ Clear hydration slots
     await dbHelper.clearHydrationSlots();
     await dbHelper.clearTodayHydrationHistory();
-    for (final updatedEntry in entry) {
-      await dbHelper.insertOrUpdateSlot(updatedEntry);
-    } // 2️⃣ Clear in-memory streams
+    for (var existingSlot in isSlotAvailableInDb) {
+      final newSlot = slots.firstWhere((s) => s.slot == existingSlot.slot);
+      final updatedSlot = existingSlot.copyWith(
+          amount: newSlot.amount,
+          waterDrank: 0,
+          status: HydrationStatus.pending);
+      await dbHelper.insertOrUpdateSlot(updatedSlot);
+    }
+
+    // 2️⃣ Clear in-memory streams
     _hydrationController.add([]);
-    // if ((state.volume ?? 0) > 600) {
-    // 3️⃣ Update last hydration date
+
+    // 3️⃣ Reset refills (Hardware & State)
+    // await sendResetCommandWithStateCheck();
+    emit(state.copyWith(refill: 0.0));
+
+    // 4️⃣ Update last hydration date
     await dbHelper.saveLastSyncDate(today);
-    // }
 
     // 4️⃣ Update UI state (optional but recommended)
     emit(state.copyWith(
-      message: "New day started. Hydration reset.",
+      message: "New day started. Hydration and refills reset.",
     ));
   }
 
@@ -793,10 +815,14 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
                   isPerfect: isPerfectDay,
                 );
               }).toList();
-              await dbHelper.bulkUpsert30Days(list);
-              await Future.delayed(Duration(seconds: 1));
+              // Single-pass: merges bottle data with manual log totals atomically.
+              // Replaces: bulkUpsert30Days + Future.delayed(1s) + syncAllSummariesWithLogs.
+              await dbHelper.bulkUpsert30DaysWithLogs(list);
+
               final history = await getCurrentDayHistory();
               emit(state.copyWith(currentHydrationValue: history));
+
+              // Stop all notification when 100% reach.
               final stopWhenFull = await SharedPrefsHelper.getStopWhenFull();
               if (stopWhenFull) {
                 final completionPercent = await WaterConsumptionCalculator
@@ -808,14 +834,13 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
                   }
                 }
               }
+
               emit(state.copyWith(
                   isHydration30DaysDataSync: true, historyData: data));
-              _hydrationController.add([]);
-              // _syncWithHealth(history);
-              _syncWithLocalConsumption(history, historyPrevious);
 
-              // Update all historical summaries with manual logs
-              await dbHelper.syncAllSummariesWithLogs();
+              _hydrationController.add([]);
+
+              _syncWithLocalConsumption(history, historyPrevious);
 
               final updatedHistory = await getCurrentDayHistory();
               emit(state.copyWith(currentHydrationValue: updatedHistory));
@@ -1084,6 +1109,12 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
         var currentSlotIdData =
             currentHyderationData.where((e) => e.slot == slot).first;
 
+        // Fetch manual logs for this slot's time range
+        final manualWaterDrank = await dbHelper.getManualWaterDrankForRange(
+          currentSlotIdData.startTime,
+          currentSlotIdData.endTime,
+        );
+
         results.add(HydrationEntry(
           slot: slot,
           startTime: TimeOfDay(
@@ -1092,7 +1123,7 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
           endTime: TimeOfDay(
               hour: currentSlotIdData.endTime.hour,
               minute: currentSlotIdData.endTime.minute),
-          waterDrank: consumed,
+          waterDrank: consumed + manualWaterDrank,
           amount: target,
         ));
       }

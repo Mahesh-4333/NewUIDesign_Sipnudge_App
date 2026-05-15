@@ -30,6 +30,7 @@ import 'package:hydrify/cubit/reminder%20time&mode/reminder_time_cubit.dart';
 import 'package:hydrify/cubit/user_info/user_info_cubit.dart';
 import 'package:hydrify/firebase_options.dart';
 import 'package:hydrify/helpers/database_helper.dart';
+import 'package:hydrify/helpers/internet_connection_helper.dart';
 import 'package:hydrify/providers/authentication_provider.dart';
 import 'package:hydrify/providers/user_info_provider.dart';
 import 'package:hydrify/providers/weather_provider.dart';
@@ -85,6 +86,7 @@ Future<void> main() async {
   FlutterBluePlus.setLogLevel(LogLevel.none);
 
   await UserManager().init();
+  InternetConnectionHelper().initialize();
 
   FlutterError.onError = (FlutterErrorDetails details) {
     //this line prints the default flutter gesture caught exception in console

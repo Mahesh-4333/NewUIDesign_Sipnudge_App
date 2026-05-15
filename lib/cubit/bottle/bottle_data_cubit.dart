@@ -5,6 +5,7 @@ import 'package:bloc/bloc.dart';
 import 'package:equatable/equatable.dart';
 import 'package:hydrify/cubit/ble/ble_cubit.dart';
 import 'package:hydrify/helpers/database_helper.dart';
+import 'package:hydrify/helpers/shared_pref_helper.dart';
 import 'package:hydrify/models/bottle_data.dart';
 import 'package:hydrify/models/hydration_entry.dart';
 import 'package:hydrify/models/hydration_summary.dart';
@@ -37,12 +38,27 @@ class BottleDataCubit extends Cubit<BottleDataState> {
 
     if (maps.isNotEmpty) {
       final lastData = BottleData.fromMap(maps.first);
+      final now = DateTime.now();
+      final lastDate = DateTime(lastData.timestamp.year,
+          lastData.timestamp.month, lastData.timestamp.day);
+      final today = DateTime(now.year, now.month, now.day);
+
+      double refills = lastData.refills;
+      if (lastDate.isBefore(today)) {
+        refills = 0.0;
+        Console.log(
+            tag: "BottleDataCubit",
+            value:
+                "📅 New day detected in _restoreLastValues. Resetting refills to 0.");
+      }
+
       Console.log(
           tag: "BottleDataCubit",
           value: "✅ Restoring from last record: "
               "volume=${lastData.liquidVolume}, "
               "percent=${lastData.liquidPercent}, "
               "battery=${lastData.battery}, "
+              "refills=$refills, "
               "timestamp=${lastData.timestamp}"
               "temp=${lastData.temp},"
               "bq_temp=${lastData.bqTemp}");
@@ -51,7 +67,7 @@ class BottleDataCubit extends Cubit<BottleDataState> {
         volume: lastData.liquidVolume,
         volumePercent: lastData.liquidPercent,
         battery: lastData.battery,
-        refills: lastData.refills,
+        refills: refills,
         temp: lastData.temp,
         bqTemp: lastData.bqTemp,
       ));

@@ -4,8 +4,10 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 
+import '../helpers/internet_connection_helper.dart';
 import '../services/location_service.dart';
 import '../services/weather_service.dart';
+import 'dart:async';
 
 class WeatherProvider extends ChangeNotifier {
   final WeatherService _weatherService;
@@ -29,7 +31,17 @@ class WeatherProvider extends ChangeNotifier {
   String? _error;
   Position? _currentLocation;
 
-  WeatherProvider(this._weatherService, this._locationService);
+  WeatherProvider(this._weatherService, this._locationService) {
+    // Listen for internet restored events to auto-refresh weather
+    InternetConnectionHelper().onInternetStatusChanged.listen((hasInternet) {
+      if (hasInternet && (_error != null || _weatherData == null)) {
+        Console.log(
+            tag: "WEATHER",
+            value: "Internet restored, auto-refreshing weather...");
+        fetchWeatherForCurrentLocation();
+      }
+    });
+  }
 
   WeatherData? get weatherData => _weatherData;
   bool get isLoading => _isLoading;
@@ -40,15 +52,12 @@ class WeatherProvider extends ChangeNotifier {
   // 🌤️ Fetch weather data
   // --------------------------------------------------------------------------
   Future<bool> _checkInternet() async {
-    try {
-      final result = await InternetAddress.lookup('google.com');
-      return result.isNotEmpty && result[0].rawAddress.isNotEmpty;
-    } catch (e) {
-      return false;
-    }
+    return await InternetConnectionHelper().hasInternetConnection();
   }
 
   Future<void> fetchWeatherForCurrentLocation() async {
+    if (_isLoading) return;
+
     _isLoading = true;
     _error = null;
     notifyListeners();

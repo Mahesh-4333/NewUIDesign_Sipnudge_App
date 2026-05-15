@@ -167,4 +167,5 @@ class AssetsPath {
   static const String awMilk = "assets/aw_milk.png";
 
   static const String calendar = "assets/calendar.png";
+  static const String NAIcon = "assets/NA_icon.png";
 }

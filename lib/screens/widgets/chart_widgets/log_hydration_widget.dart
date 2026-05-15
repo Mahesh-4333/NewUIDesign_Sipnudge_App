@@ -30,16 +30,6 @@ class _LogHydrationWidgetState extends State<LogHydrationWidget> {
   DateTime _selectedDate = DateUtils.dateOnly(DateTime.now());
   double _dragTempAmount = 0;
 
-  /// Hydration coefficients — how much effective water each ml of a drink
-  /// contributes toward the daily goal.
-  static const Map<String, double> _hydrationCoefficients = {
-    'Water': 1.0,
-    'Tea': 0.85,
-    'Coffee': 0.8,
-    'Juice': 0.9,
-    'Milk': 1.5,
-  };
-
   List<DateTime> get _dates {
     final today = DateUtils.dateOnly(DateTime.now());
     return List.generate(7, (index) => today.subtract(Duration(days: index)));
@@ -139,7 +129,8 @@ class _LogHydrationWidgetState extends State<LogHydrationWidget> {
 
     // All beverages contribute to hydration via their coefficient.
     // effectiveWater = actual ml × hydration coefficient.
-    final double coefficient = _hydrationCoefficients[_selectedDrink] ?? 1.0;
+    final double coefficient =
+        DatabaseHelper.hydrationCoefficients[_selectedDrink] ?? 1.0;
     final double effectiveWater = _currentAmount * coefficient;
 
     await DatabaseHelper().updateHydrationDaySummary(effectiveWater);
@@ -189,9 +180,9 @@ class _LogHydrationWidgetState extends State<LogHydrationWidget> {
             " (${effectiveWater.toInt()}ml water equivalent)");
     _fetchLogs();
     if (mounted) {
-      setState(() {
-        _currentAmount = 0;
-      });
+      // setState(() {
+      //   _currentAmount = 0;
+      // });
     }
   }
 

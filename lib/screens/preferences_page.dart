@@ -274,10 +274,19 @@ class PreferencesPage extends StatelessWidget {
                                           await DatabaseHelper()
                                               .clearHydrationLogs();
 
-                                          SharedPrefsHelper
-                                              .updateAndSaveDeviceConfig();
                                           await cubit.updateLastResetDate();
 
+                                          await hydrationCubit.setGoalParam();
+
+                                          await DatabaseHelper()
+                                              .deleteFoodScans();
+
+                                          // Trigger UI refresh for FoodScanner etc.
+                                          bleCubit.triggerRefresh();
+
+                                          await SharedPrefsHelper
+                                              .updateAndSaveDeviceConfig(
+                                                  triggerStream: true);
                                           Fluttertoast.showToast(
                                               msg: "Local data cleared.");
                                           Fluttertoast.showToast(

@@ -48,7 +48,7 @@ class WaterCardWidget extends StatelessWidget {
                 border: Border.all(color: AppColors.bluegray.withOpacity(0.1)),
               ),
               child: Text(
-                "Add Water",
+                "Add Log Hydration",
                 style: TextStyle(
                   color: AppColors.bluegray,
                   fontFamily: AppFontStyles.urbanistFontFamily,

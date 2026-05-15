@@ -461,6 +461,12 @@ class HydrationCubit extends Cubit<HydrationState> {
     emit(state.copyWith(goal: goal));
   }
 
+  Future<void> setGoalParam() async {
+    var waterGoal = await SharedPrefsHelper.getWaterGoal();
+
+    emit(state.copyWith(goal: waterGoal));
+  }
+
   Future<void> resetUI() async {
     emit(state.copyWith(
         entries: [],

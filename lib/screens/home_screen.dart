@@ -39,6 +39,8 @@ import 'package:hydrify/services/ai_hydration_engine.dart';
 import 'package:hydrify/screens/widgets/ai_hydration_goal_dialog.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:hydrify/helpers/internet_connection_helper.dart';
+import 'package:hydrify/services/database_sync_service.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -53,6 +55,7 @@ class _HomeScreenState extends State<HomeScreen> {
   bool _isTimezoneDialogOpen = false;
   bool _isAiEngineRunning = false;
   StreamSubscription? _configSubscription;
+  StreamSubscription<bool>? _internetSubscription;
 
   bool _isPickerShown = false;
   bool _isRetryDialogShown = false;
@@ -152,6 +155,23 @@ class _HomeScreenState extends State<HomeScreen> {
           setState(() {});
         }
       });
+
+      // Listen for internet restored to refresh weather and sync data
+      _internetSubscription = InternetConnectionHelper()
+          .onInternetStatusChanged
+          .listen((hasInternet) {
+        if (hasInternet && mounted) {
+          Console.log(
+              tag: "HOME",
+              value:
+                  "Internet restored, refreshing weather and syncing data...");
+          // Refresh weather
+          Provider.of<WeatherProvider>(context, listen: false)
+              .fetchWeatherForCurrentLocation();
+          // Sync database data
+          DatabaseSyncService().syncAll();
+        }
+      });
     });
   }
 
@@ -161,6 +181,7 @@ class _HomeScreenState extends State<HomeScreen> {
     _statsToggleTimer?.cancel();
     _aiHydrationEngineTimer?.cancel();
     _configSubscription?.cancel();
+    _internetSubscription?.cancel();
     super.dispose();
   }
 
@@ -689,7 +710,15 @@ class _HomeScreenState extends State<HomeScreen> {
                   ],
                 ),
               ),
+              const SizedBox(height: 8),
+              const CircularProgressIndicator(),
             ],
+          );
+        }
+
+        if (weatherProvider.error != null) {
+          return _buildWeatherUnavailableWidget(
+            onRefresh: () => weatherProvider.fetchWeatherForCurrentLocation(),
           );
         }
 
@@ -701,63 +730,8 @@ class _HomeScreenState extends State<HomeScreen> {
               weatherProvider.fetchWeatherForCurrentLocation();
             });
           }
-
-          if (weatherProvider.error != null) {
-            return Column(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                Text(
-                  'Weather unavailable',
-                  style: TextStyle(
-                    fontSize: AppFontStyles.fontSize_14,
-                    color: AppColors.bluegray,
-                  ),
-                ),
-                InkWell(
-                  onTap: () async {
-                    await weatherProvider.fetchWeatherForCurrentLocation();
-                  },
-                  child: Text(
-                    'Tap to refresh',
-                    style: TextStyle(
-                      fontSize: AppFontStyles.fontSize_12,
-                      color: Colors.blue,
-                      decoration: TextDecoration.underline,
-                    ),
-                  ),
-                ),
-              ],
-            );
-          }
-
-          return const Center(child: CircularProgressIndicator());
-        }
-
-        if (weatherProvider.error != null) {
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              Text(
-                'Weather unavailable',
-                style: TextStyle(
-                  fontSize: AppFontStyles.fontSize_14,
-                  color: AppColors.bluegray,
-                ),
-              ),
-              InkWell(
-                onTap: () async {
-                  await weatherProvider.fetchWeatherForCurrentLocation();
-                },
-                child: Text(
-                  'Tap to refresh',
-                  style: TextStyle(
-                    fontSize: AppFontStyles.fontSize_12,
-                    color: Colors.blue,
-                    decoration: TextDecoration.underline,
-                  ),
-                ),
-              ),
-            ],
+          return _buildWeatherUnavailableWidget(
+            onRefresh: () => weatherProvider.fetchWeatherForCurrentLocation(),
           );
         }
 
@@ -1423,6 +1397,60 @@ class _HomeScreenState extends State<HomeScreen> {
                 ]),
             // const TextSpan(
             //     text: " of today's \ngoal, keep focusing on your health!"),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildWeatherUnavailableWidget({required VoidCallback onRefresh}) {
+    return Padding(
+      padding: EdgeInsets.symmetric(horizontal: AppDimensions.defaultPadding),
+      child: InkWell(
+        onTap: onRefresh,
+        borderRadius: BorderRadius.circular(12),
+        child: Row(
+          children: [
+            // Left: N/A icon + placeholder temp/humidity
+            Column(
+              children: [
+                SizedBox(
+                  height: AppDimensions.dim45.h,
+                  width: AppDimensions.dim45.h,
+                  child: Center(
+                    child: Image.asset(
+                      AssetsPath.NAIcon,
+                      width: 55.w,
+                      height:55.w,
+                    ),
+                  ),
+                ),
+                SizedBox(height: AppDimensions.dim8.h),
+                Text(
+                  'NA°C/NA%',
+                  style: TextStyle(
+                    fontSize: AppFontStyles.fontSize_16,
+                    fontFamily: AppFontStyles.poppinsFamily,
+                    color: AppColors.bluegray.withOpacity(0.45),
+                    fontVariations: [AppFontStyles.boldFontVariation],
+                  ),
+                ),
+              ],
+            ),
+            SizedBox(width: AppDimensions.dim12.w),
+            // Right: message
+            Expanded(
+              child: Text(
+                'Turn on data/Wi-Fi to update weather.\nRemember to stay hydrated throughout the day',
+                style: TextStyle(
+                  color: AppColors.bluegray,
+                  fontFamily: AppFontStyles.museoModernoFontFamily,
+                  fontSize: AppFontStyles.fontSize_14,
+                  fontVariations: [AppFontStyles.regularFontVariation],
+                  height: 1.4,
+                ),
+              ),
+            ),
           ],
         ),
       ),

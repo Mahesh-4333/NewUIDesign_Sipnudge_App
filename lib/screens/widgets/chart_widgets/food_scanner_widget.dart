@@ -21,6 +21,9 @@ import 'package:hydrify/helpers/database_helper.dart';
 import 'package:hydrify/models/food_scan_data.dart';
 import 'package:hydrify/services/database_sync_service.dart';
 import 'package:fl_chart/fl_chart.dart';
+import 'package:hydrify/cubit/ble/ble_cubit.dart';
+import 'package:hydrify/cubit/hydration/hydration_cubit.dart';
+import 'package:hydrify/models/hydration_entry.dart';
 
 class FoodScannerWidget extends StatefulWidget {
   const FoodScannerWidget({super.key});
@@ -62,6 +65,7 @@ class _FoodScannerWidgetState extends State<FoodScannerWidget> {
   double _baseFat = 0.0;
   double? _baseSodium;
   double? _baseFiber;
+  double _lastSavedWaterMl = 0.0;
 
   @override
   void initState() {
@@ -93,6 +97,7 @@ class _FoodScannerWidgetState extends State<FoodScannerWidget> {
           _confidenceScore = latest.confidenceScore;
           _ingredients = latest.ingredients;
           _reasoning = latest.reasoning;
+          _lastSavedWaterMl = latest.waterContentMl;
           if (latest.imageBase64 != null) {
             _imageBytes = base64Decode(latest.imageBase64!);
           } else if (latest.imagePath != null) {
@@ -111,8 +116,32 @@ class _FoodScannerWidgetState extends State<FoodScannerWidget> {
 
           _updateConfidenceLevel(_confidenceScore);
         });
+        return;
       }
     }
+
+    // If no today's scan found or list empty, clear the state
+    setState(() {
+      _currentScanId = null;
+      _dishName = null;
+      _image = null;
+      _imageBytes = null;
+      _currentWeight = 100.0;
+      _baseWeight = 100.0;
+      _waterPercentage = 0.0;
+      _waterMl = 0.0;
+      _calories = 0;
+      _protein = 0.0;
+      _carbs = 0.0;
+      _fat = 0.0;
+      _sodium = null;
+      _fiber = null;
+      _confidenceScore = "0%";
+      _confidenceLevel = "NA";
+      _ingredients = [];
+      _reasoning = null;
+      _lastSavedWaterMl = 0.0;
+    });
   }
 
   void _updateConfidenceLevel(String score) {
@@ -160,6 +189,7 @@ class _FoodScannerWidgetState extends State<FoodScannerWidget> {
         _isAnalyzing = true;
         _errorMessage = null;
         _currentScanId = null;
+        _lastSavedWaterMl = 0.0;
       });
 
       await _analyzeWithGemini(photo);
@@ -277,6 +307,7 @@ class _FoodScannerWidgetState extends State<FoodScannerWidget> {
         _baseFiber = _fiber;
         _baseWeight = 100.0;
         _currentWeight = 100.0;
+        _lastSavedWaterMl = 0.0;
 
         _updateConfidenceLevel(_confidenceScore);
       });
@@ -313,13 +344,65 @@ class _FoodScannerWidgetState extends State<FoodScannerWidget> {
       setState(() {
         _currentScanId = id;
       });
-      
+
       // Sync to backend
       await DatabaseSyncService().syncFoodScan(scan.toMap());
 
       await SharedPrefsHelper.setAiHydrationGoalShown(true);
       Console.log(
           tag: 'FoodScanner', value: '[DB] Food scan saved: ${scan.dishName}');
+
+      // Update Hydration Summary
+      final double delta = _waterMl - _lastSavedWaterMl;
+      if (delta != 0) {
+        if (mounted) {
+          final hydrationCubit = context.read<HydrationCubit>();
+          final bleCubit = context.read<BleCubit>();
+
+          _lastSavedWaterMl = _waterMl;
+
+          // 1. Update Daily Summary in DB
+          await DatabaseHelper().updateHydrationDaySummary(delta);
+
+          // 2. Identify and update the matching time slot
+          final entries = hydrationCubit.state.entries;
+          final nowTime = TimeOfDay.now();
+          final nowMinutes = nowTime.hour * 60 + nowTime.minute;
+
+          HydrationEntry? targetEntry;
+          for (final entry in entries) {
+            final startMin = entry.startTime.hour * 60 + entry.startTime.minute;
+            final endMin = entry.endTime.hour * 60 + entry.endTime.minute;
+
+            bool isWithin;
+            if (startMin < endMin) {
+              isWithin = nowMinutes >= startMin && nowMinutes < endMin;
+            } else {
+              // Crosses midnight
+              isWithin = nowMinutes >= startMin || nowMinutes < endMin;
+            }
+
+            if (isWithin) {
+              targetEntry = entry;
+              break;
+            }
+          }
+
+          if (targetEntry != null) {
+            final updatedEntry = targetEntry.copyWith(
+              waterDrank: targetEntry.waterDrank + delta,
+            );
+            await hydrationCubit.markCompletedByEntries([updatedEntry]);
+          } else {
+            // No slot matched — still refresh achievement stats.
+            await hydrationCubit.markCompletedByEntries([]);
+          }
+
+          // 3. Refresh Cubits for UI synchronization
+          bleCubit.triggerRefresh();
+          hydrationCubit.refreshAchievementStats();
+        }
+      }
     } catch (e, st) {
       Console.log(tag: 'FoodScanner', value: '[DB] _saveToDb failed: $e\n$st');
     }
@@ -434,7 +517,13 @@ class _FoodScannerWidgetState extends State<FoodScannerWidget> {
   Widget build(BuildContext context) {
     bool isLoaded = _dishName != null;
 
-    return Container(
+    return BlocListener<BleCubit, BleState>(
+      listenWhen: (previous, current) =>
+          previous.refreshTrigger != current.refreshTrigger,
+      listener: (context, state) {
+        _loadTodayScan();
+      },
+      child: Container(
       width: double.maxFinite,
       margin: EdgeInsets.symmetric(horizontal: AppDimensions.defaultPadding.w),
       clipBehavior: Clip.antiAlias,
@@ -579,6 +668,7 @@ class _FoodScannerWidgetState extends State<FoodScannerWidget> {
           ),
         ],
       ),
+    ),
     );
   }
 
@@ -644,11 +734,11 @@ class _FoodScannerWidgetState extends State<FoodScannerWidget> {
             ),
             child: ClipRRect(
               borderRadius: BorderRadius.circular(25.r),
-            child: _imageBytes != null
-                ? Image.memory(_imageBytes!, fit: BoxFit.cover)
-                : _image != null
-                    ? Image.file(_image!, fit: BoxFit.cover)
-                    : Container(color: Colors.white),
+              child: _imageBytes != null
+                  ? Image.memory(_imageBytes!, fit: BoxFit.cover)
+                  : _image != null
+                      ? Image.file(_image!, fit: BoxFit.cover)
+                      : Container(color: Colors.white),
             ),
           ),
           // Scanner Corners
@@ -662,7 +752,8 @@ class _FoodScannerWidgetState extends State<FoodScannerWidget> {
                         : Colors.grey.withOpacity(0.4))),
           ),
           if (_imageBytes == null && _image == null)
-            Image.asset(AssetsPath.camera_food_scn, width: 50.sp, height: 50.sp),
+            Image.asset(AssetsPath.camera_food_scn,
+                width: 50.sp, height: 50.sp),
           if (_isAnalyzing)
             const CircularProgressIndicator(color: AppColors.blueWaterIntake),
         ],

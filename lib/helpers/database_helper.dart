@@ -32,6 +32,14 @@ class DatabaseHelper {
   static const String dailyStepsTableName = 'daily_steps';
   static const String logHydrationTableName = 'log_hydration';
 
+  static const Map<String, double> hydrationCoefficients = {
+    'Water': 1.0,
+    'Tea': 0.85,
+    'Coffee': 0.8,
+    'Juice': 0.9,
+    'Milk': 1.5,
+  };
+
   // REPLACE your old getter with this one:
   Future<Database> get database async {
     // Already initialized?
@@ -436,6 +444,37 @@ CREATE TABLE IF NOT EXISTS $appMetadataTableName (
     return DateTime.parse(result.first['value'] as String);
   }
 
+  Future<double> getManualWaterDrankForRange(
+      TimeOfDay startTime, TimeOfDay endTime) async {
+    final List<Map<String, dynamic>> todayLogs =
+        await getHydrationLogs(date: DateTime.now());
+    double manualWaterDrank = 0.0;
+    final startMinutes = startTime.hour * 60 + startTime.minute;
+    final endMinutes = endTime.hour * 60 + endTime.minute;
+
+    for (final log in todayLogs) {
+      final logTimestamp = DateTime.parse(log['timestamp'] as String);
+      final logTime = TimeOfDay.fromDateTime(logTimestamp);
+      final logMinutes = logTime.hour * 60 + logTime.minute;
+      final logConsumed = (log['consumed'] as num).toDouble();
+
+      bool isWithin;
+      if (startMinutes <= endMinutes) {
+        isWithin = logMinutes >= startMinutes && logMinutes <= endMinutes;
+      } else {
+        // Crosses midnight
+        isWithin = logMinutes >= startMinutes || logMinutes <= endMinutes;
+      }
+
+      if (isWithin) {
+        final type = log['type'] as String;
+        final coefficient = hydrationCoefficients[type] ?? 1.0;
+        manualWaterDrank += (logConsumed * coefficient);
+      }
+    }
+    return manualWaterDrank;
+  }
+
   Future<void> clearAppMetadata() async {
     try {
       final db = await database;
@@ -463,42 +502,12 @@ CREATE TABLE IF NOT EXISTS $appMetadataTableName (
       await clearHydrationSlots();
     }
 
-    // Console.log(
-    //     tag: "APP",
-    //     value:
-    //         "[DB] Inserting slot: ${entry.slot.label}, amount: ${entry.amount} mL ${entry.waterDrank} mL startEpoch ${startEpoch} endEpoch ${endEpoch}");
+    final manualWaterDrank =
+        await getManualWaterDrankForRange(entry.startTime, entry.endTime);
 
-    final List<Map<String, dynamic>> todayLogs =
-        await DatabaseHelper().getHydrationLogs(date: DateTime.now());
-
-    double manualWaterDrank = 0.0;
-    final startMinutes = entry.startTime.hour * 60 + entry.startTime.minute;
-    final endMinutes = entry.endTime.hour * 60 + entry.endTime.minute;
-
-    for (final log in todayLogs) {
-      final logTimestamp = DateTime.parse(log['timestamp'] as String);
-      final logTime = TimeOfDay.fromDateTime(logTimestamp);
-      final logMinutes = logTime.hour * 60 + logTime.minute;
-
-      final logConsumed = (log['consumed'] as num).toDouble();
-
-      if (logMinutes >= startMinutes && logMinutes <= endMinutes) {
-        if (logConsumed > 0) {
-          Console.log(
-              tag: "APP",
-              value:
-                  "[DB] Processing Log: ${log['type']} | Amount: $logConsumed mL | Time: $logTime ($logMinutes min) | Range: ${entry.startTime} - ${entry.endTime} ($startMinutes - $endMinutes min)");
-        }
-        final type = log['type'] as String;
-        if (type == 'Water') {
-          manualWaterDrank += logConsumed;
-        }
-      }
-    }
-
-    Console.log(
-        tag: "APP",
-        value: "[DB] manualWaterDrank for slot: $manualWaterDrank mL");
+    // We store only the BOTTLE component in the hydration_slots table.
+    // The total displayed in UI is (bottleDrank + manualWaterDrank).
+    final double bottleDrank = (entry.waterDrank - manualWaterDrank).clamp(0, entry.waterDrank);
 
     await db.insert(
       'hydration_slots',
@@ -508,8 +517,8 @@ CREATE TABLE IF NOT EXISTS $appMetadataTableName (
         'startEpoch': startEpoch,
         'endEpoch': endEpoch,
         'waterGoal': entry.amount,
-        'waterDrank': entry.waterDrank + manualWaterDrank,
-        'status': (entry.waterDrank + manualWaterDrank) >= entry.amount
+        'waterDrank': bottleDrank,
+        'status': (bottleDrank + manualWaterDrank) >= entry.amount
             ? 'completed'
             : 'pending',
       },
@@ -519,7 +528,7 @@ CREATE TABLE IF NOT EXISTS $appMetadataTableName (
     Console.log(
         tag: "APP",
         value:
-            "  ${entry.slot.label} - waterGoal: ${entry.amount}, waterDrank: ${entry.waterDrank + manualWaterDrank}, status: ${(entry.waterDrank + manualWaterDrank) >= entry.amount}");
+            "  ${entry.slot.label} - waterGoal: ${entry.amount}, bottleDrank: $bottleDrank, manualDrank: $manualWaterDrank, status: ${(bottleDrank + manualWaterDrank) >= entry.amount}");
   }
 
   Future<void> clearHydrationSlots() async {
@@ -539,19 +548,30 @@ CREATE TABLE IF NOT EXISTS $appMetadataTableName (
     final db = await database;
     final maps = await db.query('hydration_slots');
 
-    return List.generate(maps.length, (i) {
+    final List<HydrationEntry> entries = [];
+    for (var i = 0; i < maps.length; i++) {
       final row = maps[i];
-      return HydrationEntry(
+      final startTime = _epochToTimeOfDay(row['startEpoch'] as int);
+      final endTime = _epochToTimeOfDay(row['endEpoch'] as int);
+      final bottleDrank = (row['waterDrank'] as num?)?.toDouble() ?? 0.0;
+
+      // Add manual logs to the bottle data for UI display
+      final manualWaterDrank =
+          await getManualWaterDrankForRange(startTime, endTime);
+      final totalDrank = bottleDrank + manualWaterDrank;
+
+      entries.add(HydrationEntry(
         slot: HydrationSlot.values[row['slotIndex'] as int],
-        startTime: _epochToTimeOfDay(row['startEpoch'] as int),
-        endTime: _epochToTimeOfDay(row['endEpoch'] as int),
-        waterDrank: (row['waterDrank'] as num?)?.toDouble() ?? 0.0,
+        startTime: startTime,
+        endTime: endTime,
+        waterDrank: totalDrank,
         amount: (row['waterGoal'] as num).toDouble(),
-        status: row['status'] == 'completed'
+        status: totalDrank >= (row['waterGoal'] as num).toDouble()
             ? HydrationStatus.completed
             : HydrationStatus.pending,
-      );
-    });
+      ));
+    }
+    return entries;
   }
 
   Future<void> saveUserInfo(UserInfoState state) async {
@@ -754,13 +774,6 @@ CREATE TABLE IF NOT EXISTS $appMetadataTableName (
     );
 
     // Subtract the effective water equivalent for all beverage types.
-    const Map<String, double> hydrationCoefficients = {
-      'Water': 1.0,
-      'Tea': 0.85,
-      'Coffee': 0.8,
-      'Juice': 0.9,
-      'Milk': 1.5,
-    };
     final double coefficient = hydrationCoefficients[type] ?? 1.0;
     await updateHydrationDaySummary(-(amount * coefficient));
   }
@@ -889,6 +902,89 @@ CREATE TABLE IF NOT EXISTS $appMetadataTableName (
     await batch.commit(noResult: true);
   }
 
+  /// Optimized single-pass replacement for the old three-line pattern:
+  ///   `await bulkUpsert30Days(list);`
+  ///   `await Future.delayed(Duration(seconds: 1));`
+  ///   `await syncAllSummariesWithLogs();`
+  ///
+  /// Instead of two separate DB passes with an artificial delay, this method:
+  ///  1. Reads all log_hydration rows once and aggregates them per day in memory.
+  ///  2. For each BLE summary, adds that day's manual log total before writing.
+  ///  3. Writes everything in a single batch commit (2 DB round-trips total).
+  Future<void> bulkUpsert30DaysWithLogs(List<HydrationDaySummary> list) async {
+    if (list.isEmpty) return;
+    final db = await database;
+
+    // ── Step 1: Read & aggregate all manual logs in one DB query ──
+    final logs = await db.query(logHydrationTableName);
+    final Map<int, double> logTotalsByMidnight = {};
+    for (final log in logs) {
+      try {
+        final type = log['type'] as String;
+        final timestamp = DateTime.parse(log['timestamp'] as String);
+        final midnight =
+            DateTime(timestamp.year, timestamp.month, timestamp.day)
+                .millisecondsSinceEpoch;
+        final consumed = (log['consumed'] as num).toDouble();
+        final coefficient = hydrationCoefficients[type] ?? 1.0;
+        logTotalsByMidnight[midnight] =
+            (logTotalsByMidnight[midnight] ?? 0.0) + (consumed * coefficient);
+      } catch (e) {
+        Console.log(
+            tag: "BULK_UPSERT", value: "Error aggregating log for merge: $e");
+      }
+    }
+
+    // ── Step 2: Build the batch with merged bottle + log totals ──
+    final batch = db.batch();
+    final Set<int> bleEpochs = {};
+
+    for (final s in list) {
+      final midnight =
+          DateTime(s.date.year, s.date.month, s.date.day).millisecondsSinceEpoch;
+      bleEpochs.add(midnight);
+
+      final manualTotal = logTotalsByMidnight[midnight] ?? 0.0;
+      final mergedConsumed = s.consumed + manualTotal;
+      final mergedIsPerfect = s.target > 0 && mergedConsumed >= s.target;
+
+      Console.log(
+          tag: "BULK_UPSERT",
+          value:
+              "${s.dayIndex} : ${s.date.toIso8601String()} : bottle=${s.consumed} + logs=$manualTotal = $mergedConsumed");
+
+      batch.insert(
+        hydrationSummaryTableName,
+        s.copyWith(consumed: mergedConsumed, isPerfect: mergedIsPerfect).toMap(),
+        conflictAlgorithm: ConflictAlgorithm.replace,
+      );
+    }
+
+    // ── Step 3: Handle days with manual logs but no BLE data ──
+    final waterGoal = await SharedPrefsHelper.getWaterGoal() ?? 2500;
+    for (final entry in logTotalsByMidnight.entries) {
+      if (!bleEpochs.contains(entry.key)) {
+        final logTotal = entry.value;
+        final orphanSummary = HydrationDaySummary(
+          date: DateTime.fromMillisecondsSinceEpoch(entry.key),
+          dayIndex: 0,
+          target: waterGoal.toDouble(),
+          consumed: logTotal,
+          isPerfect: logTotal >= waterGoal,
+          createdAt: DateTime.now(),
+        );
+        // Use ignore so we never overwrite an existing BLE-sourced row.
+        batch.insert(
+          hydrationSummaryTableName,
+          orphanSummary.toMap(),
+          conflictAlgorithm: ConflictAlgorithm.ignore,
+        );
+      }
+    }
+
+    await batch.commit(noResult: true);
+  }
+
   Future<List<HydrationDaySummary>> getHydrationSummariesForRange({
     DateTime? startDate,
     DateTime? endDate,
@@ -998,26 +1094,25 @@ CREATE TABLE IF NOT EXISTS $appMetadataTableName (
   Future<void> syncAllSummariesWithLogs() async {
     final db = await database;
 
-    // 1. Get all logs from log_hydration where type is Water
-    final logs = await db.query(
-      logHydrationTableName,
-      where: 'type = ?',
-      whereArgs: ['Water'],
-    );
+    // 1. Get all logs from log_hydration
+    final logs = await db.query(logHydrationTableName);
     if (logs.isEmpty) return;
 
-    // 2. Aggregate logs by date (midnight)
+    // 2. Aggregate logs by date (midnight) with coefficients
     Map<int, double> dateTotals = {};
     for (var log in logs) {
       try {
+        final type = log['type'] as String;
         final timestampStr = log['timestamp'] as String;
         final timestamp = DateTime.parse(timestampStr);
         final midnight =
             DateTime(timestamp.year, timestamp.month, timestamp.day)
                 .millisecondsSinceEpoch;
         final consumed = (log['consumed'] as num).toDouble();
+        final coefficient = hydrationCoefficients[type] ?? 1.0;
 
-        dateTotals[midnight] = (dateTotals[midnight] ?? 0.0) + consumed;
+        dateTotals[midnight] =
+            (dateTotals[midnight] ?? 0.0) + (consumed * coefficient);
       } catch (e) {
         Console.log(tag: "SYNC_LOGS", value: "Error parsing log: $e");
       }
@@ -1151,6 +1246,13 @@ CREATE TABLE IF NOT EXISTS $appMetadataTableName (
           tag: "APP", value: "[DB] Error calculating consistency streak: $e");
       return 0;
     }
+  }
+
+  Future<void> deleteFoodScans() async {
+    final db = await database;
+    await db.delete(foodScannerTableName);
+    Console.log(
+        tag: "APP", value: "[DB] Cleared all data in $foodScannerTableName");
   }
 
   Future<int> insertFoodScan(Map<String, dynamic> data) async {

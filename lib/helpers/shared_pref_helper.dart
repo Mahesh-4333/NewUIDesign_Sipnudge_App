@@ -466,6 +466,7 @@ class SharedPrefsHelper {
     bool? ringtoneFeedback, // Maps to reminderState
     bool? stopWhenFull, // Maps to stopOnCompletion
     int? alarmRepeatIndex,
+    bool triggerStream = true,
   }) async {
     // 1. Update preferences if new values are provided
     if (waterGoal != null) await setWaterGoal(waterGoal);
@@ -550,11 +551,15 @@ class SharedPrefsHelper {
 
     if (isFirstTimeConfig) {
       await prefs.setBool('is_first_time_config', false);
-      await Future.delayed(Duration(seconds: 4));
-      configUpdateStream.add(null);
+      if (triggerStream) {
+        await Future.delayed(Duration(seconds: 4));
+        configUpdateStream.add(null);
+      }
     } else {
       // Trigger the config update stream to show the UI dialog
-      configUpdateStream.add(null);
+      if (triggerStream) {
+        configUpdateStream.add(null);
+      }
     }
   }
 }

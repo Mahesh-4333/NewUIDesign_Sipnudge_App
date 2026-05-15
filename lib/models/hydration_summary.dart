@@ -36,6 +36,30 @@ class HydrationDaySummary {
     };
   }
 
+  HydrationDaySummary copyWith({
+    int? id,
+    DateTime? date,
+    int? dayIndex,
+    double? target,
+    double? consumed,
+    String? deviceId,
+    DateTime? createdAt,
+    DateTime? updatedAt,
+    bool? isPerfect,
+  }) {
+    return HydrationDaySummary(
+      id: id ?? this.id,
+      date: date ?? this.date,
+      dayIndex: dayIndex ?? this.dayIndex,
+      target: target ?? this.target,
+      consumed: consumed ?? this.consumed,
+      deviceId: deviceId ?? this.deviceId,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+      isPerfect: isPerfect ?? this.isPerfect,
+    );
+  }
+
   factory HydrationDaySummary.fromMap(Map<String, dynamic> m) {
     // Robust parsing for 'date' which might be stored as String or int
     DateTime parsedDate;

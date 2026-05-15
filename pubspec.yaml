@@ -70,6 +70,7 @@ dependencies:
   dotted_border: ^3.1.0
   pdf: ^3.11.1
   printing: ^5.13.1
+  connectivity_plus: ^7.1.1
 
 
 dev_dependencies:
