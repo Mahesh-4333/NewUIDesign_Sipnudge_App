@@ -72,8 +72,14 @@ class _SettingScreenState extends State<SettingScreen> {
   }
 
   Future<void> _loadSavedName() async {
-    final name = UserManager().userName;
-    _nameController.text = name.isNotEmpty ? name : AppStrings.username;
+    final name = await SharedPrefsHelper.getUserName();
+    String finalName = "";
+    if (name == null || name == '') {
+      finalName = "";
+    } else {
+      finalName = name;
+    }
+    _nameController.text = finalName.isNotEmpty ? finalName : AppStrings.username;
   }
 
   void _saveNameLocally(String name) async {
@@ -154,6 +160,9 @@ class _SettingScreenState extends State<SettingScreen> {
               builder: (_) => const HelpAndSupportPage(),
             ),
           );
+          break;
+        case "Support Tickets":
+          Navigator.of(context, rootNavigator: true).pushNamed('/help_support_ticket');
           break;
         case 'faq':
           navigator.push(

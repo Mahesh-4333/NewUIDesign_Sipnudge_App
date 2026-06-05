@@ -15,6 +15,7 @@ import 'package:hydrify/helpers/water_consumption_data_helper.dart';
 import 'package:hydrify/models/bottle_data.dart';
 import 'package:hydrify/models/hydration_entry.dart';
 import 'package:hydrify/models/hydration_summary.dart';
+import 'package:hydrify/services/database_sync_service.dart';
 import 'package:hydrify/services/notification/notification_service.dart';
 import 'package:hydrify/services/health_service.dart';
 import 'package:http/http.dart' as http;
@@ -841,6 +842,8 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
               _hydrationController.add([]);
 
               _syncWithLocalConsumption(history, historyPrevious);
+
+              DatabaseSyncService().syncAll();
 
               final updatedHistory = await getCurrentDayHistory();
               emit(state.copyWith(currentHydrationValue: updatedHistory));

@@ -18,12 +18,13 @@ class GreetingWidget extends StatefulWidget {
   State<GreetingWidget> createState() => _GreetingWidgetState();
 }
 
-class _GreetingWidgetState extends State<GreetingWidget> {
+class _GreetingWidgetState extends State<GreetingWidget> with WidgetsBindingObserver {
   String _userName = '';
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _loadUserName();
 
     // Listen for username changes
@@ -43,20 +44,9 @@ class _GreetingWidgetState extends State<GreetingWidget> {
     final name = userManager.userName;
 
     if (name.isEmpty) {
-      final userEmail = await SharedPrefsHelper.getUserEmail() ?? "";
+      final userEmail = await SharedPrefsHelper.getUserName() ?? "";
       String finalName = "";
-
-      if (userEmail.toLowerCase().endsWith('@privaterelay.appleid.com')) {
-        finalName = "Username";
-      } else {
-        finalName = userEmail.isNotEmpty
-            ? DataVerifcationHelper.extractNameFromEmail(userEmail)
-            : "Username";
-      }
-
-      if (finalName.isNotEmpty) {
-        await userManager.setUserName(finalName);
-      }
+      finalName = userEmail;
 
       setState(() {
         _userName = finalName;
@@ -70,8 +60,18 @@ class _GreetingWidgetState extends State<GreetingWidget> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     UserManager().removeListener(_onUserNameChanged);
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      if (mounted) {
+        setState(() {});
+      }
+    }
   }
 
   String _getGreeting() {

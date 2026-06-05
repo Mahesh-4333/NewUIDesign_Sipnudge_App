@@ -56,9 +56,17 @@ import 'package:hydrify/services/location_service.dart';
 import 'package:hydrify/services/notification/notification_service.dart';
 import 'package:hydrify/services/user_manager.dart';
 import 'package:hydrify/services/weather_service.dart';
+import 'package:hydrify/services/achievement_notifier.dart';
+import 'package:hydrify/services/firebase_messaging_service.dart';
+import 'package:hydrify/screens/help_and_support_ticket_page.dart';
+import 'package:hydrify/screens/ticket_chat_screen.dart';
 import 'package:provider/provider.dart';
 
 import 'screens/home_screen.dart';
+
+/// Global navigator key — lets [AchievementNotifier] show dialogs from
+/// anywhere (including [DatabaseSyncService.syncAll]) without a BuildContext.
+final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -87,6 +95,7 @@ Future<void> main() async {
 
   await UserManager().init();
   InternetConnectionHelper().initialize();
+  await FirebaseMessagingService().init();
 
   FlutterError.onError = (FlutterErrorDetails details) {
     //this line prints the default flutter gesture caught exception in console
@@ -104,6 +113,9 @@ Future<void> main() async {
       locationService: locationService,
     ),
   );
+
+  // Bind the navigator key so AchievementNotifier can show dialogs globally.
+  AchievementNotifier.instance.navigatorKey = navigatorKey;
 }
 
 class MyApp extends StatelessWidget {
@@ -166,6 +178,7 @@ class MyApp extends StatelessWidget {
               return Padding(
                   padding: EdgeInsets.only(bottom: 0),
                   child: MaterialApp(
+                    navigatorKey: navigatorKey,
                     debugShowCheckedModeBanner: false,
                     theme: ThemeData(
                       appBarTheme: const AppBarTheme(
@@ -231,6 +244,13 @@ class MyApp extends StatelessWidget {
                       '/aboutus': (context) => AboutUs(),
 
                       '/contact_support': (context) => ContactSupportPage(),
+                      
+                      '/help_support_ticket': (context) => HelpAndSupportTicketPage(),
+
+                      '/ticket_chat': (context) {
+                        final args = ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>;
+                        return TicketChatScreen(ticket: args);
+                      },
 
                       '/data&analytics': (context) => DataAndAnalyticsPage(),
 

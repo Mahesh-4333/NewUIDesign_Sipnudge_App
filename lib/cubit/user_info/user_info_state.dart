@@ -32,6 +32,7 @@ class UserInfoState extends Equatable {
   final double? typicalWaterIntake;
   final String? waterUnit; // "L" or "mL"
   final bool hideAchievement;
+  final String? name;
 
   const UserInfoState(
       {this.gender = Gender.male,
@@ -53,7 +54,8 @@ class UserInfoState extends Equatable {
       this.stepGoal = 7000,
       this.typicalWaterIntake = 2.0,
       this.waterUnit = "L",
-      this.hideAchievement = false});
+      this.hideAchievement = false,
+      this.name});
 
   UserInfoState copyWith({
     Gender? gender,
@@ -76,6 +78,7 @@ class UserInfoState extends Equatable {
     double? typicalWaterIntake,
     String? waterUnit,
     bool? hideAchievement,
+    String? name,
   }) {
     return UserInfoState(
       gender: gender ?? this.gender,
@@ -98,6 +101,7 @@ class UserInfoState extends Equatable {
       typicalWaterIntake: typicalWaterIntake ?? this.typicalWaterIntake,
       waterUnit: waterUnit ?? this.waterUnit,
       hideAchievement: hideAchievement ?? this.hideAchievement,
+      name: name ?? this.name,
     );
   }
 
@@ -122,6 +126,7 @@ class UserInfoState extends Equatable {
         stepGoal,
         typicalWaterIntake,
         waterUnit,
+        name,
       ];
 }
 

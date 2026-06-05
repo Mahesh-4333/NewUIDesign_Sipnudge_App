@@ -73,7 +73,7 @@ class DatabaseHelper {
     String finalPath = path.join(await getDatabasesPath(), 'bottle_history.db');
     return await openDatabase(
       finalPath,
-      version: 19,
+      version: 20,
       onUpgrade: (db, oldVersion, newVersion) async {
         if (oldVersion < 2) {
           await db.execute('ALTER TABLE user ADD COLUMN stepGoal INTEGER');
@@ -226,6 +226,13 @@ class DatabaseHelper {
             )
           ''');
         }
+        if (oldVersion < 20) {
+          try {
+            await db.execute('ALTER TABLE user ADD COLUMN name TEXT');
+          } catch (_) {
+            // Already exists
+          }
+        }
       },
       onCreate: (Database db, int version) async {
         await db.execute('''
@@ -274,7 +281,8 @@ CREATE TABLE user (
   coffeeIntake TEXT,
   teaIntake TEXT,
   typicalWaterIntake REAL,
-  waterUnit TEXT
+  waterUnit TEXT,
+  name TEXT
 )
 ''');
 
@@ -598,6 +606,7 @@ CREATE TABLE IF NOT EXISTS $appMetadataTableName (
       'teaIntake': state.teaIntake?.toString().split('.').last,
       'typicalWaterIntake': state.typicalWaterIntake,
       'waterUnit': state.waterUnit,
+      'name': state.name,
     };
 
     Console.log(
@@ -642,6 +651,7 @@ CREATE TABLE IF NOT EXISTS $appMetadataTableName (
       stepGoal: row['stepGoal'] as int?,
       typicalWaterIntake: row['typicalWaterIntake'] as double?,
       waterUnit: row['waterUnit'] as String?,
+      name: row['name'] as String?,
     );
   }
 

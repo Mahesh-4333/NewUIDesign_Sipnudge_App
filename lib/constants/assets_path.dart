@@ -168,4 +168,5 @@ class AssetsPath {
 
   static const String calendar = "assets/calendar.png";
   static const String NAIcon = "assets/NA_icon.png";
+  static const String ticketSupportIcon = "assets/ticket_support_icon.png";
 }

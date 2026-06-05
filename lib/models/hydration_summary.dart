@@ -89,4 +89,38 @@ class HydrationDaySummary {
           : null,
     );
   }
+
+  /// Parses the camelCase JSON shape returned by the backend
+  /// `GET /api/database/daily-summaries/:userId` endpoint.
+  factory HydrationDaySummary.fromServerMap(Map<String, dynamic> m) {
+    DateTime parsedDate;
+    final rawDate = m['date'];
+    if (rawDate is String) {
+      parsedDate = DateTime.tryParse(rawDate)?.toLocal() ??
+          DateTime.fromMillisecondsSinceEpoch(0).toLocal();
+    } else if (rawDate is int) {
+      parsedDate = DateTime.fromMillisecondsSinceEpoch(rawDate).toLocal();
+    } else {
+      parsedDate = DateTime.fromMillisecondsSinceEpoch(0).toLocal();
+    }
+
+    DateTime? parseIso(dynamic raw) {
+      if (raw == null) return null;
+      if (raw is String) return DateTime.tryParse(raw)?.toLocal();
+      if (raw is int) return DateTime.fromMillisecondsSinceEpoch(raw).toLocal();
+      return null;
+    }
+
+    return HydrationDaySummary(
+      date: parsedDate,
+      dayIndex: (m['dayIndex'] as int?) ?? 0,
+      target: (m['target'] as num).toDouble(),
+      consumed: (m['consumed'] as num).toDouble(),
+      isPerfect: (m['isPerfect'] as bool?) ?? false,
+      deviceId: m['deviceId'] as String?,
+      createdAt: parseIso(m['createdAt']) ?? DateTime.now(),
+      updatedAt: parseIso(m['updatedAt']),
+    );
+  }
 }
+

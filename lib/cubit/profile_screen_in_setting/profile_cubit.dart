@@ -25,6 +25,10 @@ class ProfileCubit extends Cubit<ProfileState> {
                 title: "Help & Support",
               ),
               ProfileMenuItem(
+                iconPath: "assets/help_support.png",
+                title: "Support Tickets",
+              ),
+              ProfileMenuItem(
                 iconPath: "assets/bottle_icon11.png",
                 title: "Sipnudge Bottle",
               ),

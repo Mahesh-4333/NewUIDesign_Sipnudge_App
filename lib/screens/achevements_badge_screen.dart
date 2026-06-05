@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 import 'dart:math';
 import 'dart:ui';
@@ -22,6 +23,10 @@ import 'package:hydrify/cubit/hydration/hydration_state.dart';
 import 'package:hydrify/helpers/shared_pref_helper.dart';
 import 'package:hydrify/screens/levelreached.dart';
 import 'package:hydrify/screens/widgets/level_widgets/concentric_circles_animation.dart';
+import 'package:hydrify/services/achievement_notifier.dart';
+import 'package:hydrify/services/api_service.dart';
+import 'package:hydrify/services/sync_bus.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class AchievementsBadgeScreen extends StatefulWidget {
   const AchievementsBadgeScreen({super.key});
@@ -43,6 +48,11 @@ class _AchievementsBadgeScreenState extends State<AchievementsBadgeScreen> {
   bool _didAutoRefresh = false;
   late ConfettiController _confettiController;
 
+  final ApiService _apiService = ApiService();
+
+  // SharedPreferences key for achievement JSON cache.
+  static const String _cacheKey = 'achievements_cache';
+
   @override
   void initState() {
     super.initState();
@@ -54,26 +64,116 @@ class _AchievementsBadgeScreenState extends State<AchievementsBadgeScreen> {
     _loadHydrationData(liveTotalDrank: liveTotalDrank);
     _confettiController =
         ConfettiController(duration: const Duration(seconds: 2));
+    // Refresh silently whenever a full sync completes.
+    SyncBus.instance.addListener(_onSync);
   }
+
+  /// Called by SyncBus after every successful syncAll().
+  void _onSync() => _loadHydrationData(silent: true);
+
+  // ── Guest check ───────────────────────────────────────────────────────────
 
   Future<void> _checkGuestUser() async {
     final userEmail = await SharedPrefsHelper.getUserEmail();
-    setState(() {
-      isGuest = userEmail == "guest_user";
-    });
+    if (!mounted) return;
+    setState(() => isGuest = userEmail == "guest_user");
   }
+
+  // ── Persistent cache helpers ──────────────────────────────────────────────
+
+  Future<void> _saveAchievementsToCache(Map<String, dynamic> data) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(_cacheKey, jsonEncode(data));
+    } catch (_) {}
+  }
+
+  Future<Map<String, dynamic>?> _loadAchievementsFromCache() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final raw = prefs.getString(_cacheKey);
+      if (raw == null) return null;
+      return Map<String, dynamic>.from(jsonDecode(raw));
+    } catch (_) {
+      return null;
+    }
+  }
+
+  // ── Apply parsed server/cache payload to local state ─────────────────────
+
+  void _applyAchievementData(Map<String, dynamic> data, int dailyGoalMl) {
+    final int currentLevel = (data['currentLevel'] as num?)?.toInt() ?? 0;
+    // lastShownLevel comes from server (survives reinstalls); falls back to 0.
+    final int lastShownLevel = (data['lastShownLevel'] as num?)?.toInt() ?? 0;
+
+    final rawLevelMap = (data['levelToIntakeMap'] as Map?)?.map((k, v) =>
+            MapEntry(int.tryParse(k.toString()) ?? 0, v.toString())) ??
+        {};
+    final rawExactMap = (data['exactLevelToIntakeMap'] as Map?)?.map((k, v) =>
+            MapEntry(int.tryParse(k.toString()) ?? 0, v.toString())) ??
+        {};
+
+    final Map<int, double> mlMap = {};
+    rawLevelMap.forEach((level, litresStr) {
+      final parsed = double.tryParse(litresStr.replaceAll('L', ''));
+      if (parsed != null) mlMap[level] = parsed * 1000;
+    });
+
+    final Map<int, double> exactMlMap = {};
+    rawExactMap.forEach((level, valStr) {
+      final parsed = double.tryParse(valStr);
+      if (parsed != null) exactMlMap[level] = parsed;
+    });
+
+    if (!mounted) return;
+    setState(() {
+      _currentLevel = currentLevel.clamp(0, 365);
+      _levelToIntakeMap = rawLevelMap;
+      _levelToMlMap = mlMap;
+      _levelToExactMlMap = exactMlMap;
+      _dailyWaterGoal = dailyGoalMl;
+      _loading = false;
+    });
+
+    // Delegate to the singleton — it owns all dialog + acknowledge logic
+    // and can fire from any screen, including post-syncAll.
+    AchievementNotifier.instance.checkAndShow();
+  }
+
+  // ── Main data load: server → cache → local cubit ──────────────────────────
 
   Future<void> _loadHydrationData(
       {int? liveTotalDrank, bool silent = false}) async {
     if (!silent) {
-      setState(() => _loading = true);
+      if (mounted) setState(() => _loading = true);
     }
 
     final userGoal = await SharedPrefsHelper.getUserGoal();
     final dailyGoalMl = userGoal ?? 1400;
+    final userId = await SharedPrefsHelper.getUserId();
 
-    // Use the cubit's already-computed level data — refreshAchievementStats()
-    // keeps this authoritative and up-to-date (including today).
+    // ── 1. Try server ────────────────────────────────────────────────────
+    if (userId != null && userId.isNotEmpty) {
+      try {
+        final serverData = await _apiService.getAchievements(userId);
+        if (serverData != null) {
+          // Persist for offline use
+          _saveAchievementsToCache(serverData);
+          _applyAchievementData(serverData, dailyGoalMl);
+          return;
+        }
+      } catch (_) {}
+    }
+
+    // ── 2. Try persistent cache (offline) ────────────────────────────────
+    final cached = await _loadAchievementsFromCache();
+    if (cached != null) {
+      _applyAchievementData(cached, dailyGoalMl);
+      return;
+    }
+
+    // ── 3. Fall back to local HydrationCubit data ────────────────────────
+    if (!mounted) return;
     final hydrationState =
         BlocProvider.of<HydrationCubit>(context, listen: false).state;
 
@@ -82,23 +182,19 @@ class _AchievementsBadgeScreenState extends State<AchievementsBadgeScreen> {
     final Map<int, String> cubitExactLevelMap =
         hydrationState.exactLevelToIntakeMap;
 
-    // Build the ml map from the string map (e.g. "2.2L" → 2200.0)
     final Map<int, double> localMlMap = {};
-    final Map<int, double> localExactMlMap = {};
     cubitLevelMap.forEach((level, litresStr) {
       final parsed = double.tryParse(litresStr.replaceAll('L', ''));
-      if (parsed != null) {
-        localMlMap[level] = parsed * 1000;
-      }
+      if (parsed != null) localMlMap[level] = parsed * 1000;
     });
 
+    final Map<int, double> localExactMlMap = {};
     cubitExactLevelMap.forEach((level, litresStr) {
       final parsed = double.tryParse(litresStr.replaceAll('L', ''));
-      localExactMlMap[level] = parsed!;
+      if (parsed != null) localExactMlMap[level] = parsed;
     });
 
     if (!mounted) return;
-
     setState(() {
       _currentLevel = cubitLevel.clamp(0, 365);
       _levelToIntakeMap = cubitLevelMap;
@@ -109,16 +205,23 @@ class _AchievementsBadgeScreenState extends State<AchievementsBadgeScreen> {
     });
   }
 
+  // ── Lifecycle ─────────────────────────────────────────────────────────────
+
   @override
   void dispose() {
+    SyncBus.instance.removeListener(_onSync);
     _confettiController.dispose();
     super.dispose();
   }
+
+  // ── Helpers ───────────────────────────────────────────────────────────────
 
   String _getWaterIntakeForLevel(int level) {
     if (level <= 0 || !_levelToExactMlMap.containsKey(level)) return '0';
     return _levelToExactMlMap[level]!.toStringAsFixed(0);
   }
+
+  // ── Build ─────────────────────────────────────────────────────────────────
 
   @override
   Widget build(BuildContext context) {
@@ -142,6 +245,7 @@ class _AchievementsBadgeScreenState extends State<AchievementsBadgeScreen> {
   Widget _buildRegularScreen() {
     return BlocConsumer<HydrationCubit, HydrationState>(
         listener: (context, state) {
+      // Re-fetch silently whenever HydrationCubit emits a new state
       _loadHydrationData(liveTotalDrank: state.totalDrank, silent: true);
     }, builder: (context, state) {
       final int currentLevelNum = int.tryParse(_currentLevel.toString()) ?? 0;
@@ -199,7 +303,7 @@ class _AchievementsBadgeScreenState extends State<AchievementsBadgeScreen> {
                             BoxShadow(
                               color: Colors.black.withValues(alpha: .1),
                               blurRadius: 10,
-                              offset: Offset(0, -2),
+                              offset: const Offset(0, -2),
                             ),
                           ]),
                       child: GridView.builder(
@@ -236,11 +340,9 @@ class _AchievementsBadgeScreenState extends State<AchievementsBadgeScreen> {
                                         onShare: (dialogContext) async {
                                       _confettiController.stop();
                                       try {
-                                        // Capture the dialog as image bytes
                                         final Uint8List? imageBytes =
                                             await screenshotController.capture(
-                                          pixelRatio:
-                                              2.0, // adjust to improve resolution
+                                          pixelRatio: 2.0,
                                         );
 
                                         if (imageBytes == null) {
@@ -249,23 +351,19 @@ class _AchievementsBadgeScreenState extends State<AchievementsBadgeScreen> {
                                           return;
                                         }
 
-                                        // Get a temporary directory
                                         final tempDir =
                                             await getTemporaryDirectory();
                                         final String filePath =
                                             '${tempDir.path}/level_up.png';
 
-                                        // Write the bytes to a file
                                         final File file =
                                             await File(filePath).create();
                                         await file.writeAsBytes(imageBytes);
 
-                                        // Pop the dialog explicitly using its own context
                                         Navigator.pop(dialogContext);
 
                                         if (!itemContext.mounted) return;
 
-                                        // Use share_plus to share this image file
                                         final box = itemContext
                                             .findRenderObject() as RenderBox;
                                         await Share.shareXFiles(
@@ -331,7 +429,7 @@ class _AchievementsBadgeScreenState extends State<AchievementsBadgeScreen> {
                   decoration: BoxDecoration(
                     borderRadius:
                         BorderRadius.circular(AppDimensions.radius_100.r),
-                    image: DecorationImage(
+                    image: const DecorationImage(
                       image: AssetImage(
                         "assets/images/guest_dialog.png",
                       ),
@@ -373,6 +471,8 @@ class _AchievementsBadgeScreenState extends State<AchievementsBadgeScreen> {
       );
     });
   }
+
+  // ── Badge widgets ─────────────────────────────────────────────────────────
 
   Widget getCurrentLevelBadge(String level) {
     final int currentLevelNum = int.tryParse(level) ?? 0;
@@ -571,6 +671,8 @@ class _AchievementsBadgeScreenState extends State<AchievementsBadgeScreen> {
       ),
     );
   }
+
+  // ── Confetti shapes ───────────────────────────────────────────────────────
 
   Path drawStar(Size size) {
     double degToRad(double deg) => deg * (pi / 180.0);

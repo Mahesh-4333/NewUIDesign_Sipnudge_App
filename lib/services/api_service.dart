@@ -249,6 +249,58 @@ class ApiService {
     }
   }
 
+  Future<List<Map<String, dynamic>>?> getManualLogs(String userId) async {
+    try {
+      final response = await _dio.get('/api/database/manual-logs/$userId');
+      if (response.statusCode == 200 && response.data['success'] == true) {
+        return List<Map<String, dynamic>>.from(response.data['data']);
+      }
+      return null;
+    } on DioException catch (e) {
+      Console.log(tag: "APP", value: "Exception in getManualLogs: $e");
+      return null;
+    }
+  }
+
+  Future<bool> submitSupportTicket(String userId, String message) async {
+    try {
+      final response = await _dio.post(
+        '/api/database/support-ticket',
+        data: {'userId': userId, 'message': message},
+      );
+      return response.statusCode == 200 && response.data['success'] == true;
+    } on DioException catch (e) {
+      Console.log(tag: "APP", value: "Exception in submitSupportTicket: $e");
+      return false;
+    }
+  }
+
+  Future<List<Map<String, dynamic>>?> getSupportTickets(String userId) async {
+    try {
+      final response = await _dio.get('/api/database/support-tickets', queryParameters: {'userId': userId});
+      if (response.statusCode == 200 && response.data['success'] == true) {
+        return List<Map<String, dynamic>>.from(response.data['data']);
+      }
+      return null;
+    } on DioException catch (e) {
+      Console.log(tag: "APP", value: "Exception in getSupportTickets: $e");
+      return null;
+    }
+  }
+
+  Future<bool> replySupportTicket(String ticketId, String message) async {
+    try {
+      final response = await _dio.post(
+        '/api/database/support-ticket/$ticketId/reply',
+        data: {'message': message, 'from': 'user'},
+      );
+      return response.statusCode == 200 && response.data['success'] == true;
+    } on DioException catch (e) {
+      Console.log(tag: "APP", value: "Exception in replySupportTicket: $e");
+      return false;
+    }
+  }
+
   Future<bool> syncDailySummaries(
       String userId, List<Map<String, dynamic>> summaries) async {
     try {
@@ -259,6 +311,31 @@ class ApiService {
       return response.data['success'] == true;
     } on DioException catch (e) {
       Console.log(tag: "APP", value: "Exception in syncDailySummaries: $e");
+      return false;
+    }
+  }
+
+  /// Lightweight patch — only sends today's consumed + isPerfect.
+  /// Used on every hydration event after the initial 30-day seed.
+  Future<bool> updateTodayConsumed(
+    String userId,
+    String date,
+    double consumed,
+    bool isPerfect,
+  ) async {
+    try {
+      final response = await _dio.patch(
+        '/api/database/update-today-consumed',
+        data: {
+          'userId': userId,
+          'date': date,
+          'consumed': consumed,
+          'isPerfect': isPerfect,
+        },
+      );
+      return response.data['success'] == true;
+    } on DioException catch (e) {
+      Console.log(tag: "APP", value: "Exception in updateTodayConsumed: $e");
       return false;
     }
   }
@@ -358,6 +435,66 @@ class ApiService {
     } on DioException catch (e) {
       Console.log(tag: "APP", value: "Exception in syncMetadata: $e");
       return false;
+    }
+  }
+
+  /// Fetches achievement / badge data from the server for [userId].
+  /// Returns the payload map on success, or null on failure / no connectivity.
+  Future<Map<String, dynamic>?> getAchievements(String userId) async {
+    try {
+      final response = await _dio.get('/api/database/achievements/$userId');
+      if (response.statusCode == 200 && response.data['success'] == true) {
+        return Map<String, dynamic>.from(response.data['data']);
+      }
+      return null;
+    } on DioException catch (e) {
+      Console.log(tag: 'APP', value: 'Exception in getAchievements: $e');
+      return null;
+    }
+  }
+
+  /// Persists [level] as the last acknowledged level-up dialog on the server.
+  /// This survives app reinstalls since it's stored in the Metadata collection.
+  Future<bool> acknowledgeAchievementLevel(String userId, int level) async {
+    try {
+      final response = await _dio.post(
+        '/api/database/achievements/$userId/acknowledge',
+        data: {'level': level},
+      );
+      return response.statusCode == 200 &&
+          response.data['success'] == true;
+    } on DioException catch (e) {
+      Console.log(
+          tag: 'APP', value: 'Exception in acknowledgeAchievementLevel: $e');
+      return false;
+    }
+  }
+
+
+
+  /// Fetches HydrationDaySummary records from the server for [userId] in the
+  /// given [startDate]..[endDate] window.  Returns the list of raw maps on
+  /// success, or null when the call fails / no connectivity.
+  Future<List<Map<String, dynamic>>?> getDailySummaries(
+    String userId,
+    DateTime startDate,
+    DateTime endDate,
+  ) async {
+    try {
+      final response = await _dio.get(
+        '/api/database/daily-summaries/$userId',
+        queryParameters: {
+          'startDate': startDate.toUtc().toIso8601String(),
+          'endDate': endDate.toUtc().toIso8601String(),
+        },
+      );
+      if (response.statusCode == 200 && response.data['success'] == true) {
+        return List<Map<String, dynamic>>.from(response.data['data']);
+      }
+      return null;
+    } on DioException catch (e) {
+      Console.log(tag: 'APP', value: 'Exception in getDailySummaries: $e');
+      return null;
     }
   }
 

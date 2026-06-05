@@ -109,7 +109,7 @@ class _LogHydrationWidgetState extends State<LogHydrationWidget> {
     }
     Fluttertoast.showToast(msg: "Log deleted");
     _fetchLogs();
-    context.read<HydrationCubit>().refreshAchievementStats();
+    DatabaseSyncService().syncAll();
   }
 
   _saveLog() async {
@@ -244,7 +244,7 @@ class _LogHydrationWidgetState extends State<LogHydrationWidget> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          "DAILY GOAL TARGET",
+                          "SELECTED DRINK",
                           style: TextStyle(
                             color: AppColors.blueWaterIntake,
                             fontSize: 10.sp,
@@ -253,7 +253,7 @@ class _LogHydrationWidgetState extends State<LogHydrationWidget> {
                           ),
                         ),
                         Text(
-                          "${_dailyGoalTarget.toInt()}ml",
+                          _selectedDrink,
                           style: TextStyle(
                             color: Colors.black,
                             fontSize: 18.sp,

@@ -49,7 +49,7 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
+class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   Timer? _timezoneTimer;
   Timer? _aiHydrationEngineTimer;
   bool _isTimezoneDialogOpen = false;
@@ -78,6 +78,7 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     SharedPrefsHelper.getWaterGoal().then((e) {
       setState(() {
         currentWaterGoal = e;
@@ -177,12 +178,25 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _timezoneTimer?.cancel();
     _statsToggleTimer?.cancel();
     _aiHydrationEngineTimer?.cancel();
     _configSubscription?.cancel();
     _internetSubscription?.cancel();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      Console.log(
+          tag: "HOME",
+          value: "App resumed, refreshing weather and syncing data...");
+      Provider.of<WeatherProvider>(context, listen: false)
+          .fetchWeatherForCurrentLocation();
+      DatabaseSyncService().syncAll();
+    }
   }
 
   Future<void> _initializeTimezoneDetector() async {
@@ -627,24 +641,6 @@ class _HomeScreenState extends State<HomeScreen> {
           Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              /// 📷 QR Scanner Button
-              // IconButton(
-              //   onPressed: () {
-              //     Navigator.of(context, rootNavigator: true).pushReplacement(
-              //       //context,
-              //       MaterialPageRoute(
-              //         builder: (_) => const QrScanner(),
-              //       ),
-              //     );
-              //   },
-              //   icon: Icon(
-              //     Icons.qr_code_scanner,
-              //     color: AppColors.black,
-              //     size: AppDimensions.dim28.sp,
-              //   ),
-              //   tooltip: "Rescan Bottle",
-              // ),
-
               SizedBox(width: AppDimensions.dim8.w),
               Column(
                 children: [

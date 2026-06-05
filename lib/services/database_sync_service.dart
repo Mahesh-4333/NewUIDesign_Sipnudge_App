@@ -1,7 +1,10 @@
 import 'dart:math';
 import 'package:hydrify/helpers/database_helper.dart';
 import 'package:hydrify/helpers/shared_pref_helper.dart';
+import 'package:hydrify/services/achievement_notifier.dart';
 import 'package:hydrify/services/api_service.dart';
+import 'package:hydrify/services/firebase_messaging_service.dart';
+import 'package:hydrify/services/sync_bus.dart';
 import 'package:hydrify/helpers/logger.dart';
 
 class DatabaseSyncService {
@@ -110,8 +113,12 @@ class DatabaseSyncService {
           'teaIntake': userInfo.teaIntake?.toString().split('.').last,
           'typicalWaterIntake': userInfo.typicalWaterIntake,
           'waterUnit': userInfo.waterUnit,
+          'name': userInfo.name,
         });
       }
+
+      // Also ensure FCM token is synced on full database sync
+      await FirebaseMessagingService().syncTokenToBackend();
 
       // 2. Sync Bottle History
       final bottleHistory = await _dbHelper.getAllBottleHistory(limit: 1);
@@ -176,24 +183,64 @@ class DatabaseSyncService {
       }
 
       // 5. Sync Daily Summaries
-      final summaries = await _dbHelper.getHydrationSummariesForRange();
-      if (summaries.isNotEmpty) {
-        final mappedSummaries = summaries
-            .map((e) => {
-                  'date': e.date.toIso8601String(),
-                  'dayIndex': e.dayIndex,
-                  'target': e.target,
-                  'consumed': e.consumed,
-                  'isPerfect': e.isPerfect,
-                  'deviceId': e.deviceId,
-                  'createdAt': e.createdAt.toIso8601String(),
-                  'updatedAt': e.updatedAt?.toIso8601String(),
-                })
-            .toList();
-        await _syncInChunks<Map<String, dynamic>>(mappedSummaries, 100,
-            (chunk) async {
-          await _apiService.syncDailySummaries(userId!, chunk);
-        });
+      // Strategy:
+      //  - First launch (flag not set): full 30-day upsert to seed the server.
+      //  - Every subsequent sync: only push today's consumed + isPerfect.
+      //    This avoids sending 30 records on every hydration event.
+      final bool alreadySynced30 = await SharedPrefsHelper.hasSynced30Days();
+
+      if (!alreadySynced30) {
+        // ── One-time full seed ──────────────────────────────────────────────
+        // Fetch manual logs from server on first install
+        try {
+          final serverManualLogs = await _apiService.getManualLogs(userId!);
+          if (serverManualLogs != null && serverManualLogs.isNotEmpty) {
+            for (var log in serverManualLogs) {
+              await _dbHelper.insertHydrationLog(
+                log['type'],
+                (log['consumed'] as num).toDouble(),
+                DateTime.parse(log['timestamp']),
+              );
+            }
+          }
+        } catch (e) {
+          Console.log(tag: "SYNC", value: "Failed to fetch manual logs: $e");
+        }
+
+        final summaries = await _dbHelper.getHydrationSummariesForRange();
+        if (summaries.isNotEmpty) {
+          final mappedSummaries = summaries
+              .map((e) => {
+                    'date': e.date.toIso8601String(),
+                    'dayIndex': e.dayIndex,
+                    'target': e.target,
+                    'consumed': e.consumed,
+                    'isPerfect': e.isPerfect,
+                    'deviceId': e.deviceId,
+                    'createdAt': e.createdAt.toIso8601String(),
+                    'updatedAt': e.updatedAt?.toIso8601String(),
+                  })
+              .toList();
+          await _syncInChunks<Map<String, dynamic>>(mappedSummaries, 100,
+              (chunk) async {
+            await _apiService.syncDailySummaries(userId!, chunk);
+          });
+        }
+        // Mark done so we never do the full sync again
+        await SharedPrefsHelper.setHasSynced30Days(true);
+        Console.log(tag: "SYNC", value: "Full 30-day seed complete");
+      } else {
+        // ── Lightweight today-only update ───────────────────────────────────
+        final today = await _dbHelper.getSummaryForDate(DateTime.now());
+        if (today != null) {
+          await _apiService.updateTodayConsumed(
+            userId!,
+            today.date.toIso8601String(),
+            today.consumed,
+            today.isPerfect,
+          );
+        }
+        Console.log(tag: "SYNC", value: "Today-only consumed sync complete");
       }
 
       // 6. Sync AI Logs
@@ -286,6 +333,13 @@ class DatabaseSyncService {
       }
 
       Console.log(tag: "SYNC", value: "Sync completed successfully");
+
+      // Notify chart widgets (and any other listeners) to refresh their data.
+      SyncBus.instance.notifySyncComplete();
+
+      // After every successful sync, check if a new achievement level was
+      // unlocked and show the level-up dialog from anywhere in the app.
+      AchievementNotifier.instance.checkAndShow(userId: userId);
     } catch (e) {
       Console.log(tag: "SYNC", value: "Sync failed: $e");
     }

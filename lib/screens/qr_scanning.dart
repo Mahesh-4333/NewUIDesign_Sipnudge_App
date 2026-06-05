@@ -10,7 +10,6 @@ import 'package:hydrify/helpers/shared_pref_helper.dart';
 import 'package:hydrify/screens/auth/auth_options_screen.dart';
 import 'package:hydrify/screens/bottom_nav_screen_new.dart';
 import 'package:hydrify/screens/home_screen.dart';
-import 'package:hydrify/screens/personalinfo.dart';
 import 'package:hydrify/screens/user_personal_info_input_screen..dart';
 import 'package:hydrify/screens/widgets/auth_button_widget.dart';
 import 'package:hydrify/services/qr_generator.dart';

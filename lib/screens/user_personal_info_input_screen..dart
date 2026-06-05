@@ -29,11 +29,29 @@ class UserInfoInputScreen extends StatefulWidget {
 }
 
 class _UserInfoInputScreenState extends State<UserInfoInputScreen> {
+  final TextEditingController _nameController = TextEditingController();
+
   @override
   void initState() {
     super.initState();
     context.read<UserInfoCubit>().loadUser();
-    context.read<UserInfoCubit>().setAchievmentSnackbarStatus(!widget.fromSettings);
+    context
+        .read<UserInfoCubit>()
+        .setAchievmentSnackbarStatus(!widget.fromSettings);
+    _loadSavedName();
+  }
+
+  Future<void> _loadSavedName() async {
+    final saved = await SharedPrefsHelper.getUserName();
+    if (saved != null && saved.isNotEmpty) {
+      _nameController.text = saved;
+    }
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    super.dispose();
   }
 
   @override
@@ -45,6 +63,55 @@ class _UserInfoInputScreenState extends State<UserInfoInputScreen> {
       child: Scaffold(
         extendBodyBehindAppBar: true,
         extendBody: true,
+        bottomNavigationBar: Container(
+          height: AppDimensions.dim60,
+          margin: EdgeInsets.only(
+            left: AppDimensions.defaultPadding.w,
+            right: AppDimensions.defaultPadding.w,
+            bottom: AppDimensions.defaultPadding.w,
+          ),
+          child: BlocBuilder<UserInfoCubit, UserInfoState>(
+            builder: (context, state) {
+              return CustomNextButton(
+                  text: AppStrings.next,
+                  onNextPressed: () async {
+                    final height = state.height;
+                    final weight = state.weight;
+                    final age = state.age;
+
+                    if (height == null || weight == null || age == null) {
+                      UiUtilsService.showToast(
+                        context: context,
+                        text:
+                            "Please fill in height, weight, and age before continuing.",
+                        textColor: Colors.red,
+                      );
+                      return;
+                    }
+
+                    // Save name to SharedPrefs + cubit
+                    final name = _nameController.text.trim();
+                    if (name.isNotEmpty) {
+                      await SharedPrefsHelper.setUserName(name);
+                      if (context.mounted) {
+                        context.read<UserInfoCubit>().setName(name);
+                      }
+                    }
+
+                    if (!context.mounted) return;
+                    // From onboarding → continue next flow
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => UserLifestyleInfoInputScreen(
+                          isViaSettingsScreen: widget.fromSettings,
+                        ),
+                      ),
+                    );
+                  });
+            },
+          ),
+        ),
         appBar: AppBar(
           elevation: 0.0,
           backgroundColor: Colors.transparent,
@@ -97,6 +164,7 @@ class _UserInfoInputScreenState extends State<UserInfoInputScreen> {
               AppDimensions.defaultPadding,
             ),
             children: [
+              // ── Gender ──────────────────────────────────────────────────
               Text(
                 AppStrings.whatsYourGender,
                 style: TextStyle(
@@ -277,47 +345,63 @@ class _UserInfoInputScreenState extends State<UserInfoInputScreen> {
                   );
                 },
               ),
-              Container(
-                height: AppDimensions.dim60,
-                margin: EdgeInsets.only(
-                  top: AppDimensions.dim120.h,
-                  // left: AppDimensions.defaultPadding.w,
-                  // right: AppDimensions.defaultPadding.w,
-                ),
-                child: BlocBuilder<UserInfoCubit, UserInfoState>(
-                  builder: (context, state) {
-                    return CustomNextButton(
-                        text: AppStrings.next,
-                        onNextPressed: () {
-                          final height = state.height;
-                          final weight = state.weight;
-                          final age = state.age;
-
-                          if (height == null || weight == null || age == null) {
-                            UiUtilsService.showToast(
-                              context: context,
-                              text:
-                                  "Please fill in height, weight, and age before continuing.",
-                              textColor: Colors.red,
-                            );
-                            return;
-                          }
-
-                          // From onboarding → continue next flow
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) =>
-                                  UserLifestyleInfoInputScreen(
-                                isViaSettingsScreen: widget.fromSettings,
-                              ),
-                            ),
-                          );
-                        });
-                  },
+              SizedBox(height: AppDimensions.dim32.h),
+              // ── Name field ──────────────────────────────────────────────
+              Text(
+                "What's your name?",
+                style: TextStyle(
+                  fontFamily: AppFontStyles.urbanistFontFamily,
+                  fontSize: AppFontStyles.fontSize_16,
+                  color: AppColors.bluegray,
+                  fontVariations: [AppFontStyles.fontWeightVariation600],
                 ),
               ),
-              SizedBox(height: AppDimensions.dim30,)
+              SizedBox(height: AppDimensions.dim20.h),
+              Container(
+                padding: EdgeInsets.all(AppDimensions.dim12.w),
+                decoration: BoxDecoration(
+                  color: const Color(0xffffffff),
+                  border: Border.all(
+                    color: AppColors.lightgray,
+                    width: AppDimensions.dim1,
+                  ),
+                  borderRadius: BorderRadius.circular(AppDimensions.radius_25),
+                  boxShadow: [
+                    BoxShadow(
+                      blurRadius: AppDimensions.dim4,
+                      color: Colors.black.withOpacity(.4),
+                      offset:
+                          Offset(AppDimensions.dim2.w, AppDimensions.dim2.h),
+                    ),
+                  ],
+                ),
+                child: TextField(
+                  controller: _nameController,
+                  keyboardType: TextInputType.name,
+                  textCapitalization: TextCapitalization.words,
+                  style: TextStyle(
+                    fontFamily: AppFontStyles.urbanistFontFamily,
+                    fontSize: AppFontStyles.fontSize_16,
+                    fontVariations: [AppFontStyles.regularFontVariation],
+                    color: AppColors.black,
+                  ),
+                  decoration: InputDecoration(
+                    hintText: 'Enter your name',
+                    hintStyle: TextStyle(
+                      fontFamily: AppFontStyles.urbanistFontFamily,
+                      fontSize: AppFontStyles.fontSize_16,
+                      fontVariations: [AppFontStyles.regularFontVariation],
+                      color: const Color(0xCCCFCFCF),
+                    ),
+                    isDense: true,
+                    contentPadding: EdgeInsets.zero,
+                    border: InputBorder.none,
+                    enabledBorder: InputBorder.none,
+                    focusedBorder: InputBorder.none,
+                  ),
+                ),
+              ),
+              SizedBox(height: AppDimensions.dim100.h),
             ],
           ),
         ),

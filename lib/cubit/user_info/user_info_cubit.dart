@@ -71,6 +71,10 @@ class UserInfoCubit extends Cubit<UserInfoState> {
     emit(state.copyWith(age: age));
   }
 
+  void setName(String name) {
+    emit(state.copyWith(name: name));
+  }
+
   void updateWakeupTime({int? hour, int? minute, String? period}) {
     emit(state.copyWith(
       wakeupHour: hour,

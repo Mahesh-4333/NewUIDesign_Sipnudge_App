@@ -52,6 +52,8 @@ class SharedPrefsHelper {
   static const String _keyUnsnoozedSlots = 'unsnoozed_slots';
   static const String _keyUnsnoozedDate = 'unsnoozed_date';
   static const String _keyShutdownApp = 'shutdown_app';
+  static const String _keyHasSynced30Days = 'has_synced_30_days';
+  static const String _keyUserName = 'user_name';
 
   // ----------------------------
   // APP SHUTDOWN (TRIAL RESTRICTION)
@@ -64,6 +66,21 @@ class SharedPrefsHelper {
   static Future<bool> isAppShutdown() async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getBool(_keyShutdownApp) ?? false;
+  }
+
+  // ----------------------------
+  // DAILY SUMMARY SYNC FLAG
+  // ----------------------------
+  /// Returns true if the one-time full 30-day summary sync has already been
+  /// completed for this user. After it's done we only push today's data.
+  static Future<bool> hasSynced30Days() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool(_keyHasSynced30Days) ?? false;
+  }
+
+  static Future<void> setHasSynced30Days(bool value) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_keyHasSynced30Days, value);
   }
 
   // ----------------------------
@@ -204,6 +221,17 @@ class SharedPrefsHelper {
   static Future<void> setUserEmail(String email) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_keyUserEmail, email);
+  }
+
+  // Save / retrieve user display name
+  static Future<void> setUserName(String name) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_keyUserName, name);
+  }
+
+  static Future<String?> getUserName() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_keyUserName);
   }
 
   static Future<void> setUserId(String userId) async {

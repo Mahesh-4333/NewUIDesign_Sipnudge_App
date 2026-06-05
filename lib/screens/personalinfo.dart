@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:hydrify/cubit/user_info/user_info_cubit.dart';
+import 'package:hydrify/helpers/shared_pref_helper.dart';
 
 class PersonalInfoApp extends StatelessWidget {
   const PersonalInfoApp({super.key});
@@ -37,6 +40,7 @@ class _PersonalInfoPageState extends State<PersonalInfoPage> {
   TextEditingController heightController = TextEditingController();
   TextEditingController weightController = TextEditingController();
   TextEditingController ageController = TextEditingController();
+  TextEditingController nameController = TextEditingController();
 
   String selectedValue = "00"; // Shared for temporary selection
 
@@ -67,8 +71,19 @@ class _PersonalInfoPageState extends State<PersonalInfoPage> {
               borderRadius: BorderRadius.circular(100.r),
             ),
             child: ElevatedButton(
-              onPressed: () {
-                Navigator.pushNamed(context, '/lifestyleinfo');
+              onPressed: () async {
+                // Persist name to SharedPrefs (fast, available everywhere)
+                // and into the UserInfoCubit (flows through DB → sync).
+                final name = nameController.text.trim();
+                if (name.isNotEmpty) {
+                  await SharedPrefsHelper.setUserName(name);
+                  if (context.mounted) {
+                    context.read<UserInfoCubit>().setName(name);
+                  }
+                }
+                if (context.mounted) {
+                  Navigator.pushNamed(context, '/lifestyleinfo');
+                }
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFFB889D2),
@@ -118,6 +133,21 @@ class _PersonalInfoPageState extends State<PersonalInfoPage> {
                           fontFamily: 'Urbanist-ExtraBold',
                           color: Colors.white,
                         ),
+                      ),
+                    ],
+                  ),
+                ),
+                SizedBox(height: 24.h),
+                Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 30.w),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      buildLabel("What's your name?"),
+                      SizedBox(height: 8.h),
+                      buildTextInputField(
+                        hint: 'Enter your name',
+                        controller: nameController,
                       ),
                     ],
                   ),
@@ -409,6 +439,53 @@ class _PersonalInfoPageState extends State<PersonalInfoPage> {
                   EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
             ),
           ),
+        ),
+      ),
+    );
+  }
+
+  /// Free-text input field (keyboard-driven) — used for the name field.
+  Widget buildTextInputField({
+    required String hint,
+    required TextEditingController controller,
+  }) {
+    return Container(
+      height: 50.h,
+      decoration: BoxDecoration(
+        color: const Color(0x80735E7F),
+        borderRadius: BorderRadius.circular(30.r),
+        border: Border.all(color: const Color(0xFF9982A6), width: 1.0.w),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x40000000),
+            blurRadius: 3,
+            offset: Offset(2, 2),
+          ),
+        ],
+      ),
+      child: TextField(
+        controller: controller,
+        keyboardType: TextInputType.name,
+        textCapitalization: TextCapitalization.words,
+        style: TextStyle(color: Colors.white, fontSize: 14.sp),
+        decoration: InputDecoration(
+          hintText: hint,
+          hintStyle: TextStyle(fontSize: 14.sp, color: const Color(0x50FFFFFF)),
+          filled: true,
+          fillColor: Colors.transparent,
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(30.r),
+            borderSide: BorderSide.none,
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(30.r),
+            borderSide: BorderSide.none,
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(30.r),
+            borderSide: BorderSide.none,
+          ),
+          contentPadding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
         ),
       ),
     );
