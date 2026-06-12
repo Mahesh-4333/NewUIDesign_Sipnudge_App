@@ -864,6 +864,28 @@ CREATE TABLE IF NOT EXISTS $appMetadataTableName (
         tag: "APP", value: "[DB] Cleared all data in bottle_history table.");
   }
 
+  Future<void> clearAllDatabaseData() async {
+    try {
+      final db = await database;
+      final batch = db.batch();
+      batch.delete(tableName);
+      batch.delete(hydrationSummaryTableName);
+      batch.delete(todayHydrationHistoryTableName);
+      batch.delete(foodScannerTableName);
+      batch.delete(aiHydrationTableName);
+      batch.delete(dailyWaterGoalsTableName);
+      batch.delete(dailyStepsTableName);
+      batch.delete(logHydrationTableName);
+      batch.delete('hydration_slots');
+      batch.delete('user');
+      batch.delete(appMetadataTableName);
+      await batch.commit(noResult: true);
+      Console.log(tag: "APP", value: "[DB] Cleared all database tables successfully on logout.");
+    } catch (e) {
+      Console.log(tag: "APP", value: "[DB] Error clearing all database tables: $e");
+    }
+  }
+
   Future<void> insertBottleData(BottleData data) async {
     final db = await database;
     await db.insert(

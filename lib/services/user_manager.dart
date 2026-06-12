@@ -20,7 +20,10 @@ class UserManager {
   // Initialize and load username
   Future<void> init() async {
     final prefs = await SharedPreferences.getInstance();
-    _cachedUserName = prefs.getString(_userNameKey) ?? '';
+    _cachedUserName = prefs.getString(_userNameKey) ?? prefs.getString('user_name') ?? '';
+    if (_cachedUserName.isNotEmpty && prefs.getString(_userNameKey) == null) {
+      await prefs.setString(_userNameKey, _cachedUserName);
+    }
   }
 
   // Update username
@@ -29,6 +32,7 @@ class UserManager {
     _cachedUserName = name;
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_userNameKey, name);
+    await prefs.setString('user_name', name);
 
     // Notify all listeners
     for (var listener in _listeners) {
@@ -51,6 +55,7 @@ class UserManager {
     _cachedUserName = '';
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_userNameKey);
+    await prefs.remove('user_name');
 
     // Notify listeners
     for (var listener in _listeners) {

@@ -18,6 +18,7 @@ import 'package:hydrify/models/hydration_summary.dart';
 import 'package:hydrify/services/database_sync_service.dart';
 import 'package:hydrify/services/notification/notification_service.dart';
 import 'package:hydrify/services/health_service.dart';
+import 'package:hydrify/services/home_widget_service.dart';
 import 'package:http/http.dart' as http;
 import 'package:permission_handler/permission_handler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -56,6 +57,7 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
   StreamSubscription<BluetoothConnectionState>? _connectionSub;
   StreamSubscription<BluetoothAdapterState>? _adapterStateSub;
   Timer? _watchdogTimer;
+  Timer? _scanRestartTimer;
   DateTime? _stuckScanningSince;
 
   // Track characteristic value notifications to avoid duplicate listeners
@@ -209,32 +211,6 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
     });
   }
 
-  /// Fetches the investor day increment from the remote API.
-  /// Falls back to the default value of 4 if the request fails.
-  Future<void> _fetchInvestorDayIncrement() async {
-    try {
-      final uri = Uri.parse('https://api.pinktreehealth.com/api/dayIncrement');
-      final response = await http.get(uri).timeout(const Duration(seconds: 10));
-      if (response.statusCode == 200) {
-        final json = jsonDecode(response.body) as Map<String, dynamic>;
-        if (json['status'] == true && json['data'] != null) {
-          _investorDayIncrement = (json['data'] as num).toInt();
-          Console.log(
-              tag:
-                  '[BLE_Cubit] _investorDayIncrement set to $_investorDayIncrement from API',
-              value: 'BLE_Cubit');
-          return;
-        }
-      }
-    } catch (e) {
-      Console.log(
-          tag:
-              '[BLE_Cubit] _fetchInvestorDayIncrement failed: $e — using default 4',
-          value: 'BLE_Cubit');
-    }
-    _investorDayIncrement = 4;
-  }
-
   Future<void> checkAndResetForNewDay() async {
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
@@ -361,6 +337,10 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
   void _scanForLastDevice() {
     if (savedDeviceId == null && savedDeviceName == null) return;
 
+    // ✅ Cancel any previously pending restart timer — prevents timer stack-up
+    _scanRestartTimer?.cancel();
+    _scanRestartTimer = null;
+
     emit(state.copyWith(
       status: BleStatus.scanning,
       message: "Scanning for Sipnudge device...",
@@ -401,8 +381,10 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
         }
 
         if (match) {
-          // ✅ Mark cancelled so the delayed-rescan lambda is a no-op
+          // ✅ Mark cancelled so the restart timer is a no-op
           _scanCancelled = true;
+          _scanRestartTimer?.cancel();
+          _scanRestartTimer = null;
           _scanSub?.cancel();
           FlutterBluePlus.stopScan();
           _connectToDevice(r.device);
@@ -415,12 +397,12 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
       _rescan(lastDeviceOnly: true);
     });
 
-    // ✅ Restart scan after timeout ONLY if we haven't already connected
-    Future.delayed(const Duration(milliseconds: 5000), () {
+    // ✅ Single cancellable restart timer — only one can ever be pending at a time
+    _scanRestartTimer = Timer(const Duration(seconds: 32), () {
+      _scanRestartTimer = null;
       if (!_scanCancelled && state.status == BleStatus.scanning) {
         Console.log(
-            tag:
-                '[BLE_Cubit] Scan timeout (1.5s) — restarting scan for last device',
+            tag: '[BLE_Cubit] Scan timeout (32s) — restarting scan for last device',
             value: 'BLE_Cubit');
         _scanForLastDevice();
       }
@@ -428,6 +410,10 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
   }
 
   void _scanForAllDevices() {
+    // ✅ Cancel any previously pending restart timer
+    _scanRestartTimer?.cancel();
+    _scanRestartTimer = null;
+
     emit(state.copyWith(
       status: BleStatus.scanning,
       message: "Scanning for Sipnudge devices...",
@@ -467,8 +453,9 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
       _rescan();
     });
 
-    // ✅ Restart scan after timeout ONLY if we are still in scanning state
-    Future.delayed(const Duration(seconds: 30), () async {
+    // ✅ Single cancellable restart timer
+    _scanRestartTimer = Timer(const Duration(seconds: 32), () {
+      _scanRestartTimer = null;
       if (!_scanCancelled && state.status == BleStatus.scanning) {
         log('[BLE_Cubit] Scan timeout — restarting all-device scan',
             name: 'BLE_Cubit');
@@ -516,8 +503,8 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
         return;
       }
 
-      // 3. Skip if already scanning
-      if (FlutterBluePlus.isScanningNow) {
+      // 3. Skip if already scanning or a restart is already scheduled
+      if (FlutterBluePlus.isScanningNow || _scanRestartTimer != null) {
         _stuckScanningSince = null;
         if (state.manualRetryRequired) {
           emit(state.copyWith(manualRetryRequired: false));
@@ -559,6 +546,7 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
   @override
   Future<void> close() {
     _watchdogTimer?.cancel();
+    _scanRestartTimer?.cancel();
     _scanSub?.cancel();
     _connectionSub?.cancel();
     _adapterStateSub?.cancel();
@@ -574,6 +562,8 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
 
     // 1. Reset state and stop everything
     _watchdogTimer?.cancel();
+    _scanRestartTimer?.cancel();
+    _scanRestartTimer = null;
     _scanSub?.cancel();
     _connectionSub?.cancel();
     _adapterStateSub?.cancel();
@@ -591,11 +581,41 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
     _scanCancelled = false;
     _scanRetryCount = 0;
 
-    emit(const BleState(
-        status: BleStatus.initializing, message: "Reinitializing..."));
+    final wasFirstConnection = (savedDeviceId == null && savedDeviceName == null);
+    emit(BleState(
+        status: BleStatus.initializing,
+        message: "Reinitializing...",
+        isFirstConnection: wasFirstConnection,
+    ));
 
     // 2. Start fresh
     await start();
+  }
+
+  /// ✅ Unlinks the currently paired device and restarts BLE service
+  Future<void> unlinkDevice() async {
+    Console.log(tag: "BLE_Cubit", value: "Unlinking device...");
+
+    // Disconnect currently connected device if any
+    try {
+      final connectedDevices = FlutterBluePlus.connectedDevices;
+      for (var device in connectedDevices) {
+        await device.disconnect();
+      }
+    } catch (e) {
+      Console.log(tag: "BLE_Cubit", value: "Error disconnecting: $e");
+    }
+
+    // Clear saved device from SharedPreferences
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('last_device_id');
+    await prefs.remove('last_device_name');
+
+    savedDeviceId = null;
+    savedDeviceName = null;
+
+    // Restart BLE Cubit to scan for new devices
+    await reinitialize();
   }
 
   /// ✅ Manually dismisses the retry dialog
@@ -632,6 +652,7 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
     emit(state.copyWith(
       status: BleStatus.connecting,
       message: "Connecting to ${device.platformName}...",
+      scannedDevices: [],
     ));
 
     try {
@@ -843,10 +864,20 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
 
               _syncWithLocalConsumption(history, historyPrevious);
 
-              DatabaseSyncService().syncAll();
+              DatabaseSyncService().syncAll(isFromBle: true);
 
               final updatedHistory = await getCurrentDayHistory();
               emit(state.copyWith(currentHydrationValue: updatedHistory));
+
+              try {
+                final waterGoal = await SharedPrefsHelper.getWaterGoal() ?? 2500;
+                await HomeWidgetService.updateWidgetData(
+                  currentIntake: updatedHistory.round(),
+                  dailyGoal: waterGoal,
+                );
+              } catch (e) {
+                Console.log(tag: "[HomeWidget]", value: "Error updating widget: $e");
+              }
             } else {
               final history = await getCurrentDayHistory();
               emit(state.copyWith(currentHydrationValue: history));
@@ -1278,6 +1309,7 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
             status: BleStatus.disconnected,
             isServiceDiscoveryDone: false,
             message: "Device disconnected",
+            scannedDevices: [],
           ));
           Console.log(
               tag:
@@ -1568,6 +1600,8 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
   }
 
   /// Cancels and nullifies all characteristic notification subscriptions.
+  /// Also clears characteristic references so stale handles from the old
+  /// connection are never used after a disconnect.
   void _clearCharacteristicSubscriptions() {
     _dataSub?.cancel();
     _hydrationGoalDataSub?.cancel();

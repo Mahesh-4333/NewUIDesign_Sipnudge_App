@@ -11,7 +11,7 @@ class DatabaseSyncService {
   final DatabaseHelper _dbHelper = DatabaseHelper();
   final ApiService _apiService = ApiService();
 
-  Future<void> syncAll() async {
+  Future<void> syncAll({bool isFromBle = false}) async {
     var userId = await SharedPrefsHelper.getUserId();
 
     // If userId is missing, try to fetch it using the saved email
@@ -87,7 +87,7 @@ class DatabaseSyncService {
     }
 
     Console.log(
-        tag: "SYNC", value: "Starting full database sync for user: $userId");
+        tag: "SYNC", value: "Starting full database sync for user: $userId (isFromBle: $isFromBle)");
 
     try {
       // 1. Sync User Info
@@ -183,28 +183,45 @@ class DatabaseSyncService {
       }
 
       // 5. Sync Daily Summaries
-      // Strategy:
-      //  - First launch (flag not set): full 30-day upsert to seed the server.
-      //  - Every subsequent sync: only push today's consumed + isPerfect.
-      //    This avoids sending 30 records on every hydration event.
+      final String todayDateStr = DateTime.now().toIso8601String().split('T').first;
+      final String? lastSummarySyncDate = await SharedPrefsHelper.getLastSummarySyncDate();
       final bool alreadySynced30 = await SharedPrefsHelper.hasSynced30Days();
 
-      if (!alreadySynced30) {
-        // ── One-time full seed ──────────────────────────────────────────────
+      final bool shouldDoFullSync = !alreadySynced30 || (lastSummarySyncDate != todayDateStr && isFromBle);
+
+      if (shouldDoFullSync) {
         // Fetch manual logs from server on first install
-        try {
-          final serverManualLogs = await _apiService.getManualLogs(userId!);
-          if (serverManualLogs != null && serverManualLogs.isNotEmpty) {
-            for (var log in serverManualLogs) {
-              await _dbHelper.insertHydrationLog(
-                log['type'],
-                (log['consumed'] as num).toDouble(),
-                DateTime.parse(log['timestamp']),
-              );
+        if (!alreadySynced30) {
+          try {
+            final serverManualLogs = await _apiService.getManualLogs(userId!);
+            if (serverManualLogs != null && serverManualLogs.isNotEmpty) {
+              final localLogs = await _dbHelper.getHydrationLogs();
+              final localLogKeys = localLogs.map((l) {
+                final timestampStr = l['timestamp'] as String;
+                final typeStr = l['type'] as String;
+                final consumedVal = (l['consumed'] as num).toDouble();
+                return "$timestampStr|$typeStr|$consumedVal";
+              }).toSet();
+
+              for (var log in serverManualLogs) {
+                final String logTimestamp = log['timestamp'];
+                final String logType = log['type'];
+                final double logConsumed = (log['consumed'] as num).toDouble();
+                final String key = "$logTimestamp|$logType|$logConsumed";
+
+                if (!localLogKeys.contains(key)) {
+                  await _dbHelper.insertHydrationLog(
+                    logType,
+                    logConsumed,
+                    DateTime.parse(logTimestamp),
+                  );
+                }
+              }
             }
+          } catch (e) {
+            Console.log(tag: "SYNC", value: "Failed to fetch manual logs: $e");
           }
-        } catch (e) {
-          Console.log(tag: "SYNC", value: "Failed to fetch manual logs: $e");
+          await SharedPrefsHelper.setHasSynced30Days(true);
         }
 
         final summaries = await _dbHelper.getHydrationSummariesForRange();
@@ -221,14 +238,15 @@ class DatabaseSyncService {
                     'updatedAt': e.updatedAt?.toIso8601String(),
                   })
               .toList();
-          await _syncInChunks<Map<String, dynamic>>(mappedSummaries, 100,
-              (chunk) async {
-            await _apiService.syncDailySummaries(userId!, chunk);
-          });
+          
+          final success = await _apiService.syncDailySummaries(userId!, mappedSummaries);
+          if (success) {
+            await SharedPrefsHelper.setLastSummarySyncDate(todayDateStr);
+            Console.log(tag: "SYNC", value: "Full daily summaries sync complete (total: ${summaries.length})");
+          } else {
+            Console.log(tag: "SYNC", value: "Full daily summaries sync failed");
+          }
         }
-        // Mark done so we never do the full sync again
-        await SharedPrefsHelper.setHasSynced30Days(true);
-        Console.log(tag: "SYNC", value: "Full 30-day seed complete");
       } else {
         // ── Lightweight today-only update ───────────────────────────────────
         final today = await _dbHelper.getSummaryForDate(DateTime.now());

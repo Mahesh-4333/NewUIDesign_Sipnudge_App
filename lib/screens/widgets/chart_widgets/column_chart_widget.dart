@@ -74,7 +74,34 @@ class _FlColumnChartWidgetState extends State<FlColumnChartWidget> {
     _loadUserGoal().then((_) {
       _updateChartData();
       if (mounted) setState(() {});
+      WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToToday());
     });
+    WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToToday());
+  }
+
+  void _scrollToToday() {
+    if (!mounted || widget.interval != FilterInterval.monthly) return;
+    final today = DateTime.now();
+    if (widget.currentDate.year == today.year && widget.currentDate.month == today.month) {
+      final dayIndex = today.day - 1; // 0-based index for today
+      final double barTotalWidth = barWidth + barSpacing;
+      final double positionOfBarEnd = (dayIndex + 1) * barTotalWidth - barSpacing;
+      final viewportWidth = AppDimensions.dim365.w - AppDimensions.dim40.w;
+
+      double targetOffset = positionOfBarEnd - viewportWidth + 30.w;
+      if (targetOffset < 0) targetOffset = 0;
+
+      final double maxScroll = (chartData.length * barTotalWidth) - viewportWidth;
+      if (targetOffset > maxScroll) targetOffset = maxScroll;
+
+      if (_scrollController.hasClients) {
+        _scrollController.animateTo(
+          targetOffset,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeInOut,
+        );
+      }
+    }
   }
 
   Future<void> _loadUserGoal() async {
@@ -245,6 +272,7 @@ class _FlColumnChartWidgetState extends State<FlColumnChartWidget> {
       _loadUserGoal().then((_) {
         _updateChartData();
         setState(() {});
+        WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToToday());
       });
     }
   }

@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/svg.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:hydrify/constants/app_colors.dart';
 import 'package:hydrify/constants/app_dimensions.dart';
@@ -38,6 +39,21 @@ class _AuthOptionsScreenState extends State<AuthOptionsScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       extendBody: true,
+          extendBodyBehindAppBar: true,
+      resizeToAvoidBottomInset: false,
+      appBar: AppBar(
+      backgroundColor: Colors.transparent,
+      automaticallyImplyLeading: true,
+      leadingWidth: AppDimensions.dim85.w,
+      leading: IconButton(
+          onPressed: () {
+            Navigator.of(context).pop();
+          },
+          icon: SvgPicture.asset(
+            "assets/images/back_ic.svg",
+          ),
+        ),
+      ),
       body: Container(
         width: double.maxFinite,
         decoration: BoxDecoration(
@@ -60,7 +76,7 @@ class _AuthOptionsScreenState extends State<AuthOptionsScreen> {
           child: Column(
             children: [
               SizedBox(
-                height: AppDimensions.dim168.h,
+                height: AppDimensions.dim180.h,
               ),
               Image.asset(
                 "assets/images/sipnudge1.png",

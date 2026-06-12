@@ -41,6 +41,7 @@ import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:hydrify/helpers/internet_connection_helper.dart';
 import 'package:hydrify/services/database_sync_service.dart';
+import 'package:hydrify/services/home_widget_service.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -196,6 +197,18 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       Provider.of<WeatherProvider>(context, listen: false)
           .fetchWeatherForCurrentLocation();
       DatabaseSyncService().syncAll();
+      
+      try {
+        final bleCubit = context.read<BleCubit>();
+        final waterGoal = currentWaterGoal ?? 2500;
+        final currentIntake = bleCubit.state.currentHydrationValue ?? 0.0;
+        HomeWidgetService.updateWidgetData(
+          currentIntake: currentIntake.round(),
+          dailyGoal: waterGoal,
+        );
+      } catch (e) {
+        Console.log(tag: "HomeWidget", value: "Error updating widget on resume: $e");
+      }
     }
   }
 

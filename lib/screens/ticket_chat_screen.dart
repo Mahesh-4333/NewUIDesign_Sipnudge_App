@@ -1,10 +1,13 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:hydrify/constants/app_colors.dart';
 import 'package:hydrify/constants/app_dimensions.dart';
 import 'package:hydrify/constants/app_font_styles.dart';
+import 'package:hydrify/helpers/shared_pref_helper.dart';
 import 'package:hydrify/services/api_service.dart';
+import 'package:hydrify/services/firebase_messaging_service.dart';
 
 class TicketChatScreen extends StatefulWidget {
   final Map<String, dynamic> ticket;
@@ -19,11 +22,33 @@ class _TicketChatScreenState extends State<TicketChatScreen> {
   final TextEditingController _replyController = TextEditingController();
   bool _isSubmitting = false;
   late Map<String, dynamic> _ticket;
+  StreamSubscription<void>? _ticketUpdateSub;
 
   @override
   void initState() {
     super.initState();
     _ticket = Map<String, dynamic>.from(widget.ticket);
+    _ticketUpdateSub = FirebaseMessagingService.ticketUpdateStream.stream.listen((_) {
+      if (mounted) _refreshTicket();
+    });
+  }
+
+  Future<void> _refreshTicket() async {
+    final userId = await SharedPrefsHelper.getUserId();
+    if (userId != null && userId.isNotEmpty) {
+      final tickets = await ApiService().getSupportTickets(userId);
+      if (tickets != null) {
+        final updatedTicket = tickets.firstWhere(
+          (t) => t['_id'] == _ticket['_id'],
+          orElse: () => _ticket, // keep old if not found
+        );
+        if (mounted) {
+          setState(() {
+            _ticket = updatedTicket;
+          });
+        }
+      }
+    }
   }
 
   Future<void> _submitReply() async {
@@ -60,6 +85,7 @@ class _TicketChatScreenState extends State<TicketChatScreen> {
 
   @override
   void dispose() {
+    _ticketUpdateSub?.cancel();
     _replyController.dispose();
     super.dispose();
   }
@@ -261,9 +287,9 @@ class _TicketChatScreenState extends State<TicketChatScreen> {
                         "Initial Issue",
                         style: TextStyle(
                           color: Colors.white.withOpacity(0.7),
-                          fontSize: 10.sp,
+                          fontSize: 12.sp,
                           fontFamily: AppFontStyles.urbanistFontFamily,
-                          fontVariations: [AppFontStyles.boldFontVariation],
+                          fontVariations: [AppFontStyles.fontWeightVariation600],
                         ),
                       ),
                     ),
@@ -273,6 +299,7 @@ class _TicketChatScreenState extends State<TicketChatScreen> {
                       color: fromUser ? Colors.white : AppColors.bluegray,
                       fontSize: 14.sp,
                       fontFamily: AppFontStyles.urbanistFontFamily,
+                      fontVariations: [AppFontStyles.fontWeightVariation600],
                     ),
                   ),
                   if (timeString.isNotEmpty) ...[
@@ -281,8 +308,9 @@ class _TicketChatScreenState extends State<TicketChatScreen> {
                       timeString,
                       style: TextStyle(
                         color: fromUser ? Colors.white.withOpacity(0.7) : Colors.grey.shade500,
-                        fontSize: 10.sp,
+                        fontSize: 14.sp,
                         fontFamily: AppFontStyles.urbanistFontFamily,
+                        fontVariations: [AppFontStyles.boldFontVariation],
                       ),
                     ),
                   ],

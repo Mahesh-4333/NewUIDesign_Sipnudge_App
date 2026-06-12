@@ -13,6 +13,7 @@ import 'package:hydrify/cubit/bottom_nav/bottom_nav_cubit.dart';
 import 'package:hydrify/cubit/hydration/hydration_cubit.dart';
 import 'package:hydrify/screens/auth/local_auth_screen.dart';
 import 'package:hydrify/services/user_manager.dart';
+import 'package:hydrify/helpers/database_helper.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -155,6 +156,9 @@ class LogoutBottomSheet extends StatelessWidget {
                               // 1Logout & clear data
                               await FirebaseAuth.instance.signOut();
                               await UserManager().clear();
+
+                              // Clear SQLite database
+                              await DatabaseHelper().clearAllDatabaseData();
 
                               final prefs =
                                   await SharedPreferences.getInstance();

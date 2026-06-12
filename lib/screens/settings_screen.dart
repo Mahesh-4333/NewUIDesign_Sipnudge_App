@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -9,6 +10,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:hydrify/constants/app_colors.dart';
+import 'package:hydrify/constants/assets_path.dart';
 import 'package:hydrify/constants/app_dimensions.dart';
 import 'package:hydrify/constants/app_font_styles.dart';
 import 'package:hydrify/constants/app_strings.dart';
@@ -18,6 +20,7 @@ import 'package:hydrify/cubit/profile_screen_in_setting/profile_cubit.dart';
 import 'package:hydrify/cubit/profile_screen_in_setting/profile_state.dart';
 import 'package:hydrify/helpers/shared_pref_helper.dart';
 import 'package:hydrify/models/bottle_info.dart';
+import 'package:hydrify/cubit/ble/ble_cubit.dart';
 import 'package:hydrify/screens/bottle_info_page.dart';
 import 'package:hydrify/screens/contact_support_page.dart';
 import 'package:hydrify/screens/drink_reminder_page.dart';
@@ -212,6 +215,10 @@ class _SettingScreenState extends State<SettingScreen> {
           );
           break;
 
+        case "Unlink Device":
+          _showUnlinkDeviceDialog(context);
+          break;
+
         case AppStrings.logout:
           _showLogoutConfirmation(context);
           break;
@@ -337,6 +344,131 @@ class _SettingScreenState extends State<SettingScreen> {
     );
   }
 
+  void _showUnlinkDeviceDialog(BuildContext context) {
+    showDialog(
+      context: Navigator.of(context, rootNavigator: true).context,
+      builder: (dialogContext) => BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+        child: Dialog(
+          backgroundColor: const Color(0xFFE8ECEF), // Light greyish background matching screenshot
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(24.r),
+          ),
+          child: Padding(
+            padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 32.h),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Image.asset(AssetsPath.unlink, width: 80.w, height: 80.h),
+                SizedBox(height: 20.h),
+                Text(
+                  "Unlink Device?",
+                  style: TextStyle(
+                    color: const Color(0xFF004976),
+                    fontSize: 22.sp,
+                    fontFamily: AppFontStyles.urbanistFontFamily,
+                    fontWeight: FontWeight.bold,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                SizedBox(height: 16.h),
+                RichText(
+                  textAlign: TextAlign.center,
+                  text: TextSpan(
+                    style: TextStyle(
+                      color: AppColors.darkgray,
+                      fontSize: 14.sp,
+                      fontFamily: AppFontStyles.urbanistFontFamily,
+                      height: 1.5,
+                    ),
+                    children: [
+                      const TextSpan(text: "Disconnecting your "),
+                      TextSpan(
+                        text: "Sipnudge\nPro",
+                        style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.black),
+                      ),
+                      const TextSpan(
+                        text: " will stop all real-time\nhydration tracking. Your\nhistorical data will remain, but\nnew consumption will not sync\nuntil re-paired.",
+                      ),
+                    ],
+                  ),
+                ),
+                SizedBox(height: 32.h),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: () async {
+                      Navigator.pop(dialogContext); // Close dialog first
+                      
+                      try {
+                        // Unlink logic here
+                        await context.read<BleCubit>().unlinkDevice();
+                        
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Device unlinked successfully.')),
+                          );
+                        }
+                      } catch (e) {
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Failed to unlink device.')),
+                          );
+                        }
+                      }
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF004976), // Dark blue button
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(24.r),
+                      ),
+                      padding: EdgeInsets.symmetric(vertical: 16.h),
+                      elevation: 0,
+                    ),
+                    child: Text(
+                      "Unlink",
+                      style: TextStyle(
+                        color: AppColors.white,
+                        fontSize: 16.sp,
+                        fontFamily: AppFontStyles.urbanistFontFamily,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ),
+                SizedBox(height: 12.h),
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton(
+                    onPressed: () {
+                      Navigator.pop(dialogContext);
+                    },
+                    style: OutlinedButton.styleFrom(
+                      side: const BorderSide(color: Color(0xFF004976)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(24.r),
+                      ),
+                      padding: EdgeInsets.symmetric(vertical: 16.h),
+                    ),
+                    child: Text(
+                      "Keep Connected",
+                      style: TextStyle(
+                        color: const Color(0xFF004976),
+                        fontSize: 16.sp,
+                        fontFamily: AppFontStyles.urbanistFontFamily,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   void _showFlushDelayDialog(BuildContext context) async {
     final currentDelay = await SharedPrefsHelper.getFlushDelay();
     final TextEditingController delayController =
@@ -441,55 +573,26 @@ class _SettingScreenState extends State<SettingScreen> {
                           const EditableProfileAvatar(),
                           SizedBox(width: AppDimensions.dim16.w),
                           Expanded(
-                            child: Row(
-                              children: [
-                                Expanded(
-                                  child: TextField(
-                                    controller: _nameController,
-                                    focusNode: _nameFocusNode,
-                                    onChanged: (value) {
-                                      _saveNameLocally(value);
-                                    },
-                                    style: TextStyle(
-                                      color: AppColors.bluegray,
-                                      fontSize: AppFontStyles.fontSize_18.sp,
-                                      fontFamily:
-                                          AppFontStyles.museoModernoFontFamily,
-                                      fontVariations: [
-                                        AppFontStyles.fontWeightVariation600,
-                                      ],
-                                      shadows: [
-                                        Shadow(
-                                          offset: Offset(
-                                            AppDimensions.radius_1.r,
-                                            AppDimensions.radius_1.r,
-                                          ),
-                                          blurRadius: AppDimensions.radius_4.r,
-                                          color:
-                                              AppColors.black.withOpacity(0.25),
-                                        ),
-                                      ],
+                            child: Text(
+                              _nameController.text,
+                              style: TextStyle(
+                                color: AppColors.bluegray,
+                                fontSize: AppFontStyles.fontSize_18.sp,
+                                fontFamily: AppFontStyles.museoModernoFontFamily,
+                                fontVariations: [
+                                  AppFontStyles.fontWeightVariation600,
+                                ],
+                                shadows: [
+                                  Shadow(
+                                    offset: Offset(
+                                      AppDimensions.radius_1.r,
+                                      AppDimensions.radius_1.r,
                                     ),
-                                    decoration: const InputDecoration(
-                                      border: InputBorder.none,
-                                      isDense: true,
-                                      contentPadding: EdgeInsets.zero,
-                                    ),
+                                    blurRadius: AppDimensions.radius_4.r,
+                                    color: AppColors.black.withOpacity(0.25),
                                   ),
-                                ),
-                                IconButton(
-                                  constraints: const BoxConstraints(),
-                                  onPressed: () {
-                                    FocusScope.of(context)
-                                        .requestFocus(_nameFocusNode);
-                                  },
-                                  icon: Image.asset(
-                                    "assets/images/editicon.png",
-                                    width: AppFontStyles.fontSize_24.sp,
-                                    height: AppFontStyles.fontSize_24.sp,
-                                  ),
-                                ),
-                              ],
+                                ],
+                              ),
                             ),
                           ),
                         ],

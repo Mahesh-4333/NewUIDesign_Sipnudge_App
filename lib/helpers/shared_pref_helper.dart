@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:hydrify/helpers/database_helper.dart';
 import 'package:hydrify/helpers/logger.dart';
+import 'package:hydrify/services/user_manager.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class SharedPrefsHelper {
@@ -54,6 +55,7 @@ class SharedPrefsHelper {
   static const String _keyShutdownApp = 'shutdown_app';
   static const String _keyHasSynced30Days = 'has_synced_30_days';
   static const String _keyUserName = 'user_name';
+  static const String _keyLastSummarySyncDate = 'last_summary_sync_date';
 
   // ----------------------------
   // APP SHUTDOWN (TRIAL RESTRICTION)
@@ -81,6 +83,19 @@ class SharedPrefsHelper {
   static Future<void> setHasSynced30Days(bool value) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(_keyHasSynced30Days, value);
+  }
+
+  // ----------------------------
+  // LAST SUMMARY SYNC DATE
+  // ----------------------------
+  static Future<void> setLastSummarySyncDate(String date) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_keyLastSummarySyncDate, date);
+  }
+
+  static Future<String?> getLastSummarySyncDate() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_keyLastSummarySyncDate);
   }
 
   // ----------------------------
@@ -225,8 +240,7 @@ class SharedPrefsHelper {
 
   // Save / retrieve user display name
   static Future<void> setUserName(String name) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_keyUserName, name);
+    await UserManager().setUserName(name);
   }
 
   static Future<String?> getUserName() async {

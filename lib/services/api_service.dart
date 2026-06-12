@@ -235,6 +235,19 @@ class ApiService {
     }
   }
 
+  Future<bool> checkNameUniqueness(String name, String? userId) async {
+    try {
+      final response = await _dio.get(
+        '/api/database/check-name/${Uri.encodeComponent(name)}',
+        queryParameters: userId != null ? {'userId': userId} : null,
+      );
+      return response.data['unique'] == true;
+    } on DioException catch (e) {
+      Console.log(tag: "APP", value: "Exception in checkNameUniqueness: $e");
+      return true;
+    }
+  }
+
   Future<bool> syncManualLogs(
       String userId, List<Map<String, dynamic>> logs) async {
     try {
@@ -514,6 +527,31 @@ class ApiService {
     } on DioException catch (e) {
       Console.log(tag: "APP", value: "Exception in getAnalytics: $e");
       return null;
+    }
+  }
+
+  // Fetch User Messages
+  Future<Map<String, dynamic>> getUserMessages(String userId) async {
+    try {
+      final response = await _dio.get('/api/user-messages/$userId');
+      return response.data;
+    } on DioException catch (e) {
+      Console.log(
+          tag: "APP",
+          value: "Exception occurred : getUserMessages || ${e.toString()} ");
+      throw _handleError(e);
+    }
+  }
+
+  // Mark Message as Read
+  Future<void> markMessageRead(String messageId) async {
+    try {
+      await _dio.put('/api/user-messages/$messageId/read');
+    } on DioException catch (e) {
+      Console.log(
+          tag: "APP",
+          value: "Exception occurred : markMessageRead || ${e.toString()} ");
+      throw _handleError(e);
     }
   }
 }

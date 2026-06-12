@@ -25,9 +25,10 @@ class QrScanner extends StatefulWidget {
 }
 
 class _QrScannerState extends State<QrScanner>
-    with SingleTickerProviderStateMixin {
+    with SingleTickerProviderStateMixin, WidgetsBindingObserver {
   String? _errorText;
   bool _isProcessing = false;
+  bool _isAcceptedTerms = false;
 
   /// Scanner related
   late MobileScannerController _controller;
@@ -43,13 +44,9 @@ class _QrScannerState extends State<QrScanner>
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
 
-    // Initialize scanner controller with explicit settings
-    _controller = MobileScannerController(
-      detectionSpeed: DetectionSpeed.normal,
-      facing: CameraFacing.back,
-      torchEnabled: false,
-    );
+    _initScannerController();
 
     _lineController = AnimationController(
       vsync: this,
@@ -66,14 +63,47 @@ class _QrScannerState extends State<QrScanner>
     _termsTap.onTap = () => _onFooterLinkTap(LinkType.terms);
   }
 
+  void _initScannerController() {
+    _controller = MobileScannerController(
+      detectionSpeed: DetectionSpeed.normal,
+      facing: CameraFacing.back,
+      torchEnabled: false,
+    );
+  }
+
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _controller.dispose();
     _lineController.dispose();
     // dispose recognizers
     _privacyTap.dispose();
     _termsTap.dispose();
     super.dispose();
+  }
+
+  /// Restart the scanner when the app comes back to the foreground
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _restartScanner();
+    } else if (state == AppLifecycleState.paused) {
+      _controller.stop();
+    }
+  }
+
+  Future<void> _restartScanner() async {
+    try {
+      await _controller.start();
+    } catch (_) {
+      // Controller may have been disposed; create a fresh one
+      if (mounted) {
+        await _controller.dispose();
+        setState(() {
+          _initScannerController();
+        });
+      }
+    }
   }
 
   static const List<String> _validColors = [
@@ -85,6 +115,13 @@ class _QrScannerState extends State<QrScanner>
   ];
 
   Future<void> _handleQR(String value) async {
+    if (!_isAcceptedTerms) {
+      setState(() {
+        _errorText = "Please agree to Sipnudge T&C first";
+      });
+      return;
+    }
+
     if (_isProcessing) return;
 
     setState(() {
@@ -121,18 +158,26 @@ class _QrScannerState extends State<QrScanner>
 
       if (!mounted) return;
 
-      // await Navigator.pushReplacement(
-      //   context,
-      //   MaterialPageRoute(
-      //     builder: (_) => const BottomNavScreenNew(),
-      //   ),
-      // );
-      await Navigator.pushReplacement(
+      // Stop the scanner before going to the next screen
+      await _controller.stop();
+
+      if (!mounted) return;
+
+      await Navigator.push(
         context,
         MaterialPageRoute(
           builder: (_) => const AuthOptionsScreen(),
         ),
       );
+
+      // User came back — restart the scanner
+      if (mounted) {
+        setState(() {
+          _isProcessing = false;
+          _errorText = null;
+        });
+        await _restartScanner();
+      }
     } catch (e) {
       debugPrint("QR ERROR: $e");
 
@@ -250,94 +295,98 @@ class _QrScannerState extends State<QrScanner>
                             ),
                             child: Text(
                               _errorText!,
-                              style: const TextStyle(
+                              style: TextStyle(
                                 color: Colors.red,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ),
-                        ),
-                      Padding(
-                        padding: EdgeInsets.symmetric(horizontal: 30.w),
-                        child: Row(
-                          children: [
-                            Expanded(
-                              child: Divider(color: AppColors.greywith80),
-                            ),
-                            Padding(
-                              padding: EdgeInsets.symmetric(horizontal: 12.w),
-                              child: Text(
-                                "or",
-                                // style: TextStyle(
-                                //   color: Color(
-                                //     0xFF616161,
-                                //   ), // Simple color for testing
-                                //   fontSize: 16.sp,
-                                //   fontWeight: FontWeight.w500,
-                                // ),
-                                style: TextStyle(
-                                  color: Color(0xFF616161),
-                                  fontSize: AppFontStyles.fontSize_18.sp,
-                                  fontFamily: AppFontStyles.urbanistFontFamily,
-                                  fontVariations: [
-                                    AppFontStyles.semiBoldFontVariation,
-                                  ],
-                                ),
-                              ),
-                            ),
-                            Expanded(
-                              child: Divider(color: AppColors.greywith80),
-                            ),
-                          ],
-                        ),
-                      ),
-                      SizedBox(height: 16.h),
-                      Padding(
-                        padding: EdgeInsets.symmetric(horizontal: 24.h),
-                        child: SizedBox(
-                          width: double.infinity,
-                          height: 58.h,
-                          child: DecoratedBox(
-                            decoration: BoxDecoration(
-                              gradient: const LinearGradient(
-                                begin: Alignment.centerLeft,
-                                end: Alignment.centerRight,
-                                colors: [
-                                  Color(0xFF9FFFFA),
-                                  Color(0xFFD1FFC4),
+                                fontSize: AppFontStyles.fontSize_20.sp,
+                                fontFamily: AppFontStyles.urbanistFontFamily,
+                                fontVariations: [
+                                  AppFontStyles.fontWeightVariation600,
                                 ],
                               ),
-                              border: Border.all(color: AppColors.bluegray),
-                              borderRadius: BorderRadius.circular(30),
-                            ),
-                            child: AuthButton(
-                              text: "Continue as Guest",
-                              gradient: AppColors.guestButtonColor,
-                              textColor: AppColors.buttonTextPurpleColor,
-                              areTwoItems: false,
-                              borderColor: AppColors.bluegray,
-                              onTap: () {
-                                SharedPrefsHelper.setUserEmail("guest_user");
-
-                                UiUtilsService.showToast(
-                                  context: context,
-                                  text: "Continuing as Guest",
-                                );
-
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) => UserInfoInputScreen(
-                                      fromSettings: true,
-                                    ),
-                                  ),
-                                  // (route) => false,
-                                );
-                              },
                             ),
                           ),
                         ),
-                      )
+                      // Padding(
+                      //   padding: EdgeInsets.symmetric(horizontal: 30.w),
+                      //   child: Row(
+                      //     children: [
+                      //       Expanded(
+                      //         child: Divider(color: AppColors.greywith80),
+                      //       ),
+                      //       Padding(
+                      //         padding: EdgeInsets.symmetric(horizontal: 12.w),
+                      //         child: Text(
+                      //           "or",
+                      //           // style: TextStyle(
+                      //           //   color: Color(
+                      //           //     0xFF616161,
+                      //           //   ), // Simple color for testing
+                      //           //   fontSize: 16.sp,
+                      //           //   fontWeight: FontWeight.w500,
+                      //           // ),
+                      //           style: TextStyle(
+                      //             color: Color(0xFF616161),
+                      //             fontSize: AppFontStyles.fontSize_18.sp,
+                      //             fontFamily: AppFontStyles.urbanistFontFamily,
+                      //             fontVariations: [
+                      //               AppFontStyles.semiBoldFontVariation,
+                      //             ],
+                      //           ),
+                      //         ),
+                      //       ),
+                      //       Expanded(
+                      //         child: Divider(color: AppColors.greywith80),
+                      //       ),
+                      //     ],
+                      //   ),
+                      // ),
+                      SizedBox(height: 16.h),
+                      // Padding(
+                      //   padding: EdgeInsets.symmetric(horizontal: 24.h),
+                      //   child: SizedBox(
+                      //     width: double.infinity,
+                      //     height: 58.h,
+                      //     child: DecoratedBox(
+                      //       decoration: BoxDecoration(
+                      //         gradient: const LinearGradient(
+                      //           begin: Alignment.centerLeft,
+                      //           end: Alignment.centerRight,
+                      //           colors: [
+                      //             Color(0xFF9FFFFA),
+                      //             Color(0xFFD1FFC4),
+                      //           ],
+                      //         ),
+                      //         border: Border.all(color: AppColors.bluegray),
+                      //         borderRadius: BorderRadius.circular(30),
+                      //       ),
+                      //       child: AuthButton(
+                      //         text: "Continue as Guest",
+                      //         gradient: AppColors.guestButtonColor,
+                      //         textColor: AppColors.buttonTextPurpleColor,
+                      //         areTwoItems: false,
+                      //         borderColor: AppColors.bluegray,
+                      //         onTap: () {
+                      //           SharedPrefsHelper.setUserEmail("guest_user");
+
+                      //           UiUtilsService.showToast(
+                      //             context: context,
+                      //             text: "Continuing as Guest",
+                      //           );
+
+                      //           Navigator.push(
+                      //             context,
+                      //             MaterialPageRoute(
+                      //               builder: (context) => UserInfoInputScreen(
+                      //                 fromSettings: true,
+                      //               ),
+                      //             ),
+                      //             // (route) => false,
+                      //           );
+                      //         },
+                      //       ),
+                      //     ),
+                      //   ),
+                      // )
                     ],
                   ),
                 ),
@@ -486,6 +535,82 @@ class _QrScannerState extends State<QrScanner>
             Positioned.fill(
               child: CustomPaint(painter: _ScannerOverlayPainter(scanRect)),
             ),
+
+            // Terms and conditions checkbox
+            Positioned(
+              bottom: -15.h,
+              left: 0,
+              right: 0,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Theme(
+                    data: ThemeData(
+                      unselectedWidgetColor: const Color(0xFF369FFF),
+                    ),
+                    child: Checkbox(
+                      activeColor: const Color(0xFF369FFF),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(4.r),
+                      ),
+                      side: BorderSide(
+                        color: const Color(0xFF369FFF),
+                        width: 2.w,
+                      ),
+                      value: _isAcceptedTerms,
+                      onChanged: (val) {
+                        setState(() {
+                          _isAcceptedTerms = val ?? false;
+                          if (_isAcceptedTerms) {
+                            _errorText = null;
+                          }
+                        });
+                      },
+                    ),
+                  ),
+                  RichText(
+                    text: TextSpan(
+                      text: 'I agree to Sipnudge ',
+                      style: TextStyle(
+                        color: Colors.black,
+                        fontFamily: AppFontStyles.urbanistFontFamily,
+                        fontSize: AppFontStyles.fontSize_16.sp,
+                        fontVariations: [AppFontStyles.fontWeightVariation600],
+                      ),
+                      children: [
+                        TextSpan(
+                          text: 'T&C',
+                          style: TextStyle(
+                            color: const Color(0xFF369FFF),
+                            fontFamily: AppFontStyles.urbanistFontFamily,
+                            fontSize: AppFontStyles.fontSize_16.sp,
+                            fontVariations: [
+                              AppFontStyles.fontWeightVariation600
+                            ],
+                            decoration: TextDecoration.underline,
+                          ),
+                          recognizer: TapGestureRecognizer()
+                            ..onTap = () {
+                              _onFooterLinkTap(LinkType.terms);
+                            },
+                        ),
+                        TextSpan(
+                          text: '.',
+                          style: TextStyle(
+                            color: Colors.black,
+                            fontFamily: AppFontStyles.urbanistFontFamily,
+                            fontSize: AppFontStyles.fontSize_16.sp,
+                            fontVariations: [
+                              AppFontStyles.fontWeightVariation600
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ],
         );
       },
@@ -494,8 +619,8 @@ class _QrScannerState extends State<QrScanner>
 
   void _onFooterLinkTap(LinkType type) async {
     final uri = Uri.parse(type == LinkType.privacy
-        ? "https://sipnudge.com/policies/privacy-policy"
-        : "https://sipnudge.com/policies/terms-of-service");
+        ? "https://test.sipnudge.com/privacy"
+        : "https://test.sipnudge.com/terms");
     try {
       await launchUrl(uri, mode: LaunchMode.externalApplication);
     } catch (e) {

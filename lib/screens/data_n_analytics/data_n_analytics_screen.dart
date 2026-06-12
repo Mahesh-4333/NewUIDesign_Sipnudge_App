@@ -614,7 +614,7 @@ class _DataNAnalyticsScreenState extends State<DataNAnalyticsScreen> {
               ),
               CircularPercentIndicator(
                 radius: 96.w,
-                percent: percentCompletion,
+                percent: percentCompletion.clamp(0.0, 1.0),
                 progressColor: AppColors.color_0083FF,
                 backgroundColor: AppColors.color_F1F5F9,
                 circularStrokeCap: CircularStrokeCap.round,
@@ -626,7 +626,7 @@ class _DataNAnalyticsScreenState extends State<DataNAnalyticsScreen> {
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Text(
-                      "${(percentCompletion * 100).toStringAsPrecision(2)}%",
+                      "${(percentCompletion * 100).toStringAsFixed(0)}%",
                       style: TextStyle(
                         color: AppColors.bluegray,
                         fontSize: AppFontStyles.fontSize_30,

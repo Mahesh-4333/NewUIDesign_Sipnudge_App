@@ -57,60 +57,62 @@ class _PersonalInfoPageState extends State<PersonalInfoPage> {
       child: Scaffold(
         resizeToAvoidBottomInset: true,
         backgroundColor: Colors.transparent,
-        bottomNavigationBar: Padding(
-          padding: EdgeInsets.fromLTRB(24.w, 8.h, 24.w, 25.h),
-          child: Container(
-            decoration: BoxDecoration(
-              boxShadow: [
-                BoxShadow(
-                  offset: Offset(4.w, 4.h),
-                  blurRadius: 4.r,
-                  color: const Color(0x40000000),
+        bottomNavigationBar: MediaQuery.of(context).viewInsets.bottom > 0
+            ? null
+            : Padding(
+                padding: EdgeInsets.fromLTRB(24.w, 8.h, 24.w, 25.h),
+                child: Container(
+                  decoration: BoxDecoration(
+                    boxShadow: [
+                      BoxShadow(
+                        offset: Offset(4.w, 4.h),
+                        blurRadius: 4.r,
+                        color: const Color(0x40000000),
+                      ),
+                    ],
+                    borderRadius: BorderRadius.circular(100.r),
+                  ),
+                  child: ElevatedButton(
+                    onPressed: () async {
+                      // Persist name to SharedPrefs (fast, available everywhere)
+                      // and into the UserInfoCubit (flows through DB → sync).
+                      final name = nameController.text.trim();
+                      if (name.isNotEmpty) {
+                        await SharedPrefsHelper.setUserName(name);
+                        if (context.mounted) {
+                          context.read<UserInfoCubit>().setName(name);
+                        }
+                      }
+                      if (context.mounted) {
+                        Navigator.pushNamed(context, '/lifestyleinfo');
+                      }
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFFB889D2),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(100.r),
+                      ),
+                      padding: EdgeInsets.symmetric(vertical: 18.h),
+                      elevation: 0,
+                    ),
+                    child: Text(
+                      "Next",
+                      style: TextStyle(
+                        fontSize: 16.sp,
+                        color: Colors.white,
+                        fontFamily: 'Urbanist-SemiBold',
+                        shadows: const [
+                          Shadow(
+                            offset: Offset(0, 4),
+                            blurRadius: 10,
+                            color: Color(0x40000000),
+                          )
+                        ],
+                      ),
+                    ),
+                  ),
                 ),
-              ],
-              borderRadius: BorderRadius.circular(100.r),
-            ),
-            child: ElevatedButton(
-              onPressed: () async {
-                // Persist name to SharedPrefs (fast, available everywhere)
-                // and into the UserInfoCubit (flows through DB → sync).
-                final name = nameController.text.trim();
-                if (name.isNotEmpty) {
-                  await SharedPrefsHelper.setUserName(name);
-                  if (context.mounted) {
-                    context.read<UserInfoCubit>().setName(name);
-                  }
-                }
-                if (context.mounted) {
-                  Navigator.pushNamed(context, '/lifestyleinfo');
-                }
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFFB889D2),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(100.r),
-                ),
-                padding: EdgeInsets.symmetric(vertical: 18.h),
-                elevation: 0,
               ),
-              child: Text(
-                "Next",
-                style: TextStyle(
-                  fontSize: 16.sp,
-                  color: Colors.white,
-                  fontFamily: 'Urbanist-SemiBold',
-                  shadows: const [
-                    Shadow(
-                      offset: Offset(0, 4),
-                      blurRadius: 10,
-                      color: Color(0x40000000),
-                    )
-                  ],
-                ),
-              ),
-            ),
-          ),
-        ),
         body: SafeArea(
           child: SingleChildScrollView(
             child: Column(

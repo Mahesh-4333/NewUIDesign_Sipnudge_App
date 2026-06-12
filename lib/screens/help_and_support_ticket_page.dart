@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_svg/svg.dart';
@@ -7,6 +8,7 @@ import 'package:hydrify/constants/app_dimensions.dart';
 import 'package:hydrify/constants/app_font_styles.dart';
 import 'package:hydrify/helpers/shared_pref_helper.dart';
 import 'package:hydrify/services/api_service.dart';
+import 'package:hydrify/services/firebase_messaging_service.dart';
 
 class HelpAndSupportTicketPage extends StatefulWidget {
   const HelpAndSupportTicketPage({super.key});
@@ -34,10 +36,15 @@ class _HelpAndSupportTicketPageState extends State<HelpAndSupportTicketPage> {
   
   final Set<String> _selectedTopics = {};
   
+  StreamSubscription<void>? _ticketUpdateSub;
+
   @override
   void initState() {
     super.initState();
     _fetchTickets();
+    _ticketUpdateSub = FirebaseMessagingService.ticketUpdateStream.stream.listen((_) {
+      if (mounted) _fetchTickets();
+    });
   }
 
   Future<void> _fetchTickets() async {
@@ -116,6 +123,7 @@ class _HelpAndSupportTicketPageState extends State<HelpAndSupportTicketPage> {
 
   @override
   void dispose() {
+    _ticketUpdateSub?.cancel();
     _messageController.dispose();
     super.dispose();
   }
@@ -347,7 +355,7 @@ class _HelpAndSupportTicketPageState extends State<HelpAndSupportTicketPage> {
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Text(
-                          "Submit Report",
+                          "Submit Ticket",
                           style: TextStyle(
                             color: Colors.white,
                             fontSize: 16.sp,
@@ -444,7 +452,7 @@ class _HelpAndSupportTicketPageState extends State<HelpAndSupportTicketPage> {
                       style: TextStyle(
                         color: Colors.grey.shade500,
                         fontSize: 12.sp,
-                        fontFamily: AppFontStyles.urbanistFontFamily,
+                        fontVariations: [AppFontStyles.boldFontVariation],
                       ),
                     ),
                   ],
@@ -458,6 +466,7 @@ class _HelpAndSupportTicketPageState extends State<HelpAndSupportTicketPage> {
                     color: AppColors.bluegray,
                     fontSize: 14.sp,
                     fontFamily: AppFontStyles.urbanistFontFamily,
+                    fontVariations: [AppFontStyles.boldFontVariation],
                   ),
                 ),
                 SizedBox(height: 10.h),
@@ -471,6 +480,7 @@ class _HelpAndSupportTicketPageState extends State<HelpAndSupportTicketPage> {
                         color: Colors.grey.shade500,
                         fontSize: 12.sp,
                         fontFamily: AppFontStyles.urbanistFontFamily,
+                        fontVariations: [AppFontStyles.fontWeightVariation600],
                       ),
                     ),
                   ],

@@ -10,6 +10,10 @@ import 'package:hydrify/constants/app_strings.dart';
 import 'package:hydrify/helpers/data_verification_helper.dart';
 import 'package:hydrify/helpers/shared_pref_helper.dart';
 import 'package:hydrify/services/user_manager.dart';
+import 'package:hydrify/screens/message_screen.dart';
+import 'package:hydrify/services/api_service.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:hydrify/constants/assets_path.dart';
 
 class GreetingWidget extends StatefulWidget {
   const GreetingWidget({super.key});
@@ -20,6 +24,8 @@ class GreetingWidget extends StatefulWidget {
 
 class _GreetingWidgetState extends State<GreetingWidget> with WidgetsBindingObserver {
   String _userName = '';
+  int _unreadCount = 0;
+  final ApiService _apiService = ApiService();
 
   @override
   void initState() {
@@ -29,6 +35,25 @@ class _GreetingWidgetState extends State<GreetingWidget> with WidgetsBindingObse
 
     // Listen for username changes
     UserManager().addListener(_onUserNameChanged);
+
+    _fetchUnreadCount();
+  }
+
+  Future<void> _fetchUnreadCount() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final userId = prefs.getString('user_id');
+      if (userId != null) {
+        final data = await _apiService.getUserMessages(userId);
+        if (data['data'] != null && mounted) {
+          setState(() {
+            _unreadCount = data['data']['unreadPersonalCount'] ?? 0;
+          });
+        }
+      }
+    } catch (e) {
+      debugPrint("Error fetching unread count: $e");
+    }
   }
 
   void _onUserNameChanged(String newName) {
@@ -68,6 +93,7 @@ class _GreetingWidgetState extends State<GreetingWidget> with WidgetsBindingObse
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
+      _fetchUnreadCount();
       if (mounted) {
         setState(() {});
       }
@@ -107,14 +133,51 @@ class _GreetingWidgetState extends State<GreetingWidget> with WidgetsBindingObse
           ),
         ),
         SizedBox(height: AppDimensions.dim4.h),
-        Text(
-          _userName,
-          style: TextStyle(
-            color: AppColors.bluegray,
-            fontSize: AppFontStyles.fontSize_20,
-            fontFamily: AppFontStyles.museoModernoFontFamily,
-            fontVariations: [AppFontStyles.boldFontVariation],
-          ),
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Text(
+              _userName,
+              style: TextStyle(
+                color: AppColors.bluegray,
+                fontSize: AppFontStyles.fontSize_20,
+                fontFamily: AppFontStyles.museoModernoFontFamily,
+                fontVariations: [AppFontStyles.boldFontVariation],
+              ),
+            ),
+            SizedBox(width: 8.w),
+            GestureDetector(
+              onTap: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const MessageScreen()),
+                );
+              },
+              child: Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  Image.asset(
+                    AssetsPath.message,
+                    width: 24.w,
+                    height: 24.h,
+                  ),
+                  if (_unreadCount > 0)
+                    Positioned(
+                      right: -2.w,
+                      top: -2.h,
+                      child: Container(
+                        width: 10.w,
+                        height: 10.w,
+                        decoration: BoxDecoration(
+                          color: Colors.greenAccent.shade400,
+                          shape: BoxShape.circle,
+                          border: Border.all(color: Colors.white, width: 2),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ],
         ),
       ],
     );

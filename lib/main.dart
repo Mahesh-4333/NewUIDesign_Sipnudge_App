@@ -58,6 +58,7 @@ import 'package:hydrify/services/user_manager.dart';
 import 'package:hydrify/services/weather_service.dart';
 import 'package:hydrify/services/achievement_notifier.dart';
 import 'package:hydrify/services/firebase_messaging_service.dart';
+import 'package:hydrify/services/home_widget_service.dart';
 import 'package:hydrify/screens/help_and_support_ticket_page.dart';
 import 'package:hydrify/screens/ticket_chat_screen.dart';
 import 'package:provider/provider.dart';
@@ -70,6 +71,7 @@ final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await HomeWidgetService.initialize();
   await FlutterBluePlus.setLogLevel(LogLevel.verbose, color: true);
 
   await Firebase.initializeApp(

@@ -68,8 +68,44 @@ class _FlAreaChartWidgetState extends State<FlAreaChartWidget> {
     _loadUserGoal().then((_) {
       _updateChartData();
       if (mounted) setState(() {});
+      WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToToday());
     });
     _scrollController.addListener(_scrollListener);
+    WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToToday());
+  }
+
+  void _scrollToToday() {
+    if (!mounted || widget.interval != FilterInterval.monthly) return;
+    final today = DateTime.now();
+    if (widget.currentDate.year == today.year && widget.currentDate.month == today.month) {
+      final dayIndex = today.day - 1;
+
+      double pointWidth = 50.w;
+      final chartWidth = pointWidth * (chartData.isEmpty ? 1 : chartData.length);
+      final expandedWidth = AppDimensions.dim365.w - AppDimensions.dim40.w;
+      final drawingWidth = chartWidth - AppDimensions.dim9.w - (pointWidth / 2);
+      final viewportWidth = expandedWidth;
+
+      double localX = 0;
+      if (chartData.length > 1) {
+        localX = (dayIndex / (chartData.length - 1)) * drawingWidth;
+      }
+      final double positionOfPoint = localX + AppDimensions.dim9.w;
+
+      double targetOffset = positionOfPoint - viewportWidth + 30.w;
+      if (targetOffset < 0) targetOffset = 0;
+
+      final double maxScroll = chartWidth - viewportWidth;
+      if (targetOffset > maxScroll) targetOffset = maxScroll;
+
+      if (_scrollController.hasClients) {
+        _scrollController.animateTo(
+          targetOffset,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeInOut,
+        );
+      }
+    }
   }
 
   Future<void> _loadUserGoal() async {
@@ -245,6 +281,7 @@ class _FlAreaChartWidgetState extends State<FlAreaChartWidget> {
       _loadUserGoal().then((_) {
         _updateChartData();
         setState(() {});
+        WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToToday());
       });
     }
   }
@@ -257,8 +294,9 @@ class _FlAreaChartWidgetState extends State<FlAreaChartWidget> {
         ? AppDimensions.dim365.w
         : pointWidth * (chartData.isEmpty ? 1 : chartData.length);
     final expandedWidth = AppDimensions.dim365.w - AppDimensions.dim40.w;
+    final double rightPadding = isWeekly ? 24.w : 0;
     final drawingWidth = isWeekly
-        ? expandedWidth - AppDimensions.dim9.w
+        ? expandedWidth - AppDimensions.dim9.w - rightPadding
         : chartWidth - AppDimensions.dim9.w - (pointWidth / 2);
     final drawingHeight = AppDimensions.dim262.h - AppDimensions.dim9.h - 32.h;
 
@@ -289,6 +327,7 @@ class _FlAreaChartWidgetState extends State<FlAreaChartWidget> {
                               width: chartWidth,
                               padding: EdgeInsets.only(
                                 left: AppDimensions.dim9.w,
+                                right: rightPadding,
                                 top: AppDimensions.dim9.h,
                               ),
                               child: _buildAreaChart(chartWidth, isWeekly),

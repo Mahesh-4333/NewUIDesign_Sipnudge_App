@@ -11,6 +11,7 @@ import 'package:hydrify/helpers/shared_pref_helper.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:hydrify/screens/widgets/water_wave_widget.dart';
 import 'package:hydrify/services/database_sync_service.dart';
+import 'package:hydrify/services/home_widget_service.dart';
 import 'package:intl/intl.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 
@@ -174,6 +175,17 @@ class _LogHydrationWidgetState extends State<LogHydrationWidget> {
     bleCubit.triggerRefresh();
     hydrationCubit.refreshAchievementStats();
     DatabaseSyncService().syncAll();
+
+    try {
+      final waterGoal = await SharedPrefsHelper.getWaterGoal() ?? 2500;
+      final currentIntakeVal = await bleCubit.getCurrentDayHistory();
+      await HomeWidgetService.updateWidgetData(
+        currentIntake: currentIntakeVal.round(),
+        dailyGoal: waterGoal,
+      );
+    } catch (e) {
+      // Handle or ignore gracefully
+    }
 
     Fluttertoast.showToast(
         msg: "Logged ${_currentAmount.toInt()}ml of $_selectedDrink"

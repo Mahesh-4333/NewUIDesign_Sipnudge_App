@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -16,6 +17,8 @@ import 'package:hydrify/screens/widgets/user_info_input_widgets/custom_cupertino
 import 'package:hydrify/screens/widgets/user_info_input_widgets/custom_radio_selection_widget.dart';
 import 'package:hydrify/screens/widgets/user_info_input_widgets/next_button_widget.dart';
 import 'package:hydrify/services/ui_utils_service.dart';
+import 'package:hydrify/services/api_service.dart';
+import 'package:hydrify/helpers/logger.dart';
 
 class UserInfoInputScreen extends StatefulWidget {
   final bool fromSettings;
@@ -30,26 +33,221 @@ class UserInfoInputScreen extends StatefulWidget {
 
 class _UserInfoInputScreenState extends State<UserInfoInputScreen> {
   final TextEditingController _nameController = TextEditingController();
+  final FocusNode _nameFocusNode = FocusNode();
+  bool _isKeyboardVisible = false;
+  bool _isUsernameReadOnly = false;
+
+  Timer? _debounce;
+  String? _usernameError;
+  bool _isCheckingUsername = false;
+  bool _isUsernameValid = false;
 
   @override
   void initState() {
     super.initState();
-    context.read<UserInfoCubit>().loadUser();
-    context
-        .read<UserInfoCubit>()
-        .setAchievmentSnackbarStatus(!widget.fromSettings);
-    _loadSavedName();
+    _nameFocusNode.addListener(_onFocusChange);
+    _loadInitialUserData();
   }
 
-  Future<void> _loadSavedName() async {
-    final saved = await SharedPrefsHelper.getUserName();
-    if (saved != null && saved.isNotEmpty) {
-      _nameController.text = saved;
+  void _onFocusChange() {
+    setState(() {
+      _isKeyboardVisible = _nameFocusNode.hasFocus && !_isUsernameReadOnly;
+    });
+  }
+
+  void _onUsernameChanged(String value) {
+    if (_debounce?.isActive ?? false) _debounce!.cancel();
+
+    final name = value.trim();
+    if (name.isEmpty) {
+      setState(() {
+        _usernameError = null;
+        _isUsernameValid = false;
+        _isCheckingUsername = false;
+      });
+      return;
+    }
+
+    final regex = RegExp(r'^[a-zA-Z0-9_]{3,15}$');
+    if (!regex.hasMatch(name)) {
+      setState(() {
+        _usernameError = "3-15 alphanumeric characters or underscores only.";
+        _isUsernameValid = false;
+        _isCheckingUsername = false;
+      });
+      return;
+    }
+
+    setState(() {
+      _isCheckingUsername = true;
+      _usernameError = null;
+      _isUsernameValid = false;
+    });
+
+    _debounce = Timer(const Duration(milliseconds: 500), () async {
+      final userId = await SharedPrefsHelper.getUserId();
+      final isUnique = await ApiService().checkNameUniqueness(name, userId);
+      if (!mounted) return;
+      setState(() {
+        _isCheckingUsername = false;
+        if (isUnique) {
+          _isUsernameValid = true;
+          _usernameError = null;
+        } else {
+          _isUsernameValid = false;
+          _usernameError = "Username is already taken.";
+        }
+      });
+    });
+  }
+
+  Future<void> _loadInitialUserData() async {
+    final cubit = context.read<UserInfoCubit>();
+    await cubit.loadUser();
+
+    if (cubit.state.name != null && cubit.state.name!.isNotEmpty) {
+      setState(() {
+        _isUsernameReadOnly = true;
+        _nameController.text = cubit.state.name!;
+      });
+    }
+
+    if (cubit.state.height == null ||
+        cubit.state.weight == null ||
+        cubit.state.name == null) {
+      final email = await SharedPrefsHelper.getUserEmail();
+      if (email != null && email.isNotEmpty && email != "guest_user") {
+        try {
+          final serverData = await ApiService().getUserByEmail(email);
+          Console.log(
+              tag: "USER_INFO",
+              value: "Fetched user profile from server: $serverData");
+          if (serverData != null && serverData['exists'] == true) {
+            final genderStr = serverData['gender']?.toString().toLowerCase();
+            Gender gender = Gender.male;
+            if (genderStr == 'female')
+              gender = Gender.female;
+            else if (genderStr == 'prefernottosay' ||
+                genderStr == 'prefer_not_to_say')
+              gender = Gender.preferNotToSay;
+
+            final activityStr =
+                serverData['activityLevel']?.toString().toLowerCase();
+            ActivityLevel activity = ActivityLevel.lightActivity;
+            if (activityStr == 'sedentary')
+              activity = ActivityLevel.sedentary;
+            else if (activityStr == 'midactive' || activityStr == 'mid_active')
+              activity = ActivityLevel.midActive;
+            else if (activityStr == 'veryactive' ||
+                activityStr == 'very_active')
+              activity = ActivityLevel.veryActive;
+
+            final dietStr = serverData['dietType']?.toString().toLowerCase();
+            DietType diet = DietType.balanced;
+            if (dietStr == 'vegetarian')
+              diet = DietType.vegetarian;
+            else if (dietStr == 'processed')
+              diet = DietType.processed;
+            else if (dietStr == 'highprotein' || dietStr == 'high_protein')
+              diet = DietType.highProtein;
+
+            final coffeeStr =
+                serverData['coffeeIntake']?.toString().toLowerCase();
+            BeverageIntake coffee = BeverageIntake.none;
+            if (coffeeStr == 'onetotwo' || coffeeStr == 'one_to_two')
+              coffee = BeverageIntake.oneToTwo;
+            else if (coffeeStr == 'threetofour' || coffeeStr == 'three_to_four')
+              coffee = BeverageIntake.threeToFour;
+            else if (coffeeStr == 'fiveplus' || coffeeStr == 'five_plus')
+              coffee = BeverageIntake.fivePlus;
+
+            final teaStr = serverData['teaIntake']?.toString().toLowerCase();
+            BeverageIntake tea = BeverageIntake.none;
+            if (teaStr == 'onetotwo' || teaStr == 'one_to_two')
+              tea = BeverageIntake.oneToTwo;
+            else if (teaStr == 'threetofour' || teaStr == 'three_to_four')
+              tea = BeverageIntake.threeToFour;
+            else if (teaStr == 'fiveplus' || teaStr == 'five_plus')
+              tea = BeverageIntake.fivePlus;
+
+            final double? height = serverData['height'] != null
+                ? (serverData['height'] as num).toDouble()
+                : null;
+            final double? weight = serverData['weight'] != null
+                ? (serverData['weight'] as num).toDouble()
+                : null;
+            final int? age = serverData['age'] != null
+                ? (serverData['age'] as num).toInt()
+                : null;
+            final String? name = serverData['name'];
+
+            final newState = UserInfoState(
+              gender: gender,
+              height: height,
+              heightUnit: serverData['heightUnit'] ?? 'cm',
+              weight: weight,
+              weightUnit: serverData['weightUnit'] ?? 'kg',
+              age: age,
+              name: name,
+              wakeupHour: serverData['wakeupHour'],
+              wakeupMinute: serverData['wakeupMinute'],
+              wakeupPeriod: serverData['wakeupPeriod'],
+              bedtimeHour: serverData['bedtimeHour'],
+              bedtimeMinute: serverData['bedtimeMinute'],
+              bedtimePeriod: serverData['bedtimePeriod'],
+              activityLevel: activity,
+              dietType: diet,
+              stepGoal: serverData['stepGoal'],
+              coffeeIntake: coffee,
+              teaIntake: tea,
+              typicalWaterIntake: serverData['typicalWaterIntake'] != null
+                  ? (serverData['typicalWaterIntake'] as num).toDouble()
+                  : null,
+              waterUnit: serverData['waterUnit'] ?? 'L',
+            );
+
+            cubit.emit(newState);
+            await cubit.saveUser(newState);
+
+            if (name != null && name.isNotEmpty) {
+              setState(() {
+                _isUsernameReadOnly = true;
+              });
+              _nameController.text = name;
+              _onUsernameChanged(name);
+            }
+          }
+        } catch (e) {
+          Console.log(
+              tag: "USER_INFO",
+              value: "Failed to fetch initial profile from server: $e");
+        }
+      }
+    }
+
+    if (_nameController.text.isEmpty) {
+      final savedName = await SharedPrefsHelper.getUserName();
+      if (savedName != null && savedName.isNotEmpty) {
+        setState(() {
+          _isUsernameReadOnly = true;
+        });
+        _nameController.text = savedName;
+        _onUsernameChanged(savedName);
+      }
+    }
+
+    if (mounted) {
+      context
+          .read<UserInfoCubit>()
+          .setAchievmentSnackbarStatus(!widget.fromSettings);
     }
   }
 
   @override
   void dispose() {
+    _debounce?.cancel();
+    _nameFocusNode.removeListener(_onFocusChange);
+    _nameFocusNode.dispose();
     _nameController.dispose();
     super.dispose();
   }
@@ -57,61 +255,95 @@ class _UserInfoInputScreenState extends State<UserInfoInputScreen> {
   @override
   Widget build(BuildContext context) {
     return PopScope(
-      // <<< FIX: allow pop only when opened from Settings
       canPop: widget.fromSettings,
       onPopInvoked: (didPop) {},
       child: Scaffold(
         extendBodyBehindAppBar: true,
         extendBody: true,
-        bottomNavigationBar: Container(
-          height: AppDimensions.dim60,
-          margin: EdgeInsets.only(
-            left: AppDimensions.defaultPadding.w,
-            right: AppDimensions.defaultPadding.w,
-            bottom: AppDimensions.defaultPadding.w,
-          ),
-          child: BlocBuilder<UserInfoCubit, UserInfoState>(
-            builder: (context, state) {
-              return CustomNextButton(
-                  text: AppStrings.next,
-                  onNextPressed: () async {
-                    final height = state.height;
-                    final weight = state.weight;
-                    final age = state.age;
+        bottomNavigationBar: _isKeyboardVisible
+            ? null
+            : Container(
+                height: AppDimensions.dim60,
+                margin: EdgeInsets.only(
+                  left: AppDimensions.defaultPadding.w,
+                  right: AppDimensions.defaultPadding.w,
+                  bottom: AppDimensions.defaultPadding.w,
+                ),
+                child: BlocBuilder<UserInfoCubit, UserInfoState>(
+                  builder: (context, state) {
+                    return CustomNextButton(
+                        text: AppStrings.next,
+                        onNextPressed: () async {
+                          final height = state.height;
+                          final weight = state.weight;
+                          final age = state.age;
 
-                    if (height == null || weight == null || age == null) {
-                      UiUtilsService.showToast(
-                        context: context,
-                        text:
-                            "Please fill in height, weight, and age before continuing.",
-                        textColor: Colors.red,
-                      );
-                      return;
-                    }
+                          if (height == null || weight == null || age == null) {
+                            UiUtilsService.showToast(
+                              context: context,
+                              text:
+                                  "Please fill in height, weight, and age before continuing.",
+                              textColor: Colors.red,
+                            );
+                            return;
+                          }
 
-                    // Save name to SharedPrefs + cubit
-                    final name = _nameController.text.trim();
-                    if (name.isNotEmpty) {
-                      await SharedPrefsHelper.setUserName(name);
-                      if (context.mounted) {
-                        context.read<UserInfoCubit>().setName(name);
-                      }
-                    }
+                          final name = _nameController.text.trim();
+                          if (name.isEmpty) {
+                            UiUtilsService.showToast(
+                              context: context,
+                              text: "Please enter your name.",
+                              textColor: Colors.red,
+                            );
+                            return;
+                          }
 
-                    if (!context.mounted) return;
-                    // From onboarding → continue next flow
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => UserLifestyleInfoInputScreen(
-                          isViaSettingsScreen: widget.fromSettings,
-                        ),
-                      ),
-                    );
-                  });
-            },
-          ),
-        ),
+                          final regex = RegExp(r'^[a-zA-Z0-9_]{3,15}$');
+                          if (!regex.hasMatch(name)) {
+                            UiUtilsService.showToast(
+                              context: context,
+                              text:
+                                  "Name must be 3-15 alphanumeric characters or underscores.",
+                              textColor: Colors.red,
+                            );
+                            return;
+                          }
+
+                          // // Check username uniqueness from backend
+                          // final userId = await SharedPrefsHelper.getUserId();
+                          // final isUnique = await ApiService().checkNameUniqueness(name, userId);
+                          // if (!isUnique) {
+                          //   if (context.mounted) {
+                          //     UiUtilsService.showToast(
+                          //       context: context,
+                          //       text: "This name is already taken. Please choose a unique name.",
+                          //       textColor: Colors.red,
+                          //     );
+                          //   }
+                          //   return;
+                          // }
+
+                          // Save name to SharedPrefs + cubit
+                          await SharedPrefsHelper.setUserName(name);
+                          if (context.mounted) {
+                            context.read<UserInfoCubit>().setName(name);
+                          }
+
+                          if (!context.mounted) return;
+                          // From onboarding → continue next flow
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) =>
+                                  UserLifestyleInfoInputScreen(
+                                isViaSettingsScreen: widget.fromSettings,
+                              ),
+                            ),
+                          );
+                        });
+                  },
+                ),
+              ),
         appBar: AppBar(
           elevation: 0.0,
           backgroundColor: Colors.transparent,
@@ -160,8 +392,11 @@ class _UserInfoInputScreenState extends State<UserInfoInputScreen> {
             top: AppDimensions.dim120.h,
           ),
           child: ListView(
-            padding: EdgeInsets.all(
-              AppDimensions.defaultPadding,
+            padding: EdgeInsets.only(
+              left: AppDimensions.defaultPadding.w,
+              right: AppDimensions.defaultPadding.w,
+              top: AppDimensions.defaultPadding.h,
+              bottom: AppDimensions.dim80.h,
             ),
             children: [
               // ── Gender ──────────────────────────────────────────────────
@@ -345,10 +580,10 @@ class _UserInfoInputScreenState extends State<UserInfoInputScreen> {
                   );
                 },
               ),
-              SizedBox(height: AppDimensions.dim32.h),
+              SizedBox(height: AppDimensions.dim20.h),
               // ── Name field ──────────────────────────────────────────────
               Text(
-                "What's your name?",
+                "Add User Name",
                 style: TextStyle(
                   fontFamily: AppFontStyles.urbanistFontFamily,
                   fontSize: AppFontStyles.fontSize_16,
@@ -376,14 +611,20 @@ class _UserInfoInputScreenState extends State<UserInfoInputScreen> {
                   ],
                 ),
                 child: TextField(
+                  focusNode: _nameFocusNode,
                   controller: _nameController,
+                  onChanged: _onUsernameChanged,
+                  readOnly: _isUsernameReadOnly,
+                  enableInteractiveSelection: !_isUsernameReadOnly,
                   keyboardType: TextInputType.name,
                   textCapitalization: TextCapitalization.words,
+                  scrollPadding:
+                      EdgeInsets.only(bottom: AppDimensions.dim140.h),
                   style: TextStyle(
                     fontFamily: AppFontStyles.urbanistFontFamily,
                     fontSize: AppFontStyles.fontSize_16,
                     fontVariations: [AppFontStyles.regularFontVariation],
-                    color: AppColors.black,
+                    color: _isUsernameReadOnly ? Colors.grey : AppColors.black,
                   ),
                   decoration: InputDecoration(
                     hintText: 'Enter your name',
@@ -401,6 +642,66 @@ class _UserInfoInputScreenState extends State<UserInfoInputScreen> {
                   ),
                 ),
               ),
+              SizedBox(height: AppDimensions.dim8.h),
+              if (_isUsernameReadOnly)
+                Text(
+                  "Username cannot be changed once set.",
+                  style: TextStyle(
+                    color: Colors.grey.shade600,
+                    fontSize: AppFontStyles.fontSize_13.sp,
+                    fontFamily: AppFontStyles.urbanistFontFamily,
+                    fontVariations: [AppFontStyles.regularFontVariation],
+                  ),
+                )
+              else ...[
+                if (_isCheckingUsername)
+                  Text(
+                    "Checking availability...",
+                    style: TextStyle(
+                      color: Colors.grey,
+                      fontSize: AppFontStyles.fontSize_13.sp,
+                      fontFamily: AppFontStyles.urbanistFontFamily,
+                      fontVariations: [AppFontStyles.regularFontVariation],
+                    ),
+                  )
+                else if (_usernameError != null)
+                  Text(
+                    _usernameError!,
+                    style: TextStyle(
+                      color: Colors.red,
+                      fontSize: AppFontStyles.fontSize_13.sp,
+                      fontFamily: AppFontStyles.urbanistFontFamily,
+                      fontVariations: [AppFontStyles.regularFontVariation],
+                    ),
+                  )
+                else if (_isUsernameValid)
+                  Row(
+                    children: [
+                      Icon(Icons.check_circle_outline,
+                          color: Colors.green, size: 16.r),
+                      SizedBox(width: 4.w),
+                      Text(
+                        "Username available",
+                        style: TextStyle(
+                          color: Colors.green,
+                          fontSize: AppFontStyles.fontSize_13.sp,
+                          fontFamily: AppFontStyles.urbanistFontFamily,
+                          fontVariations: [AppFontStyles.boldFontVariation],
+                        ),
+                      ),
+                    ],
+                  ),
+                SizedBox(height: AppDimensions.dim4.h),
+                Text(
+                  "Use 3-15 letters, numbers, or underscores.",
+                  style: TextStyle(
+                    color: Colors.grey.shade500,
+                    fontSize: AppFontStyles.fontSize_11.sp,
+                    fontFamily: AppFontStyles.urbanistFontFamily,
+                    fontVariations: [AppFontStyles.regularFontVariation],
+                  ),
+                ),
+              ],
               SizedBox(height: AppDimensions.dim100.h),
             ],
           ),

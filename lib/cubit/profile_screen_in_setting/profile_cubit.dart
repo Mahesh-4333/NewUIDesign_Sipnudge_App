@@ -25,7 +25,7 @@ class ProfileCubit extends Cubit<ProfileState> {
                 title: "Help & Support",
               ),
               ProfileMenuItem(
-                iconPath: "assets/help_support.png",
+                iconPath: AssetsPath.supportTicket,
                 title: "Support Tickets",
               ),
               ProfileMenuItem(
@@ -51,6 +51,11 @@ class ProfileCubit extends Cubit<ProfileState> {
               ProfileMenuItem(
                 iconPath: "assets/drink_rem.png",
                 title: "Active Notifications",
+              ),
+              ProfileMenuItem(
+                iconPath:
+                    "assets/unlink1.png", // A reasonable icon path that already exists for link accounts
+                title: "Unlink Device",
               ),
               ProfileMenuItem(
                 iconPath: "assets/logout.png",

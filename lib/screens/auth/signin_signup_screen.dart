@@ -117,7 +117,6 @@ class _SigninSignupScreenState extends State<SigninSignupScreen> {
                     height: AppDimensions.dim5.h,
                   ),
                 ),
-                // _buildDivider(),
                 SizedBox(
                   height: AppDimensions.dim10.h,
                 ),
@@ -287,6 +286,7 @@ class _SigninSignupScreenState extends State<SigninSignupScreen> {
                     ),
                     children: [
                       WidgetSpan(
+                        alignment: PlaceholderAlignment.middle,
                         child: GestureDetector(
                           onTap: () {
                             Navigator.of(context).push(
@@ -299,7 +299,7 @@ class _SigninSignupScreenState extends State<SigninSignupScreen> {
                             AppStrings.termsAndConditions,
                             style: TextStyle(
                               color: AppColors.blueGradient,
-                              fontSize: AppFontStyles.fontSize_17,
+                              fontSize: AppFontStyles.fontSize_17.sp,
                               fontFamily: AppFontStyles.urbanistFontFamily,
                               fontVariations: [
                                 AppFontStyles.semiBoldFontVariation,
@@ -308,17 +308,6 @@ class _SigninSignupScreenState extends State<SigninSignupScreen> {
                           ),
                         ),
                       ),
-                      // TextSpan(
-                      //   text: AppStrings.clickToContinue,
-                      //   style: TextStyle(
-                      //     color: AppColors.white,
-                      //     fontSize: AppFontStyles.fontSize_17,
-                      //     fontFamily: AppFontStyles.urbanistFontFamily,
-                      //     fontVariations: [
-                      //       AppFontStyles.semiBoldFontVariation,
-                      //     ],
-                      //   ),
-                      // ),
                     ],
                   ),
                 ),
@@ -531,7 +520,6 @@ class _SigninSignupScreenState extends State<SigninSignupScreen> {
         SizedBox(
           height: AppDimensions.dim20.h,
         ),
-        _buildDivider()
       ],
     );
   }
@@ -620,7 +608,7 @@ class _SigninSignupScreenState extends State<SigninSignupScreen> {
             mainAxisSize: MainAxisSize.min,
             children: [
               AuthButton(
-                iconPath: "assets/images/apple_ic.svg",
+                iconPath: "assets/apple_icon_1.svg",
                 text: AppStrings.continueWithApple,
                 color: AppColors.white,
                 onTap: () async {

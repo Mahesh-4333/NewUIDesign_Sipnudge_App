@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
@@ -13,6 +14,8 @@ class FirebaseMessagingService {
 
   final FirebaseMessaging _firebaseMessaging = FirebaseMessaging.instance;
   final ApiService _apiService = ApiService();
+
+  static final StreamController<void> ticketUpdateStream = StreamController<void>.broadcast();
 
   Future<void> init() async {
     try {
@@ -76,7 +79,9 @@ class FirebaseMessagingService {
       // 6. Handle foreground notifications (optional, if we want to show a local alert)
       FirebaseMessaging.onMessage.listen((RemoteMessage message) {
         Console.log(tag: "FCM", value: 'Foreground message received: ${message.notification?.title}');
-        // We could show a local snackbar or flutter_local_notifications here
+        if (message.data['type'] == 'ticket_reply' || message.data['type'] == 'ticket_closed') {
+          ticketUpdateStream.add(null);
+        }
       });
 
     } catch (e) {
