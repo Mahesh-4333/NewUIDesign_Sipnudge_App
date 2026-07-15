@@ -6,6 +6,7 @@ import 'package:hydrify/services/api_service.dart';
 import 'package:hydrify/services/firebase_messaging_service.dart';
 import 'package:hydrify/services/sync_bus.dart';
 import 'package:hydrify/helpers/logger.dart';
+import 'package:hydrify/models/hydration_summary.dart';
 
 class DatabaseSyncService {
   final DatabaseHelper _dbHelper = DatabaseHelper();
@@ -113,7 +114,7 @@ class DatabaseSyncService {
           'teaIntake': userInfo.teaIntake?.toString().split('.').last,
           'typicalWaterIntake': userInfo.typicalWaterIntake,
           'waterUnit': userInfo.waterUnit,
-          'name': userInfo.name,
+          'userName': userInfo.name,
         });
       }
 
@@ -183,6 +184,41 @@ class DatabaseSyncService {
       }
 
       // 5. Sync Daily Summaries
+      // First, pull daily summaries from the server to update the local SQLite database (in case background BLE sync updated the server)
+      try {
+        final now = DateTime.now();
+        final startDate = DateTime(now.year, now.month, now.day);
+        final endDate = startDate.add(const Duration(days: 1));
+        final serverSummaries = await _apiService.getDailySummaries(userId, startDate, endDate);
+        if (serverSummaries != null && serverSummaries.isNotEmpty) {
+          for (final m in serverSummaries) {
+            final String dateStr = m['date'] as String;
+            final datePart = dateStr.length >= 10 ? dateStr.substring(0, 10) : dateStr;
+            final DateTime rawDate = DateTime.tryParse(datePart) ?? DateTime.parse(dateStr);
+            final targetVal = (m['target'] as num).toDouble();
+            final consumedVal = (m['consumed'] as num).toDouble();
+            final isPerfectDay = targetVal > 0 && consumedVal >= targetVal;
+
+            // Prevent overwriting a larger local SQLite consumed value
+            final localSummary = await _dbHelper.getSummaryForDate(rawDate);
+            if (localSummary == null || localSummary.consumed < consumedVal) {
+              final updatedSummary = HydrationDaySummary(
+                date: rawDate,
+                dayIndex: m['dayIndex'] as int? ?? 0,
+                target: targetVal,
+                consumed: consumedVal,
+                deviceId: m['deviceId'] as String?,
+                isPerfect: isPerfectDay,
+              );
+              await _dbHelper.bulkUpsert30Days([updatedSummary]);
+              Console.log(tag: "SYNC", value: "Successfully pulled daily summary from server for $rawDate: $consumedVal ml");
+            }
+          }
+        }
+      } catch (e) {
+        Console.log(tag: "SYNC", value: "Failed to pull today's daily summary from server: $e");
+      }
+
       final String todayDateStr = DateTime.now().toIso8601String().split('T').first;
       final String? lastSummarySyncDate = await SharedPrefsHelper.getLastSummarySyncDate();
       final bool alreadySynced30 = await SharedPrefsHelper.hasSynced30Days();

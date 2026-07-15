@@ -6,6 +6,15 @@ import 'package:geolocator/geolocator.dart';
 class LocationException implements Exception {
   final String message;
   LocationException(this.message);
+  @override
+  String toString() => message;
+}
+
+/// Thrown specifically when location permission is permanently denied.
+/// UI callers should catch this to show an informational "Open Settings" link.
+class LocationPermissionDeniedException extends LocationException {
+  LocationPermissionDeniedException()
+      : super('Location permissions are permanently denied.');
 }
 
 class LocationService {
@@ -33,9 +42,10 @@ class LocationService {
     }
 
     if (permission == LocationPermission.deniedForever) {
-      await Geolocator.openAppSettings();
-      throw LocationException(
-          'Location permissions are permanently denied, we cannot request permissions.');
+      // Do NOT auto-redirect to Settings per Apple App Store guidelines.
+      // Throw a specific exception so the UI layer can show an informational
+      // message with an optional "Open Settings" link the user taps themselves.
+      throw LocationPermissionDeniedException();
     }
 
     return true;
@@ -60,6 +70,9 @@ class LocationService {
           value:
               'Location obtained: ${position.latitude}, ${position.longitude}');
       return position;
+    } on LocationPermissionDeniedException {
+      // Let this propagate up so WeatherProvider can fire the popup stream.
+      rethrow;
     } catch (e) {
       Console.log(tag: "APP", value: 'Error getting location: $e');
       throw LocationException('Failed to get location: $e');

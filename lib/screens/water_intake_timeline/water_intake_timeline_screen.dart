@@ -40,7 +40,7 @@ class WaterIntakeTimelineScreen extends StatefulWidget {
 class _WaterIntakeTimelineState extends State<WaterIntakeTimelineScreen> {
   String title = "Home";
   bool isSelected = false;
-  int _activeTabIndex = 0; // 0: Completed, 1: Pending, 2: Schedule
+  int _activeTabIndex = 2; // 0: Completed, 1: Pending, 2: Schedule
   int? _expandedIndex;
   TimeOfDay? tempStartTime;
   TimeOfDay? tempEndTime;

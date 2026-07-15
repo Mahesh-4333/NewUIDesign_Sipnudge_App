@@ -21,22 +21,22 @@ class ApiClient {
     dio = Dio(options);
 
     dio.interceptors.add(PrettyDioLogger(
-      requestBody: true,
-      requestHeader: true,
-      responseBody: true,
+      requestBody: false,
+      requestHeader: false,
+      responseBody: false,
       responseHeader: false,
-      error: true,
-      compact: true,
+      error: false,
+      compact: false,
       maxWidth: 90,
     ));
 
     dio.interceptors.add(LogInterceptor(
-      request: true,
-      requestHeader: true,
-      requestBody: true,
-      responseHeader: true,
-      responseBody: true,
-      error: true,
+      request: false,
+      requestHeader: false,
+      requestBody: false,
+      responseHeader: false,
+      responseBody: false,
+      error: false,
     ));
 
     dio.interceptors.add(InterceptorsWrapper(

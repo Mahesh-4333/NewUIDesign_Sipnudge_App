@@ -1,468 +1,405 @@
+import 'dart:ui';
+
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:flutter_svg/svg.dart';
 import 'package:hydrify/constants/app_colors.dart';
 import 'package:hydrify/constants/app_dimensions.dart';
 import 'package:hydrify/constants/app_font_styles.dart';
 import 'package:hydrify/constants/app_strings.dart';
 import 'package:hydrify/cubit/account&security/account&security_cubit.dart';
 import 'package:hydrify/cubit/account&security/account&security_state.dart';
+import 'package:hydrify/cubit/bottom_nav/bottom_nav_cubit.dart';
+import 'package:hydrify/helpers/database_helper.dart';
+import 'package:hydrify/helpers/logger.dart';
+import 'package:hydrify/helpers/shared_pref_helper.dart';
+import 'package:hydrify/screens/auth/local_auth_screen.dart';
 import 'package:hydrify/screens/widgets/account&security_widgets/toggle_state_widget.dart';
 import 'package:hydrify/screens/widgets/animated_bottom_navbar_widget.dart';
-
-// import 'package:flutterapp1/widgets/account&security_widgets/toggle_state_widget.dart';
+import 'package:hydrify/services/api_service.dart';
+import 'package:hydrify/services/user_manager.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class AccountAndSecurityPage extends StatelessWidget {
   const AccountAndSecurityPage({super.key});
 
   @override
-  // Widget build(BuildContext context) {
-  //   return BlocProvider(
-  //     create: (_) => AccountSecurityCubit(),
-  //     child: const _AccountAndSecurityView(),
-  //   );
-  // }
-// }
-
-// class _AccountAndSecurityView extends StatelessWidget {
-//   const _AccountAndSecurityView();
-
-  @override
   Widget build(BuildContext context) {
     return Scaffold(
+      extendBodyBehindAppBar: true,
+      extendBody: true,
+      appBar: AppBar(
+        elevation: 0.0,
+        backgroundColor: Colors.transparent,
+        centerTitle: true,
+        title: Text(
+          AppStrings.accountandsecurity,
+          style: TextStyle(
+            color: AppColors.bluegray,
+            fontSize: AppFontStyles.fontSize_AppBar,
+            fontFamily: AppFontStyles.urbanistFontFamily,
+            fontVariations: [
+              AppFontStyles.boldFontVariation,
+            ],
+          ),
+        ),
+        leadingWidth: AppDimensions.dim85.w,
+        leading: IconButton(
+          onPressed: () {
+            Navigator.of(context).pop();
+          },
+          icon: SvgPicture.asset(
+            "assets/images/back_ic.svg",
+          ),
+        ),
+      ),
       body: Container(
         width: double.infinity,
         height: double.infinity,
         decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            colors: [AppColors.gradientStart, AppColors.gradientEnd],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
+          image: DecorationImage(
+            image: AssetImage("assets/images/app_background.png"),
+            fit: BoxFit.cover,
           ),
         ),
         child: SafeArea(
-          child: Column(
-            children: [
-              // Top Header
-              Padding(
-                padding: EdgeInsets.only(
-                  top: AppDimensions.dim40.h,
-                  left: AppDimensions.dim20.w,
-                  right: AppDimensions.dim20.w,
-                ),
-                child: Row(
-                  children: [
-                    SizedBox(
-                      width: AppDimensions.dim40.w,
-                      height: AppDimensions.dim40.w,
-                      child: IconButton(
-                        onPressed: () => Navigator.pop(context),
-                        icon: Icon(
-                          Icons.arrow_back,
-                          color: AppColors.black,
-                          size: AppFontStyles.fontSize_30,
-                        ),
-                      ),
-                    ),
-                    SizedBox(width: AppDimensions.dim50.w),
-                    Text(
-                      AppStrings.accountandsecurity,
-                      style: TextStyle(
-                        color: AppColors.white,
-                        fontSize: AppFontStyles.fontSize_24.sp,
-                        fontFamily: AppFontStyles.urbanistFontFamily,
-                        fontVariations: [AppFontStyles.boldFontVariation],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              SizedBox(height: AppDimensions.dim50.h),
-
-              // Toggle Container
-              Padding(
-                padding: EdgeInsets.symmetric(
-                  horizontal: AppDimensions.dim20.w,
-                ),
-                child: Container(
+          child: Padding(
+            padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 20.h),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                SizedBox(height: 20.h),
+                Container(
+                  width: double.infinity,
                   padding: EdgeInsets.symmetric(
-                    vertical: AppDimensions.dim16.h,
-                    horizontal: AppDimensions.dim20.w,
+                    vertical: 32.h,
+                    horizontal: 24.w,
                   ),
                   decoration: BoxDecoration(
-                    color: AppColors.white1A,
-                    borderRadius: BorderRadius.circular(
-                      AppDimensions.radius_16.r,
-                    ),
+                    color: AppColors.white.withOpacity(0.85),
+                    borderRadius: BorderRadius.circular(24.r),
+                    border: Border.all(color: const Color(0xCCC6C6C6)),
                     boxShadow: [
                       BoxShadow(
-                        color: AppColors.black.withOpacity(
-                          0.10,
-                        ), // shadow color only
-                        blurRadius: AppDimensions.radius_2.r,
-                        spreadRadius: AppDimensions.radius_3.r,
-                        offset: Offset(
-                          AppDimensions.radius_3.r,
-                          AppDimensions.radius_3.r,
-                        ), // even shadow
+                        color: Colors.black.withOpacity(0.04),
+                        blurRadius: 12.r,
+                        spreadRadius: 2.r,
+                        offset: Offset(0, 4.r),
                       ),
                     ],
                   ),
                   child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      BlocBuilder<AccountSecurityCubit, AccountSecurityState>(
-                        builder: (context, state) {
-                          return ToggleTile(
-                            title: AppStrings.biomatricsID,
-                            value: state.biometricsEnabled,
-                            onChanged: (val) => context
-                                .read<AccountSecurityCubit>()
-                                .toggleBiometrics(val),
-                          );
-                        },
+                      Container(
+                        width: 72.r,
+                        height: 72.r,
+                        decoration: BoxDecoration(
+                          color: AppColors.errorRedColor.withOpacity(0.12),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(
+                          Icons.warning_amber_rounded,
+                          color: AppColors.errorRedColor,
+                          size: 38.r,
+                        ),
                       ),
-                      SizedBox(height: AppDimensions.dim12.h),
-                      BlocBuilder<AccountSecurityCubit, AccountSecurityState>(
-                        builder: (context, state) {
-                          return ToggleTile(
-                            title: AppStrings.faceID,
-                            value: state.faceIdEnabled,
-                            onChanged: (val) => context
-                                .read<AccountSecurityCubit>()
-                                .toggleFaceId(val),
-                          );
-                        },
+                      SizedBox(height: 24.h),
+                      Text(
+                        AppStrings.deleteaccount,
+                        style: TextStyle(
+                          color: AppColors.bluegray,
+                          fontSize: 22.sp,
+                          fontFamily: AppFontStyles.urbanistFontFamily,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      SizedBox(height: 16.h),
+                      Text(
+                        AppStrings.accountremove,
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: AppColors.darkgray,
+                          fontSize: 15.sp,
+                          height: 1.5,
+                          fontFamily: AppFontStyles.urbanistFontFamily,
+                        ),
+                      ),
+                      SizedBox(height: 32.h),
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton(
+                          onPressed: () => _showDeleteConfirmation(context),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.errorRedColor,
+                            foregroundColor: Colors.white,
+                            elevation: 0,
+                            padding: EdgeInsets.symmetric(vertical: 16.h),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(24.r),
+                            ),
+                          ),
+                          child: Text(
+                            AppStrings.deleteaccount,
+                            style: TextStyle(
+                              fontSize: 16.sp,
+                              fontWeight: FontWeight.bold,
+                              fontFamily: AppFontStyles.urbanistFontFamily,
+                            ),
+                          ),
+                        ),
                       ),
                     ],
                   ),
                 ),
-              ),
-
-              SizedBox(height: AppDimensions.dim20.h),
-
-              Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Padding(
-                    padding: EdgeInsets.symmetric(
-                      horizontal: AppDimensions.dim120.w,
-                    ),
-                    child: Container(
-                      decoration: BoxDecoration(
-                        //color: Color(0xFFEA966F),
-                        borderRadius: BorderRadius.circular(
-                          AppDimensions.radius_100.r,
-                        ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: AppColors.black.withOpacity(0.25),
-                            offset: Offset(
-                              AppDimensions.radius_3.r,
-                              AppDimensions.radius_3.r,
-                            ),
-                            blurRadius: AppDimensions.radius_4.r,
-                          ),
-                        ],
-                      ),
-                      width: double.infinity,
-                      child: ElevatedButton(
-                        onPressed: () {},
-                        style: ElevatedButton.styleFrom(
-                          //backgroundColor: Colors.transparent,
-                          backgroundColor: AppColors.firebrick.withOpacity(
-                            0.42,
-                          ),
-                          padding: EdgeInsets.symmetric(
-                            vertical: AppDimensions.dim5.h,
-                          ),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(
-                              AppDimensions.radius_100.r,
-                            ),
-                          ),
-                        ),
-                        child: Text(
-                          AppStrings.deleteaccount,
-                          style: TextStyle(
-                            fontSize: AppFontStyles.fontSize_20,
-                            fontVariations: [
-                              AppFontStyles.semiBoldFontVariation,
-                            ],
-                            color: AppColors.lightSalmon,
-                            fontFamily: AppFontStyles.urbanistFontFamily,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-
-                  ///SizedBox(height: 8.h),
-                  Padding(
-                    padding: EdgeInsets.all(AppDimensions.dim10.w),
-                    child: Text(
-                      AppStrings.accountremove,
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: AppFontStyles.fontSize_12.sp,
-                        fontVariations: [AppFontStyles.regularFontVariation],
-                        color: AppColors.white,
-                        fontFamily: AppFontStyles.urbanistFontFamily,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              Spacer(),
-
-              AnimatedBottomNavBar(),
-            ],
+              ],
+            ),
           ),
         ),
       ),
     );
   }
+
+  /// Shows a confirmation bottom sheet before permanently deleting the account.
+  void _showDeleteConfirmation(BuildContext context) async {
+    context.read<BottomNavCubit>().hideBar();
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => _DeleteAccountSheet(parentContext: context),
+    );
+    context.read<BottomNavCubit>().showBar();
+  }
 }
 
-//==============================================================================
+// ─────────────────────────────────────────────────────────────────────────────
+// Delete Account Confirmation Bottom Sheet
+// ─────────────────────────────────────────────────────────────────────────────
 
-// import 'package:flutter/material.dart';
-// import 'package:flutter_bloc/flutter_bloc.dart';
-// import 'package:flutter_screenutil/flutter_screenutil.dart';
-// import 'package:flutter_screenutil/flutter_screenutil.dart';
-// import 'package:hydrify/constants/app_colors.dart';
-// import 'package:hydrify/constants/app_dimensions.dart';
-// import 'package:hydrify/constants/app_font_styles.dart';
-// import 'package:hydrify/constants/app_strings.dart';
-// import 'package:hydrify/cubit/account&security/account&security_cubit.dart';
-// import 'package:hydrify/cubit/account&security/account&security_state.dart';
-// import 'package:hydrify/cubit/profile_screen_in_setting/profile_cubit.dart';
-// import 'package:hydrify/cubit/profile_screen_in_setting/profile_state.dart';
-// import 'package:hydrify/screens/widgets/FaQ_Widgets/faq_widgets.dart';
-// import 'package:hydrify/screens/widgets/account&security_widgets/toggle_state_widget.dart';
-// import 'package:hydrify/screens/widgets/navigation_helper.dart';
-// // import 'package:flutterapp1/widgets/account&security_widgets/toggle_state_widget.dart';
+class _DeleteAccountSheet extends StatefulWidget {
+  final BuildContext parentContext;
+  const _DeleteAccountSheet({required this.parentContext});
 
-// class AccountAndSecurityPage extends StatelessWidget {
-//   const AccountAndSecurityPage({super.key});
+  @override
+  State<_DeleteAccountSheet> createState() => _DeleteAccountSheetState();
+}
 
-//   @override
-//   Widget build(BuildContext context) {
-//     return BlocProvider(
-//       create: (_) => AccountSecurityCubit(),
-//       child: const _AccountAndSecurityView(),
-//     );
-//   }
-// }
+class _DeleteAccountSheetState extends State<_DeleteAccountSheet> {
+  bool _isDeleting = false;
 
-// class _AccountAndSecurityView extends StatelessWidget {
-//   const _AccountAndSecurityView();
+  Future<void> _performDelete() async {
+    setState(() => _isDeleting = true);
 
-//   @override
-//   Widget build(BuildContext context) {
-//     return Scaffold(
-//       body: Container(
-//         width: double.infinity,
-//         height: double.infinity,
-//         decoration: const BoxDecoration(
-//           gradient: LinearGradient(
-//             colors: [AppColors.gradientStart, AppColors.gradientEnd],
-//             begin: Alignment.topLeft,
-//             end: Alignment.bottomRight,
-//           ),
-//         ),
-//         child: SafeArea(
-//           child: Column(
-//             children: [
-//               // Top Header
-//               Padding(
-//                 padding: EdgeInsets.only(
-//                   top: AppDimensions.dim40.h,
-//                   left: AppDimensions.dim20.w,
-//                   right: AppDimensions.dim20.w,
-//                 ),
-//                 child: Row(
-//                   children: [
-//                     SizedBox(
-//                       width: AppDimensions.dim40.w,
-//                       height: AppDimensions.dim40.w,
-//                       child: IconButton(
-//                         onPressed: () => Navigator.pop(context),
-//                         icon: Icon(
-//                           Icons.arrow_back,
-//                           color: AppColors.black,
-//                           size: AppFontStyles.fontSize_30,
-//                         ),
-//                       ),
-//                     ),
-//                     SizedBox(width: AppDimensions.dim50.w),
-//                     Text(
-//                       AppStrings.accountandsecurity,
-//                       style: TextStyle(
-//                         color: AppColors.white,
-//                         fontSize: AppFontStyles.fontSize_24.sp,
-//                         fontFamily: AppFontStyles.urbanistFontFamily,
-//                         fontVariations: [AppFontStyles.boldFontVariation],
-//                       ),
-//                     ),
-//                   ],
-//                 ),
-//               ),
-//               SizedBox(height: AppDimensions.dim50.h),
+    try {
+      final userId = await SharedPrefsHelper.getUserId();
+      final firebaseUser = FirebaseAuth.instance.currentUser;
 
-//               // Toggle Container
-//               Padding(
-//                 padding: EdgeInsets.symmetric(
-//                   horizontal: AppDimensions.dim20.w,
-//                 ),
-//                 child: Container(
-//                   padding: EdgeInsets.symmetric(
-//                     vertical: AppDimensions.dim16.h,
-//                     horizontal: AppDimensions.dim20.w,
-//                   ),
-//                   decoration: BoxDecoration(
-//                     color: AppColors.white1A,
-//                     borderRadius: BorderRadius.circular(
-//                       AppDimensions.radius_16.r,
-//                     ),
-//                     boxShadow: [
-//                       BoxShadow(
-//                         color: AppColors.black.withOpacity(
-//                           0.10,
-//                         ), // shadow color only
-//                         blurRadius: AppDimensions.radius_2.r,
-//                         spreadRadius: AppDimensions.radius_3.r,
-//                         offset: Offset(
-//                           AppDimensions.radius_3.r,
-//                           AppDimensions.radius_3.r,
-//                         ), // even shadow
-//                       ),
-//                     ],
-//                   ),
-//                   child: Column(
-//                     crossAxisAlignment: CrossAxisAlignment.start,
-//                     children: [
-//                       BlocBuilder<AccountSecurityCubit, AccountSecurityState>(
-//                         builder: (context, state) {
-//                           return ToggleTile(
-//                             title: AppStrings.biomatricsID,
-//                             value: state.biometricsEnabled,
-//                             onChanged: (val) => context
-//                                 .read<AccountSecurityCubit>()
-//                                 .toggleBiometrics(val),
-//                           );
-//                         },
-//                       ),
-//                       SizedBox(height: AppDimensions.dim12.h),
-//                       BlocBuilder<AccountSecurityCubit, AccountSecurityState>(
-//                         builder: (context, state) {
-//                           return ToggleTile(
-//                             title: AppStrings.faceID,
-//                             value: state.faceIdEnabled,
-//                             onChanged: (val) => context
-//                                 .read<AccountSecurityCubit>()
-//                                 .toggleFaceId(val),
-//                           );
-//                         },
-//                       ),
-//                     ],
-//                   ),
-//                 ),
-//               ),
+      if (userId == null) {
+        _showError('Could not find your account. Please try again.');
+        return;
+      }
 
-//               SizedBox(height: AppDimensions.dim20.h),
+      // 1. Call backend to permanently delete all data
+      final apiService = ApiService();
+      final success = await apiService.deleteAccount(
+        userId,
+        firebaseUid: firebaseUser?.uid,
+      );
 
-//               Column(
-//                 mainAxisAlignment: MainAxisAlignment.center,
-//                 children: [
-//                   Padding(
-//                     padding: EdgeInsets.symmetric(
-//                       horizontal: AppDimensions.dim120.w,
-//                     ),
-//                     child: Container(
-//                       decoration: BoxDecoration(
-//                         //color: Color(0xFFEA966F),
-//                         borderRadius: BorderRadius.circular(
-//                           AppDimensions.radius_100.r,
-//                         ),
-//                         boxShadow: [
-//                           BoxShadow(
-//                             color: AppColors.black.withOpacity(0.25),
-//                             offset: Offset(
-//                               AppDimensions.radius_3.r,
-//                               AppDimensions.radius_3.r,
-//                             ),
-//                             blurRadius: AppDimensions.radius_4.r,
-//                           ),
-//                         ],
-//                       ),
-//                       width: double.infinity,
-//                       child: ElevatedButton(
-//                         onPressed: () {},
-//                         style: ElevatedButton.styleFrom(
-//                           //backgroundColor: Colors.transparent,
-//                           backgroundColor: AppColors.firebrick.withOpacity(
-//                             0.42,
-//                           ),
-//                           padding: EdgeInsets.symmetric(
-//                             vertical: AppDimensions.dim5.h,
-//                           ),
-//                           shape: RoundedRectangleBorder(
-//                             borderRadius: BorderRadius.circular(
-//                               AppDimensions.radius_100.r,
-//                             ),
-//                           ),
-//                         ),
-//                         child: Text(
-//                           AppStrings.deleteaccount,
-//                           style: TextStyle(
-//                             fontSize: AppFontStyles.fontSize_20,
-//                             fontVariations: [
-//                               AppFontStyles.semiBoldFontVariation,
-//                             ],
-//                             color: AppColors.lightSalmon,
-//                             fontFamily: AppFontStyles.urbanistFontFamily,
-//                           ),
-//                         ),
-//                       ),
-//                     ),
-//                   ),
+      if (!success) {
+        _showError('Failed to delete account. Please try again.');
+        return;
+      }
 
-//                   ///SizedBox(height: 8.h),
-//                   Padding(
-//                     padding: EdgeInsets.all(AppDimensions.dim10.w),
-//                     child: Text(
-//                       AppStrings.accountremove,
-//                       textAlign: TextAlign.center,
-//                       style: TextStyle(
-//                         fontSize: AppFontStyles.fontSize_12.sp,
-//                         fontVariations: [AppFontStyles.regularFontVariation],
-//                         color: AppColors.white,
-//                         fontFamily: AppFontStyles.urbanistFontFamily,
-//                       ),
-//                     ),
-//                   ),
-//                 ],
-//               ),
-//               Spacer(),
+      // 2. Sign out Firebase Auth (backend already deleted the Auth user)
+      try {
+        await FirebaseAuth.instance.signOut();
+      } catch (_) {}
 
-//               Positioned(
-//                 left: AppDimensions.dim6.w,
-//                 right: AppDimensions.dim6.w,
-//                 bottom: AppDimensions.dim6.w,
-//                 child: CustomBottomNavBar(
-//                   activeTab: 'Home',
-//                   onTabSelected: (label) {
-//                     NavigationHelper.navigate(context, label);
-//                   },
-//                 ),
-//               ),
-//             ],
-//           ),
-//         ),
-//       ),
-//     );
-//   }
-// }
+      // 3. Clear local data
+      await UserManager().clear();
+      await DatabaseHelper().clearAllDatabaseData();
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.clear();
 
-//==============================================================================
+      Console.log(tag: 'DELETE_ACCOUNT', value: 'Account permanently deleted.');
+
+      if (!mounted) return;
+
+      // 4. Close bottom sheet and navigate to login
+      Navigator.of(context).pop();
+
+      widget.parentContext.read<BottomNavCubit>().resetToHome();
+
+      Navigator.of(widget.parentContext, rootNavigator: true)
+          .pushAndRemoveUntil(
+        MaterialPageRoute(builder: (_) => const LocalAuthScreen()),
+        (route) => false,
+      );
+    } catch (e) {
+      Console.log(tag: 'DELETE_ACCOUNT', value: 'Error: $e');
+      _showError('Something went wrong. Please try again.');
+    } finally {
+      if (mounted) setState(() => _isDeleting = false);
+    }
+  }
+
+  void _showError(String message) {
+    if (!mounted) return;
+    Navigator.of(context).pop();
+    ScaffoldMessenger.of(widget.parentContext).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.red.shade700,
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      children: [
+        // Blurred background
+        BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 6, sigmaY: 6),
+          child: Container(color: Colors.black.withOpacity(0)),
+        ),
+
+        // Sheet
+        Align(
+          alignment: Alignment.bottomCenter,
+          child: Container(
+            width: double.infinity,
+            padding: EdgeInsets.only(
+              top: 20.h,
+              left: 28.w,
+              right: 28.w,
+              bottom: 36.h,
+            ),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(28.r)),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Handle bar
+                Container(
+                  width: 40.w,
+                  height: 4.h,
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade300,
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                ),
+                SizedBox(height: 20.h),
+
+                // Icon
+                Container(
+                  width: 64.r,
+                  height: 64.r,
+                  decoration: BoxDecoration(
+                    color: Colors.red.shade50,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(Icons.delete_forever_rounded,
+                      color: Colors.red.shade600, size: 32.r),
+                ),
+                SizedBox(height: 16.h),
+
+                Text(
+                  'Delete Account?',
+                  style: TextStyle(
+                    fontSize: 22.sp,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black87,
+                    fontFamily: AppFontStyles.urbanistFontFamily,
+                  ),
+                ),
+                SizedBox(height: 10.h),
+
+                Text(
+                  'This action is permanent and cannot be undone.\n'
+                  'All your hydration data, history, and settings will be permanently deleted.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 14.sp,
+                    color: Colors.grey.shade600,
+                    height: 1.5,
+                    fontFamily: AppFontStyles.urbanistFontFamily,
+                  ),
+                ),
+                SizedBox(height: 28.h),
+
+                // Buttons
+                Row(
+                  children: [
+                    // Cancel
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: _isDeleting
+                            ? null
+                            : () => Navigator.of(context).pop(),
+                        style: OutlinedButton.styleFrom(
+                          padding: EdgeInsets.symmetric(vertical: 14.h),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(40.r),
+                          ),
+                          side: BorderSide(color: Colors.grey.shade300),
+                        ),
+                        child: Text(
+                          'Cancel',
+                          style: TextStyle(
+                            fontSize: 16.sp,
+                            color: Colors.black87,
+                            fontFamily: AppFontStyles.urbanistFontFamily,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ),
+                    SizedBox(width: 12.w),
+
+                    // Delete
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: _isDeleting ? null : _performDelete,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.red.shade600,
+                          foregroundColor: Colors.white,
+                          padding: EdgeInsets.symmetric(vertical: 14.h),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(40.r),
+                          ),
+                        ),
+                        child: _isDeleting
+                            ? SizedBox(
+                                height: 20.r,
+                                width: 20.r,
+                                child: const CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Colors.white,
+                                ),
+                              )
+                            : Text(
+                                'Yes, Delete',
+                                style: TextStyle(
+                                  fontSize: 16.sp,
+                                  fontFamily: AppFontStyles.urbanistFontFamily,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}

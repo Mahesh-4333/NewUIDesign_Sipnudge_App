@@ -42,7 +42,7 @@ class ApiService {
         },
       );
 
-      return signinResponseModelFromJson(response.data);
+      return SigninResponseModel.fromJson(response.data);
     } on DioException catch (e) {
       Console.log(
           tag: "APP", value: "Exception occurred : signIn || ${e.toString()} ");
@@ -60,7 +60,7 @@ class ApiService {
         },
       );
 
-      return signUpResponseModelFromJson(response.data);
+      return SignUpResponseModel.fromJson(response.data);
     } on DioException catch (e) {
       Console.log(
           tag: "APP", value: "Exception occurred : signIn || ${e.toString()} ");
@@ -111,6 +111,59 @@ class ApiService {
     }
   }
 
+  Future<Map<String, dynamic>> requestSignupOTP(String email, String password) async {
+    try {
+      final response = await _dio.post(
+        '/api/user/otp/send',
+        data: {
+          'email': email,
+          'password': password,
+        },
+      );
+
+      return Map<String, dynamic>.from(response.data);
+    } on DioException catch (e) {
+      Console.log(
+          tag: "APP", value: "Exception occurred : requestSignupOTP || ${e.toString()} ");
+      throw _handleError(e);
+    }
+  }
+
+  Future<Map<String, dynamic>> verifySignupOTP(String email, int otp) async {
+    try {
+      final response = await _dio.post(
+        '/api/user/otp/verify',
+        data: {
+          'email': email,
+          'otp': otp,
+        },
+      );
+
+      return Map<String, dynamic>.from(response.data);
+    } on DioException catch (e) {
+      Console.log(
+          tag: "APP", value: "Exception occurred : verifySignupOTP || ${e.toString()} ");
+      throw _handleError(e);
+    }
+  }
+
+  Future<Map<String, dynamic>> resendSignupOTP(String email) async {
+    try {
+      final response = await _dio.post(
+        '/api/user/otp/send',
+        data: {
+          'email': email,
+        },
+      );
+
+      return Map<String, dynamic>.from(response.data);
+    } on DioException catch (e) {
+      Console.log(
+          tag: "APP", value: "Exception occurred : resendSignupOTP || ${e.toString()} ");
+      throw _handleError(e);
+    }
+  }
+
   Future<OtpResponseModel> getSignUpOTP(String email) async {
     try {
       final response = await _dio.post(
@@ -120,7 +173,7 @@ class ApiService {
         },
       );
 
-      return otpResponseModelFromJson(response.data);
+      return OtpResponseModel.fromJson(response.data);
     } on DioException catch (e) {
       Console.log(
           tag: "APP", value: "Exception occurred : signIn || ${e.toString()} ");
@@ -137,7 +190,7 @@ class ApiService {
         },
       );
 
-      return otpResponseModelFromJson(response.data);
+      return OtpResponseModel.fromJson(response.data);
     } on DioException catch (e) {
       Console.log(
           tag: "APP", value: "Exception occurred : signIn || ${e.toString()} ");
@@ -152,7 +205,7 @@ class ApiService {
         data: {'email': email, 'otp': submittedOTP},
       );
 
-      return otpResponseModelFromJson(response.data);
+      return OtpResponseModel.fromJson(response.data);
     } on DioException catch (e) {
       Console.log(
           tag: "APP", value: "Exception occurred : signIn || ${e.toString()} ");
@@ -551,6 +604,29 @@ class ApiService {
       Console.log(
           tag: "APP",
           value: "Exception occurred : markMessageRead || ${e.toString()} ");
+      throw _handleError(e);
+    }
+  }
+
+  /// Permanently deletes the user account and all associated data from the server.
+  /// [userId] — MongoDB user ID
+  /// [firebaseUid] — Firebase Auth UID (optional, for Firebase deletion)
+  Future<bool> deleteAccount(String userId, {String? firebaseUid}) async {
+    try {
+      final data = <String, dynamic>{'userId': userId};
+      if (firebaseUid != null) data['firebaseUid'] = firebaseUid;
+
+      final response = await _dio.delete(
+        '/api/user/delete-account',
+        data: data,
+      );
+      return response.statusCode == 200 &&
+          (response.data['status'] == 'success' ||
+              response.data['status'] == 'SUCCESS');
+    } on DioException catch (e) {
+      Console.log(
+          tag: "APP",
+          value: "Exception occurred : deleteAccount || ${e.toString()} ");
       throw _handleError(e);
     }
   }

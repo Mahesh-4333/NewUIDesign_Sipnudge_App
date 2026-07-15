@@ -2,7 +2,7 @@ name: hydrify
 description: "A new Flutter project."
 
 publish_to: 'none' 
-version: 1.1.0-config4+4
+version: 1.1.5+44
 
 environment:
   sdk: ^3.6.0
@@ -71,8 +71,13 @@ dependencies:
   pdf: ^3.11.1
   printing: ^5.13.1
   connectivity_plus: ^7.1.1
+  network_info_plus: ^6.1.1
   firebase_messaging: ^15.2.10
   home_widget: ^0.9.2
+  in_app_update_flutter: ^2.0.3
+  showcaseview: ^5.0.2
+
+
 
 
 dev_dependencies:
@@ -145,4 +150,9 @@ flutter:
         
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
-  
+
+dependency_overrides:
+  showcaseview:
+    path: packages/showcaseview
+  flutter_blue_plus_darwin:
+    path: ./local_plugins/flutter_blue_plus_darwin

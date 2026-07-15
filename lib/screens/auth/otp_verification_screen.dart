@@ -11,6 +11,7 @@ import 'package:hydrify/screens/auth/reset_password_screen.dart';
 import 'package:hydrify/screens/user_personal_info_input_screen..dart';
 import 'package:hydrify/screens/widgets/auth_button_widget.dart';
 import 'package:hydrify/services/firebase_functions_service.dart';
+import 'package:hydrify/services/api_service.dart';
 import 'package:hydrify/services/ui_utils_service.dart';
 import 'package:pinput/pinput.dart';
 
@@ -71,20 +72,45 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
   Future<void> _resendOTP() async {
     UiUtilsService.showLoading(context, "Resending OTP");
 
-    var resendResponse =
-        await FirebaseFunctionsService.resendOTP(widget.userEmail);
+    try {
+      Map<String, dynamic> resendResponse;
+      if (widget.isResetPassFlow) {
+        resendResponse =
+            await FirebaseFunctionsService.resendOTP(widget.userEmail);
+      } else {
+        resendResponse =
+            await ApiService().resendSignupOTP(widget.userEmail);
+      }
 
-    UiUtilsService.dismissLoading(context);
+      if (!mounted) return;
+      UiUtilsService.dismissLoading(context);
 
-    if (resendResponse["status"] == "success" &&
-        resendResponse["statusCode"] == 200) {
-      UiUtilsService.showToast(
-          context: context, text: resendResponse["message"]);
-      _startTimer();
-    } else {
+      if (resendResponse["status"] == "success" ||
+          resendResponse["status"] == "SUCCESS" ||
+          resendResponse["statusCode"] == 200) {
+        UiUtilsService.showToast(
+            context: context, text: resendResponse["message"]);
+        _startTimer();
+      } else {
+        UiUtilsService.showToast(
+          context: context,
+          text: resendResponse["message"] ?? "Unexpected error occurred",
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      UiUtilsService.dismissLoading(context);
+
+      String message = e.toString();
+      if (message.startsWith("Exception: ")) {
+        message = message.substring("Exception: ".length);
+      }
+      final regExp = RegExp(r'^\[(\d+)\]');
+      message = message.replaceFirst(regExp, '').trim();
+
       UiUtilsService.showToast(
         context: context,
-        text: resendResponse["message"] ?? "Unexpected error occurred",
+        text: message,
       );
     }
   }
@@ -92,56 +118,82 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
   Future<void> _verifyOtp() async {
     final enteredOtp = _otpController.text.trim();
 
-    if (enteredOtp.isNotEmpty) {
+    if (enteredOtp.length == 6) {
       UiUtilsService.showLoading(context, "Verifying OTP");
 
-      Map<String, dynamic> response;
-      if (widget.isResetPassFlow) {
-        response = await FirebaseFunctionsService.verifyResetOTPOnly(
-          widget.userEmail,
-          int.parse(enteredOtp),
-        );
-      } else {
-        response = await FirebaseFunctionsService.verifySignupOTP(
-          widget.userEmail,
-          int.parse(enteredOtp),
-        );
-      }
-
-      UiUtilsService.dismissLoading(context);
-
-      if (response["status"] == "success" && response["statusCode"] == 200) {
-        UiUtilsService.showToast(
-            context: context, text: response["message"] ?? "OTP Verified");
-
+      try {
+        Map<String, dynamic> response;
         if (widget.isResetPassFlow) {
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(
-              builder: (context) => ResetPasswordScreen(
-                userEmail: widget.userEmail,
-              ),
-            ),
+          response = await FirebaseFunctionsService.verifyResetOTPOnly(
+            widget.userEmail,
+            int.parse(enteredOtp),
           );
         } else {
-          await SharedPrefsHelper.setUserEmail(widget.userEmail);
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(
-              builder: (context) => UserInfoInputScreen(),
-            ),
+          response = await ApiService().verifySignupOTP(
+            widget.userEmail,
+            int.parse(enteredOtp),
           );
         }
-      } else {
+
+        if (!mounted) return;
+        UiUtilsService.dismissLoading(context);
+
+        if (response["status"] == "success" ||
+            response["status"] == "SUCCESS" ||
+            response["statusCode"] == 200) {
+          UiUtilsService.showToast(
+              context: context, text: response["message"] ?? "OTP Verified");
+
+          if (widget.isResetPassFlow) {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(
+                builder: (context) => ResetPasswordScreen(
+                  userEmail: widget.userEmail,
+                ),
+              ),
+            );
+          } else {
+            final userId = response["data"]?["_id"];
+            if (userId != null) {
+              await SharedPrefsHelper.setUserId(userId);
+            }
+            await SharedPrefsHelper.setUserEmail(widget.userEmail);
+
+            if (!mounted) return;
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(
+                builder: (context) => UserInfoInputScreen(),
+              ),
+            );
+          }
+        } else {
+          UiUtilsService.showToast(
+            context: context,
+            text: response["message"] ?? "Invalid OTP",
+          );
+        }
+      } catch (e) {
+        if (!mounted) return;
+        UiUtilsService.dismissLoading(context);
+
+        String message = e.toString();
+        if (message.startsWith("Exception: ")) {
+          message = message.substring("Exception: ".length);
+        }
+        final regExp = RegExp(r'^\[(\d+)\]');
+        message = message.replaceFirst(regExp, '').trim();
+
         UiUtilsService.showToast(
           context: context,
-          text: response["message"] ?? "Invalid OTP",
+          text: message,
         );
       }
     } else {
       UiUtilsService.showToast(
         context: context,
-        text: "Please enter valid OTP",
+        text: "Please enter a valid 6-digit OTP",
       );
     }
   }
@@ -240,15 +292,15 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
   Widget _buildInputField(BuildContext context) {
     return Pinput(
       controller: _otpController,
-      length: 4,
+      length: 6,
       onCompleted: (value) {},
       separatorBuilder: (index) =>
-          SizedBox(width: AppDimensions.defaultPadding.w),
+          SizedBox(width: 8.w),
       defaultPinTheme: PinTheme(
-        width: AppDimensions.dim83.w,
-        height: AppDimensions.dim70.h,
+        width: 46.w,
+        height: 56.h,
         textStyle: TextStyle(
-          fontSize: AppFontStyles.fontSize_24.sp,
+          fontSize: AppFontStyles.fontSize_20.sp, // slightly smaller text for 6 digits
           color: Colors.black,
           fontFamily: AppFontStyles.urbanistFontFamily,
           fontVariations: [AppFontStyles.boldFontVariation],
@@ -266,8 +318,8 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
         ),
       ),
       focusedPinTheme: PinTheme(
-        width: AppDimensions.dim83.w,
-        height: AppDimensions.dim70.h,
+        width: 46.w,
+        height: 56.h,
         decoration: BoxDecoration(
           color: const Color(0x80369FFF),
           boxShadow: [

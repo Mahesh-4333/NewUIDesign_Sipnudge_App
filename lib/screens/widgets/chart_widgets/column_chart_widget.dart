@@ -80,27 +80,41 @@ class _FlColumnChartWidgetState extends State<FlColumnChartWidget> {
   }
 
   void _scrollToToday() {
-    if (!mounted || widget.interval != FilterInterval.monthly) return;
+    if (!mounted) return;
     final today = DateTime.now();
-    if (widget.currentDate.year == today.year && widget.currentDate.month == today.month) {
-      final dayIndex = today.day - 1; // 0-based index for today
-      final double barTotalWidth = barWidth + barSpacing;
-      final double positionOfBarEnd = (dayIndex + 1) * barTotalWidth - barSpacing;
-      final viewportWidth = AppDimensions.dim365.w - AppDimensions.dim40.w;
+    int? targetIndex;
 
-      double targetOffset = positionOfBarEnd - viewportWidth + 30.w;
-      if (targetOffset < 0) targetOffset = 0;
-
-      final double maxScroll = (chartData.length * barTotalWidth) - viewportWidth;
-      if (targetOffset > maxScroll) targetOffset = maxScroll;
-
-      if (_scrollController.hasClients) {
-        _scrollController.animateTo(
-          targetOffset,
-          duration: const Duration(milliseconds: 300),
-          curve: Curves.easeInOut,
-        );
+    if (widget.interval == FilterInterval.monthly) {
+      if (widget.currentDate.year == today.year &&
+          widget.currentDate.month == today.month) {
+        targetIndex = today.day - 1; // 0-based index for today
       }
+    } else if (widget.interval == FilterInterval.yearly) {
+      if (widget.currentDate.year == today.year) {
+        targetIndex = today.month - 1; // 0-based index for current month
+      }
+    }
+
+    if (targetIndex == null) return;
+
+    final double barTotalWidth = barWidth + barSpacing;
+    final double positionOfBarEnd =
+        (targetIndex + 1) * barTotalWidth - barSpacing;
+    final viewportWidth = AppDimensions.dim365.w - AppDimensions.dim40.w;
+
+    double targetOffset = positionOfBarEnd - viewportWidth + 30.w;
+    if (targetOffset < 0) targetOffset = 0;
+
+    final double maxScroll =
+        (chartData.length * barTotalWidth) - viewportWidth;
+    if (targetOffset > maxScroll) targetOffset = maxScroll;
+
+    if (_scrollController.hasClients) {
+      _scrollController.animateTo(
+        targetOffset,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeInOut,
+      );
     }
   }
 
@@ -153,10 +167,12 @@ class _FlColumnChartWidgetState extends State<FlColumnChartWidget> {
             dayDate.month == now.month &&
             dayDate.day == now.day;
 
-        if (isToday && currentUserGoal != null) {
+        if (totalTarget > 0) {
+          target = totalTarget;
+        } else if (isToday && currentUserGoal != null) {
           target = currentUserGoal!;
         } else {
-          target = totalTarget;
+          target = 2500;
         }
 
         final double consumed = totalConsumed;
@@ -201,10 +217,12 @@ class _FlColumnChartWidgetState extends State<FlColumnChartWidget> {
             dayDate.month == now.month &&
             dayDate.day == now.day;
 
-        if (isToday && currentUserGoal != null) {
+        if (totalTarget > 0) {
+          target = totalTarget;
+        } else if (isToday && currentUserGoal != null) {
           target = currentUserGoal!;
         } else {
-          target = totalTarget;
+          target = 2500;
         }
 
         final double consumed = totalConsumed;
@@ -233,9 +251,9 @@ class _FlColumnChartWidgetState extends State<FlColumnChartWidget> {
           if (e.date.year == now.year &&
               e.date.month == now.month &&
               e.date.day == now.day) {
-            target += currentUserGoal ?? e.target;
+            target += e.target > 0 ? e.target : (currentUserGoal ?? 2500);
           } else {
-            target += e.target;
+            target += e.target > 0 ? e.target : 2500;
           }
           consumed += e.consumed;
         }
@@ -309,13 +327,14 @@ class _FlColumnChartWidgetState extends State<FlColumnChartWidget> {
               bottom: 0,
               child: SizedBox(
                 width: AppDimensions.dim365.w,
-                height: AppDimensions.dim262.h,
+                height: AppDimensions.dim272.h,
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.start,
+                  crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
                     SizedBox(
                       width: AppDimensions.dim40.w,
-                      height: AppDimensions.dim265.h,
+                      height: AppDimensions.dim272.h,
                       child: CustomYAxis(maxY: maxY, divisions: 5),
                     ),
                     Expanded(
@@ -425,6 +444,20 @@ class _FlColumnChartWidgetState extends State<FlColumnChartWidget> {
     );
   }
 
+  bool _isToday(int index) {
+    if (index < 0 || index >= chartData.length) return false;
+    final itemDate = chartData[index].date;
+    final now = DateTime.now();
+
+    if (widget.interval == FilterInterval.yearly) {
+      return itemDate.year == now.year && itemDate.month == now.month;
+    } else {
+      return itemDate.year == now.year &&
+          itemDate.month == now.month &&
+          itemDate.day == now.day;
+    }
+  }
+
   FlTitlesData _buildTitles() {
     final isWeekly = widget.interval == FilterInterval.weekly;
 
@@ -432,23 +465,41 @@ class _FlColumnChartWidgetState extends State<FlColumnChartWidget> {
       bottomTitles: AxisTitles(
         sideTitles: SideTitles(
           showTitles: true,
-          getTitlesWidget: (value, _) {
+          reservedSize: 36.h,
+          getTitlesWidget: (value, meta) {
             int index = value.toInt();
             if (index < 0 || index >= chartData.length) {
               return const SizedBox();
             }
 
             final label = isWeekly ? weekLabels[index] : chartData[index].x;
+            final isToday = _isToday(index);
 
-            return Padding(
-              padding: EdgeInsets.only(top: AppDimensions.dim5.h),
-              child: Text(
-                label,
-                style: TextStyle(
-                  color: AppColors.black,
-                  fontFamily: AppFontStyles.urbanistFontFamily,
-                  fontSize: AppFontStyles.fontSize_14,
-                  fontVariations: [AppFontStyles.boldFontVariation],
+            return SideTitleWidget(
+              meta: meta,
+              space: 4.h,
+              child: Center(
+                child: Container(
+                  padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(100.r),
+                    border: Border.all(
+                      color: isToday
+                          ? AppColors.blueWaterIntake
+                          : Colors.transparent,
+                      width: 1.2.w,
+                    ),
+                  ),
+                  child: Text(
+                    label,
+                    style: TextStyle(
+                      color: AppColors.black,
+                      fontFamily: AppFontStyles.urbanistFontFamily,
+                      fontSize: AppFontStyles.fontSize_14,
+                      fontVariations: [AppFontStyles.boldFontVariation],
+                      height: 1.0,
+                    ),
+                  ),
                 ),
               ),
             );
@@ -494,7 +545,7 @@ class CustomYAxis extends StatelessWidget {
     final step = maxY ~/ divisions;
 
     return Padding(
-      padding: EdgeInsets.only(bottom: AppDimensions.dim20.h),
+      padding: EdgeInsets.only(bottom: 30.h),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         crossAxisAlignment: CrossAxisAlignment.start,

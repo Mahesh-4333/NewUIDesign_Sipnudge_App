@@ -39,13 +39,13 @@ class _AuthOptionsScreenState extends State<AuthOptionsScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       extendBody: true,
-          extendBodyBehindAppBar: true,
+      extendBodyBehindAppBar: true,
       resizeToAvoidBottomInset: false,
       appBar: AppBar(
-      backgroundColor: Colors.transparent,
-      automaticallyImplyLeading: true,
-      leadingWidth: AppDimensions.dim85.w,
-      leading: IconButton(
+        backgroundColor: Colors.transparent,
+        automaticallyImplyLeading: true,
+        leadingWidth: AppDimensions.dim85.w,
+        leading: IconButton(
           onPressed: () {
             Navigator.of(context).pop();
           },
@@ -143,7 +143,7 @@ class _AuthOptionsScreenState extends State<AuthOptionsScreen> {
                       await FirebaseFunctionsService.signInWithGoogle();
                   UiUtilsService.dismissLoading(context);
                   if (signInWithGoogleRes != null) {
-                    SharedPrefsHelper.setUserEmail(
+                    await SharedPrefsHelper.setUserEmail(
                         signInWithGoogleRes.user?.email ?? "");
                     UiUtilsService.showToast(
                         context: context, text: "Signin Successful");
@@ -362,6 +362,7 @@ class _AuthOptionsScreenState extends State<AuthOptionsScreen> {
                 },
               ),
               Spacer(),
+
               /// 🔹 FOOTER TEXT
               Container(
                 width: double.infinity,
@@ -387,7 +388,9 @@ class _AuthOptionsScreenState extends State<AuthOptionsScreen> {
                           style: TextStyle(
                             color: AppColors.black,
                             fontSize: AppFontStyles.fontSize_13,
-                            fontVariations: [AppFontStyles.semiBoldFontVariation],
+                            fontVariations: [
+                              AppFontStyles.semiBoldFontVariation
+                            ],
                           ),
                           recognizer: TapGestureRecognizer()
                             ..onTap = () {
@@ -403,7 +406,9 @@ class _AuthOptionsScreenState extends State<AuthOptionsScreen> {
                           style: TextStyle(
                             color: AppColors.black,
                             fontSize: AppFontStyles.fontSize_13,
-                            fontVariations: [AppFontStyles.semiBoldFontVariation],
+                            fontVariations: [
+                              AppFontStyles.semiBoldFontVariation
+                            ],
                           ),
                           recognizer: TapGestureRecognizer()
                             ..onTap = () {

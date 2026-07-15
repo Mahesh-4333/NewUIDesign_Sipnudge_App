@@ -35,6 +35,7 @@ class SharedPrefsHelper {
   static const String _keyRingtoneFeedback = 'ringtone_feedback';
   static const String _keyPendingConfigData = 'pending_config_data';
   static const String _keyPendingResetCommand = 'pending_reset_command';
+  static const String _keyPendingWifiProvData = 'pending_wifi_prov_data';
 
   static const String _keyReminderMode = "reminder_mode";
   static const String _keyAlarmRepeatIndex = "alarm_repeat_index";
@@ -56,6 +57,7 @@ class SharedPrefsHelper {
   static const String _keyHasSynced30Days = 'has_synced_30_days';
   static const String _keyUserName = 'user_name';
   static const String _keyLastSummarySyncDate = 'last_summary_sync_date';
+  static const String _keyHasShownHomeShowcase = 'has_shown_home_showcase';
 
   // ----------------------------
   // APP SHUTDOWN (TRIAL RESTRICTION)
@@ -226,6 +228,16 @@ class SharedPrefsHelper {
       return true;
     }
     return goalHydration;
+  }
+
+  static Future<bool> hasShownHomeShowcase() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool(_keyHasShownHomeShowcase) ?? false;
+  }
+
+  static Future<void> setHasShownHomeShowcase(bool value) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_keyHasShownHomeShowcase, value);
   }
 
   // ----------------------------
@@ -603,5 +615,20 @@ class SharedPrefsHelper {
         configUpdateStream.add(null);
       }
     }
+  }
+
+  static Future<void> setPendingWifiProvData(String data) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_keyPendingWifiProvData, data);
+  }
+
+  static Future<String?> getPendingWifiProvData() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_keyPendingWifiProvData);
+  }
+
+  static Future<void> clearPendingWifiProvData() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_keyPendingWifiProvData);
   }
 }

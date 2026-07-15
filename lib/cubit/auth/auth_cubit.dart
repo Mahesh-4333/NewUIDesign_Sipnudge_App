@@ -185,10 +185,17 @@ class AuthCubit extends Cubit<AuthState> {
       ));
     } catch (e) {
       Console.log(tag: 'auth_cubit', value: 'SignIn exception: $e');
+      String message = e.toString();
+      if (message.startsWith("Exception: ")) {
+        message = message.substring("Exception: ".length);
+      }
+      final regExp = RegExp(r'^\[\d+\]\s*');
+      message = message.replaceFirst(regExp, '');
+
       emit(state.copyWith(
         isLoading: false,
         isError: true,
-        errorMessage: 'Login failed: ${e.toString()}',
+        errorMessage: message.isNotEmpty ? message : 'Login failed',
       ));
     }
   }

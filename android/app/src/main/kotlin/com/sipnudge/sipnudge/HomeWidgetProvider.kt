@@ -16,7 +16,10 @@ class HomeWidgetProvider : HomeWidgetProvider() {
     ) {
         appWidgetIds.forEach { widgetId ->
             val views = RemoteViews(context.packageName, R.layout.widget_layout).apply {
-                val intake = widgetData.getInt("current_intake", 0)
+                val lastUpdateDate = widgetData.getString("last_update_date", "")
+                val sdf = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault())
+                val todayStr = sdf.format(java.util.Date())
+                val intake = if (lastUpdateDate == todayStr) widgetData.getInt("current_intake", 0) else 0
                 val goal = widgetData.getInt("daily_goal", 2000)
                 
                 setTextViewText(R.id.widget_intake, "$intake ml / $goal ml")

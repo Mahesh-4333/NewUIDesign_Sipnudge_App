@@ -16,6 +16,7 @@ import 'package:hydrify/services/qr_generator.dart';
 import 'package:hydrify/services/ui_utils_service.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 class QrScanner extends StatefulWidget {
   const QrScanner({super.key});
@@ -33,6 +34,8 @@ class _QrScannerState extends State<QrScanner>
   /// Scanner related
   late MobileScannerController _controller;
   bool _cameraReady = true;
+  bool? _hasPermission;
+  bool _isPermanentlyDenied = false;
 
   late AnimationController _lineController;
   late Animation<double> _lineAnimation;
@@ -47,6 +50,7 @@ class _QrScannerState extends State<QrScanner>
     WidgetsBinding.instance.addObserver(this);
 
     _initScannerController();
+    _checkPermission();
 
     _lineController = AnimationController(
       vsync: this,
@@ -71,6 +75,51 @@ class _QrScannerState extends State<QrScanner>
     );
   }
 
+  Future<void> _checkPermission() async {
+    final status = await Permission.camera.status;
+    if (status.isGranted) {
+      if (mounted) {
+        setState(() {
+          _hasPermission = true;
+          _isPermanentlyDenied = false;
+        });
+      }
+    } else if (status.isPermanentlyDenied) {
+      if (mounted) {
+        setState(() {
+          _hasPermission = false;
+          _isPermanentlyDenied = true;
+        });
+      }
+    } else if (status.isDenied) {
+      // Automatically trigger native permission request on first entry
+      await _requestPermission();
+    } else {
+      if (mounted) {
+        setState(() {
+          _hasPermission = false;
+          _isPermanentlyDenied = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _requestPermission() async {
+    final status = await Permission.camera.request();
+    if (mounted) {
+      setState(() {
+        _hasPermission = status.isGranted;
+        _isPermanentlyDenied = status.isPermanentlyDenied;
+      });
+    }
+  }
+
+  Future<void> _handlePermissionButton() async {
+    // Re-request permission; on iOS this is a no-op if permanently denied
+    // (we must NOT redirect to Settings automatically per Apple guidelines).
+    await _requestPermission();
+  }
+
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
@@ -86,19 +135,46 @@ class _QrScannerState extends State<QrScanner>
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
-      _restartScanner();
+      _checkPermission().then((_) {
+        if (_hasPermission == true) {
+          _restartScanner();
+        }
+      });
     } else if (state == AppLifecycleState.paused) {
-      _controller.stop();
+      if (_hasPermission == true) {
+        _controller.stop();
+      }
     }
   }
 
   Future<void> _restartScanner() async {
+    if (_hasPermission != true) return;
     try {
       await _controller.start();
-    } catch (_) {
-      // Controller may have been disposed; create a fresh one
+    } on MobileScannerException catch (e) {
+      debugPrint("Scanner start exception: ${e.errorCode}");
+      if (e.errorCode == MobileScannerErrorCode.controllerInitializing ||
+          e.errorCode == MobileScannerErrorCode.controllerAlreadyInitialized) {
+        return;
+      }
       if (mounted) {
-        await _controller.dispose();
+        try {
+          await _controller.dispose();
+        } catch (_) {}
+        setState(() {
+          _initScannerController();
+        });
+      }
+    } catch (e) {
+      debugPrint("Scanner start error: $e");
+      if (e.toString().contains('controllerInitializing') ||
+          e.toString().contains('controllerAlreadyInitialized')) {
+        return;
+      }
+      if (mounted) {
+        try {
+          await _controller.dispose();
+        } catch (_) {}
         setState(() {
           _initScannerController();
         });
@@ -113,6 +189,34 @@ class _QrScannerState extends State<QrScanner>
     'gray',
     'red',
   ];
+
+  Future<void> _handleSkip() async {
+    if (!_isAcceptedTerms) {
+      setState(() {
+        _errorText = "Please agree to Sipnudge T&C first";
+      });
+      return;
+    }
+
+    await _controller.stop();
+
+    if (!mounted) return;
+
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => const AuthOptionsScreen(),
+      ),
+    );
+
+    if (mounted) {
+      setState(() {
+        _isProcessing = false;
+        _errorText = null;
+      });
+      await _restartScanner();
+    }
+  }
 
   Future<void> _handleQR(String value) async {
     if (!_isAcceptedTerms) {
@@ -341,52 +445,34 @@ class _QrScannerState extends State<QrScanner>
                       //   ),
                       // ),
                       SizedBox(height: 16.h),
-                      // Padding(
-                      //   padding: EdgeInsets.symmetric(horizontal: 24.h),
-                      //   child: SizedBox(
-                      //     width: double.infinity,
-                      //     height: 58.h,
-                      //     child: DecoratedBox(
-                      //       decoration: BoxDecoration(
-                      //         gradient: const LinearGradient(
-                      //           begin: Alignment.centerLeft,
-                      //           end: Alignment.centerRight,
-                      //           colors: [
-                      //             Color(0xFF9FFFFA),
-                      //             Color(0xFFD1FFC4),
-                      //           ],
-                      //         ),
-                      //         border: Border.all(color: AppColors.bluegray),
-                      //         borderRadius: BorderRadius.circular(30),
-                      //       ),
-                      //       child: AuthButton(
-                      //         text: "Continue as Guest",
-                      //         gradient: AppColors.guestButtonColor,
-                      //         textColor: AppColors.buttonTextPurpleColor,
-                      //         areTwoItems: false,
-                      //         borderColor: AppColors.bluegray,
-                      //         onTap: () {
-                      //           SharedPrefsHelper.setUserEmail("guest_user");
-
-                      //           UiUtilsService.showToast(
-                      //             context: context,
-                      //             text: "Continuing as Guest",
-                      //           );
-
-                      //           Navigator.push(
-                      //             context,
-                      //             MaterialPageRoute(
-                      //               builder: (context) => UserInfoInputScreen(
-                      //                 fromSettings: true,
-                      //               ),
-                      //             ),
-                      //             // (route) => false,
-                      //           );
-                      //         },
-                      //       ),
-                      //     ),
-                      //   ),
-                      // )
+                      Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 24.w),
+                        child: SizedBox(
+                          width: double.infinity,
+                          height: 58.h,
+                          child: ElevatedButton(
+                            onPressed: _handleSkip,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF369FFF),
+                              foregroundColor: Colors.white,
+                              elevation: 0,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(30.r),
+                              ),
+                            ),
+                            child: Text(
+                              "Skip if you don't have bottle",
+                              style: TextStyle(
+                                fontSize: AppFontStyles.fontSize_16.sp,
+                                fontFamily: AppFontStyles.urbanistFontFamily,
+                                fontVariations: [
+                                  AppFontStyles.fontWeightVariation600,
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -453,6 +539,91 @@ class _QrScannerState extends State<QrScanner>
   }
 
   Widget _buildScanner() {
+    if (_hasPermission == null) {
+      return const Center(
+        child: CircularProgressIndicator(
+          color: Colors.amber,
+        ),
+      );
+    }
+
+    if (_hasPermission == false) {
+      return Center(
+        child: Padding(
+          padding: EdgeInsets.symmetric(horizontal: 24.w),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.camera_alt_outlined,
+                size: 64.r,
+                color: Colors.black,
+              ),
+              SizedBox(height: 16.h),
+              Text(
+                "Camera Permission Required",
+                style: TextStyle(
+                  color: Colors.black,
+                  fontSize: 18.sp,
+                  fontWeight: FontWeight.bold,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              SizedBox(height: 8.h),
+              Text(
+                _isPermanentlyDenied
+                    ? "Camera access was denied. Please enable it in your device Settings to scan the QR code."
+                    : "We need camera access to scan the QR code on your Sipnudge bottle.",
+                style: TextStyle(
+                  color: Colors.black,
+                  fontSize: 14.sp,
+                  fontVariations: [AppFontStyles.boldFontVariation],
+                ),
+                textAlign: TextAlign.center,
+              ),
+              SizedBox(height: 24.h),
+              if (_isPermanentlyDenied) ...[
+                // ✅ Apple compliant: user explicitly taps to go to Settings
+                GestureDetector(
+                  onTap: () => openAppSettings(),
+                  child: Text(
+                    'Open Settings',
+                    style: TextStyle(
+                      color: const Color(0xFFFFCA28), // amber
+                      fontSize: 16.sp,
+                      fontVariations: [AppFontStyles.boldFontVariation],
+                      decoration: TextDecoration.underline,
+                      decorationColor: const Color(0xFFFFCA28),
+                    ),
+                  ),
+                ),
+              ] else ...[
+                ElevatedButton(
+                  onPressed: _handlePermissionButton,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.amber,
+                    foregroundColor: Colors.black,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12.r),
+                    ),
+                    padding:
+                        EdgeInsets.symmetric(horizontal: 24.w, vertical: 12.h),
+                  ),
+                  child: Text(
+                    "Continue",
+                    style: TextStyle(
+                      fontSize: 14.sp,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+      );
+    }
+
     return LayoutBuilder(
       builder: (context, constraints) {
         final scanRect = Rect.fromCenter(

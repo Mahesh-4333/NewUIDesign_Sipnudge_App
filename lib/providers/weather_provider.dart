@@ -29,7 +29,17 @@ class WeatherProvider extends ChangeNotifier {
   WeatherData? _weatherData;
   bool _isLoading = false;
   String? _error;
+  bool _isLocationPermanentlyDenied = false;
   Position? _currentLocation;
+
+  bool get isLocationPermanentlyDenied => _isLocationPermanentlyDenied;
+
+  /// Fires once every time location permission is found to be permanently
+  /// denied. UI layers should listen and show an "Open Settings" dialog.
+  final StreamController<void> _permDeniedController =
+      StreamController<void>.broadcast();
+  Stream<void> get onPermissionPermanentlyDenied =>
+      _permDeniedController.stream;
 
   WeatherProvider(this._weatherService, this._locationService) {
     // Listen for internet restored events to auto-refresh weather
@@ -47,6 +57,12 @@ class WeatherProvider extends ChangeNotifier {
   bool get isLoading => _isLoading;
   String? get error => _error;
   Position? get currentLocation => _currentLocation;
+
+  @override
+  void dispose() {
+    _permDeniedController.close();
+    super.dispose();
+  }
 
   // --------------------------------------------------------------------------
   // 🌤️ Fetch weather data
@@ -81,8 +97,19 @@ class WeatherProvider extends ChangeNotifier {
         _currentLocation!.latitude,
         _currentLocation!.longitude,
       );
+    } on LocationPermissionDeniedException {
+      _isLocationPermanentlyDenied = true;
+      _error = 'Location permission permanently denied';
+      // Notify listeners so the UI can show a settings popup
+      if (!_permDeniedController.isClosed) {
+        _permDeniedController.add(null);
+      }
     } catch (e) {
-      Console.log(tag: "APP", value: "Exception occurred in fetchingWeatherForCurrentLocation ${e.toString()}");
+      Console.log(
+          tag: "APP",
+          value:
+              "Exception occurred in fetchingWeatherForCurrentLocation ${e.toString()}");
+      _isLocationPermanentlyDenied = false;
       _error = e.toString();
     } finally {
       _isLoading = false;
@@ -246,7 +273,7 @@ class WeatherProvider extends ChangeNotifier {
       case 'drizzly day':
       case 'rainy day':
       case 'heavy rain':
-        return 'assets/images/11_heavy_rain.svg';
+        return 'assets/images/11_heavy_rain_color.svg';
 
       case 'thunderstorm':
         return 'assets/images/14_thunderstorm_color.svg';

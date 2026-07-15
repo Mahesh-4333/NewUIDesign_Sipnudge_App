@@ -21,6 +21,9 @@ import 'package:hydrify/services/health_service.dart';
 import 'package:hydrify/screens/water_intake_timeline/water_intake_timeline_screen.dart';
 import 'package:hydrify/screens/widgets/animated_bottom_navbar_widget.dart';
 import 'package:hydrify/screens/widgets/new_configuration_dialog.dart';
+import 'package:showcaseview/showcaseview.dart';
+import 'package:hydrify/helpers/showcase_keys.dart';
+import 'package:hydrify/screens/widgets/custom_showcase.dart';
 
 class BottomNavScreenNew extends StatefulWidget {
   const BottomNavScreenNew({super.key});
@@ -43,8 +46,15 @@ class _BottomNavScreenNewState extends State<BottomNavScreenNew> {
   @override
   void initState() {
     super.initState();
-    _configSubscription = SharedPrefsHelper.configUpdateStream.stream.listen((_) {
+    _configSubscription =
+        SharedPrefsHelper.configUpdateStream.stream.listen((_) async {
+          await Future.delayed(const Duration(milliseconds: 1000));
       if (mounted) {
+        try {
+          if (ShowCaseWidget.of(context).isShowcaseRunning) {
+            return;
+          } 
+        } catch (_) {}
         NewConfigurationDialog.show(context);
       }
     });
@@ -71,100 +81,130 @@ class _BottomNavScreenNewState extends State<BottomNavScreenNew> {
 
   @override
   Widget build(BuildContext context) {
-    return WillPopScope(
-      onWillPop: _onWillPop,
-      child: Scaffold(
-        extendBody: false,
-        bottomNavigationBar: SizedBox(height: 0, width: 0,),
-        body: Stack(
-          children: [
-            Container(
-              width: double.infinity,
-              height: double.infinity,
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [
-                    AppColors.gradientStart,
-                    AppColors.gradientEnd,
-                  ],
-                ),
-              ),
-              child: MultiBlocListener(
-                listeners: [
-                  BlocListener<HydrationCubit, HydrationState>(
-                    listenWhen: (prev, curr) {
-                      Console.log(
-                          tag: "newlyUnlockedLevel123",
-                          value:
-                              "${curr.newlyUnlockedLevel} :: ${prev.newlyUnlockedLevel}");
-                      if (curr.newlyUnlockedLevel != null &&
-                          prev.newlyUnlockedLevel != curr.newlyUnlockedLevel) {
-                        return true;
-                      }
-                      return false;
-                    },
-                    listener: (context, hydrationState) {
-                      // _showLevelUpSnackbar(context, hydrationState.newlyUnlockedLevel!);
-                    },
-                  ),
-                  BlocListener<BottomNavCubit, BottomNavState>(
-                    listenWhen: (prev, curr) =>
-                        prev.selectedTab != curr.selectedTab,
-                    listener: (context, state) {
-                      Console.log(
-                          tag: "_currentTabSelected", value: state.selectedTab);
-                      if (state.selectedTab == BottomNavTab.analysis) {
-                        _checkAndShowHealthDialog(context);
-                      }
-                    },
-                  ),
-                  BlocListener<BleCubit, BleState>(
-                    listenWhen: (prev, curr) =>
-                        curr.commandSentTimestamp != prev.commandSentTimestamp &&
-                        curr.lastCommandSent != null,
-                    listener: (context, state) {
-                      // ScaffoldMessenger.of(context).showSnackBar(
-                      //   SnackBar(
-                      //     content: Text(state.message),
-                      //     behavior: SnackBarBehavior.floating,
-                      //     backgroundColor: Colors.green.shade700,
-                      //   ),
-                      // );
-                    },
-                  ),
-                ],
-                child: BlocBuilder<BottomNavCubit, BottomNavState>(
-                  builder: (context, state) {
-                    return _buildTabNavigators(state.selectedTab);
-                  },
-                ),
-              ),
+    return ShowCaseWidget(
+      onFinish: () async {
+        final waterGoal = await SharedPrefsHelper.getWaterGoal();
+        if (waterGoal != null) {
+          await SharedPrefsHelper.updateAndSaveDeviceConfig(
+            waterGoal: waterGoal,
+            triggerStream: false,
+          );
+        }
+      },
+      builder: (showcaseContext) {
+        return WillPopScope(
+          onWillPop: _onWillPop,
+          child: Scaffold(
+            extendBody: false,
+            bottomNavigationBar: SizedBox(
+              height: 0,
+              width: 0,
             ),
-            Positioned(
-              bottom: 0.h,
-              child: SafeArea(
-                top: false,
-                left: false,
-                right: false,
-                bottom: false,
-                child: Padding(
-                  padding: EdgeInsets.only(
-                    left: AppDimensions.defaultPadding.w,
-                    right: AppDimensions.defaultPadding.w,
-                    bottom: AppDimensions.dim28.h,
+            body: Stack(
+              children: [
+                Container(
+                  width: double.infinity,
+                  height: double.infinity,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        AppColors.gradientStart,
+                        AppColors.gradientEnd,
+                      ],
+                    ),
                   ),
-                  child: SizedBox(
-                    height: AppDimensions.dim88.h,
-                    child: const AnimatedBottomNavBar(),
+                  child: MultiBlocListener(
+                    listeners: [
+                      BlocListener<HydrationCubit, HydrationState>(
+                        listenWhen: (prev, curr) {
+                          Console.log(
+                              tag: "newlyUnlockedLevel123",
+                              value:
+                                  "${curr.newlyUnlockedLevel} :: ${prev.newlyUnlockedLevel}");
+                          if (curr.newlyUnlockedLevel != null &&
+                              prev.newlyUnlockedLevel !=
+                                  curr.newlyUnlockedLevel) {
+                            return true;
+                          }
+                          return false;
+                        },
+                        listener: (context, hydrationState) {
+                          // _showLevelUpSnackbar(context, hydrationState.newlyUnlockedLevel!);
+                        },
+                      ),
+                      BlocListener<BottomNavCubit, BottomNavState>(
+                        listenWhen: (prev, curr) =>
+                            prev.selectedTab != curr.selectedTab,
+                        listener: (context, state) {
+                          Console.log(
+                              tag: "_currentTabSelected",
+                              value: state.selectedTab);
+                          if (state.selectedTab == BottomNavTab.analysis) {
+                            _checkAndShowHealthDialog(context);
+                          }
+                        },
+                      ),
+                      BlocListener<BleCubit, BleState>(
+                        listenWhen: (prev, curr) =>
+                            curr.commandSentTimestamp !=
+                                prev.commandSentTimestamp &&
+                            curr.lastCommandSent != null,
+                        listener: (context, state) {
+                          // ScaffoldMessenger.of(context).showSnackBar(
+                          //   SnackBar(
+                          //     content: Text(state.message),
+                          //     behavior: SnackBarBehavior.floating,
+                          //     backgroundColor: Colors.green.shade700,
+                          //   ),
+                          // );
+                        },
+                      ),
+                    ],
+                    child: BlocBuilder<BottomNavCubit, BottomNavState>(
+                      builder: (context, state) {
+                        return _buildTabNavigators(state.selectedTab);
+                      },
+                    ),
                   ),
                 ),
-              ),
-            )
-          ],
-        ),
-      ),
+                Positioned(
+                  bottom: 0.h,
+                  child: SafeArea(
+                    top: false,
+                    left: false,
+                    right: false,
+                    bottom: false,
+                    child: Padding(
+                      padding: EdgeInsets.only(
+                        left: AppDimensions.defaultPadding.w,
+                        right: AppDimensions.defaultPadding.w,
+                        bottom: AppDimensions.dim28.h,
+                      ),
+                      child: SizedBox(
+                        height: AppDimensions.dim88.h,
+                        child: CustomShowcase(
+                          showcaseKey: ShowcaseKeys.bottomNavKey,
+                          title: 'Navigation Tabs',
+                          description:
+                              'Switch between Home, Analysis, Goals, and Settings screens.',
+                          buttonText: 'Finish',
+                          child: IgnorePointer(
+                            ignoring: ShowCaseWidget.of(showcaseContext)
+                                .isShowcaseRunning,
+                            child: const AnimatedBottomNavBar(),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                )
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 

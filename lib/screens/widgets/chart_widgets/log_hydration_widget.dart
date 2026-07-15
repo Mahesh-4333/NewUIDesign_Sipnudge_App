@@ -177,12 +177,7 @@ class _LogHydrationWidgetState extends State<LogHydrationWidget> {
     DatabaseSyncService().syncAll();
 
     try {
-      final waterGoal = await SharedPrefsHelper.getWaterGoal() ?? 2500;
-      final currentIntakeVal = await bleCubit.getCurrentDayHistory();
-      await HomeWidgetService.updateWidgetData(
-        currentIntake: currentIntakeVal.round(),
-        dailyGoal: waterGoal,
-      );
+      await HomeWidgetService.updateWidgetData();
     } catch (e) {
       // Handle or ignore gracefully
     }

@@ -77,6 +77,23 @@ class CustomStackedBarChart extends StatefulWidget {
 class _CustomStackedBarChartState extends State<CustomStackedBarChart> {
   int? _selectedIndex;
 
+  bool _isCurrentDay(String label) {
+    final now = DateTime.now();
+    final weekday = now.weekday; // 1 = Monday, 7 = Sunday
+    final weekdayLabels = {
+      1: ['mon', 'monday'],
+      2: ['tue', 'tuesday'],
+      3: ['wed', 'wednesday'],
+      4: ['thu', 'thursday'],
+      5: ['fri', 'friday'],
+      6: ['sat', 'saturday'],
+      7: ['sun', 'sunday'],
+    };
+
+    final lowerLabel = label.toLowerCase().trim();
+    return weekdayLabels[weekday]?.contains(lowerLabel) ?? false;
+  }
+
   @override
   Widget build(BuildContext context) {
     return Row(
@@ -85,6 +102,7 @@ class _CustomStackedBarChartState extends State<CustomStackedBarChart> {
       children: List.generate(widget.data.length, (index) {
         final item = widget.data[index];
         final isSelected = _selectedIndex == index;
+        final isCurrentDay = _isCurrentDay(item.label);
 
         return Column(
           mainAxisSize: MainAxisSize.min,
@@ -138,13 +156,26 @@ class _CustomStackedBarChartState extends State<CustomStackedBarChart> {
               ],
             ),
             const SizedBox(height: 12),
-            Text(
-              item.label,
-              style: TextStyle(
-                color: AppColors.color_4C6C9A,
-                fontSize: AppFontStyles.fontSize_10,
-                fontFamily: AppFontStyles.lexendFontFamily,
-                fontVariations: [AppFontStyles.semiBoldFontVariation],
+            Container(
+              padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(100.r),
+                border: Border.all(
+                  color: isCurrentDay
+                      ? AppColors.color_4C6C9A.withOpacity(0.5)
+                      : Colors.transparent,
+                  width: 1.w,
+                ),
+              ),
+              child: Text(
+                item.label,
+                style: TextStyle(
+                  color: AppColors.color_4C6C9A,
+                  fontSize: AppFontStyles.fontSize_10,
+                  fontFamily: AppFontStyles.lexendFontFamily,
+                  fontVariations: [AppFontStyles.semiBoldFontVariation],
+                  height: 1.0,
+                ),
               ),
             ),
           ],

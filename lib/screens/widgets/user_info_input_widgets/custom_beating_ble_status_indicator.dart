@@ -16,7 +16,7 @@ class CustomBeatingBleStatusIndicator extends StatefulWidget {
 
 class _CustomBeatingBleStatusIndicatorState
     extends State<CustomBeatingBleStatusIndicator>
-    with SingleTickerProviderStateMixin {
+    with SingleTickerProviderStateMixin, WidgetsBindingObserver {
   late AnimationController _controller;
   late Animation<double> _blurAnimation;
   late Animation<double> _spreadAnimation;
@@ -24,6 +24,7 @@ class _CustomBeatingBleStatusIndicatorState
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
 
     _controller = AnimationController(
       vsync: this,
@@ -45,8 +46,18 @@ class _CustomBeatingBleStatusIndicatorState
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _controller.dispose();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      if (mounted && !_controller.isAnimating) {
+        _controller.repeat(reverse: true);
+      }
+    }
   }
 
   @override

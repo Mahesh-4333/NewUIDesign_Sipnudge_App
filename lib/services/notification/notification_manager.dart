@@ -110,10 +110,11 @@ class NotificationManager {
         var result = await Permission.scheduleExactAlarm.request();
 
         if (!result.isGranted && result.isPermanentlyDenied) {
+          // Do NOT auto-redirect to Settings per Apple/Google store guidelines.
+          // Callers should surface an informational UI with an optional Settings link
+          // that the user explicitly taps.
           debugPrint(
-              'Exact Alarm permission permanently denied. Opening settings.');
-
-          openAppSettings();
+              'Exact Alarm permission permanently denied. The user must go to Settings manually.');
         }
       }
     }

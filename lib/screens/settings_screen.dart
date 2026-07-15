@@ -22,12 +22,14 @@ import 'package:hydrify/helpers/shared_pref_helper.dart';
 import 'package:hydrify/models/bottle_info.dart';
 import 'package:hydrify/cubit/ble/ble_cubit.dart';
 import 'package:hydrify/screens/bottle_info_page.dart';
+import 'package:hydrify/screens/wifi_provisioning_screen.dart';
 import 'package:hydrify/screens/contact_support_page.dart';
 import 'package:hydrify/screens/drink_reminder_page.dart';
 import 'package:hydrify/screens/faq_page.dart';
 import 'package:hydrify/screens/calendar/calendar_screen.dart';
 import 'package:hydrify/screens/help&support_page.dart';
 import 'package:hydrify/screens/preferences_page.dart';
+import 'package:hydrify/screens/account&security_page.dart';
 import 'package:hydrify/screens/user_personal_info_input_screen..dart';
 import 'package:hydrify/screens/widgets/logout_widgets/logout_bottom_sheet.dart';
 import 'package:hydrify/screens/active_notifications_screen.dart';
@@ -191,6 +193,14 @@ class _SettingScreenState extends State<SettingScreen> {
 
           break;
 
+        case 'Connect Wi-Fi':
+          navigator.push(
+            MaterialPageRoute(
+              builder: (_) => const WifiProvisioningScreen(),
+            ),
+          );
+          break;
+
         case 'Export Log':
           _exportLog(context);
           break;
@@ -211,6 +221,15 @@ class _SettingScreenState extends State<SettingScreen> {
           navigator.push(
             MaterialPageRoute(
               builder: (_) => const CalendarScreen(),
+            ),
+          );
+          break;
+
+        case "Account & Security":
+        case AppStrings.accountandsecurity:
+          navigator.push(
+            MaterialPageRoute(
+              builder: (_) => const AccountAndSecurityPage(),
             ),
           );
           break;

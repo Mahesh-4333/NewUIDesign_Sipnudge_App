@@ -105,123 +105,123 @@ class _UserInfoInputScreenState extends State<UserInfoInputScreen> {
     final cubit = context.read<UserInfoCubit>();
     await cubit.loadUser();
 
-    if (cubit.state.name != null && cubit.state.name!.isNotEmpty) {
-      setState(() {
-        _isUsernameReadOnly = true;
-        _nameController.text = cubit.state.name!;
-      });
-    }
+    // if (cubit.state.name != null && cubit.state.name!.isNotEmpty) {
+    //   setState(() {
+    //     _isUsernameReadOnly = true;
+    //     _nameController.text = cubit.state.name!;
+    //   });
+    // }
 
-    if (cubit.state.height == null ||
-        cubit.state.weight == null ||
-        cubit.state.name == null) {
-      final email = await SharedPrefsHelper.getUserEmail();
-      if (email != null && email.isNotEmpty && email != "guest_user") {
-        try {
-          final serverData = await ApiService().getUserByEmail(email);
-          Console.log(
-              tag: "USER_INFO",
-              value: "Fetched user profile from server: $serverData");
-          if (serverData != null && serverData['exists'] == true) {
-            final genderStr = serverData['gender']?.toString().toLowerCase();
-            Gender gender = Gender.male;
-            if (genderStr == 'female')
-              gender = Gender.female;
-            else if (genderStr == 'prefernottosay' ||
-                genderStr == 'prefer_not_to_say')
-              gender = Gender.preferNotToSay;
+    // if (cubit.state.height == null ||
+    //     cubit.state.weight == null ||
+    //     cubit.state.name == null) {
 
-            final activityStr =
-                serverData['activityLevel']?.toString().toLowerCase();
-            ActivityLevel activity = ActivityLevel.lightActivity;
-            if (activityStr == 'sedentary')
-              activity = ActivityLevel.sedentary;
-            else if (activityStr == 'midactive' || activityStr == 'mid_active')
-              activity = ActivityLevel.midActive;
-            else if (activityStr == 'veryactive' ||
-                activityStr == 'very_active')
-              activity = ActivityLevel.veryActive;
+    // }
 
-            final dietStr = serverData['dietType']?.toString().toLowerCase();
-            DietType diet = DietType.balanced;
-            if (dietStr == 'vegetarian')
-              diet = DietType.vegetarian;
-            else if (dietStr == 'processed')
-              diet = DietType.processed;
-            else if (dietStr == 'highprotein' || dietStr == 'high_protein')
-              diet = DietType.highProtein;
+    final email = await SharedPrefsHelper.getUserEmail();
+    if (email != null && email.isNotEmpty && email != "guest_user") {
+      try {
+        final serverData = await ApiService().getUserByEmail(email);
+        Console.log(
+            tag: "USER_INFO",
+            value: "Fetched user profile from server: $serverData");
+        if (serverData != null && serverData['exists'] == true) {
+          final genderStr = serverData['gender']?.toString().toLowerCase();
+          Gender gender = Gender.male;
+          if (genderStr == 'female')
+            gender = Gender.female;
+          else if (genderStr == 'prefernottosay' ||
+              genderStr == 'prefer_not_to_say') gender = Gender.preferNotToSay;
 
-            final coffeeStr =
-                serverData['coffeeIntake']?.toString().toLowerCase();
-            BeverageIntake coffee = BeverageIntake.none;
-            if (coffeeStr == 'onetotwo' || coffeeStr == 'one_to_two')
-              coffee = BeverageIntake.oneToTwo;
-            else if (coffeeStr == 'threetofour' || coffeeStr == 'three_to_four')
-              coffee = BeverageIntake.threeToFour;
-            else if (coffeeStr == 'fiveplus' || coffeeStr == 'five_plus')
-              coffee = BeverageIntake.fivePlus;
+          final activityStr =
+              serverData['activityLevel']?.toString().toLowerCase();
+          ActivityLevel activity = ActivityLevel.lightActivity;
+          if (activityStr == 'sedentary')
+            activity = ActivityLevel.sedentary;
+          else if (activityStr == 'midactive' || activityStr == 'mid_active')
+            activity = ActivityLevel.midActive;
+          else if (activityStr == 'veryactive' || activityStr == 'very_active')
+            activity = ActivityLevel.veryActive;
 
-            final teaStr = serverData['teaIntake']?.toString().toLowerCase();
-            BeverageIntake tea = BeverageIntake.none;
-            if (teaStr == 'onetotwo' || teaStr == 'one_to_two')
-              tea = BeverageIntake.oneToTwo;
-            else if (teaStr == 'threetofour' || teaStr == 'three_to_four')
-              tea = BeverageIntake.threeToFour;
-            else if (teaStr == 'fiveplus' || teaStr == 'five_plus')
-              tea = BeverageIntake.fivePlus;
+          final dietStr = serverData['dietType']?.toString().toLowerCase();
+          DietType diet = DietType.balanced;
+          if (dietStr == 'vegetarian')
+            diet = DietType.vegetarian;
+          else if (dietStr == 'processed')
+            diet = DietType.processed;
+          else if (dietStr == 'highprotein' || dietStr == 'high_protein')
+            diet = DietType.highProtein;
 
-            final double? height = serverData['height'] != null
-                ? (serverData['height'] as num).toDouble()
-                : null;
-            final double? weight = serverData['weight'] != null
-                ? (serverData['weight'] as num).toDouble()
-                : null;
-            final int? age = serverData['age'] != null
-                ? (serverData['age'] as num).toInt()
-                : null;
-            final String? name = serverData['name'];
+          final coffeeStr =
+              serverData['coffeeIntake']?.toString().toLowerCase();
+          BeverageIntake coffee = BeverageIntake.none;
+          if (coffeeStr == 'onetotwo' || coffeeStr == 'one_to_two')
+            coffee = BeverageIntake.oneToTwo;
+          else if (coffeeStr == 'threetofour' || coffeeStr == 'three_to_four')
+            coffee = BeverageIntake.threeToFour;
+          else if (coffeeStr == 'fiveplus' || coffeeStr == 'five_plus')
+            coffee = BeverageIntake.fivePlus;
 
-            final newState = UserInfoState(
-              gender: gender,
-              height: height,
-              heightUnit: serverData['heightUnit'] ?? 'cm',
-              weight: weight,
-              weightUnit: serverData['weightUnit'] ?? 'kg',
-              age: age,
-              name: name,
-              wakeupHour: serverData['wakeupHour'],
-              wakeupMinute: serverData['wakeupMinute'],
-              wakeupPeriod: serverData['wakeupPeriod'],
-              bedtimeHour: serverData['bedtimeHour'],
-              bedtimeMinute: serverData['bedtimeMinute'],
-              bedtimePeriod: serverData['bedtimePeriod'],
-              activityLevel: activity,
-              dietType: diet,
-              stepGoal: serverData['stepGoal'],
-              coffeeIntake: coffee,
-              teaIntake: tea,
-              typicalWaterIntake: serverData['typicalWaterIntake'] != null
-                  ? (serverData['typicalWaterIntake'] as num).toDouble()
-                  : null,
-              waterUnit: serverData['waterUnit'] ?? 'L',
-            );
+          final teaStr = serverData['teaIntake']?.toString().toLowerCase();
+          BeverageIntake tea = BeverageIntake.none;
+          if (teaStr == 'onetotwo' || teaStr == 'one_to_two')
+            tea = BeverageIntake.oneToTwo;
+          else if (teaStr == 'threetofour' || teaStr == 'three_to_four')
+            tea = BeverageIntake.threeToFour;
+          else if (teaStr == 'fiveplus' || teaStr == 'five_plus')
+            tea = BeverageIntake.fivePlus;
 
-            cubit.emit(newState);
-            await cubit.saveUser(newState);
+          final double? height = serverData['height'] != null
+              ? (serverData['height'] as num).toDouble()
+              : null;
+          final double? weight = serverData['weight'] != null
+              ? (serverData['weight'] as num).toDouble()
+              : null;
+          final int? age = serverData['age'] != null
+              ? (serverData['age'] as num).toInt()
+              : null;
+          final String? name = serverData['userName'];
 
-            if (name != null && name.isNotEmpty) {
-              setState(() {
-                _isUsernameReadOnly = true;
-              });
-              _nameController.text = name;
-              _onUsernameChanged(name);
-            }
+          final newState = UserInfoState(
+            gender: gender,
+            height: height,
+            heightUnit: serverData['heightUnit'] ?? 'cm',
+            weight: weight,
+            weightUnit: serverData['weightUnit'] ?? 'kg',
+            age: age,
+            name: name,
+            wakeupHour: serverData['wakeupHour'],
+            wakeupMinute: serverData['wakeupMinute'],
+            wakeupPeriod: serverData['wakeupPeriod'],
+            bedtimeHour: serverData['bedtimeHour'],
+            bedtimeMinute: serverData['bedtimeMinute'],
+            bedtimePeriod: serverData['bedtimePeriod'],
+            activityLevel: activity,
+            dietType: diet,
+            stepGoal: serverData['stepGoal'],
+            coffeeIntake: coffee,
+            teaIntake: tea,
+            typicalWaterIntake: serverData['typicalWaterIntake'] != null
+                ? (serverData['typicalWaterIntake'] as num).toDouble()
+                : null,
+            waterUnit: serverData['waterUnit'] ?? 'L',
+          );
+
+          cubit.emit(newState);
+          await cubit.saveUser(newState);
+
+          if (name != null && name.isNotEmpty) {
+            setState(() {
+              _isUsernameReadOnly = true;
+            });
+            _nameController.text = name;
+            _onUsernameChanged(name);
           }
-        } catch (e) {
-          Console.log(
-              tag: "USER_INFO",
-              value: "Failed to fetch initial profile from server: $e");
         }
+      } catch (e) {
+        Console.log(
+            tag: "USER_INFO",
+            value: "Failed to fetch initial profile from server: $e");
       }
     }
 
@@ -292,7 +292,7 @@ class _UserInfoInputScreenState extends State<UserInfoInputScreen> {
                           if (name.isEmpty) {
                             UiUtilsService.showToast(
                               context: context,
-                              text: "Please enter your name.",
+                              text: "Please enter your username.",
                               textColor: Colors.red,
                             );
                             return;
@@ -303,25 +303,11 @@ class _UserInfoInputScreenState extends State<UserInfoInputScreen> {
                             UiUtilsService.showToast(
                               context: context,
                               text:
-                                  "Name must be 3-15 alphanumeric characters or underscores.",
+                                  "Username must be 3-15 alphanumeric characters or underscores.",
                               textColor: Colors.red,
                             );
                             return;
                           }
-
-                          // // Check username uniqueness from backend
-                          // final userId = await SharedPrefsHelper.getUserId();
-                          // final isUnique = await ApiService().checkNameUniqueness(name, userId);
-                          // if (!isUnique) {
-                          //   if (context.mounted) {
-                          //     UiUtilsService.showToast(
-                          //       context: context,
-                          //       text: "This name is already taken. Please choose a unique name.",
-                          //       textColor: Colors.red,
-                          //     );
-                          //   }
-                          //   return;
-                          // }
 
                           // Save name to SharedPrefs + cubit
                           await SharedPrefsHelper.setUserName(name);
@@ -627,7 +613,7 @@ class _UserInfoInputScreenState extends State<UserInfoInputScreen> {
                     color: _isUsernameReadOnly ? Colors.grey : AppColors.black,
                   ),
                   decoration: InputDecoration(
-                    hintText: 'Enter your name',
+                    hintText: 'Enter your username',
                     hintStyle: TextStyle(
                       fontFamily: AppFontStyles.urbanistFontFamily,
                       fontSize: AppFontStyles.fontSize_16,

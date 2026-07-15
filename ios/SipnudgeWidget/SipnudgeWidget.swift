@@ -10,18 +10,29 @@ struct SlotItem: Codable {
 
 struct Provider: TimelineProvider {
     func placeholder(in context: Context) -> SimpleEntry {
-        SimpleEntry(date: Date(), intake: 0, goal: 2000, upcomingSlotName: "Wakeup Time", upcomingSlotTarget: 500, upcomingSlotTime: "07:00 AM", streak: 7)
+        SimpleEntry(date: Date(), intake: 0, goal: 2000, upcomingSlotName: "Wakeup Time", upcomingSlotTarget: 500, upcomingSlotTime: "07:00 AM", streak: 7,
+                    dbgUUID: "-", dbgConnected: "-", dbgSubscribed: "-", dbgBleRx: "-")
     }
 
     func getSnapshot(in context: Context, completion: @escaping (SimpleEntry) -> ()) {
-        let entry = SimpleEntry(date: Date(), intake: 750, goal: 2500, upcomingSlotName: "Lunch Time", upcomingSlotTarget: 300, upcomingSlotTime: "01:00 PM", streak: 7)
+        let entry = SimpleEntry(date: Date(), intake: 750, goal: 2500, upcomingSlotName: "Lunch Time", upcomingSlotTarget: 300, upcomingSlotTime: "01:00 PM", streak: 7,
+                                dbgUUID: "-", dbgConnected: "-", dbgSubscribed: "-", dbgBleRx: "-")
         completion(entry)
     }
 
-    func getTimeline(in context: Context, completion: @escaping (Timeline<Entry>) -> ()) {
-        // Access shared UserDefaults via the App Group
-        let userDefaults = UserDefaults(suiteName: "group.com.sipnudge.sipnudge")
-        let intake = userDefaults?.integer(forKey: "current_intake") ?? 0
+    private func createEntry(for date: Date, userDefaults: UserDefaults?) -> SimpleEntry {
+        let lastUpdateDateStr = userDefaults?.string(forKey: "last_update_date") ?? ""
+        
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd"
+        formatter.timeZone = TimeZone.current
+        let todayStr = formatter.string(from: date)
+        
+        var intake = userDefaults?.integer(forKey: "current_intake") ?? 0
+        if lastUpdateDateStr != todayStr {
+            intake = 0
+        }
+        
         let goal = userDefaults?.integer(forKey: "daily_goal") ?? 2000
         let streak = userDefaults?.integer(forKey: "streak") ?? 0
         
@@ -34,10 +45,9 @@ struct Provider: TimelineProvider {
            let data = slotsJsonString.data(using: .utf8) {
             let decoder = JSONDecoder()
             if let slots = try? decoder.decode([SlotItem].self, from: data), !slots.isEmpty {
-                let now = Date()
                 let calendar = Calendar.current
-                let nowHour = calendar.component(.hour, from: now)
-                let nowMinute = calendar.component(.minute, from: now)
+                let nowHour = calendar.component(.hour, from: date)
+                let nowMinute = calendar.component(.minute, from: date)
                 let nowTotalMinutes = nowHour * 60 + nowMinute
                 
                 // Sort slots by time
@@ -71,12 +81,86 @@ struct Provider: TimelineProvider {
             }
         }
         
-        let entry = SimpleEntry(date: Date(), intake: intake, goal: goal, upcomingSlotName: upcomingSlotName, upcomingSlotTarget: upcomingSlotTarget, upcomingSlotTime: upcomingSlotTime, streak: streak)
+        return SimpleEntry(date: date, intake: intake, goal: goal, upcomingSlotName: upcomingSlotName, upcomingSlotTarget: upcomingSlotTarget, upcomingSlotTime: upcomingSlotTime, streak: streak,
+                           dbgUUID: userDefaults?.string(forKey: "dbg_uuid") ?? "nil",
+                           dbgConnected: userDefaults?.string(forKey: "dbg_connected") ?? "nil",
+                           dbgSubscribed: userDefaults?.string(forKey: "dbg_subscribed") ?? "nil",
+                           dbgBleRx: userDefaults?.string(forKey: "dbg_ble_rx") ?? "nil")
+    }
+
+    func getTimeline(in context: Context, completion: @escaping (Timeline<Entry>) -> ()) {
+        // Access shared UserDefaults via the App Group
+        let userDefaults = UserDefaults(suiteName: "group.com.sipnudge.sipnudge")
+        let now = Date()
         
-        // Refresh every 15 minutes as a fallback
-        let nextUpdate = Calendar.current.date(byAdding: .minute, value: 15, to: Date()) ?? Date().addingTimeInterval(900)
-        let timeline = Timeline(entries: [entry], policy: .after(nextUpdate))
-        completion(timeline)
+        let calendar = Calendar.current
+        let midnight: Date
+        if let nextDay = calendar.date(byAdding: .day, value: 1, to: now) {
+            midnight = calendar.startOfDay(for: nextDay)
+        } else {
+            midnight = now.addingTimeInterval(86400) // 24 hours fallback
+        }
+        
+        // Define fallback timeline compilation
+        let compileTimeline: () -> Timeline<Entry> = {
+            let entryNow = self.createEntry(for: now, userDefaults: userDefaults)
+            let entryMidnight = self.createEntry(for: midnight, userDefaults: userDefaults)
+            let nextUpdate = calendar.date(byAdding: .minute, value: 5, to: now) ?? now.addingTimeInterval(300)
+            return Timeline(entries: [entryNow, entryMidnight], policy: .after(nextUpdate))
+        }
+
+        // Try getting userId to fetch from server
+        guard let userId = userDefaults?.string(forKey: "flutter.user_id")
+                ?? userDefaults?.string(forKey: "user_id") else {
+            completion(compileTimeline())
+            return
+        }
+
+        // Format dates for API query
+        let todayStart = calendar.startOfDay(for: now)
+        let tomorrowStart = calendar.date(byAdding: .day, value: 1, to: todayStart) ?? todayStart.addingTimeInterval(86400)
+        
+        let isoFormatter = ISO8601DateFormatter()
+        isoFormatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        isoFormatter.timeZone = TimeZone(secondsFromGMT: 0)
+        
+        let startDateStr = isoFormatter.string(from: todayStart)
+        let endDateStr = isoFormatter.string(from: tomorrowStart)
+        
+        var components = URLComponents(string: "https://api.sipnudge.com/api/database/daily-summaries/\(userId)")
+        components?.queryItems = [
+            URLQueryItem(name: "startDate", value: startDateStr),
+            URLQueryItem(name: "endDate", value: endDateStr)
+        ]
+        
+        guard let url = components?.url else {
+            completion(compileTimeline())
+            return
+        }
+        
+        let task = URLSession.shared.dataTask(with: url) { data, response, error in
+            if error == nil,
+               let data = data,
+               let json = try? JSONSerialization.jsonObject(with: data, options: []) as? [String: Any],
+               let success = json["success"] as? Bool, success,
+               let list = json["data"] as? [[String: Any]],
+               let first = list.first {
+                
+                let consumed = first["consumed"] as? Double ?? Double(first["consumed"] as? Int ?? 0)
+                let target = first["target"] as? Double ?? Double(first["target"] as? Int ?? 2500)
+                
+                userDefaults?.set(Int(consumed), forKey: "current_intake")
+                userDefaults?.set(Int(target), forKey: "daily_goal")
+                
+                let todayFormatter = DateFormatter()
+                todayFormatter.dateFormat = "yyyy-MM-dd"
+                todayFormatter.timeZone = .current
+                userDefaults?.set(todayFormatter.string(from: now), forKey: "last_update_date")
+                userDefaults?.synchronize()
+            }
+            completion(compileTimeline())
+        }
+        task.resume()
     }
 }
 
@@ -88,6 +172,11 @@ struct SimpleEntry: TimelineEntry {
     let upcomingSlotTarget: Int
     let upcomingSlotTime: String
     let streak: Int
+    // Diagnostics — only populated in debug builds
+    let dbgUUID: String
+    let dbgConnected: String
+    let dbgSubscribed: String
+    let dbgBleRx: String
 }
 
 struct SipnudgeWidgetEntryView : View {
@@ -97,6 +186,10 @@ struct SipnudgeWidgetEntryView : View {
     var progress: Double {
         guard entry.goal > 0 else { return 0.0 }
         return min(Double(entry.intake) / Double(entry.goal), 1.0)
+    }
+
+    var headingText: String {
+        progress >= 0.5 ? "You're on track" : "Keep sipping 💧"
     }
 
     var percentageString: String {
@@ -238,7 +331,7 @@ struct SipnudgeWidgetEntryView : View {
                 .cornerRadius(20)
                 
                 // Heading
-                Text("You're on track")
+                Text(headingText)
                     .font(.system(size: 22, weight: .bold, design: .rounded))
                     .foregroundColor(Color(red: 0.09, green: 0.15, blue: 0.27))
                     .lineLimit(1)
@@ -296,7 +389,7 @@ struct SipnudgeWidgetEntryView : View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
         .padding(.horizontal, 16)
-        .padding(.vertical, 14)
+        .padding(.vertical, 10)
     }
 
     // MARK: - Small Layout

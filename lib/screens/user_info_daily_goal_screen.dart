@@ -588,25 +588,30 @@ class _UserInfoDailyGoalScreenNewState extends State<UserInfoDailyGoalScreen> {
                 }
 
                 final dbHelper = DatabaseHelper();
-                var isSlotAvailableInDb = await dbHelper.getAllSlots();
-                if (isSlotAvailableInDb.isEmpty) {
-                  await dbHelper.clearHydrationSlots();
-                  for (var slot in slots) {
-                    await dbHelper.insertOrUpdateSlot(slot);
-                  }
-                  await bleCubit.queueHydrationSlots(slots);
-                } else {
-                  List<HydrationEntry> updatedSlots = [];
-                  for (var existingSlot in isSlotAvailableInDb) {
-                    final newSlot =
-                        slots.firstWhere((s) => s.slot == existingSlot.slot);
-                    final updatedSlot =
-                        existingSlot.copyWith(amount: newSlot.amount);
-                    await dbHelper.insertOrUpdateSlot(updatedSlot);
-                    updatedSlots.add(updatedSlot);
-                  }
-                  await bleCubit.queueHydrationSlots(updatedSlots);
+                final existingSlotsInDb = await dbHelper.getAllSlots();
+
+                // Build a map of existing slots to preserve waterDrank values
+                final existingSlotMap = {
+                  for (var s in existingSlotsInDb) s.slot: s
+                };
+
+                // Always clear and re-insert all 7 slots to avoid partial saves
+                await dbHelper.clearHydrationSlots();
+                final List<HydrationEntry> updatedSlots = [];
+                for (var newSlot in slots) {
+                  final existing = existingSlotMap[newSlot.slot];
+                  // Preserve waterDrank, startTime & endTime if this slot already existed
+                  final slotToSave = existing != null
+                      ? existing.copyWith(
+                          amount: newSlot.amount,
+                          startTime: existing.startTime,
+                          endTime: existing.endTime,
+                        )
+                      : newSlot;
+                  await dbHelper.insertOrUpdateSlot(slotToSave);
+                  updatedSlots.add(slotToSave);
                 }
+                await bleCubit.queueHydrationSlots(updatedSlots);
 
                 await SharedPrefsHelper.setLastLevelUpDate("");
 
@@ -643,8 +648,11 @@ class _UserInfoDailyGoalScreenNewState extends State<UserInfoDailyGoalScreen> {
                 await hydrationCubit.refreshAchievementStats(
                     updateUnlock: userInfoCubit.state.hideAchievement);
 
-                SharedPrefsHelper.updateAndSaveDeviceConfig(
-                    waterGoal: convertedWaterGoal.toInt());
+                final bool hasShownShowcase = await SharedPrefsHelper.hasShownHomeShowcase();
+                if (hasShownShowcase || widget.isViaSettingsScreen) {
+                  await SharedPrefsHelper.updateAndSaveDeviceConfig(
+                      waterGoal: convertedWaterGoal.toInt());
+                }
                 bottomNavCubit.showBar();
 
                 DatabaseSyncService().syncAll();

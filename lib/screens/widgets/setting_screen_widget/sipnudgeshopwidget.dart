@@ -8,7 +8,7 @@ class SipnudgeShopWidget extends StatelessWidget {
   const SipnudgeShopWidget({super.key});
 
   Future<void> _openWebsite() async {
-    final Uri url = Uri.parse('https://sipnudge.com/pages/contact');
+    final Uri url = Uri.parse('https://sipnudge.com/#product');
     try {
       if (!await launchUrl(url, mode: LaunchMode.externalApplication)) {
         throw Exception('Could not launch $url');

@@ -173,4 +173,6 @@ class AssetsPath {
   static const String newRelease = "assets/new_release_background.webp";
   static const String unlink = "assets/unlink.png";
   static const String supportTicket = "assets/support_ticket.png";
+  static const String bellIcon = "assets/bell_icon.png";
+  static const String timelineCircle = "assets/timeline_circle.png";
 }

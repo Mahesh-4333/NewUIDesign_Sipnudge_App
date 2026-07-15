@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:hydrify/helpers/database_helper.dart';
 import 'package:hydrify/models/hydration_entry.dart';
 import 'package:hydrify/helpers/logger.dart';
+import 'package:hydrify/helpers/shared_pref_helper.dart';
+import 'package:hydrify/services/api_service.dart';
 
 class HomeWidgetService {
   // Constants for widget names and App Group ID
@@ -17,13 +19,76 @@ class HomeWidgetService {
     await HomeWidget.setAppGroupId(appGroupId);
   }
 
-  static Future<void> updateWidgetData({
-    required int currentIntake,
-    required int dailyGoal,
-  }) async {
+  static Future<void> updateWidgetData() async {
+    int currentIntake = 0;
+    int dailyGoal = 2500;
+
+    final dbHelper = DatabaseHelper();
+    final today = DateTime.now();
+
+    // Fetch initial dailyGoal and currentIntake from local database if available
+    try {
+      final localGoal = await dbHelper.getDailyWaterGoal(today);
+      if (localGoal != null) {
+        dailyGoal = localGoal;
+      } else {
+        final prefGoal = await SharedPrefsHelper.getWaterGoal();
+        if (prefGoal != null) {
+          dailyGoal = prefGoal;
+        }
+      }
+      
+      final todaySummary = await dbHelper.getSummaryForDate(today);
+      if (todaySummary != null) {
+        currentIntake = todaySummary.consumed.round();
+        dailyGoal = todaySummary.target.round();
+      }
+    } catch (e) {
+      Console.log(tag: "HomeWidget", value: "Error fetching dailyGoal from local database: $e");
+    }
+
+    // Try fetching from API exclusively
+    try {
+      final userId = await SharedPrefsHelper.getUserId();
+      if (userId != null) {
+        // Save user_id to the App Group so the native widget extension can read it in the background
+        await HomeWidget.saveWidgetData<String>('user_id', userId);
+        final rangeStart = DateTime(today.year, today.month, today.day);
+        final rangeEnd = DateTime(today.year, today.month, today.day, 23, 59, 59);
+        final summaries = await ApiService().getDailySummaries(userId, rangeStart, rangeEnd);
+        if (summaries != null && summaries.isNotEmpty) {
+          // Find today's summary by matching the year, month, and day in local time
+          Map<String, dynamic>? todaySummary;
+          for (final summary in summaries) {
+            final dateStr = summary['date'] as String?;
+            if (dateStr != null) {
+              final parsedDate = DateTime.tryParse(dateStr)?.toLocal();
+              if (parsedDate != null &&
+                  parsedDate.year == today.year &&
+                  parsedDate.month == today.month &&
+                  parsedDate.day == today.day) {
+                todaySummary = summary;
+                break;
+              }
+            }
+          }
+
+          // Fallback to the latest summary in the range if no exact match is found
+          todaySummary ??= summaries.last;
+
+          currentIntake = (todaySummary['consumed'] as num?)?.round() ?? currentIntake;
+          dailyGoal = (todaySummary['target'] as num?)?.round() ?? dailyGoal;
+        }
+      }
+    } catch (e) {
+      Console.log(tag: "HomeWidget", value: "Error fetching summaries from API: $e");
+    }
+
     // Save data to be read by the native widgets
     await HomeWidget.saveWidgetData<int>('current_intake', currentIntake);
     await HomeWidget.saveWidgetData<int>('daily_goal', dailyGoal);
+    final todayStr = DateTime.now().toIso8601String().substring(0, 10);
+    await HomeWidget.saveWidgetData<String>('last_update_date', todayStr);
 
     // Calculate and save upcoming slot data
     try {

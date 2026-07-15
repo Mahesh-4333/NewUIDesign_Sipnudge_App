@@ -33,6 +33,10 @@ class ProfileCubit extends Cubit<ProfileState> {
                 title: "Sipnudge Bottle",
               ),
               ProfileMenuItem(
+                iconPath: "assets/personalinfo.png",
+                title: "Connect Wi-Fi",
+              ),
+              ProfileMenuItem(
                 iconPath: AssetsPath.calendar,
                 title: "Calendar",
               ),
@@ -44,13 +48,17 @@ class ProfileCubit extends Cubit<ProfileState> {
                 iconPath: "assets/data_analytics_icon.png",
                 title: "Export Log",
               ),
+              ProfileMenuItem(
+                iconPath: "assets/performance.png",
+                title: "Add Millisecond",
+              ),
               // ProfileMenuItem(
-              //   iconPath: "assets/performance.png",
-              //   title: "Add Millisecond",
+              //   iconPath: "assets/drink_rem.png",
+              //   title: "Active Notifications",
               // ),
               ProfileMenuItem(
-                iconPath: "assets/drink_rem.png",
-                title: "Active Notifications",
+                iconPath: "assets/acc_security.png",
+                title: "Account & Security",
               ),
               ProfileMenuItem(
                 iconPath:

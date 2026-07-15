@@ -22,11 +22,23 @@ import 'package:hydrify/services/home_widget_service.dart';
 import 'package:http/http.dart' as http;
 import 'package:permission_handler/permission_handler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:hydrify/services/sync_bus.dart';
 
 part 'ble_state.dart';
 
-class BleCubit extends Cubit<BleState> implements HydrationSync {
-  BleCubit() : super(const BleState());
+class BleCubit extends Cubit<BleState> with WidgetsBindingObserver implements HydrationSync {
+  BleCubit() : super(const BleState()) {
+    SyncBus.instance.addListener(_onSyncComplete);
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  Future<void> _onSyncComplete() async {
+    Console.log(tag: "BLE_Cubit", value: "Sync completed. Reloading hydration value from DB.");
+    final history = await getCurrentDayHistory();
+    emit(state.copyWith(currentHydrationValue: history));
+    _hydrationController.add([]); // triggers UI stream update
+  }
+
   final _healthService = HealthService();
   final _hydrationController =
       StreamController<List<HydrationEntry>>.broadcast();
@@ -43,6 +55,7 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
   final Guid resetUUID = Guid("6E400008-B5A3-F393-E0A9-E50E24DCCA9E");
 
   final Guid rtcSyncUUID = Guid("6E400004-B5A3-F393-E0A9-E50E24DCCA9E");
+  final Guid wifiProvUUID = Guid("6E400009-B5A3-F393-E0A9-E50E24DCCA9E");
 
   BluetoothCharacteristic? _dataChar;
   BluetoothCharacteristic? _ackChar;
@@ -52,6 +65,7 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
   BluetoothCharacteristic? _configChar;
   BluetoothCharacteristic? _resetChar;
   BluetoothCharacteristic? _rtcSyncChar;
+  BluetoothCharacteristic? _wifiProvChar;
 
   StreamSubscription<List<ScanResult>>? _scanSub;
   StreamSubscription<BluetoothConnectionState>? _connectionSub;
@@ -65,6 +79,9 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
   StreamSubscription? _hydrationGoalDataSub;
   StreamSubscription? _hydrationSlotsSub;
   StreamSubscription? _hydration30DaysSub;
+  StreamSubscription? _wifiProvSub;
+
+  Completer<WifiProvResponse>? _wifiProvCompleter;
 
   String? savedDeviceName;
   String? savedDeviceId;
@@ -402,7 +419,8 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
       _scanRestartTimer = null;
       if (!_scanCancelled && state.status == BleStatus.scanning) {
         Console.log(
-            tag: '[BLE_Cubit] Scan timeout (32s) — restarting scan for last device',
+            tag:
+                '[BLE_Cubit] Scan timeout (32s) — restarting scan for last device',
             value: 'BLE_Cubit');
         _scanForLastDevice();
       }
@@ -545,6 +563,8 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
 
   @override
   Future<void> close() {
+    SyncBus.instance.removeListener(_onSyncComplete);
+    WidgetsBinding.instance.removeObserver(this);
     _watchdogTimer?.cancel();
     _scanRestartTimer?.cancel();
     _scanSub?.cancel();
@@ -553,6 +573,78 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
     _clearCharacteristicSubscriptions();
     _hydrationController.close();
     return super.close();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState lifecycleState) {
+    if (lifecycleState == AppLifecycleState.resumed) {
+      Console.log(
+          tag: "BLE_Cubit",
+          value: "App resumed. Verifying BLE connection status...");
+      _verifyConnectionStatus();
+    }
+  }
+
+  Future<void> _verifyConnectionStatus() async {
+    final connectedDevices = FlutterBluePlus.connectedDevices;
+    
+    // Find if our saved/last device is currently connected
+    BluetoothDevice? connectedDevice;
+    for (var device in connectedDevices) {
+      bool match = false;
+      if (savedDeviceId != null && savedDeviceId!.isNotEmpty) {
+        match = (device.remoteId.str == savedDeviceId);
+      } else if (savedDeviceName != null && savedDeviceName!.isNotEmpty) {
+        match = (device.platformName == savedDeviceName);
+      }
+      if (match) {
+        connectedDevice = device;
+        break;
+      }
+    }
+
+    if (connectedDevice != null) {
+      // The device is physically/OS-level connected.
+      if (state.status != BleStatus.connected || state.isServiceDiscoveryDone != true) {
+        Console.log(
+            tag: "BLE_Cubit",
+            value: "Device is connected at OS level, but Cubit state is ${state.status}. Syncing state and discovering services.");
+        // Make sure we listen to its connection changes
+        _listenToConnection(connectedDevice);
+        
+        // Discover services and update status
+        emit(state.copyWith(
+          status: BleStatus.connecting,
+          message: "Restoring connection to ${connectedDevice.platformName}...",
+        ));
+        await _discoverServices(connectedDevice);
+      } else {
+        Console.log(
+            tag: "BLE_Cubit",
+            value: "Device is connected and Cubit state matches.");
+      }
+    } else {
+      // The device is NOT connected.
+      if (state.status == BleStatus.connected) {
+        Console.log(
+            tag: "BLE_Cubit",
+            value: "Cubit state is connected, but device is not in connectedDevices. Updating state to disconnected.");
+        
+        _isConnecting = false;
+        _clearCharacteristicSubscriptions();
+        emit(state.copyWith(
+          status: BleStatus.disconnected,
+          isServiceDiscoveryDone: false,
+          message: "Device disconnected",
+          scannedDevices: [],
+        ));
+        
+        // Trigger scan to reconnect
+        if (savedDeviceId != null || savedDeviceName != null) {
+          _scanForLastDevice();
+        }
+      }
+    }
   }
 
   /// ✅ Completely resets the BLE service and restarts it.
@@ -581,11 +673,12 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
     _scanCancelled = false;
     _scanRetryCount = 0;
 
-    final wasFirstConnection = (savedDeviceId == null && savedDeviceName == null);
+    final wasFirstConnection =
+        (savedDeviceId == null && savedDeviceName == null);
     emit(BleState(
-        status: BleStatus.initializing,
-        message: "Reinitializing...",
-        isFirstConnection: wasFirstConnection,
+      status: BleStatus.initializing,
+      message: "Reinitializing...",
+      isFirstConnection: wasFirstConnection,
     ));
 
     // 2. Start fresh
@@ -656,11 +749,22 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
     ));
 
     try {
-      // ✅ Increased timeout: iOS sometimes needs 10-15 s on first connect
-      await device.connect(
-        autoConnect: false,
-        timeout: const Duration(seconds: 15),
-      );
+      // ✅ On iOS: autoConnect=true delegates reconnection to CoreBluetooth (OS level).
+      //    This ensures the device reconnects even when the Dart isolate is suspended
+      //    in the background (after ~5 min iOS kills Dart timers, but CoreBluetooth lives on).
+      // ✅ On Android: autoConnect=false with a timeout is the standard approach.
+      if (Platform.isIOS) {
+        // ✅ On iOS: autoConnect=true — CoreBluetooth manages reconnection at OS level.
+        //    mtu: null is required — flutter_blue_plus defaults mtu to 512 which
+        //    conflicts with autoConnect=true ('(mtu == null) || !autoConnect' assertion).
+        await device.connect(autoConnect: true, mtu: null);
+      } else {
+        // ✅ On Android: autoConnect=false with a timeout is the standard approach.
+        await device.connect(
+          autoConnect: false,
+          timeout: const Duration(seconds: 15),
+        );
+      }
       await device.connectionState
           .where((s) => s == BluetoothConnectionState.connected)
           .first;
@@ -735,6 +839,7 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
             if (c.uuid == water30DaysDataUUID) _hydration30DaysChar = c;
             if (c.uuid == configUUID) _configChar = c;
             if (c.uuid == resetUUID) _resetChar = c;
+            if (c.uuid == wifiProvUUID) _wifiProvChar = c;
           }
 
           // Setup notifications and log characteristic status
@@ -762,14 +867,19 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
                 charName = " [30Days]";
               else if (c.uuid == configUUID)
                 charName = " [Config]";
-              else if (c.uuid == resetUUID) charName = " [Reset]";
+              else if (c.uuid == resetUUID)
+                charName = " [Reset]";
+              else if (c.uuid == wifiProvUUID) charName = " [WifiProv]";
             }
 
             final logTag = supported.contains("Notify") ? "✅" : "✍️";
-            print(
-                "$logTag Found Characteristic${charName}: ${c.uuid} | ${supported.join(' | ')}");
+            Console.log(
+                tag: "Found Characteristic",
+                value: "${charName}: ${c.uuid} | ${supported.join(' | ')}");
           } else {
-            print("⛔ Characteristic ${c.uuid}: No common properties");
+            Console.log(
+                tag: "Characteristic",
+                value: "${c.uuid} | No common properties");
           }
         }
       }
@@ -777,7 +887,8 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
       // ✅ Clear any old characteristic-specific subscriptions before adding new ones
       _clearCharacteristicSubscriptions();
 
-      // Final availability check for critical characteristics
+      // Final availability check for critical characteristics (Temporarily bypassed for Wi-Fi testing)
+      /*
       if (_dataChar == null || _ackChar == null) {
         String missing = "";
         if (_dataChar == null) missing += " [Data] ";
@@ -804,6 +915,7 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
         _rescan(lastDeviceOnly: false);
         return;
       }
+      */
 
       Console.log(
           tag: "✅ All critical characteristics confirmed.", value: 'BLE_Cubit');
@@ -870,13 +982,10 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
               emit(state.copyWith(currentHydrationValue: updatedHistory));
 
               try {
-                final waterGoal = await SharedPrefsHelper.getWaterGoal() ?? 2500;
-                await HomeWidgetService.updateWidgetData(
-                  currentIntake: updatedHistory.round(),
-                  dailyGoal: waterGoal,
-                );
+                await HomeWidgetService.updateWidgetData();
               } catch (e) {
-                Console.log(tag: "[HomeWidget]", value: "Error updating widget: $e");
+                Console.log(
+                    tag: "[HomeWidget]", value: "Error updating widget: $e");
               }
             } else {
               final history = await getCurrentDayHistory();
@@ -912,6 +1021,15 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
           var slots = _parseHydrationData(data);
           if (slots.isNotEmpty) _hydrationController.add(slots);
           _sendAck(device, sendAckToHydrationSlotsCharacteristic: true);
+        });
+      }
+
+      if (_wifiProvChar != null) {
+        _wifiProvSub = _wifiProvChar!.onValueReceived.listen((value) {
+          final data = String.fromCharCodes(value);
+          Console.log(
+              tag: "⬇️ [WIFI_PROV] Raw Data: $data", value: 'BLE_Cubit');
+          _handleWifiProvNotification(data);
         });
       }
 
@@ -956,8 +1074,18 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
                   tag: "[BLE_Cubit]  enable notify for ${c.uuid}",
                   value: 'BLE_Cubit');
             } catch (e) {
+              final errorStr = e.toString();
+              String diagnostic = "";
+              if (errorStr.contains('apple-code: 10') ||
+                  errorStr.contains('Attribute could not be found')) {
+                diagnostic =
+                    " | DIAGNOSTIC: iOS CoreBluetooth cannot find the CCCD (0x2902) descriptor for this characteristic. "
+                    "This usually happens due to iOS caching stale GATT services (restart Bluetooth/device to clear cache), "
+                    "or because the peripheral firmware declared the Notify/Indicate property but did not add the CCCD descriptor to the database.";
+              }
               Console.log(
-                  tag: "[BLE_Cubit] Failed to enable notify for ${c.uuid}: $e",
+                  tag:
+                      "[BLE_Cubit] Failed to enable notify for ${c.uuid}: $e$diagnostic",
                   value: 'BLE_Cubit');
             }
           }
@@ -989,6 +1117,9 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
   // Data parsing and ACK
   // ---------------------------------------------------------------------------
 
+  // Debounce guard: update widget from DATA_CHAR at most once per 60 seconds.
+  DateTime? _lastWidgetUpdateFromDataChar;
+
   void _parseData(String data) {
     final parts = data.split(';');
     int? battery;
@@ -998,6 +1129,7 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
     double? temp;
     double? bqTemp;
     DateTime? ts;
+    int? dailyTotalMl; // parsed from daily_total_ml key
     Console.log(tag: "Raw TS from bottle parts: $parts", value: 'BLE_Cubit');
     for (var p in parts) {
       final kv = p.split('=');
@@ -1027,6 +1159,11 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
             tag: "Raw TS from bottle_temp:  $temp ", value: 'BLE_Cubit');
       } else if (key == 'bq_temp') {
         bqTemp = double.tryParse(value);
+      } else if (key == 'daily_total_ml') {
+        // The bottle reports today's total in every DATA_CHAR packet.
+        // We use this to keep the home widget current without waiting
+        // for a full 30-day sync (6E400006).
+        dailyTotalMl = int.tryParse(value);
       } else if (key == 'ts') {
         String tsStr = value;
         Console.log(
@@ -1065,6 +1202,32 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
         bqTemp: bqTemp,
         ts: ts,
         bottleData: data));
+
+    // Update the home widget with today's total from DATA_CHAR.
+    // Debounce: at most once per 60 seconds so we don't exhaust WidgetKit budget.
+    if (dailyTotalMl != null && dailyTotalMl > 0) {
+      final now = DateTime.now();
+      final lastUpdate = _lastWidgetUpdateFromDataChar;
+      if (lastUpdate == null || now.difference(lastUpdate).inSeconds >= 60) {
+        _lastWidgetUpdateFromDataChar = now;
+        _updateWidgetFromDailyTotal(dailyTotalMl);
+      }
+    }
+  }
+
+  /// Updates the home widget from DATA_CHAR's daily_total_ml field.
+  /// Called at most once per 60 seconds (see _lastWidgetUpdateFromDataChar).
+  Future<void> _updateWidgetFromDailyTotal(int dailyTotalMl) async {
+    try {
+      await HomeWidgetService.updateWidgetData();
+      Console.log(
+          tag: "[HomeWidget] Widget updated from DATA_CHAR",
+          value: 'BLE_Cubit');
+    } catch (e) {
+      Console.log(
+          tag: "[HomeWidget] Error updating widget from DATA_CHAR: $e",
+          value: 'BLE_Cubit');
+    }
   }
 
   List<HydrationEntry> _parseHydrationData(String payload) {
@@ -1293,16 +1456,27 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
 
   void _listenToConnection(BluetoothDevice device) {
     _connectionSub?.cancel();
-    _connectionSub = device.connectionState.listen((stateChange) {
+    _connectionSub = device.connectionState.listen((stateChange) async {
       switch (stateChange) {
         case BluetoothConnectionState.connected:
+          // ✅ Always re-discover services on every connect event.
+          //    On iOS with autoConnect=true, CoreBluetooth can silently reconnect
+          //    the device while the app is in background. When the app resumes,
+          //    this fires and we must re-subscribe to all characteristics
+          //    because iOS drops all notification subscriptions after disconnect.
+          Console.log(
+              tag:
+                  '[BLE_Cubit] Connected (or reconnected) — re-discovering services',
+              value: 'BLE_Cubit');
           emit(state.copyWith(
             status: BleStatus.connected,
             message: "Connected to ${device.platformName}",
           ));
+          _clearCharacteristicSubscriptions();
+          await _discoverServices(device);
           break;
         case BluetoothConnectionState.disconnected:
-          // ✅ Clear the connecting guard so the next scan can reconnect
+          // ✅ Clear the connecting guard so the next connection attempt is allowed
           _isConnecting = false;
           _clearCharacteristicSubscriptions();
           emit(state.copyWith(
@@ -1312,11 +1486,12 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
             scannedDevices: [],
           ));
           Console.log(
-              tag:
-                  '[BLE_Cubit] Device disconnected — triggering reconnect scan',
-              value: 'BLE_Cubit');
-          if (savedDeviceId != null || savedDeviceName != null) {
-            // ✅ Trigger IMMEDIATE scan bypassing the _rescan back-off delay
+              tag: '[BLE_Cubit] Device disconnected', value: 'BLE_Cubit');
+          // ✅ On iOS with autoConnect=true, CoreBluetooth will reconnect automatically
+          //    in the background — no need to trigger a Dart-level scan.
+          //    On Android, fall back to _scanForLastDevice() as before.
+          if (Platform.isAndroid &&
+              (savedDeviceId != null || savedDeviceName != null)) {
             _scanForLastDevice();
           }
           break;
@@ -1364,7 +1539,7 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
       // 2. Sync Pending Config Data
       final pendingConfig = await SharedPrefsHelper.getPendingConfigData();
       Console.log(
-          tag: "BLE_Cubit", value: "Sending pending config data: $_configChar");
+          tag: "BLE_Cubit", value: "Sending pending config data (UUID: ${_configChar?.uuid})");
       if (pendingConfig != null &&
           pendingConfig.isNotEmpty &&
           _configChar != null) {
@@ -1414,6 +1589,55 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
         //   commandSentTimestamp: DateTime.now().millisecondsSinceEpoch,
         //   lastCommandSent: 'hydrationSlots',
         // ));
+      }
+      // 4. Sync Pending Wi-Fi Provisioning
+      final pendingWifi = await SharedPrefsHelper.getPendingWifiProvData();
+      Console.log(
+          tag: "BLE_Cubit",
+          value: "Sending pending Wi-Fi provisioning data: $pendingWifi");
+      final freshWifiProvChar = await _getFreshCharacteristic(wifiProvUUID);
+      if (pendingWifi != null &&
+          pendingWifi.isNotEmpty &&
+          freshWifiProvChar != null) {
+        try {
+          Console.log(
+              tag: "BLE_Cubit",
+              value: "Sending pending Wi-Fi provisioning data: $pendingWifi");
+
+          if (freshWifiProvChar.properties.notify ||
+              freshWifiProvChar.properties.indicate) {
+            try {
+              await freshWifiProvChar.setNotifyValue(true);
+              Console.log(
+                  tag: "BLE_Cubit",
+                  value:
+                      "Enabled notify for wifiProvChar in _flushPendingSlots");
+            } catch (e) {
+              final errorStr = e.toString();
+              String diagnostic = "";
+              if (errorStr.contains('apple-code: 10') ||
+                  errorStr.contains('Attribute could not be found')) {
+                diagnostic =
+                    " | DIAGNOSTIC: iOS CoreBluetooth cannot find the CCCD (0x2902) descriptor for wifiProvChar. "
+                    "Check for stale iOS BLE cache or ensure peripheral firmware includes the CCCD descriptor.";
+              }
+              Console.log(
+                  tag:
+                      "Failed to enable notify for wifiProvChar: $e$diagnostic",
+                  value: 'BLE_Cubit');
+            }
+          }
+
+          final bool writeWithoutResp = !freshWifiProvChar.properties.write &&
+              freshWifiProvChar.properties.writeWithoutResponse;
+          await freshWifiProvChar.write(utf8.encode(pendingWifi),
+              withoutResponse: writeWithoutResp);
+          await SharedPrefsHelper.clearPendingWifiProvData();
+        } catch (e) {
+          Console.log(
+              tag: "Failed to send pending Wi-Fi provisioning data: $e",
+              value: 'BLE_Cubit');
+        }
       }
     } catch (e) {
       print('============> error ${e.toString()}');
@@ -1607,11 +1831,14 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
     _hydrationGoalDataSub?.cancel();
     _hydrationSlotsSub?.cancel();
     _hydration30DaysSub?.cancel();
+    _wifiProvSub?.cancel();
 
     _dataSub = null;
     _hydrationGoalDataSub = null;
     _hydrationSlotsSub = null;
     _hydration30DaysSub = null;
+    _wifiProvSub = null;
+    _wifiProvChar = null;
   }
 
   @override
@@ -1729,5 +1956,236 @@ class BleCubit extends Cubit<BleState> implements HydrationSync {
 
   void triggerRefresh() {
     emit(state.copyWith(refreshTrigger: state.refreshTrigger + 1));
+  }
+
+  void _handleWifiProvNotification(String data) {
+    if (_wifiProvCompleter == null || _wifiProvCompleter!.isCompleted) {
+      Console.log(
+          tag:
+              "[WIFI_PROV] Notification received but no pending completer: $data",
+          value: "BLE_Cubit");
+      return;
+    }
+
+    String cleanedData = data.trim();
+    final firstBrace = cleanedData.indexOf('{');
+    final lastBrace = cleanedData.lastIndexOf('}');
+    if (firstBrace != -1 && lastBrace != -1 && lastBrace > firstBrace) {
+      cleanedData = cleanedData.substring(firstBrace, lastBrace + 1);
+    }
+
+    try {
+      final Map<String, dynamic> json = jsonDecode(cleanedData);
+      final response = WifiProvResponse.fromJson(json);
+      _wifiProvCompleter!.complete(response);
+      _wifiProvCompleter = null;
+    } catch (e) {
+      Console.log(
+          tag:
+              "[WIFI_PROV] Error parsing notification JSON (original: '$data', cleaned: '$cleanedData'): $e",
+          value: "BLE_Cubit");
+      _wifiProvCompleter!.complete(WifiProvResponse(
+        result: 'error',
+        reason: 'bad_json',
+      ));
+      _wifiProvCompleter = null;
+    }
+  }
+
+  Future<WifiProvResponse> provisionWifi({
+    required int priority,
+    String? ssid,
+    String? pass,
+    String? userId,
+  }) async {
+    // Build request payload
+    final Map<String, dynamic> request = {};
+    if (userId != null && userId.isNotEmpty) {
+      request['userId'] = userId;
+    }
+    if (ssid != null && ssid.isNotEmpty) {
+      request['ssid'] = ssid;
+      request['priority'] = priority;
+      request['pass'] = pass ?? '';
+    }
+
+    final jsonPayload = jsonEncode(request);
+
+    // Save to shared preferences as pending wifi provisioning data
+    try {
+      await SharedPrefsHelper.setPendingWifiProvData(jsonPayload);
+      Console.log(
+          tag:
+              "[WIFI_PROV] Saved pending Wi-Fi config to SharedPreferences: $jsonPayload",
+          value: "BLE_Cubit");
+    } catch (e) {
+      Console.log(
+          tag: "[WIFI_PROV] Failed to save config to SharedPreferences: $e",
+          value: "BLE_Cubit");
+    }
+
+    final freshWifiProvChar = await _getFreshCharacteristic(wifiProvUUID);
+    if (freshWifiProvChar == null) {
+      return WifiProvResponse(
+        result: 'saved_pending',
+        reason:
+            'Device not connected. Configuration saved and will be sent when the bottle connects.',
+      );
+    }
+
+    // Cancel any previous pending completer
+    if (_wifiProvCompleter != null && !_wifiProvCompleter!.isCompleted) {
+      _wifiProvCompleter!.complete(WifiProvResponse(
+        result: 'error',
+        reason: 'Operation superseded by new request',
+      ));
+    }
+    _wifiProvCompleter = Completer<WifiProvResponse>();
+
+    try {
+      Console.log(
+          tag: "BLE_Cubit",
+          value: "Sending Wi-Fi provisioning data directly: $jsonPayload");
+
+      if (freshWifiProvChar.properties.notify ||
+          freshWifiProvChar.properties.indicate) {
+        try {
+          await freshWifiProvChar.setNotifyValue(true);
+          Console.log(
+              tag: "BLE_Cubit",
+              value: "Enabled notify for wifiProvChar in provisionWifi");
+        } catch (e) {
+          final errorStr = e.toString();
+          String diagnostic = "";
+          if (errorStr.contains('apple-code: 10') ||
+              errorStr.contains('Attribute could not be found')) {
+            diagnostic =
+                " | DIAGNOSTIC: iOS CoreBluetooth cannot find the CCCD (0x2902) descriptor for wifiProvChar. "
+                "Check for stale iOS BLE cache or ensure peripheral firmware includes the CCCD descriptor.";
+          }
+          Console.log(
+              tag:
+                  "Failed to enable notify for wifiProvChar in provisionWifi: $e$diagnostic",
+              value: 'BLE_Cubit');
+        }
+      }
+
+      final bool writeWithoutResp = !freshWifiProvChar.properties.write &&
+          freshWifiProvChar.properties.writeWithoutResponse;
+
+      await freshWifiProvChar.write(
+        utf8.encode(jsonPayload),
+        withoutResponse: writeWithoutResp,
+      ); // Successfully written, clear the pending config
+      await SharedPrefsHelper.clearPendingWifiProvData();
+
+      // Return the future with a 20-second timeout
+      return await _wifiProvCompleter!.future.timeout(
+        const Duration(seconds: 20),
+        onTimeout: () {
+          _wifiProvCompleter = null;
+          return WifiProvResponse(
+            result: 'fail',
+            reason: 'timeout',
+            saved: false,
+            savedUserId: false,
+          );
+        },
+      );
+    } catch (e) {
+      _wifiProvCompleter = null;
+      Console.log(
+          tag: "[WIFI_PROV] Error sending Wi-Fi provisioning: $e",
+          value: "BLE_Cubit");
+      return WifiProvResponse(
+        result: 'error',
+        reason: e.toString(),
+      );
+    }
+  }
+
+  Future<BluetoothCharacteristic?> _getFreshCharacteristic(Guid charUuid) async {
+    BluetoothDevice? device;
+    if (_wifiProvChar != null) {
+      device = _wifiProvChar!.device;
+    } else {
+      final connected = FlutterBluePlus.connectedDevices;
+      if (connected.isNotEmpty) {
+        device = connected.first;
+      }
+    }
+
+    if (device == null) return null;
+
+    try {
+      final services = await device.discoverServices();
+      for (var s in services) {
+        final bool isMainService = (s.uuid == serviceUUID);
+        for (var c in s.characteristics) {
+          // Update the stored reference in cubit so subsequent calls or listeners use the fresh instance
+          if (isMainService) {
+            if (c.uuid == dataUUID) _dataChar = c;
+            if (c.uuid == ackUUID) _ackChar = c;
+            if (c.uuid == hydrationGoalDataUUID) _hydrationGoalDataChar = c;
+            if (c.uuid == rtcSyncUUID) _rtcSyncChar = c;
+            if (c.uuid == hydrationSlotsUUID) _hydrationSlotsChar = c;
+            if (c.uuid == water30DaysDataUUID) _hydration30DaysChar = c;
+            if (c.uuid == configUUID) _configChar = c;
+            if (c.uuid == resetUUID) _resetChar = c;
+            if (c.uuid == wifiProvUUID) _wifiProvChar = c;
+          }
+          if (c.uuid == charUuid) {
+            return c;
+          }
+        }
+      }
+    } catch (e) {
+      Console.log(tag: "Error getting fresh characteristic: $e", value: "BLE_Cubit");
+    }
+
+    // Fallback to the currently cached reference if discovery failed
+    return _getTargetCharByUuid(charUuid);
+  }
+
+  BluetoothCharacteristic? _getTargetCharByUuid(Guid uuid) {
+    if (uuid == dataUUID) return _dataChar;
+    if (uuid == ackUUID) return _ackChar;
+    if (uuid == hydrationGoalDataUUID) return _hydrationGoalDataChar;
+    if (uuid == rtcSyncUUID) return _rtcSyncChar;
+    if (uuid == hydrationSlotsUUID) return _hydrationSlotsChar;
+    if (uuid == water30DaysDataUUID) return _hydration30DaysChar;
+    if (uuid == configUUID) return _configChar;
+    if (uuid == resetUUID) return _resetChar;
+    if (uuid == wifiProvUUID) return _wifiProvChar;
+    return null;
+  }
+}
+
+class WifiProvResponse {
+  final String result;
+  final int? priority;
+  final String? ip;
+  final bool? savedUserId;
+  final bool? saved;
+  final String? reason;
+
+  WifiProvResponse({
+    required this.result,
+    this.priority,
+    this.ip,
+    this.savedUserId,
+    this.saved,
+    this.reason,
+  });
+
+  factory WifiProvResponse.fromJson(Map<String, dynamic> json) {
+    return WifiProvResponse(
+      result: json['result'] ?? 'error',
+      priority: json['priority'],
+      ip: json['ip'],
+      savedUserId: json['savedUserId'],
+      saved: json['saved'],
+      reason: json['reason'],
+    );
   }
 }
