@@ -58,6 +58,26 @@ class SharedPrefsHelper {
   static const String _keyUserName = 'user_name';
   static const String _keyLastSummarySyncDate = 'last_summary_sync_date';
   static const String _keyHasShownHomeShowcase = 'has_shown_home_showcase';
+  static const String _keyHasShownLocationPrivacy = 'has_shown_location_privacy';
+  static const String _keyUserLatitude = 'user_latitude';
+  static const String _keyUserLongitude = 'user_longitude';
+  static const String _keyUserType = 'user_type';
+
+  static Future<void> setUserType(String type) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_keyUserType, type);
+    configUpdateStream.add(null);
+  }
+
+  static Future<String> getUserType() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_keyUserType) ?? 'regular';
+  }
+
+  static Future<bool> isPremium() async {
+    final type = await getUserType();
+    return type == 'premium';
+  }
 
   // ----------------------------
   // APP SHUTDOWN (TRIAL RESTRICTION)
@@ -238,6 +258,36 @@ class SharedPrefsHelper {
   static Future<void> setHasShownHomeShowcase(bool value) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(_keyHasShownHomeShowcase, value);
+  }
+
+  static Future<bool> hasShownLocationPrivacy() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool(_keyHasShownLocationPrivacy) ?? false;
+  }
+
+  static Future<void> setHasShownLocationPrivacy(bool value) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_keyHasShownLocationPrivacy, value);
+  }
+
+  static Future<double?> getUserLatitude() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getDouble(_keyUserLatitude);
+  }
+
+  static Future<void> setUserLatitude(double value) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setDouble(_keyUserLatitude, value);
+  }
+
+  static Future<double?> getUserLongitude() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getDouble(_keyUserLongitude);
+  }
+
+  static Future<void> setUserLongitude(double value) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setDouble(_keyUserLongitude, value);
   }
 
   // ----------------------------

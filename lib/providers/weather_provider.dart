@@ -1,5 +1,4 @@
 import 'package:hydrify/helpers/logger.dart';
-import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
@@ -7,6 +6,8 @@ import 'package:geolocator/geolocator.dart';
 import '../helpers/internet_connection_helper.dart';
 import '../services/location_service.dart';
 import '../services/weather_service.dart';
+import '../helpers/shared_pref_helper.dart';
+import '../services/api_service.dart';
 import 'dart:async';
 
 class WeatherProvider extends ChangeNotifier {
@@ -97,6 +98,25 @@ class WeatherProvider extends ChangeNotifier {
         _currentLocation!.latitude,
         _currentLocation!.longitude,
       );
+
+      // Save latitude and longitude in user info and sync with server
+      try {
+        await SharedPrefsHelper.setUserLatitude(_currentLocation!.latitude);
+        await SharedPrefsHelper.setUserLongitude(_currentLocation!.longitude);
+
+        final userId = await SharedPrefsHelper.getUserId();
+        if (userId != null) {
+          await ApiService().syncUserLocation(
+            userId,
+            _currentLocation!.latitude,
+            _currentLocation!.longitude,
+          );
+        }
+      } catch (e) {
+        Console.log(
+            tag: "WEATHER",
+            value: "Error saving/syncing location user info: $e");
+      }
     } on LocationPermissionDeniedException {
       _isLocationPermanentlyDenied = true;
       _error = 'Location permission permanently denied';

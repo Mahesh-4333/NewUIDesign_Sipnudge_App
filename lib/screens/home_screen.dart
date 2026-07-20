@@ -481,7 +481,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               ),
             ],
           ),
-          content:  Text(
+          content: Text(
             'Location permission has been permanently denied.\n\n'
             'To enable weather data and personalized hydration, please go to '
             'Settings and allow location access for this app.',
@@ -489,24 +489,24 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               fontSize: 14,
               height: 1.5,
               color: Color(0xFF555555),
-                     fontFamily: AppFontStyles.urbanistFontFamily,
-            fontVariations: [
-                                  AppFontStyles.fontWeightVariation600,
-                                ],
+              fontFamily: AppFontStyles.urbanistFontFamily,
+              fontVariations: [
+                AppFontStyles.fontWeightVariation600,
+              ],
             ),
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(ctx).pop(),
-              child:  Text(
+              child: Text(
                 'Not Now',
                 style: TextStyle(
                   color: Colors.grey,
                   fontWeight: FontWeight.w500,
-                     fontFamily: AppFontStyles.urbanistFontFamily,
-            fontVariations: [
-                                  AppFontStyles.fontWeightVariation600,
-                                ],
+                  fontFamily: AppFontStyles.urbanistFontFamily,
+                  fontVariations: [
+                    AppFontStyles.fontWeightVariation600,
+                  ],
                 ),
               ),
             ),
@@ -1203,7 +1203,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               ),
             ),
             Positioned(
-              bottom: AppDimensions.dim175.h,
+              bottom: AppDimensions.dim170.h,
               left: AppDimensions.dim184.w,
               child: BlocBuilder<BottleDataCubit, BottleDataState>(
                 buildWhen: (previous, current) =>

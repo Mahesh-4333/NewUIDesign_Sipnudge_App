@@ -387,8 +387,10 @@ class ApiService {
     String userId,
     String date,
     double consumed,
-    bool isPerfect,
-  ) async {
+    bool isPerfect, {
+    double? target,
+    int? dayIndex,
+  }) async {
     try {
       final response = await _dio.patch(
         '/api/database/update-today-consumed',
@@ -397,6 +399,8 @@ class ApiService {
           'date': date,
           'consumed': consumed,
           'isPerfect': isPerfect,
+          if (target != null) 'target': target,
+          if (dayIndex != null) 'dayIndex': dayIndex,
         },
       );
       return response.data['success'] == true;
@@ -630,4 +634,135 @@ class ApiService {
       throw _handleError(e);
     }
   }
+
+  Future<Map<String, dynamic>?> getLeaderboard(String userId) async {
+    try {
+      final response = await _dio.get('/api/database/leaderboard/$userId');
+      if (response.statusCode == 200 && response.data['success'] == true) {
+        return Map<String, dynamic>.from(response.data['data']);
+      }
+      return null;
+    } on DioException catch (e) {
+      Console.log(tag: "APP", value: "Exception in getLeaderboard: $e");
+      return null;
+    }
+  }
+
+  Future<List<Map<String, double>>> getUsersLocations() async {
+    try {
+      final response = await _dio.get('/api/database/users-locations');
+      if (response.statusCode == 200 && response.data['success'] == true) {
+        final List<dynamic> rawList = response.data['data'] ?? [];
+        return rawList.map((item) {
+          final map = item as Map<String, dynamic>;
+          return {
+            'latitude': (map['latitude'] as num).toDouble(),
+            'longitude': (map['longitude'] as num).toDouble(),
+          };
+        }).toList();
+      }
+      return [];
+    } on DioException catch (e) {
+      Console.log(tag: "APP", value: "Exception in getUsersLocations: $e");
+      return [];
+    }
+  }
+
+  Future<bool> syncUserLocation(
+      String userId, double latitude, double longitude) async {
+    try {
+      final response = await _dio.post(
+        '/api/database/sync-user-location',
+        data: {
+          'userId': userId,
+          'latitude': latitude,
+          'longitude': longitude,
+        },
+      );
+      return response.data['success'] == true;
+    } on DioException catch (e) {
+      Console.log(tag: "APP", value: "Exception in syncUserLocation: $e");
+      return false;
+    }
+  }
+
+  // Fetch active subscription plans from the backend
+  Future<List<dynamic>?> getSubscriptionPlans() async {
+    try {
+      final response = await _dio.get('/api/products', queryParameters: {'type': 'subscription', 'active': 'true'});
+      if (response.statusCode == 200) {
+        return response.data['data'] as List<dynamic>?;
+      }
+      return null;
+    } on DioException catch (e) {
+      Console.log(
+          tag: "APP",
+          value: "Exception occurred : getSubscriptionPlans || ${e.toString()} ");
+      return null;
+    }
+  }
+
+  // Create a new subscription on the backend
+  Future<Map<String, dynamic>?> createSubscription({
+    required String userId,
+    required String planId,
+    required String billingCycle,
+    required double price,
+    required String gatewaySubscriptionId,
+  }) async {
+    try {
+      final response = await _dio.post(
+        '/api/subscriptions',
+        data: {
+          'userId': userId,
+          'planId': planId,
+          'billingCycle': billingCycle,
+          'price': price,
+          'gatewaySubscriptionId': gatewaySubscriptionId,
+        },
+      );
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        return response.data as Map<String, dynamic>?;
+      }
+      return null;
+    } on DioException catch (e) {
+      Console.log(
+          tag: "APP",
+          value: "Exception occurred : createSubscription || ${e.toString()} ");
+      return null;
+    }
+  }
+
+  // Cancel an active subscription
+  Future<Map<String, dynamic>?> cancelSubscription(String subscriptionId) async {
+    try {
+      final response = await _dio.post('/api/subscriptions/$subscriptionId/cancel');
+      if (response.statusCode == 200) {
+        return response.data as Map<String, dynamic>?;
+      }
+      return null;
+    } on DioException catch (e) {
+      Console.log(
+          tag: "APP",
+          value: "Exception occurred : cancelSubscription || ${e.toString()} ");
+      return null;
+    }
+  }
+
+  // Get active subscriptions for a user
+  Future<Map<String, dynamic>?> getUserSubscriptions(String userId) async {
+    try {
+      final response = await _dio.get('/api/subscriptions/user/$userId');
+      if (response.statusCode == 200) {
+        return response.data as Map<String, dynamic>?;
+      }
+      return null;
+    } on DioException catch (e) {
+      Console.log(
+          tag: "APP",
+          value: "Exception occurred : getUserSubscriptions || ${e.toString()} ");
+      return null;
+    }
+  }
 }
+

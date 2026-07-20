@@ -83,6 +83,39 @@ class PreferencesCubit extends Cubit<PreferencesState> {
     emit(state.copyWith(uvCleaning: value));
   }
 
+  /// Map haptic intensity label → float and persist
+  void setHapticIntensity(String label) {
+    final double strength = switch (label) {
+      'Low' => 0.25,
+      'High' => 1.0,
+      _ => 0.75, // Medium
+    };
+    SharedPrefsHelper.updateAndSaveDeviceConfig(vibrationStrength: strength);
+    emit(state.copyWith(
+      hapticIntensity: label,
+      vibrationStrength: strength,
+    ));
+  }
+
+  /// Map LED brightness label → float and persist
+  void setLedBrightness(String label) {
+    final double intensity = switch (label) {
+      'Dim' => 0.3,
+      'Bright' => 1.0,
+      _ => 0.7, // Medium
+    };
+    SharedPrefsHelper.updateAndSaveDeviceConfig(ledIntensity: intensity);
+    emit(state.copyWith(
+      ledBrightness: label,
+      ledIntensity: intensity,
+    ));
+  }
+
+  /// Store UV speed choice
+  void setUvSpeed(String label) {
+    emit(state.copyWith(uvSpeed: label));
+  }
+
   void toggleRingtoneFeedback(bool value) async {
     var allSlots = await DatabaseHelper().getAllSlots();
     NotificationService().resetAllHydrationReminders(allSlots);

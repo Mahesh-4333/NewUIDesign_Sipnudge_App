@@ -21,12 +21,12 @@ import 'package:hydrify/helpers/shared_pref_helper.dart';
 import 'package:hydrify/screens/ringtone_screen.dart';
 import 'package:hydrify/screens/user_info_daily_goal_screen.dart';
 import 'package:hydrify/screens/widgets/preferences_widgets/color_gradient_slider.dart';
-import 'package:hydrify/screens/widgets/preferences_widgets/custom_slider_tile.dart';
 import 'package:hydrify/screens/widgets/preferences_widgets/custom_toggle_tile.dart';
 import 'package:hydrify/screens/widgets/preferences_widgets/menu_item_tile.dart';
 import 'package:hydrify/screens/widgets/preferences_widgets/preference_card.dart';
 import 'package:hydrify/screens/widgets/preferences_widgets/section_header.dart';
 import 'package:hydrify/screens/widgets/preferences_widgets/erase_data_dialog.dart';
+import 'package:hydrify/screens/widgets/preferences_widgets/segmented_choice_tile.dart';
 import 'package:hydrify/services/notification/notification_service.dart';
 import 'package:intl/intl.dart';
 
@@ -153,63 +153,44 @@ class PreferencesPage extends StatelessWidget {
                       const SectionHeader(title: AppStrings.hapticsAndVisuals),
                       PreferenceCard(
                         children: [
-                          CustomSliderTile(
-                            title: AppStrings.vibrationStrength,
-                            value: state.vibrationStrength,
-                            suffix: "%",
-                            sliderPadding: EdgeInsets.only(right: 30.w),
-                            onChanged: (v) => cubit.updateVibrationStrength(v),
-                            onChangeEnd: (v) => cubit.saveVibrationStrength(v),
+                          // Vibration: Haptic Intensity — segmented (Green)
+                          SegmentedChoiceTile(
+                            title: 'Vibration: Haptic Intensity',
+                            options: const ['Low', 'Medium', 'High'],
+                            selectedOption: state.hapticIntensity,
+                            activeColor: const Color(0xFF4CAF50),
+                            onSelected: (v) => cubit.setHapticIntensity(v),
                           ),
                           Divider(
                               height: 1,
                               indent: 20.w,
                               endIndent: 20.w,
                               color: AppColors.stonegray.withOpacity(0.1)),
-                          CustomToggleTile(
-                            title: AppStrings.ledIndicator,
-                            description:
-                                AppStrings.pulseBaseLightDuringHydration,
-                            value: state.ledFeedback,
-                            onChanged: (v) => cubit.toggleLedFeedback(v),
+                          // LED: Notification Light — segmented (Blue)
+                          SegmentedChoiceTile(
+                            title: 'LED: Notification Light',
+                            options: const ['Dim', 'Medium', 'Bright'],
+                            selectedOption: state.ledBrightness,
+                            activeColor: const Color(0xFF4285F4),
+                            onSelected: (v) => cubit.setLedBrightness(v),
                           ),
-                          ColorGradientSlider(
-                            title: AppStrings.selectColorOfLed,
-                            value: state.ledHue,
-                            onChanged: (v) => cubit.updateLedHue(v),
-                          ),
-                          CustomSliderTile(
-                            title: AppStrings.intensityOfLed,
-                            value: state.ledIntensity,
-                            suffix: "%",
-                            hideRightText: true,
-                            gradientColors: [
-                              HSVColor.fromAHSV(
-                                      1.0, state.ledHue * 360, 0.1, 0.95)
-                                  .toColor(),
-                              HSVColor.fromAHSV(
-                                      1.0, state.ledHue * 360, 0.6, 0.9)
-                                  .toColor(),
-                              HSVColor.fromAHSV(
-                                      1.0, state.ledHue * 360, 1.0, 1.0)
-                                  .toColor(),
-                            ],
-                            sliderPadding: EdgeInsets.only(right: 30.w),
-                            thumbColor: HSVColor.fromAHSV(
-                                    1.0, state.ledHue * 360, 1.0, 1.0)
-                                .toColor(),
-                            onChanged: (v) => cubit.updateLedIntensity(v),
-                            onChangeEnd: (v) => cubit.saveLedIntensity(v),
-                          ),
+                          // ColorGradientSlider(
+                          //   title: AppStrings.selectColorOfLed,
+                          //   value: state.ledHue,
+                          //   onChanged: (v) => cubit.updateLedHue(v),
+                          // ),
                           Divider(
                               height: 1,
                               indent: 20.w,
                               endIndent: 20.w,
                               color: AppColors.stonegray.withOpacity(0.1)),
-                          CustomToggleTile(
-                            title: AppStrings.uvCleaning,
-                            value: state.uvCleaning,
-                            onChanged: (v) => cubit.toggleUvCleaning(v),
+                          // UV Cleaning speed — segmented (Purple)
+                          SegmentedChoiceTile(
+                            title: 'UV Cleaning',
+                            options: const ['Normal', 'Fast'],
+                            selectedOption: state.uvSpeed,
+                            activeColor: const Color(0xFF9C27B0),
+                            onSelected: (v) => cubit.setUvSpeed(v),
                           ),
                         ],
                       ),

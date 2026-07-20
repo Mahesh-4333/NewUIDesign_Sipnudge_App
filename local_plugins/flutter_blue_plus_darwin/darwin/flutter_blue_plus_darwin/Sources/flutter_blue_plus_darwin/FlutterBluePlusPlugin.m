@@ -1153,9 +1153,30 @@ typedef NS_ENUM(NSUInteger, LogLevel) {
 
     [self.methodChannel invokeMethod:@"OnAdapterStateChanged" arguments:response];
 
-    // disconnect all devices
+    // Disconnect all devices ONLY when in foreground.
+    //
+    // CRITICAL FIX (Sipnudge): When iOS relaunches the app in the background
+    // via CoreBluetooth state restoration (bluetoothd), the adapter state
+    // briefly passes through non-poweredOn values. Calling disconnectAllDevices
+    // here cancels the peripheral connection AND writes CCCD=0 to the bottle,
+    // clearing the 6e400006 notification subscription that our native
+    // CBCentralManager (com.sipnudge.background-ble) relies on.
+    // After this, the bottle stops sending data and background sync permanently
+    // fails — causing the "works for 3-4 hours then stops" issue.
+    //
+    // We only disconnect in foreground (UIApplicationStateActive /
+    // UIApplicationStateInactive) where the user toggled Bluetooth off.
+    // In background/suspended states, we let CoreBluetooth handle cleanup
+    // on its own so the native manager's subscriptions are preserved.
     if (self.centralManager.state != CBManagerStatePoweredOn) {
-        [self disconnectAllDevices:@"adapterTurnOff"];
+        UIApplicationState appState = [UIApplication sharedApplication].applicationState;
+        BOOL isInForeground = (appState == UIApplicationStateActive ||
+                               appState == UIApplicationStateInactive);
+        if (isInForeground) {
+            [self disconnectAllDevices:@"adapterTurnOff"];
+        } else {
+            Log(LDEBUG, @"adapterTurnOff skipped — app is in background (preserving BLE subscriptions)");
+        }
     }
 }
 

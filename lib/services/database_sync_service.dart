@@ -287,11 +287,17 @@ class DatabaseSyncService {
         // ── Lightweight today-only update ───────────────────────────────────
         final today = await _dbHelper.getSummaryForDate(DateTime.now());
         if (today != null) {
+          // Send date as UTC midnight string (YYYY-MM-DDT00:00:00.000Z) so the
+          // backend normalises it consistently regardless of server timezone.
+          final dateUtc =
+              '${today.date.toIso8601String().substring(0, 10)}T00:00:00.000Z';
           await _apiService.updateTodayConsumed(
             userId!,
-            today.date.toIso8601String(),
+            dateUtc,
             today.consumed,
             today.isPerfect,
+            target: today.target,
+            dayIndex: today.dayIndex,
           );
         }
         Console.log(tag: "SYNC", value: "Today-only consumed sync complete");

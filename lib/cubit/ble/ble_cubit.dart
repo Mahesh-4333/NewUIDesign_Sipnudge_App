@@ -5,6 +5,7 @@ import 'dart:io';
 
 import 'package:bloc/bloc.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:hydrify/cubit/hydration/hydration_sync.dart';
 import 'package:hydrify/helpers/database_helper.dart';
@@ -30,7 +31,70 @@ class BleCubit extends Cubit<BleState> with WidgetsBindingObserver implements Hy
   BleCubit() : super(const BleState()) {
     SyncBus.instance.addListener(_onSyncComplete);
     WidgetsBinding.instance.addObserver(this);
+    // Listen for native → Dart events (e.g. when native CBCentralManager
+    // connects after a BT toggle or after the 30-second FBP scan times out).
+    if (Platform.isIOS) {
+      _setupNativeBleChannel();
+    }
   }
+
+  /// Registers a handler for incoming MethodChannel calls FROM the native side.
+  /// Currently handles "onNativeConnected" — fired by SipnudgeBackgroundBLE's
+  /// didConnect callback — so the Flutter UI stays in sync with BLE state even
+  /// when flutter_blue_plus's 30-second scan has already timed out (BT toggle).
+  void _setupNativeBleChannel() {
+    const MethodChannel('com.sipnudge.sipnudge/native_ble')
+        .setMethodCallHandler((call) async {
+      if (call.method == 'onNativeConnected') {
+        final uuid = call.arguments as String?;
+        if (uuid == null || uuid.isEmpty) return;
+        Console.log(
+            tag: '[BLE_Cubit] onNativeConnected from Swift uuid=$uuid',
+            value: 'BLE_Cubit');
+        // Only attempt if not already connecting/connected.
+        if (_isConnecting) {
+          Console.log(
+              tag: '[BLE_Cubit] onNativeConnected: ignored because _isConnecting is true',
+              value: 'BLE_Cubit');
+          return;
+        }
+        final alreadyConnected = FlutterBluePlus.connectedDevices.any((d) => d.remoteId.str == uuid);
+        if (alreadyConnected) {
+          Console.log(
+              tag: '[BLE_Cubit] onNativeConnected: device already connected in FBP. Hooking listener.',
+              value: 'BLE_Cubit');
+          final device = FlutterBluePlus.connectedDevices.firstWhere((d) => d.remoteId.str == uuid);
+          _listenToConnection(device);
+          return;
+        }
+        // Create a BluetoothDevice from the UUID and connect via FBP so the
+        // Flutter UI reflects the connection established by the native manager.
+        try {
+          final device = BluetoothDevice.fromId(uuid);
+          Console.log(
+              tag: '[BLE_Cubit] Triggering FBP connect after native connect',
+              value: 'BLE_Cubit');
+          // Stop scan if active before triggering connect
+          if (FlutterBluePlus.isScanningNow) {
+            try {
+              _scanCancelled = true;
+              await FlutterBluePlus.stopScan();
+              _scanSub?.cancel();
+            } catch (_) {}
+          }
+          await _connectToDevice(device);
+          Console.log(
+              tag: '[BLE_Cubit] FBP connected after native trigger successfully',
+              value: 'BLE_Cubit');
+        } catch (e) {
+          Console.log(
+              tag: '[BLE_Cubit] FBP connect after native trigger failed (non-fatal): $e',
+              value: 'BLE_Cubit');
+        }
+      }
+    });
+  }
+
 
   Future<void> _onSyncComplete() async {
     Console.log(tag: "BLE_Cubit", value: "Sync completed. Reloading hydration value from DB.");
@@ -346,6 +410,16 @@ class BleCubit extends Cubit<BleState> with WidgetsBindingObserver implements Hy
             tag: '[BLE_Cubit] Bluetooth re-enabled — restarting scan',
             value: 'BLE_Cubit');
         _scanRetryCount = 0;
+        
+        // Guard: If we are already connected or in the middle of a connection attempt
+        // (e.g. native MethodChannel connection already fired), skip starting a fresh scan.
+        final isConnected = FlutterBluePlus.connectedDevices.any((d) => d.remoteId.str == savedDeviceId);
+        if (_isConnecting || isConnected || state.status == BleStatus.connected) {
+          Console.log(
+              tag: '[BLE_Cubit] Reconnection already in progress or connected. Skipping scan restart.',
+              value: 'BLE_Cubit');
+          return;
+        }
         await onReady();
       }
     });
@@ -353,6 +427,15 @@ class BleCubit extends Cubit<BleState> with WidgetsBindingObserver implements Hy
 
   void _scanForLastDevice() {
     if (savedDeviceId == null && savedDeviceName == null) return;
+
+    // Guard: Do not start a scan if we are already connected/connecting
+    final isConnected = FlutterBluePlus.connectedDevices.any((d) => d.remoteId.str == savedDeviceId);
+    if (_isConnecting || isConnected || state.status == BleStatus.connected) {
+      Console.log(
+          tag: '[BLE_Cubit] _scanForLastDevice: Already connecting or connected. Ignoring scan request.',
+          value: 'BLE_Cubit');
+      return;
+    }
 
     // ✅ Cancel any previously pending restart timer — prevents timer stack-up
     _scanRestartTimer?.cancel();
@@ -428,6 +511,14 @@ class BleCubit extends Cubit<BleState> with WidgetsBindingObserver implements Hy
   }
 
   void _scanForAllDevices() {
+    // Guard: Do not start a scan if we are already connected/connecting
+    if (_isConnecting || state.status == BleStatus.connected) {
+      Console.log(
+          tag: '[BLE_Cubit] _scanForAllDevices: Already connecting or connected. Ignoring scan request.',
+          value: 'BLE_Cubit');
+      return;
+    }
+
     // ✅ Cancel any previously pending restart timer
     _scanRestartTimer?.cancel();
     _scanRestartTimer = null;
@@ -749,22 +840,14 @@ class BleCubit extends Cubit<BleState> with WidgetsBindingObserver implements Hy
     ));
 
     try {
-      // ✅ On iOS: autoConnect=true delegates reconnection to CoreBluetooth (OS level).
-      //    This ensures the device reconnects even when the Dart isolate is suspended
-      //    in the background (after ~5 min iOS kills Dart timers, but CoreBluetooth lives on).
-      // ✅ On Android: autoConnect=false with a timeout is the standard approach.
-      if (Platform.isIOS) {
-        // ✅ On iOS: autoConnect=true — CoreBluetooth manages reconnection at OS level.
-        //    mtu: null is required — flutter_blue_plus defaults mtu to 512 which
-        //    conflicts with autoConnect=true ('(mtu == null) || !autoConnect' assertion).
-        await device.connect(autoConnect: true, mtu: null);
-      } else {
-        // ✅ On Android: autoConnect=false with a timeout is the standard approach.
-        await device.connect(
-          autoConnect: false,
-          timeout: const Duration(seconds: 15),
-        );
-      }
+      // ✅ Use autoConnect: false on both iOS and Android.
+      //    On iOS, since our native Swift manager handles background reconnection,
+      //    we do NOT want FBP's autoConnect: true (which waits for advertisements
+      //    and blocks indefinitely if the native manager has already connected the peripheral).
+      await device.connect(
+        autoConnect: false,
+        timeout: const Duration(seconds: 15),
+      );
       await device.connectionState
           .where((s) => s == BluetoothConnectionState.connected)
           .first;
@@ -782,6 +865,25 @@ class BleCubit extends Cubit<BleState> with WidgetsBindingObserver implements Hy
 
       savedDeviceId = device.remoteId.str;
       savedDeviceName = device.platformName;
+
+      // ✅ Notify native iOS CBCentralManager that flutter_blue_plus has connected.
+      //    The native manager calls retrieveConnectedPeripherals() to get the
+      //    peripheral reference and immediately registers a pending connection.
+      //    Without this call, the native manager may never get the peripheral
+      //    reference and iOS will never wake the app for background BLE events.
+      if (Platform.isIOS) {
+        try {
+          await const MethodChannel('com.sipnudge.sipnudge/native_ble')
+              .invokeMethod('triggerNativeConnect');
+          Console.log(
+              tag: '[BLE_Cubit] Native BLE connect triggered successfully',
+              value: 'BLE_Cubit');
+        } catch (e) {
+          Console.log(
+              tag: '[BLE_Cubit] Native BLE connect trigger failed (non-fatal): $e',
+              value: 'BLE_Cubit');
+        }
+      }
 
       Console.log(
           tag: "device.remoteId.str_123",

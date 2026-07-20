@@ -34,6 +34,8 @@ import 'package:hydrify/screens/user_personal_info_input_screen..dart';
 import 'package:hydrify/screens/widgets/logout_widgets/logout_bottom_sheet.dart';
 import 'package:hydrify/screens/active_notifications_screen.dart';
 import 'package:hydrify/screens/data_and_analytics_screen.dart';
+import 'package:hydrify/screens/leaderboard_screen.dart';
+import 'package:hydrify/screens/subscription_page.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:hydrify/screens/widgets/setting_screen_widget/editableProfileAvatar.dart';
 import 'package:hydrify/screens/widgets/setting_screen_widget/profile_menu_item.dart';
@@ -51,6 +53,7 @@ class _SettingScreenState extends State<SettingScreen> {
   final TextEditingController _nameController = TextEditingController();
   final FocusNode _nameFocusNode = FocusNode();
   String _appVersion = '';
+  bool _isPremium = false;
 
   static const String _userNameKey = 'user_display_name';
 
@@ -61,12 +64,23 @@ class _SettingScreenState extends State<SettingScreen> {
     UserManager().addListener(_onNameChanged);
     _loadSavedName();
     _loadAppVersion();
+    _loadPremiumStatus();
+  }
+
+  Future<void> _loadPremiumStatus() async {
+    final premium = await SharedPrefsHelper.isPremium();
+    if (mounted) {
+      setState(() {
+        _isPremium = premium;
+      });
+    }
   }
 
   Future<void> _loadAppVersion() async {
     final packageInfo = await PackageInfo.fromPlatform();
     setState(() {
-      _appVersion = 'Version : ${packageInfo.version}+${packageInfo.buildNumber}';
+      _appVersion =
+          'Version : ${packageInfo.version}+${packageInfo.buildNumber}';
     });
   }
 
@@ -84,7 +98,8 @@ class _SettingScreenState extends State<SettingScreen> {
     } else {
       finalName = name;
     }
-    _nameController.text = finalName.isNotEmpty ? finalName : AppStrings.username;
+    _nameController.text =
+        finalName.isNotEmpty ? finalName : AppStrings.username;
   }
 
   void _saveNameLocally(String name) async {
@@ -119,6 +134,22 @@ class _SettingScreenState extends State<SettingScreen> {
             break;
           }
 
+        case "Billing & Subscription":
+          {
+            context.read<BottomNavCubit>().hideBar();
+            navigator
+                .push(
+              MaterialPageRoute(
+                builder: (_) => const SubscriptionPage(),
+              ),
+            )
+                .then((value) {
+              context.read<BottomNavCubit>().showBar();
+              _loadPremiumStatus();
+            });
+            break;
+          }
+
         case AppStrings.drinkreminder:
           navigator.push(
             MaterialPageRoute(
@@ -146,7 +177,15 @@ class _SettingScreenState extends State<SettingScreen> {
         case AppStrings.dataAnalytics:
           navigator.push(
             MaterialPageRoute(
-              builder: (_) =>  DataNAnalyticsScreen(),
+              builder: (_) => DataNAnalyticsScreen(),
+            ),
+          );
+          break;
+
+        case "Leaderboard":
+          navigator.push(
+            MaterialPageRoute(
+              builder: (_) => const LeaderboardScreen(),
             ),
           );
           break;
@@ -167,7 +206,8 @@ class _SettingScreenState extends State<SettingScreen> {
           );
           break;
         case "Support Tickets":
-          Navigator.of(context, rootNavigator: true).pushNamed('/help_support_ticket');
+          Navigator.of(context, rootNavigator: true)
+              .pushNamed('/help_support_ticket');
           break;
         case 'faq':
           navigator.push(
@@ -263,6 +303,157 @@ class _SettingScreenState extends State<SettingScreen> {
         const SnackBar(content: Text('Page Coming Soon...')),
       );
     }
+  }
+
+  Widget _buildUpgradeBanner() {
+    if (_isPremium) {
+      return Padding(
+        padding: EdgeInsets.symmetric(horizontal: AppDimensions.dim24.w),
+        child: Container(
+          width: double.infinity,
+          padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 16.h),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16.r),
+            gradient: const LinearGradient(
+              colors: [
+                Color(0xFF007BFF),
+                Color(0xFF004976),
+              ],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: const Color(0xFF007BFF).withOpacity(0.2),
+                blurRadius: 8.r,
+                offset: Offset(0, 4.h),
+              ),
+            ],
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 44.w,
+                height: 44.h,
+                decoration: const BoxDecoration(
+                  color: Colors.white,
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.workspace_premium,
+                  color: Color(0xFF007BFF),
+                  size: 24,
+                ),
+              ),
+              SizedBox(width: 16.w),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      "Elite Upgrade Active",
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 16.sp,
+                        fontFamily: AppFontStyles.urbanistFontFamily,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    SizedBox(height: 4.h),
+                    Text(
+                      "Enjoying ad-free tracking and hydration insights!",
+                      style: TextStyle(
+                        color: Colors.white.withOpacity(0.9),
+                        fontSize: 11.sp,
+                        fontFamily: AppFontStyles.urbanistFontFamily,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return Padding(
+      padding: EdgeInsets.symmetric(horizontal: AppDimensions.dim24.w),
+      child: GestureDetector(
+        onTap: () {
+          final navigator = Navigator.of(context);
+          context.read<BottomNavCubit>().hideBar();
+          navigator
+              .push(
+            MaterialPageRoute(
+              builder: (_) => const SubscriptionPage(),
+            ),
+          )
+              .then((value) {
+            context.read<BottomNavCubit>().showBar();
+            _loadPremiumStatus();
+          });
+        },
+        child: Container(
+          width: double.infinity,
+          padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 16.h),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16.r),
+            gradient: const LinearGradient(
+              colors: [
+                Color(0xFF3393FF),
+                Color(0xFF007BFF),
+              ],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: const Color(0xFF007BFF).withOpacity(0.3),
+                blurRadius: 10.r,
+                offset: Offset(0, 4.h),
+              ),
+            ],
+          ),
+          child: Row(
+            children: [
+              Image.asset(
+                AssetsPath.conftyImg,
+                width: 44.w,
+                height: 44.h,
+              ),
+              SizedBox(width: 16.w),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      "Upgrade Plan Now!",
+                      style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 17.sp,
+                          fontFamily: AppFontStyles.urbanistFontFamily,
+                          fontVariations: [AppFontStyles.boldFontVariation]),
+                    ),
+                    SizedBox(height: 4.h),
+                    Text(
+                      "Enjoy all the benefits and explore more possibilities",
+                      style: TextStyle(
+                          color: Colors.white.withOpacity(0.9),
+                          fontSize: 11.sp,
+                          fontFamily: AppFontStyles.urbanistFontFamily,
+                          fontVariations: [
+                            AppFontStyles.semiBoldFontVariation
+                          ]),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   // 🔥 NEW: Navigate to Bottle Info Screen
@@ -369,7 +560,8 @@ class _SettingScreenState extends State<SettingScreen> {
       builder: (dialogContext) => BackdropFilter(
         filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
         child: Dialog(
-          backgroundColor: const Color(0xFFE8ECEF), // Light greyish background matching screenshot
+          backgroundColor: const Color(
+              0xFFE8ECEF), // Light greyish background matching screenshot
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(24.r),
           ),
@@ -404,10 +596,13 @@ class _SettingScreenState extends State<SettingScreen> {
                       const TextSpan(text: "Disconnecting your "),
                       TextSpan(
                         text: "Sipnudge\nPro",
-                        style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.black),
+                        style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.black),
                       ),
                       const TextSpan(
-                        text: " will stop all real-time\nhydration tracking. Your\nhistorical data will remain, but\nnew consumption will not sync\nuntil re-paired.",
+                        text:
+                            " will stop all real-time\nhydration tracking. Your\nhistorical data will remain, but\nnew consumption will not sync\nuntil re-paired.",
                       ),
                     ],
                   ),
@@ -418,26 +613,29 @@ class _SettingScreenState extends State<SettingScreen> {
                   child: ElevatedButton(
                     onPressed: () async {
                       Navigator.pop(dialogContext); // Close dialog first
-                      
+
                       try {
                         // Unlink logic here
                         await context.read<BleCubit>().unlinkDevice();
-                        
+
                         if (context.mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Device unlinked successfully.')),
+                            const SnackBar(
+                                content: Text('Device unlinked successfully.')),
                           );
                         }
                       } catch (e) {
                         if (context.mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Failed to unlink device.')),
+                            const SnackBar(
+                                content: Text('Failed to unlink device.')),
                           );
                         }
                       }
                     },
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF004976), // Dark blue button
+                      backgroundColor:
+                          const Color(0xFF004976), // Dark blue button
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(24.r),
                       ),
@@ -597,7 +795,8 @@ class _SettingScreenState extends State<SettingScreen> {
                               style: TextStyle(
                                 color: AppColors.bluegray,
                                 fontSize: AppFontStyles.fontSize_18.sp,
-                                fontFamily: AppFontStyles.museoModernoFontFamily,
+                                fontFamily:
+                                    AppFontStyles.museoModernoFontFamily,
                                 fontVariations: [
                                   AppFontStyles.fontWeightVariation600,
                                 ],
@@ -618,6 +817,8 @@ class _SettingScreenState extends State<SettingScreen> {
                       ),
                     ),
                     SizedBox(height: AppDimensions.dim30.h),
+                    _buildUpgradeBanner(),
+                    SizedBox(height: AppDimensions.dim20.h),
 
                     // Menu group 1
                     Padding(

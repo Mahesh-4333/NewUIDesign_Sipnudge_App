@@ -13,6 +13,10 @@ class ProfileCubit extends Cubit<ProfileState> {
                 title: "Personal Info",
               ),
               ProfileMenuItem(
+                iconPath: "assets/performance.png",
+                title: "Billing & Subscription",
+              ),
+              ProfileMenuItem(
                 iconPath: "assets/drink_rem.png",
                 title: "Drink Reminder",
               ),
@@ -43,6 +47,10 @@ class ProfileCubit extends Cubit<ProfileState> {
               ProfileMenuItem(
                 iconPath: "assets/data_analytics_icon.png",
                 title: "Data & Analytics",
+              ),
+              ProfileMenuItem(
+                iconPath: "assets/performance.png",
+                title: "Leaderboard",
               ),
               ProfileMenuItem(
                 iconPath: "assets/data_analytics_icon.png",

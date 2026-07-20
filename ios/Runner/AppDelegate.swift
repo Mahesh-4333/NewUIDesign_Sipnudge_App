@@ -3,6 +3,140 @@ import UIKit
 import CoreBluetooth
 import WidgetKit
 import UserNotifications
+import GoogleMaps
+
+// ─────────────────────────────────────────────────────────────────────────────
+// MARK: - BackgroundSessionManager
+// Manages a URLSession with background configuration for "Fire & Forget" uploads.
+//
+// The iOS system daemon (nsurlsessiond) owns the network task — the app can be
+// suspended immediately after scheduling and the upload will still complete on
+// a slow (0.15 Mbps) connection, preventing the 10-second watchdog from ever
+// triggering and permanently throttling BLE background wakes.
+// ─────────────────────────────────────────────────────────────────────────────
+class BackgroundSessionManager: NSObject, URLSessionDelegate, URLSessionTaskDelegate {
+
+    static let shared = BackgroundSessionManager()
+    static let sessionIdentifier = "com.sipnudge.bg-upload"
+
+    private var session: URLSession!
+
+    /// Stored by AppDelegate when iOS calls handleEventsForBackgroundURLSession.
+    /// Must be called after all background events are delivered so the OS knows
+    /// we are done and can snapshot our app state.
+    var backgroundCompletionHandler: (() -> Void)?
+
+    /// taskIdentifier → temp file URL so we can delete the file after the upload.
+    private var tempFiles: [Int: URL] = [:]
+
+    /// taskIdentifier → (notificationURL, notificationBody) to fire the FCM push
+    /// notification after the main upload succeeds.
+    private var pendingNotifications: [Int: (url: URL, body: Data)] = [:]
+
+    private override init() {
+        super.init()
+        let config = URLSessionConfiguration.background(withIdentifier: BackgroundSessionManager.sessionIdentifier)
+        // isDiscretionary = false → upload ASAP, not at OS discretion (e.g. while charging)
+        config.isDiscretionary = false
+        // sessionSendsLaunchEvents = true → CRITICAL: wakes the app when upload completes
+        config.sessionSendsLaunchEvents = true
+        session = URLSession(configuration: config, delegate: self, delegateQueue: nil)
+        NSLog("[BGSession] BackgroundSessionManager initialized — session: \(BackgroundSessionManager.sessionIdentifier)")
+    }
+
+    /// Schedule a background upload.
+    /// Writes `body` to a temp file (background sessions require file-based uploads,
+    /// not in-memory Data) and hands the task to nsurlsessiond.
+    func scheduleUpload(url: URL,
+                        method: String,
+                        headers: [String: String],
+                        body: Data,
+                        notificationURL: URL? = nil,
+                        notificationBody: Data? = nil) {
+        // Write payload to a uniquely-named temp file
+        let tempDir = FileManager.default.temporaryDirectory
+        let tempFile = tempDir.appendingPathComponent(UUID().uuidString + ".json")
+        do {
+            try body.write(to: tempFile)
+        } catch {
+            NSLog("[BGSession] ❌ Failed to write temp file: \(error.localizedDescription)")
+            return
+        }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = method
+        for (key, value) in headers {
+            request.setValue(value, forHTTPHeaderField: key)
+        }
+
+        let task = session.uploadTask(with: request, fromFile: tempFile)
+        tempFiles[task.taskIdentifier] = tempFile
+
+        if let nURL = notificationURL, let nBody = notificationBody {
+            pendingNotifications[task.taskIdentifier] = (url: nURL, body: nBody)
+        }
+
+        task.resume()
+        NSLog("[BGSession] 📤 Scheduled background upload task #\(task.taskIdentifier) → \(url.absoluteString)")
+    }
+
+    // ── URLSessionTaskDelegate ────────────────────────────────────────────────
+
+    func urlSession(_ session: URLSession,
+                    task: URLSessionTask,
+                    didCompleteWithError error: Error?) {
+        // Always clean up the temp file regardless of success/failure
+        defer {
+            if let tempFile = tempFiles.removeValue(forKey: task.taskIdentifier) {
+                try? FileManager.default.removeItem(at: tempFile)
+                NSLog("[BGSession] 🗑 Deleted temp file for task #\(task.taskIdentifier)")
+            }
+        }
+
+        if let error = error {
+            NSLog("[BGSession] ❌ Task #\(task.taskIdentifier) failed: \(error.localizedDescription)")
+            pendingNotifications.removeValue(forKey: task.taskIdentifier)
+            return
+        }
+
+        let statusCode = (task.response as? HTTPURLResponse)?.statusCode ?? 0
+        NSLog("[BGSession] ✅ Task #\(task.taskIdentifier) completed — HTTP \(statusCode)")
+
+        // Only send the push notification if the main upload returned 200 OK
+        guard statusCode == 200,
+              let pending = pendingNotifications.removeValue(forKey: task.taskIdentifier) else {
+            return
+        }
+
+        // The push notification payload is tiny — fire it as a regular data task.
+        // We are inside an OS-delivered background session callback, so iOS gives us
+        // sufficient time to make this small follow-up request safely.
+        var notifRequest = URLRequest(url: pending.url)
+        notifRequest.httpMethod = "POST"
+        notifRequest.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        notifRequest.httpBody = pending.body
+        URLSession.shared.dataTask(with: notifRequest) { _, _, err in
+            if let err = err {
+                NSLog("[BGSession] ❌ Push notification request failed: \(err.localizedDescription)")
+            } else {
+                NSLog("[BGSession] 📬 Push notification request sent successfully")
+            }
+        }.resume()
+    }
+
+    // ── URLSessionDelegate ────────────────────────────────────────────────────
+
+    /// Called by iOS when all background events for this session have been delivered.
+    /// Calling the stored completion handler tells the OS we have finished processing
+    /// and it may now take a snapshot of our app state and suspend us.
+    func urlSessionDidFinishEvents(forBackgroundURLSession session: URLSession) {
+        NSLog("[BGSession] All background events delivered — calling completion handler")
+        DispatchQueue.main.async { [weak self] in
+            self?.backgroundCompletionHandler?()
+            self?.backgroundCompletionHandler = nil
+        }
+    }
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // MARK: - AppDelegate
@@ -17,13 +151,89 @@ import UserNotifications
         _ application: UIApplication,
         didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
     ) -> Bool {
+        // Register MethodChannel to receive Google Maps API Key dynamically from Dart
+        if let controller = window?.rootViewController as? FlutterViewController {
+            let mapsChannel = FlutterMethodChannel(name: "com.sipnudge.sipnudge/google_maps",
+                                               binaryMessenger: controller.binaryMessenger)
+            mapsChannel.setMethodCallHandler({
+                (call: FlutterMethodCall, result: @escaping FlutterResult) -> Void in
+                if call.method == "setApiKey",
+                   let args = call.arguments as? [String: Any],
+                   let key = args["key"] as? String {
+                    GMSServices.provideAPIKey(key)
+                    result(nil)
+                } else {
+                    result(FlutterMethodNotImplemented)
+                }
+            })
+
+            // ── Native BLE MethodChannel ────────────────────────────────────────
+            // Dart calls "triggerNativeConnect" immediately after flutter_blue_plus
+            // connects so our native CBCentralManager gets the peripheral reference
+            // via retrieveConnectedPeripherals. Without this, the native manager
+            // may miss the peripheral on first launch and never register a pending
+            // connection — causing iOS to never wake the app for BLE events.
+            let bleChannel = FlutterMethodChannel(name: "com.sipnudge.sipnudge/native_ble",
+                                                  binaryMessenger: controller.binaryMessenger)
+            bleChannel.setMethodCallHandler { [weak self] (call, result) in
+                if call.method == "triggerNativeConnect" {
+                    NSLog("[AppDelegate] triggerNativeConnect received from Dart")
+                    self?.bleManager?.connectToSavedDevice()
+                    result(nil)
+                } else {
+                    result(FlutterMethodNotImplemented)
+                }
+            }
+        }
+
         // Register flutter plugins first
         GeneratedPluginRegistrant.register(with: self)
+
+        // Touch BackgroundSessionManager early so its URLSession is registered
+        // BEFORE iOS might deliver any pending background events on this launch.
+        _ = BackgroundSessionManager.shared
 
         // Start the native BLE manager (connects immediately, stays connected)
         bleManager = SipnudgeBackgroundBLE()
 
+        // Wire native-connected callback → MethodChannel event to Dart.
+        // When the native CBCentralManager connects after a BT toggle (or any
+        // scenario where flutter_blue_plus's scan has timed out), this call
+        // triggers the Dart side to issue its own connect via FBP so the UI
+        // stays in sync with the actual BLE state.
+        if let controller = window?.rootViewController as? FlutterViewController {
+            let nativeBleChannel = FlutterMethodChannel(
+                name: "com.sipnudge.sipnudge/native_ble",
+                binaryMessenger: controller.binaryMessenger
+            )
+            bleManager?.onNativeConnected = { uuid in
+                DispatchQueue.main.async {
+                    NSLog("[AppDelegate] onNativeConnected → notifying Dart uuid=\(uuid)")
+                    nativeBleChannel.invokeMethod("onNativeConnected", arguments: uuid)
+                }
+            }
+        }
+
         return super.application(application, didFinishLaunchingWithOptions: launchOptions)
+    }
+
+    /// Called by iOS when background URL session events are ready to be delivered.
+    /// We MUST store the completion handler and call it AFTER all events are processed
+    /// (done inside BackgroundSessionManager.urlSessionDidFinishEvents).
+    /// Failing to call this handler causes memory leaks and prevents iOS from
+    /// taking a proper background snapshot.
+    override func application(
+        _ application: UIApplication,
+        handleEventsForBackgroundURLSession identifier: String,
+        completionHandler: @escaping () -> Void
+    ) {
+        NSLog("[AppDelegate] handleEventsForBackgroundURLSession called: \(identifier)")
+        if identifier == BackgroundSessionManager.sessionIdentifier {
+            BackgroundSessionManager.shared.backgroundCompletionHandler = completionHandler
+        } else {
+            // Unknown session identifier — call immediately to avoid memory leak
+            completionHandler()
+        }
     }
 
     // Required for CoreBluetooth state restoration when the OS relaunches the app
@@ -80,6 +290,17 @@ class SipnudgeBackgroundBLE: NSObject, CBCentralManagerDelegate, CBPeripheralDel
     /// True while the app is in the background — only process data then.
     private var inBackground = false
 
+    /// Called whenever the native CBCentralManager successfully connects to the
+    /// bottle. AppDelegate wires this to a MethodChannel event so the Dart/FBP
+    /// side can also connect and update the UI — essential after a BT toggle
+    /// where flutter_blue_plus's 30-second scan may have already timed out.
+    var onNativeConnected: ((String) -> Void)?
+
+    private func log(_ msg: String) {
+        print(msg)
+        NSLog(msg)
+    }
+
     override init() {
         super.init()
         // CBCentralManagerOptionRestoreIdentifierKey is THE key that tells iOS
@@ -93,7 +314,7 @@ class SipnudgeBackgroundBLE: NSObject, CBCentralManagerDelegate, CBPeripheralDel
                 CBCentralManagerOptionShowPowerAlertKey: false
             ]
         )
-        NSLog("[BG-BLE] Initialized with restore identifier: \(kRestoreIdentifier)")
+        log("[BG-BLE] Initialized with restore identifier: \(kRestoreIdentifier)")
     }
 
     private func writeDebug(_ key: String, _ value: String) {
@@ -105,7 +326,9 @@ class SipnudgeBackgroundBLE: NSObject, CBCentralManagerDelegate, CBPeripheralDel
     func enterBackground() {
         inBackground = true
         NSLog("[BG-BLE] Entered background — native manager active")
-        // Re-connect if somehow disconnected when going to background
+        // Always queue a connection if disconnected, even if BT is off.
+        // CoreBluetooth will preserve this pending connection and attempt to
+        // establish it as soon as Bluetooth is turned back on, waking our app.
         if let p = peripheral, p.state != .connected {
             central.connect(p, options: nil)
         } else if peripheral == nil {
@@ -121,58 +344,90 @@ class SipnudgeBackgroundBLE: NSObject, CBCentralManagerDelegate, CBPeripheralDel
     // ── CBCentralManagerDelegate ──────────────────────────────────────────────
 
     func centralManagerDidUpdateState(_ central: CBCentralManager) {
-        NSLog("[BG-BLE] BT state: \(central.state.rawValue)")
-        if central.state == .poweredOn {
+        log("[BG-BLE] BT state: \(central.state.rawValue)")
+        switch central.state {
+        case .poweredOn:
+            // BT came (back) on — re-establish connection to the bottle.
             connectToSavedDevice()
+        case .poweredOff:
+            // BT was turned off. Clear stale characteristic references so we
+            // don't attempt ATT operations on a closed link. The pending
+            // connect from didDisconnectPeripheral is also cancelled by the OS.
+            // centralManagerDidUpdateState(.poweredOn) will call connectToSavedDevice()
+            // when BT is re-enabled.
+            char30Days = nil
+            charAck = nil
+            log("[BG-BLE] BT powered off — cleared char refs, will reconnect when BT returns")
+        default:
+            break
         }
     }
 
     /// Called when iOS relaunches the app in the background for a BLE event.
     func centralManager(_ central: CBCentralManager, willRestoreState dict: [String: Any]) {
-        NSLog("[BG-BLE] willRestoreState called — restoring connections")
+        log("[BG-BLE] willRestoreState called — restoring connections")
         if let peripherals = dict[CBCentralManagerRestoredStatePeripheralsKey] as? [CBPeripheral] {
             for p in peripherals {
-                NSLog("[BG-BLE] Restored peripheral: \(p.identifier)")
+                log("[BG-BLE] Restored peripheral: \(p.identifier) state=\(p.state.rawValue)")
                 peripheral = p
                 peripheral?.delegate = self
-                // Re-subscribe to the 30-day characteristic if it was already discovered
+                // Re-subscribe to characteristics that were already discovered
                 for service in p.services ?? [] {
                     for char in service.characteristics ?? [] {
                         if char.uuid == kChar30DaysUUID {
                             char30Days = char
-                            // Always force subscription — same reason as didDiscoverCharacteristicsFor
+                            // Always force subscription — even if isNotifying appears true.
+                            // If flutter_blue_plus already set the CCCD, iOS reports isNotifying=true
+                            // on our proxy too, causing us to skip subscription. Forcing it ensures
+                            // our CBCentralManager session is registered as a subscriber independently.
                             p.setNotifyValue(true, for: char)
-                            NSLog("[BG-BLE] willRestoreState: setNotifyValue(true) for 30-day char")
+                            log("[BG-BLE] willRestoreState: setNotifyValue(true) for 30-day char")
                         } else if char.uuid == kCharAckUUID {
                             charAck = char
-                            NSLog("[BG-BLE] willRestoreState: restored charAck")
+                            log("[BG-BLE] willRestoreState: restored charAck")
                         }
                     }
+                }
+                // If the peripheral is not currently connected, issue a pending connect.
+                // CoreBluetooth will fulfil this automatically when the bottle next
+                // wakes up and starts advertising — even if the app is fully suspended.
+                if p.state != .connected {
+                    log("[BG-BLE] willRestoreState: peripheral not connected — issuing pending connect")
+                    central.connect(p, options: nil)
                 }
             }
         }
     }
 
     func centralManager(_ central: CBCentralManager, didConnect peripheral: CBPeripheral) {
-        NSLog("[BG-BLE] Connected to \(peripheral.identifier)")
+        log("[BG-BLE] Connected to \(peripheral.identifier)")
         writeDebug("connected", "connected to \(peripheral.identifier)")
         peripheral.delegate = self
         peripheral.discoverServices([kServiceUUID])
+        // Notify the Dart side so flutter_blue_plus can also connect and the
+        // Flutter UI reflects the connection — critical after BT toggle or when
+        // the 30-second FBP scan has already timed out.
+        onNativeConnected?(peripheral.identifier.uuidString)
     }
 
     func centralManager(_ central: CBCentralManager,
                          didDisconnectPeripheral peripheral: CBPeripheral, error: Error?) {
-        NSLog("[BG-BLE] Disconnected from \(peripheral.identifier) — reconnecting")
+        log("[BG-BLE] Disconnected from \(peripheral.identifier)")
         self.char30Days = nil
+        // Always queue a reconnect immediately.
+        // CoreBluetooth queues connection requests even when state is .poweredOff,
+        // so that when Bluetooth transitions back to .poweredOn, the connection
+        // is automatically retried. If we skipped this while BT was off, we would
+        // have no pending connection when BT comes back on, meaning iOS would
+        // never wake our suspended app in the background.
+        NSLog("[BG-BLE] Registering pending connect for next bottle advertisement")
         central.connect(peripheral, options: nil)
     }
 
     func centralManager(_ central: CBCentralManager,
                          didFailToConnect peripheral: CBPeripheral, error: Error?) {
-        NSLog("[BG-BLE] Failed to connect — retrying in 3s")
-        DispatchQueue.global().asyncAfter(deadline: .now() + 3) { [weak self] in
-            self?.central.connect(peripheral, options: nil)
-        }
+        NSLog("[BG-BLE] Failed to connect — error: \(error?.localizedDescription ?? "none")")
+        central.connect(peripheral, options: nil)
     }
 
     // ── CBPeripheralDelegate ─────────────────────────────────────────────────
@@ -228,56 +483,95 @@ class SipnudgeBackgroundBLE: NSObject, CBCentralManagerDelegate, CBPeripheralDel
     ///   1. bluetooth-central is in UIBackgroundModes  ✅
     ///   2. CBCentralManagerOptionRestoreIdentifierKey is set  ✅
     ///   3. setNotifyValue(true) succeeded  ✅
+    ///
+    /// CRITICAL "Fire & Forget" pattern:
+    ///   A. Begin a background task so iOS doesn't kill us while we pack data.
+    ///   B. Parse the payload and update the App Group (WidgetKit).
+    ///   C. Hand the network upload to BackgroundSessionManager (nsurlsessiond).
+    ///   D. Call endBackgroundTask IMMEDIATELY — the app returns to sleep in <0.1s.
+    ///   → The 10-second watchdog is NEVER triggered regardless of network speed.
     func peripheral(_ peripheral: CBPeripheral,
                     didUpdateValueFor characteristic: CBCharacteristic, error: Error?) {
+
+        // ── A: Begin background task ──────────────────────────────────────────
+        var bgTaskId = UIBackgroundTaskIdentifier.invalid
+        bgTaskId = UIApplication.shared.beginBackgroundTask(withName: "SipnudgeBLEProcess") {
+            // Expiry handler: called only if we somehow exceed the allowed time.
+            // End immediately to avoid a hard force-kill. Should never happen with
+            // Fire & Forget because endBackgroundTask is called in <0.1 seconds below.
+            NSLog("[BG-BLE] ⚠️ Background task expiry handler triggered — ending task defensively")
+            UIApplication.shared.endBackgroundTask(bgTaskId)
+            bgTaskId = .invalid
+        }
+
+        // ── Validate data ─────────────────────────────────────────────────────
         guard error == nil,
               characteristic.uuid == kChar30DaysUUID,
               let data = characteristic.value,
               let payload = String(data: data, encoding: .utf8) else {
             if let e = error { writeDebug("ble_rx", "ERROR: \(e.localizedDescription)") }
+            UIApplication.shared.endBackgroundTask(bgTaskId)
+            bgTaskId = .invalid
             return
         }
 
         writeDebug("ble_rx", "got data len=\(data.count) bg=\(inBackground)")
         NSLog("[BG-BLE] Received 30-day payload (inBackground=\(inBackground)): \(payload.prefix(80))…")
-        
-        // Parse today's consumed value and upload directly to API
+
+        // ── Debug notification: visible on lock screen without Xcode ──────────
+        // This fires IMMEDIATELY when BLE data arrives in background, proving
+        // the OS wake-up is working. Remove once background sync is confirmed.
+        if inBackground {
+            let dbgContent = UNMutableNotificationContent()
+            dbgContent.title = "📶 BG BLE Data Received"
+            dbgContent.body = "Native background sync triggered. Uploading \(data.count) bytes..."
+            dbgContent.sound = .default
+            let dbgReq = UNNotificationRequest(
+                identifier: "bg_ble_rx_\(Int(Date().timeIntervalSince1970))",
+                content: dbgContent,
+                trigger: UNTimeIntervalNotificationTrigger(timeInterval: 1, repeats: false)
+            )
+            UNUserNotificationCenter.current().add(dbgReq, withCompletionHandler: nil)
+            NSLog("[BG-BLE] Debug notification scheduled")
+        }
+
+        // ── B: Parse today's consumed value ───────────────────────────────────
         var todayConsumed = 0
         var todayDate = Calendar.current.startOfDay(for: Date())
         var todayDayIndex = 0
-        
+
         let parts = payload
             .trimmingCharacters(in: .whitespacesAndNewlines)
             .components(separatedBy: "|")
-            
+
         if parts.count >= 2,
            let epochStr = parts.first?.trimmingCharacters(in: .whitespaces),
            let epochNum = Int(epochStr) {
-            
+
             let epochMs = epochStr.count == 13 ? epochNum : epochNum * 1000
             let startDate = Date(timeIntervalSince1970: Double(epochMs) / 1000.0)
             let calendar = Calendar.current
             let today = calendar.startOfDay(for: Date())
-            
+
             var latestDayIndex = -1
             var latestConsumed = 0
-            
+
             for seg in parts.dropFirst() {
                 let s = seg.trimmingCharacters(in: .whitespacesAndNewlines)
                 guard !s.isEmpty, s.lowercased() != "na" else { continue }
-                
+
                 let segParts = s.components(separatedBy: "/")
                 guard segParts.count >= 3,
                       let dayIndex = Int(segParts[0].trimmingCharacters(in: .whitespaces)),
                       let consumed = Double(segParts[2].trimmingCharacters(in: .whitespaces)) else {
                     continue
                 }
-                
+
                 if dayIndex > latestDayIndex {
                     latestDayIndex = dayIndex
                     latestConsumed = Int(consumed)
                 }
-                
+
                 let segDate = calendar.startOfDay(for: startDate.addingTimeInterval(Double(dayIndex) * 86400))
                 if segDate == today {
                     todayConsumed = Int(consumed)
@@ -286,15 +580,15 @@ class SipnudgeBackgroundBLE: NSObject, CBCentralManagerDelegate, CBPeripheralDel
                     break
                 }
             }
-            
+
             if todayConsumed == 0 && latestConsumed > 0 {
                 todayConsumed = latestConsumed
                 todayDate = calendar.startOfDay(for: startDate.addingTimeInterval(Double(latestDayIndex) * 86400))
                 todayDayIndex = latestDayIndex
             }
         }
-        
-        // Update shared App Group UserDefaults so the native Widget can refresh instantly in the background
+
+        // ── Update shared App Group UserDefaults → WidgetKit refreshes instantly ──
         if let appDefaults = UserDefaults(suiteName: kAppGroupId) {
             let storedGoal = UserDefaults.standard.object(forKey: "flutter.water_goal") as? Int
                 ?? appDefaults.object(forKey: "daily_goal") as? Int
@@ -312,7 +606,6 @@ class SipnudgeBackgroundBLE: NSObject, CBCentralManagerDelegate, CBPeripheralDel
                 if lastUpdateDateStr != todayStr {
                     existingIntake = 0
                 }
-                
                 if todayConsumed > existingIntake {
                     appDefaults.set(todayConsumed, forKey: "current_intake")
                     NSLog("[BG-BLE] Natively updated App Group current_intake to \(todayConsumed)")
@@ -321,7 +614,7 @@ class SipnudgeBackgroundBLE: NSObject, CBCentralManagerDelegate, CBPeripheralDel
             appDefaults.set(goal, forKey: "daily_goal")
             appDefaults.set(todayStr, forKey: "last_update_date")
             appDefaults.synchronize()
-            
+
             DispatchQueue.main.async {
                 if #available(iOS 14.0, *) {
                     WidgetCenter.shared.reloadAllTimelines()
@@ -329,24 +622,29 @@ class SipnudgeBackgroundBLE: NSObject, CBCentralManagerDelegate, CBPeripheralDel
                 }
             }
         }
-        
-        // Directly upload on data API
-        uploadTodayDataToAPI(consumed: Double(todayConsumed), date: todayDate, dayIndex: todayDayIndex, deviceId: peripheral.identifier.uuidString)
 
-        // Send ACK back to the bottle so its LED turns off/closes sync session
-        // if let ackChar = charAck {
-        //     let ackData = "ACK".data(using: .utf8)!
-        //     peripheral.writeValue(ackData, for: ackChar, type: .withoutResponse)
-        //     NSLog("[BG-BLE] Sent ACK to bottle inside didUpdateValueFor")
-        //     writeDebug("ble_tx", "sent ACK")
-        // } else {
-        //     NSLog("[BG-BLE] Warning: ACK char not discovered yet, cannot send ACK")
-        // }
+        // ── C: Schedule background upload — Fire & Forget ─────────────────────
+        // Hand the network task to the iOS background daemon (nsurlsessiond).
+        // It will complete the upload independently, even on a 0.15 Mbps connection,
+        // even if the app is fully suspended after step D below.
+        uploadTodayDataViaBackgroundSession(
+            consumed: Double(todayConsumed),
+            date: todayDate,
+            dayIndex: todayDayIndex,
+            deviceId: peripheral.identifier.uuidString
+        )
+
+        // ── D: End background task IMMEDIATELY ────────────────────────────────
+        // The upload is now owned by nsurlsessiond. Signal iOS we are done so the
+        // app goes back to sleep — well under the 10-second watchdog limit.
+        UIApplication.shared.endBackgroundTask(bgTaskId)
+        bgTaskId = .invalid
+        NSLog("[BG-BLE] ✅ Background task ended — app returning to sleep")
     }
 
     // ── Private helpers ───────────────────────────────────────────────────────
 
-    private func uploadTodayDataToAPI(consumed: Double, date: Date, dayIndex: Int, deviceId: String) {
+    private func uploadTodayDataViaBackgroundSession(consumed: Double, date: Date, dayIndex: Int, deviceId: String) {
         guard let userId = UserDefaults.standard.string(forKey: "flutter.user_id")
                 ?? UserDefaults(suiteName: kAppGroupId)?.string(forKey: "flutter.user_id")
                 ?? UserDefaults.standard.string(forKey: "user_id")
@@ -379,56 +677,52 @@ class SipnudgeBackgroundBLE: NSObject, CBCentralManagerDelegate, CBPeripheralDel
             "isPerfect": isPerfect
         ]
 
-        guard let url = URL(string: "https://api.sipnudge.com/api/database/update-today-consumed") else {
+        guard let uploadURL = URL(string: "https://api.sipnudge.com/api/database/update-today-consumed"),
+              let notificationURL = URL(string: "https://api.sipnudge.com/api/database/send-bg-consumed-notification") else {
             NSLog("[BG-BLE] ❌ Invalid URL")
             return
         }
 
-        var request = URLRequest(url: url)
-        request.httpMethod = "PATCH"
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-
         do {
             let jsonData = try JSONSerialization.data(withJSONObject: body, options: [])
-            request.httpBody = jsonData
+            let notificationBody = try JSONSerialization.data(withJSONObject: [
+                "userId": userId,
+                "consumed": consumed
+            ], options: [])
 
-            NSLog("[BG-BLE] 📤 Uploading today's data for user \(userId) (consumed: \(consumed)ml, target: \(goal)ml) to API...")
-            writeDebug("api_tx", "sending \(consumed)ml")
+            NSLog("[BG-BLE] 📤 Scheduling background upload for user \(userId) (consumed: \(consumed)ml, target: \(goal)ml)")
+            writeDebug("api_tx", "scheduling bg upload \(consumed)ml")
 
-            let task = URLSession.shared.dataTask(with: request) { [weak self] data, response, error in
-                if let error = error {
-                    NSLog("[BG-BLE] ❌ API Upload error: \(error.localizedDescription)")
-                    self?.writeDebug("api_tx", "ERROR: \(error.localizedDescription)")
-                    return
-                }
-
-                if let httpResponse = response as? HTTPURLResponse {
-                    NSLog("[BG-BLE] 📥 API Response code: \(httpResponse.statusCode)")
-                    self?.writeDebug("api_tx", "HTTP \(httpResponse.statusCode)")
-                }
-            }
-            task.resume()
+            BackgroundSessionManager.shared.scheduleUpload(
+                url: uploadURL,
+                method: "PATCH",
+                headers: ["Content-Type": "application/json"],
+                body: jsonData,
+                notificationURL: notificationURL,
+                notificationBody: notificationBody
+            )
         } catch {
             NSLog("[BG-BLE] ❌ JSON serialization error: \(error.localizedDescription)")
             writeDebug("api_tx", "JSON_ERR")
         }
     }
 
-    private func connectToSavedDevice() {
+    /// Internal (not private) so AppDelegate can trigger it via MethodChannel.
+    func connectToSavedDevice() {
         let rawUUIDStr = UserDefaults.standard.string(forKey: kPrefsDeviceKey)
-        NSLog("[BG-BLE] Saved device UUID from prefs (key=\(kPrefsDeviceKey)): \(rawUUIDStr ?? "NIL")")
+        log("[BG-BLE] Saved device UUID from prefs (key=\(kPrefsDeviceKey)): \(rawUUIDStr ?? "NIL")")
         writeDebug("uuid", rawUUIDStr ?? "NIL")
 
         guard let uuidStr = rawUUIDStr,
               let uuid = UUID(uuidString: uuidStr) else {
-            NSLog("[BG-BLE] No saved device UUID — waiting for flutter_blue_plus to pair")
+            log("[BG-BLE] No saved device UUID — waiting for flutter_blue_plus to pair")
             return
         }
 
         // 1. Try known peripherals (fastest — already in CoreBluetooth cache)
         let known = central.retrievePeripherals(withIdentifiers: [uuid])
         if let p = known.first {
-            NSLog("[BG-BLE] Found saved peripheral in cache — connecting")
+            log("[BG-BLE] Found saved peripheral in cache — connecting")
             peripheral = p
             peripheral?.delegate = self
             central.connect(p, options: nil)
@@ -438,20 +732,20 @@ class SipnudgeBackgroundBLE: NSObject, CBCentralManagerDelegate, CBPeripheralDel
         // 2. Fallback: already connected to the system (e.g. flutter_blue_plus owns it)
         let connected = central.retrieveConnectedPeripherals(withServices: [kServiceUUID])
         if let p = connected.first(where: { $0.identifier == uuid }) {
-            NSLog("[BG-BLE] Peripheral already connected to system — registering with our manager")
+            log("[BG-BLE] Peripheral already connected to system — registering with our manager")
             peripheral = p
             peripheral?.delegate = self
             central.connect(p, options: nil) // Establish our own manager's connection entry
             return
         }
 
-        NSLog("[BG-BLE] Peripheral \(uuid) not in cache yet — will connect after flutter_blue_plus pairs")
+        log("[BG-BLE] Peripheral \(uuid) not in cache yet — will connect after flutter_blue_plus pairs")
     }
 
     private func updateWidget(from payload: String) {
         // Disabled widget updates here to avoid local state interference.
         // The background BLE sync now uploads today's consumed value directly to the API.
         // The Flutter app will fetch this data upon startup or resume.
-        NSLog("[BG-BLE] updateWidget called (disabled - uploading directly to API instead)")
+        log("[BG-BLE] updateWidget called (disabled - uploading directly to API instead)")
     }
 }

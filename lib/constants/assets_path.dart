@@ -175,4 +175,12 @@ class AssetsPath {
   static const String supportTicket = "assets/support_ticket.png";
   static const String bellIcon = "assets/bell_icon.png";
   static const String timelineCircle = "assets/timeline_circle.png";
+
+  static const String leaderWaterIntake = "assets/leaderboard/intake.png";
+  static const String leaderWorld = "assets/leaderboard/world.png";
+  static const String leaderCo2 = "assets/leaderboard/co2.png";
+  static const String bottleRingCap =
+      "assets/achievement_badge/bottle_ring_cap.png";
+
+  static const String conftyImg = "assets/confty_img.png";
 }

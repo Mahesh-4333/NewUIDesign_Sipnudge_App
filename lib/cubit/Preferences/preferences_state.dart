@@ -11,6 +11,10 @@ class PreferencesState {
   final double ledHue;
   final bool uvCleaning;
   final DateTime? lastResetDate;
+  // Discrete choice fields for segmented UI
+  final String hapticIntensity; // 'Low', 'Medium', 'High'
+  final String ledBrightness;   // 'Dim', 'Medium', 'Bright'
+  final String uvSpeed;         // 'Normal', 'Fast'
 
   PreferencesState({
     required this.hapticFeedback,
@@ -23,6 +27,9 @@ class PreferencesState {
     this.ledHue = 0.6,
     this.uvCleaning = false,
     this.lastResetDate,
+    this.hapticIntensity = 'Medium',
+    this.ledBrightness = 'Medium',
+    this.uvSpeed = 'Normal',
   });
 
   PreferencesState copyWith({
@@ -36,6 +43,9 @@ class PreferencesState {
     double? ledHue,
     bool? uvCleaning,
     DateTime? lastResetDate,
+    String? hapticIntensity,
+    String? ledBrightness,
+    String? uvSpeed,
   }) {
     return PreferencesState(
       hapticFeedback: hapticFeedback ?? this.hapticFeedback,
@@ -48,6 +58,9 @@ class PreferencesState {
       ledHue: ledHue ?? this.ledHue,
       uvCleaning: uvCleaning ?? this.uvCleaning,
       lastResetDate: lastResetDate ?? this.lastResetDate,
+      hapticIntensity: hapticIntensity ?? this.hapticIntensity,
+      ledBrightness: ledBrightness ?? this.ledBrightness,
+      uvSpeed: uvSpeed ?? this.uvSpeed,
     );
   }
 }

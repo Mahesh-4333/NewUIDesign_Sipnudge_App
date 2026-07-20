@@ -29,7 +29,7 @@ class BottleInfo {
         return BottleInfo(
           color: 'black',
           name: 'Midnight Edition',
-          imagePath: 'assets/images/black_bottle_image.png',
+          imagePath: 'assets/images/new_premium_black_bottle.png',
           material: 'Stainless Steel',
           description: 'Premium black bottle with sleek design',
           currentWater: currentWater,
@@ -80,7 +80,7 @@ class BottleInfo {
         return BottleInfo(
           color: 'Black',
           name: 'Midnight Edition',
-          imagePath: 'assets/images/black_bottle_image.png',
+          imagePath: 'assets/images/new_premium_black_bottle.png',
           material: 'Stainless Steel',
           description: 'Default bottle',
           currentWater: currentWater,
