@@ -9,7 +9,7 @@ import 'package:hydrify/cubit/bottom_nav/bottom_nav_cubit.dart';
 import 'package:hydrify/cubit/hydration/hydration_cubit.dart';
 import 'package:hydrify/cubit/hydration/hydration_state.dart';
 import 'package:hydrify/helpers/logger.dart';
-import 'package:hydrify/screens/achevements_badge_screen.dart';
+import 'package:hydrify/screens/leaderboard_screen.dart';
 import 'package:hydrify/screens/analysis_screen.dart';
 import 'package:hydrify/screens/drink_reminder_page.dart';
 import 'package:hydrify/screens/home_screen.dart';
@@ -322,7 +322,7 @@ class _BottomNavScreenNewState extends State<BottomNavScreenNew> {
         _buildOffstageNavigator(
           tab: BottomNavTab.reports,
           selectedTab: selectedTab,
-          child: AchievementsBadgeScreen(),
+          child: const LeaderboardScreen(showBackButton: false),
         ),
         _buildOffstageNavigator(
           tab: BottomNavTab.settings,

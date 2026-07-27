@@ -54,14 +54,9 @@ class _LocalAuthScreenState extends State<LocalAuthScreen>
     final authProvider =
         Provider.of<AuthenticationProvider>(context, listen: false);
 
-    bool success = false;
-
-    while (mounted && !success) {
-      success = await authProvider.authenticateWithBiometrics();
-
-      if (!success) {
-        await Future.delayed(const Duration(milliseconds: 500));
-      }
+    final canCheck = await authProvider.canCheckBiometrics();
+    if (canCheck) {
+      await authProvider.authenticateWithBiometrics();
     }
 
     if (!mounted) return;

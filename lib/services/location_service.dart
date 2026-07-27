@@ -63,7 +63,9 @@ class LocationService {
       Console.log(tag: "APP", value: 'Permission granted, getting position...');
 
       final position = await Geolocator.getCurrentPosition(
-          desiredAccuracy: LocationAccuracy.high);
+        desiredAccuracy: LocationAccuracy.high,
+        timeLimit: const Duration(seconds: 5),
+      );
 
       Console.log(
           tag: "APP",

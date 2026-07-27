@@ -1,4 +1,5 @@
 import 'package:hydrify/helpers/logger.dart';
+import 'package:hydrify/helpers/shared_pref_helper.dart';
 
 import 'package:dio/dio.dart';
 import 'package:hydrify/models/requests/login_details_request_model.dart';
@@ -403,7 +404,7 @@ class ApiService {
           if (dayIndex != null) 'dayIndex': dayIndex,
         },
       );
-      return response.data['success'] == true;
+      return response.statusCode == 204 || (response.data != null && response.data['success'] == true);
     } on DioException catch (e) {
       Console.log(tag: "APP", value: "Exception in updateTodayConsumed: $e");
       return false;
@@ -648,7 +649,7 @@ class ApiService {
     }
   }
 
-  Future<List<Map<String, double>>> getUsersLocations() async {
+  Future<List<Map<String, dynamic>>> getUsersLocations() async {
     try {
       final response = await _dio.get('/api/database/users-locations');
       if (response.statusCode == 200 && response.data['success'] == true) {
@@ -656,8 +657,12 @@ class ApiService {
         return rawList.map((item) {
           final map = item as Map<String, dynamic>;
           return {
+            'userId': map['userId']?.toString() ?? '',
             'latitude': (map['latitude'] as num).toDouble(),
             'longitude': (map['longitude'] as num).toDouble(),
+            'bottlesSaved': (map['bottlesSaved'] as num? ?? 0).toInt(),
+            'carbonReduced': (map['carbonReduced'] as num? ?? 0.0).toDouble(),
+            'totalConsumed': (map['totalConsumed'] as num? ?? 0).toInt(),
           };
         }).toList();
       }
@@ -671,12 +676,28 @@ class ApiService {
   Future<bool> syncUserLocation(
       String userId, double latitude, double longitude) async {
     try {
+      final isGhost = await SharedPrefsHelper.getGhostMode();
+      if (isGhost) {
+        // Ghost Mode ON: Privacy protected - do not sync location to server
+        return true;
+      }
+
+      double syncLat = latitude;
+      double syncLng = longitude;
+
+      final isFuzzy = await SharedPrefsHelper.getFuzzyLocation();
+      if (isFuzzy) {
+        // Fuzzy Location ON: Send offset coordinates (~1km away) to server
+        syncLat += 0.008;
+        syncLng += 0.008;
+      }
+
       final response = await _dio.post(
         '/api/database/sync-user-location',
         data: {
           'userId': userId,
-          'latitude': latitude,
-          'longitude': longitude,
+          'latitude': syncLat,
+          'longitude': syncLng,
         },
       );
       return response.data['success'] == true;

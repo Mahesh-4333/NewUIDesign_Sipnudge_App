@@ -32,6 +32,7 @@
 		97C146FE1CF9000F007C117D /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 97C146FD1CF9000F007C117D /* Assets.xcassets */; };
 		97C147011CF9000F007C117D /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 97C146FF1CF9000F007C117D /* LaunchScreen.storyboard */; };
 		A3F1CBDC8D1E0EDB5879EB69 /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = AC186EB2AF8A84EB514AFA7C /* GoogleService-Info.plist */; };
+		91B840152F77CDBA009332E9 /* Secrets.plist in Resources */ = {isa = PBXBuildFile; fileRef = 91B840162F77CDBA009332E9 /* Secrets.plist */; };
 		D16F4506C1D42B7B17BFFCC1 /* Pods_RunnerTests.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 13F0750ECCEBC5D16D5DF83A /* Pods_RunnerTests.framework */; };
 /* End PBXBuildFile section */
 
@@ -117,6 +118,7 @@
 		99D83D10C51962BAB0344467 /* Pods-RunnerTests.profile.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-RunnerTests.profile.xcconfig"; path = "Target Support Files/Pods-RunnerTests/Pods-RunnerTests.profile.xcconfig"; sourceTree = "<group>"; };
 		A48947087BDE8E5C6D179AC5 /* Pods_Runner.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_Runner.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		AC186EB2AF8A84EB514AFA7C /* GoogleService-Info.plist */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.xml; name = "GoogleService-Info.plist"; path = "Runner/GoogleService-Info.plist"; sourceTree = "<group>"; };
+		91B840162F77CDBA009332E9 /* Secrets.plist */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.xml; name = "Secrets.plist"; path = "Runner/Secrets.plist"; sourceTree = "<group>"; };
 		BA276487EAE6028C63D7D7D8 /* Pods-Runner.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Runner.debug.xcconfig"; path = "Target Support Files/Pods-Runner/Pods-Runner.debug.xcconfig"; sourceTree = "<group>"; };
 		CB8C2F40F8DEECA524284019 /* Pods-Runner.profile.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Runner.profile.xcconfig"; path = "Target Support Files/Pods-Runner/Pods-Runner.profile.xcconfig"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -205,6 +207,7 @@
 				331C8082294A63A400263BE5 /* RunnerTests */,
 				D76EF35637E62C291DB99A7D /* Pods */,
 				AC186EB2AF8A84EB514AFA7C /* GoogleService-Info.plist */,
+				91B840162F77CDBA009332E9 /* Secrets.plist */,
 				E8B4306215D565B14D10DB71 /* Frameworks */,
 			);
 			sourceTree = "<group>";
@@ -328,6 +331,7 @@
 				3B06AD1E1E4923F5004D2608 /* Thin Binary */,
 				079C90A75190CC4B98029042 /* [CP] Embed Pods Frameworks */,
 				70B1BF2E5E32C02A8D3266C3 /* [CP] Copy Pods Resources */,
+				FBC000000000000000000001 /* [CP] Firebase Crashlytics Run Script */,
 			);
 			buildRules = (
 			);
@@ -420,6 +424,7 @@
 				97C146FE1CF9000F007C117D /* Assets.xcassets in Resources */,
 				97C146FC1CF9000F007C117D /* Main.storyboard in Resources */,
 				A3F1CBDC8D1E0EDB5879EB69 /* GoogleService-Info.plist in Resources */,
+				91B840152F77CDBA009332E9 /* Secrets.plist in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -533,6 +538,27 @@
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
 			shellScript = "diff \"${PODS_PODFILE_DIR_PATH}/Podfile.lock\" \"${PODS_ROOT}/Manifest.lock\" > /dev/null\nif [ $? != 0 ] ; then\n    # print error to STDERR\n    echo \"error: The sandbox is not in sync with the Podfile.lock. Run 'pod install' or update your CocoaPods installation.\" >&2\n    exit 1\nfi\n# This output is used by Xcode 'outputs' to avoid re-running this script phase.\necho \"SUCCESS\" > \"${SCRIPT_OUTPUT_FILE_0}\"\n";
+			showEnvVarsInLog = 0;
+		};
+		FBC000000000000000000001 /* [CP] Firebase Crashlytics Run Script */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+				"${DWARF_DSYM_FOLDER_PATH}/${DWARF_DSYM_FILE_NAME}/Contents/Resources/DWARF/${TARGET_NAME}",
+				"$(SRCROOT)/$(BUILT_PRODUCTS_DIR)/$(INFOPLIST_PATH)"
+			);
+			name = "[CP] Firebase Crashlytics Run Script";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "\"${PODS_ROOT}/FirebaseCrashlytics/run\"\n";
 			showEnvVarsInLog = 0;
 		};
 /* End PBXShellScriptBuildPhase section */

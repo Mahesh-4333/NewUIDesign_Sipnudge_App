@@ -59,6 +59,8 @@ class SharedPrefsHelper {
   static const String _keyLastSummarySyncDate = 'last_summary_sync_date';
   static const String _keyHasShownHomeShowcase = 'has_shown_home_showcase';
   static const String _keyHasShownLocationPrivacy = 'has_shown_location_privacy';
+  static const String _keyGhostMode = 'location_ghost_mode';
+  static const String _keyFuzzyLocation = 'location_fuzzy';
   static const String _keyUserLatitude = 'user_latitude';
   static const String _keyUserLongitude = 'user_longitude';
   static const String _keyUserType = 'user_type';
@@ -268,6 +270,26 @@ class SharedPrefsHelper {
   static Future<void> setHasShownLocationPrivacy(bool value) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(_keyHasShownLocationPrivacy, value);
+  }
+
+  static Future<bool> getGhostMode() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool(_keyGhostMode) ?? true;
+  }
+
+  static Future<void> setGhostMode(bool value) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_keyGhostMode, value);
+  }
+
+  static Future<bool> getFuzzyLocation() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool(_keyFuzzyLocation) ?? true;
+  }
+
+  static Future<void> setFuzzyLocation(bool value) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_keyFuzzyLocation, value);
   }
 
   static Future<double?> getUserLatitude() async {

@@ -27,7 +27,9 @@ import 'package:hydrify/services/sync_bus.dart';
 
 part 'ble_state.dart';
 
-class BleCubit extends Cubit<BleState> with WidgetsBindingObserver implements HydrationSync {
+class BleCubit extends Cubit<BleState>
+    with WidgetsBindingObserver
+    implements HydrationSync {
   BleCubit() : super(const BleState()) {
     SyncBus.instance.addListener(_onSyncComplete);
     WidgetsBinding.instance.addObserver(this);
@@ -54,16 +56,20 @@ class BleCubit extends Cubit<BleState> with WidgetsBindingObserver implements Hy
         // Only attempt if not already connecting/connected.
         if (_isConnecting) {
           Console.log(
-              tag: '[BLE_Cubit] onNativeConnected: ignored because _isConnecting is true',
+              tag:
+                  '[BLE_Cubit] onNativeConnected: ignored because _isConnecting is true',
               value: 'BLE_Cubit');
           return;
         }
-        final alreadyConnected = FlutterBluePlus.connectedDevices.any((d) => d.remoteId.str == uuid);
+        final alreadyConnected =
+            FlutterBluePlus.connectedDevices.any((d) => d.remoteId.str == uuid);
         if (alreadyConnected) {
           Console.log(
-              tag: '[BLE_Cubit] onNativeConnected: device already connected in FBP. Hooking listener.',
+              tag:
+                  '[BLE_Cubit] onNativeConnected: device already connected in FBP. Hooking listener.',
               value: 'BLE_Cubit');
-          final device = FlutterBluePlus.connectedDevices.firstWhere((d) => d.remoteId.str == uuid);
+          final device = FlutterBluePlus.connectedDevices
+              .firstWhere((d) => d.remoteId.str == uuid);
           _listenToConnection(device);
           return;
         }
@@ -84,20 +90,23 @@ class BleCubit extends Cubit<BleState> with WidgetsBindingObserver implements Hy
           }
           await _connectToDevice(device);
           Console.log(
-              tag: '[BLE_Cubit] FBP connected after native trigger successfully',
+              tag:
+                  '[BLE_Cubit] FBP connected after native trigger successfully',
               value: 'BLE_Cubit');
         } catch (e) {
           Console.log(
-              tag: '[BLE_Cubit] FBP connect after native trigger failed (non-fatal): $e',
+              tag:
+                  '[BLE_Cubit] FBP connect after native trigger failed (non-fatal): $e',
               value: 'BLE_Cubit');
         }
       }
     });
   }
 
-
   Future<void> _onSyncComplete() async {
-    Console.log(tag: "BLE_Cubit", value: "Sync completed. Reloading hydration value from DB.");
+    Console.log(
+        tag: "BLE_Cubit",
+        value: "Sync completed. Reloading hydration value from DB.");
     final history = await getCurrentDayHistory();
     emit(state.copyWith(currentHydrationValue: history));
     _hydrationController.add([]); // triggers UI stream update
@@ -120,6 +129,7 @@ class BleCubit extends Cubit<BleState> with WidgetsBindingObserver implements Hy
 
   final Guid rtcSyncUUID = Guid("6E400004-B5A3-F393-E0A9-E50E24DCCA9E");
   final Guid wifiProvUUID = Guid("6E400009-B5A3-F393-E0A9-E50E24DCCA9E");
+  final Guid wifiNotifUUID = Guid("6E40000B-B5A3-F393-E0A9-E50E24DCCA9E");
 
   BluetoothCharacteristic? _dataChar;
   BluetoothCharacteristic? _ackChar;
@@ -130,6 +140,7 @@ class BleCubit extends Cubit<BleState> with WidgetsBindingObserver implements Hy
   BluetoothCharacteristic? _resetChar;
   BluetoothCharacteristic? _rtcSyncChar;
   BluetoothCharacteristic? _wifiProvChar;
+  BluetoothCharacteristic? _wifiNotifChar;
 
   StreamSubscription<List<ScanResult>>? _scanSub;
   StreamSubscription<BluetoothConnectionState>? _connectionSub;
@@ -143,7 +154,7 @@ class BleCubit extends Cubit<BleState> with WidgetsBindingObserver implements Hy
   StreamSubscription? _hydrationGoalDataSub;
   StreamSubscription? _hydrationSlotsSub;
   StreamSubscription? _hydration30DaysSub;
-  StreamSubscription? _wifiProvSub;
+  StreamSubscription? _wifiNotifSub;
 
   Completer<WifiProvResponse>? _wifiProvCompleter;
 
@@ -369,7 +380,16 @@ class BleCubit extends Cubit<BleState> with WidgetsBindingObserver implements Hy
       return;
     }
 
-    final currentState = await FlutterBluePlus.adapterState.first;
+    BluetoothAdapterState currentState;
+    try {
+      currentState = await FlutterBluePlus.adapterState.first.timeout(
+        const Duration(seconds: 2),
+        onTimeout: () => BluetoothAdapterState.unknown,
+      );
+    } catch (e) {
+      currentState = BluetoothAdapterState.unknown;
+    }
+
     if (currentState == BluetoothAdapterState.on) {
       await onReady();
     } else {
@@ -377,12 +397,6 @@ class BleCubit extends Cubit<BleState> with WidgetsBindingObserver implements Hy
         status: BleStatus.error,
         message: "Please turn on Bluetooth",
       ));
-
-      await FlutterBluePlus.adapterState
-          .where((s) => s == BluetoothAdapterState.on)
-          .first;
-
-      await onReady();
     }
 
     // ✅ Keep listening so that if BT is toggled off→on again we recover
@@ -410,13 +424,17 @@ class BleCubit extends Cubit<BleState> with WidgetsBindingObserver implements Hy
             tag: '[BLE_Cubit] Bluetooth re-enabled — restarting scan',
             value: 'BLE_Cubit');
         _scanRetryCount = 0;
-        
+
         // Guard: If we are already connected or in the middle of a connection attempt
         // (e.g. native MethodChannel connection already fired), skip starting a fresh scan.
-        final isConnected = FlutterBluePlus.connectedDevices.any((d) => d.remoteId.str == savedDeviceId);
-        if (_isConnecting || isConnected || state.status == BleStatus.connected) {
+        final isConnected = FlutterBluePlus.connectedDevices
+            .any((d) => d.remoteId.str == savedDeviceId);
+        if (_isConnecting ||
+            isConnected ||
+            state.status == BleStatus.connected) {
           Console.log(
-              tag: '[BLE_Cubit] Reconnection already in progress or connected. Skipping scan restart.',
+              tag:
+                  '[BLE_Cubit] Reconnection already in progress or connected. Skipping scan restart.',
               value: 'BLE_Cubit');
           return;
         }
@@ -429,10 +447,12 @@ class BleCubit extends Cubit<BleState> with WidgetsBindingObserver implements Hy
     if (savedDeviceId == null && savedDeviceName == null) return;
 
     // Guard: Do not start a scan if we are already connected/connecting
-    final isConnected = FlutterBluePlus.connectedDevices.any((d) => d.remoteId.str == savedDeviceId);
+    final isConnected = FlutterBluePlus.connectedDevices
+        .any((d) => d.remoteId.str == savedDeviceId);
     if (_isConnecting || isConnected || state.status == BleStatus.connected) {
       Console.log(
-          tag: '[BLE_Cubit] _scanForLastDevice: Already connecting or connected. Ignoring scan request.',
+          tag:
+              '[BLE_Cubit] _scanForLastDevice: Already connecting or connected. Ignoring scan request.',
           value: 'BLE_Cubit');
       return;
     }
@@ -514,7 +534,8 @@ class BleCubit extends Cubit<BleState> with WidgetsBindingObserver implements Hy
     // Guard: Do not start a scan if we are already connected/connecting
     if (_isConnecting || state.status == BleStatus.connected) {
       Console.log(
-          tag: '[BLE_Cubit] _scanForAllDevices: Already connecting or connected. Ignoring scan request.',
+          tag:
+              '[BLE_Cubit] _scanForAllDevices: Already connecting or connected. Ignoring scan request.',
           value: 'BLE_Cubit');
       return;
     }
@@ -600,7 +621,15 @@ class BleCubit extends Cubit<BleState> with WidgetsBindingObserver implements Hy
     _watchdogTimer = Timer.periodic(const Duration(seconds: 2), (timer) async {
       // 1. Skip if Bluetooth is not supported or not ON
       if (await FlutterBluePlus.isSupported == false) return;
-      final adapterState = await FlutterBluePlus.adapterState.first;
+      BluetoothAdapterState adapterState;
+      try {
+        adapterState = await FlutterBluePlus.adapterState.first.timeout(
+          const Duration(milliseconds: 500),
+          onTimeout: () => BluetoothAdapterState.unknown,
+        );
+      } catch (_) {
+        adapterState = BluetoothAdapterState.unknown;
+      }
       if (adapterState != BluetoothAdapterState.on) return;
 
       // 2. Skip if already connected or currently connecting
@@ -678,7 +707,7 @@ class BleCubit extends Cubit<BleState> with WidgetsBindingObserver implements Hy
 
   Future<void> _verifyConnectionStatus() async {
     final connectedDevices = FlutterBluePlus.connectedDevices;
-    
+
     // Find if our saved/last device is currently connected
     BluetoothDevice? connectedDevice;
     for (var device in connectedDevices) {
@@ -696,13 +725,15 @@ class BleCubit extends Cubit<BleState> with WidgetsBindingObserver implements Hy
 
     if (connectedDevice != null) {
       // The device is physically/OS-level connected.
-      if (state.status != BleStatus.connected || state.isServiceDiscoveryDone != true) {
+      if (state.status != BleStatus.connected ||
+          state.isServiceDiscoveryDone != true) {
         Console.log(
             tag: "BLE_Cubit",
-            value: "Device is connected at OS level, but Cubit state is ${state.status}. Syncing state and discovering services.");
+            value:
+                "Device is connected at OS level, but Cubit state is ${state.status}. Syncing state and discovering services.");
         // Make sure we listen to its connection changes
         _listenToConnection(connectedDevice);
-        
+
         // Discover services and update status
         emit(state.copyWith(
           status: BleStatus.connecting,
@@ -719,8 +750,9 @@ class BleCubit extends Cubit<BleState> with WidgetsBindingObserver implements Hy
       if (state.status == BleStatus.connected) {
         Console.log(
             tag: "BLE_Cubit",
-            value: "Cubit state is connected, but device is not in connectedDevices. Updating state to disconnected.");
-        
+            value:
+                "Cubit state is connected, but device is not in connectedDevices. Updating state to disconnected.");
+
         _isConnecting = false;
         _clearCharacteristicSubscriptions();
         emit(state.copyWith(
@@ -729,7 +761,7 @@ class BleCubit extends Cubit<BleState> with WidgetsBindingObserver implements Hy
           message: "Device disconnected",
           scannedDevices: [],
         ));
-        
+
         // Trigger scan to reconnect
         if (savedDeviceId != null || savedDeviceName != null) {
           _scanForLastDevice();
@@ -880,7 +912,8 @@ class BleCubit extends Cubit<BleState> with WidgetsBindingObserver implements Hy
               value: 'BLE_Cubit');
         } catch (e) {
           Console.log(
-              tag: '[BLE_Cubit] Native BLE connect trigger failed (non-fatal): $e',
+              tag:
+                  '[BLE_Cubit] Native BLE connect trigger failed (non-fatal): $e',
               value: 'BLE_Cubit');
         }
       }
@@ -942,6 +975,7 @@ class BleCubit extends Cubit<BleState> with WidgetsBindingObserver implements Hy
             if (c.uuid == configUUID) _configChar = c;
             if (c.uuid == resetUUID) _resetChar = c;
             if (c.uuid == wifiProvUUID) _wifiProvChar = c;
+            if (c.uuid == wifiNotifUUID) _wifiNotifChar = c;
           }
 
           // Setup notifications and log characteristic status
@@ -971,7 +1005,9 @@ class BleCubit extends Cubit<BleState> with WidgetsBindingObserver implements Hy
                 charName = " [Config]";
               else if (c.uuid == resetUUID)
                 charName = " [Reset]";
-              else if (c.uuid == wifiProvUUID) charName = " [WifiProv]";
+              else if (c.uuid == wifiProvUUID)
+                charName = " [WifiProv]";
+              else if (c.uuid == wifiNotifUUID) charName = " [WifiNotif]";
             }
 
             final logTag = supported.contains("Notify") ? "✅" : "✍️";
@@ -1126,11 +1162,11 @@ class BleCubit extends Cubit<BleState> with WidgetsBindingObserver implements Hy
         });
       }
 
-      if (_wifiProvChar != null) {
-        _wifiProvSub = _wifiProvChar!.onValueReceived.listen((value) {
+      if (_wifiNotifChar != null) {
+        _wifiNotifSub = _wifiNotifChar!.onValueReceived.listen((value) {
           final data = String.fromCharCodes(value);
           Console.log(
-              tag: "⬇️ [WIFI_PROV] Raw Data: $data", value: 'BLE_Cubit');
+              tag: "⬇️ [WIFI_NOTIF] Raw Data: $data", value: 'BLE_Cubit');
           _handleWifiProvNotification(data);
         });
       }
@@ -1169,11 +1205,13 @@ class BleCubit extends Cubit<BleState> with WidgetsBindingObserver implements Hy
       // ✅ 2. Now enable notifications for ALL characteristics across all services
       for (var service in services) {
         for (var c in service.characteristics) {
-          if (c.properties.notify || c.properties.indicate) {
+          if ((c.properties.notify || c.properties.indicate) &&
+              c.device.isConnected) {
             try {
               await c.setNotifyValue(true);
               Console.log(
-                  tag: "[BLE_Cubit]  enable notify for ${c.uuid}",
+                  tag:
+                      "[BLE_Cubit]  enable notify for ${c.uuid} ${c.properties.notify} ${c.properties.indicate}",
                   value: 'BLE_Cubit');
             } catch (e) {
               final errorStr = e.toString();
@@ -1466,10 +1504,18 @@ class BleCubit extends Cubit<BleState> with WidgetsBindingObserver implements Hy
       final epochMillis =
           (epochNum.toString().length == 13) ? epochNum : epochNum * 1000;
 
-      // Normalize to UTC midnight for stable day-indexing
-      // Use isUtc: true to ensure it stays in GMT
+      // Interpret the epoch in LOCAL time (not UTC) so that day-index arithmetic
+      // maps correctly to the user's local calendar. Using isUtc:true shifts
+      // dates by the UTC offset — e.g. on IST (UTC+5:30) dayIndex 0 would land
+      // on 2026-07-24 instead of the correct 2026-07-25, causing a persistent
+      // off-by-one in the history table and in today-matching logic.
       DateTime startDate =
-          DateTime.fromMillisecondsSinceEpoch(epochMillis, isUtc: true);
+          DateTime.fromMillisecondsSinceEpoch(epochMillis, isUtc: false);
+
+      // Normalize to midnight local time so that adding Duration(days: N)
+      // always hits the correct calendar day regardless of the exact time-of-day
+      // the firmware recorded the epoch.
+      startDate = DateTime(startDate.year, startDate.month, startDate.day);
 
       Console.log(
           tag:
@@ -1641,7 +1687,8 @@ class BleCubit extends Cubit<BleState> with WidgetsBindingObserver implements Hy
       // 2. Sync Pending Config Data
       final pendingConfig = await SharedPrefsHelper.getPendingConfigData();
       Console.log(
-          tag: "BLE_Cubit", value: "Sending pending config data (UUID: ${_configChar?.uuid})");
+          tag: "BLE_Cubit",
+          value: "Sending pending config data (UUID: ${_configChar?.uuid})");
       if (pendingConfig != null &&
           pendingConfig.isNotEmpty &&
           _configChar != null) {
@@ -1706,29 +1753,29 @@ class BleCubit extends Cubit<BleState> with WidgetsBindingObserver implements Hy
               tag: "BLE_Cubit",
               value: "Sending pending Wi-Fi provisioning data: $pendingWifi");
 
-          if (freshWifiProvChar.properties.notify ||
-              freshWifiProvChar.properties.indicate) {
-            try {
-              await freshWifiProvChar.setNotifyValue(true);
-              Console.log(
-                  tag: "BLE_Cubit",
-                  value:
-                      "Enabled notify for wifiProvChar in _flushPendingSlots");
-            } catch (e) {
-              final errorStr = e.toString();
-              String diagnostic = "";
-              if (errorStr.contains('apple-code: 10') ||
-                  errorStr.contains('Attribute could not be found')) {
-                diagnostic =
-                    " | DIAGNOSTIC: iOS CoreBluetooth cannot find the CCCD (0x2902) descriptor for wifiProvChar. "
-                    "Check for stale iOS BLE cache or ensure peripheral firmware includes the CCCD descriptor.";
-              }
-              Console.log(
-                  tag:
-                      "Failed to enable notify for wifiProvChar: $e$diagnostic",
-                  value: 'BLE_Cubit');
-            }
-          }
+          // if (freshWifiProvChar.properties.notify ||
+          //     freshWifiProvChar.properties.indicate) {
+          //   try {
+          //     await freshWifiProvChar.setNotifyValue(true);
+          //     Console.log(
+          //         tag: "BLE_Cubit",
+          //         value:
+          //             "Enabled notify for wifiProvChar in _flushPendingSlots");
+          //   } catch (e) {
+          //     final errorStr = e.toString();
+          //     String diagnostic = "";
+          //     if (errorStr.contains('apple-code: 10') ||
+          //         errorStr.contains('Attribute could not be found')) {
+          //       diagnostic =
+          //           " | DIAGNOSTIC: iOS CoreBluetooth cannot find the CCCD (0x2902) descriptor for wifiProvChar. "
+          //           "Check for stale iOS BLE cache or ensure peripheral firmware includes the CCCD descriptor.";
+          //     }
+          //     Console.log(
+          //         tag:
+          //             "Failed to enable notify for wifiProvChar: $e$diagnostic",
+          //         value: 'BLE_Cubit');
+          //   }
+          // }
 
           final bool writeWithoutResp = !freshWifiProvChar.properties.write &&
               freshWifiProvChar.properties.writeWithoutResponse;
@@ -1933,14 +1980,15 @@ class BleCubit extends Cubit<BleState> with WidgetsBindingObserver implements Hy
     _hydrationGoalDataSub?.cancel();
     _hydrationSlotsSub?.cancel();
     _hydration30DaysSub?.cancel();
-    _wifiProvSub?.cancel();
+    _wifiNotifSub?.cancel();
 
     _dataSub = null;
     _hydrationGoalDataSub = null;
     _hydrationSlotsSub = null;
     _hydration30DaysSub = null;
-    _wifiProvSub = null;
+    _wifiNotifSub = null;
     _wifiProvChar = null;
+    _wifiNotifChar = null;
   }
 
   @override
@@ -2127,7 +2175,7 @@ class BleCubit extends Cubit<BleState> with WidgetsBindingObserver implements Hy
     }
 
     final freshWifiProvChar = await _getFreshCharacteristic(wifiProvUUID);
-    if (freshWifiProvChar == null) {
+    if (freshWifiProvChar == null || !freshWifiProvChar.device.isConnected) {
       return WifiProvResponse(
         result: 'saved_pending',
         reason:
@@ -2149,25 +2197,28 @@ class BleCubit extends Cubit<BleState> with WidgetsBindingObserver implements Hy
           tag: "BLE_Cubit",
           value: "Sending Wi-Fi provisioning data directly: $jsonPayload");
 
-      if (freshWifiProvChar.properties.notify ||
-          freshWifiProvChar.properties.indicate) {
+      final freshWifiNotifChar = await _getFreshCharacteristic(wifiNotifUUID);
+      if (freshWifiNotifChar != null &&
+          freshWifiNotifChar.device.isConnected &&
+          (freshWifiNotifChar.properties.notify ||
+              freshWifiNotifChar.properties.indicate)) {
         try {
-          await freshWifiProvChar.setNotifyValue(true);
+          await freshWifiNotifChar.setNotifyValue(true);
           Console.log(
               tag: "BLE_Cubit",
-              value: "Enabled notify for wifiProvChar in provisionWifi");
+              value: "Enabled notify for wifiNotifChar in provisionWifi");
         } catch (e) {
           final errorStr = e.toString();
           String diagnostic = "";
           if (errorStr.contains('apple-code: 10') ||
               errorStr.contains('Attribute could not be found')) {
             diagnostic =
-                " | DIAGNOSTIC: iOS CoreBluetooth cannot find the CCCD (0x2902) descriptor for wifiProvChar. "
+                " | DIAGNOSTIC: iOS CoreBluetooth cannot find the CCCD (0x2902) descriptor for wifiNotifChar. "
                 "Check for stale iOS BLE cache or ensure peripheral firmware includes the CCCD descriptor.";
           }
           Console.log(
               tag:
-                  "Failed to enable notify for wifiProvChar in provisionWifi: $e$diagnostic",
+                  "Failed to enable notify for wifiNotifChar in provisionWifi: $e$diagnostic",
               value: 'BLE_Cubit');
         }
       }
@@ -2206,10 +2257,30 @@ class BleCubit extends Cubit<BleState> with WidgetsBindingObserver implements Hy
     }
   }
 
-  Future<BluetoothCharacteristic?> _getFreshCharacteristic(Guid charUuid) async {
+  Future<BluetoothCharacteristic?> _getFreshCharacteristic(
+      Guid charUuid) async {
+    // Return the cached reference if it is already available and the device is connected
+    if (charUuid == wifiProvUUID &&
+        _wifiProvChar != null &&
+        _wifiProvChar!.device.isConnected) {
+      Console.log(
+          tag: "[WIFI_PROV] Using cached characteristic for $charUuid",
+          value: "BLE_Cubit");
+      return _wifiProvChar;
+    }
+    if (charUuid == wifiNotifUUID &&
+        _wifiNotifChar != null &&
+        _wifiNotifChar!.device.isConnected) {
+      Console.log(
+          tag: "[WIFI_NOTIF] Using cached characteristic for $charUuid",
+          value: "BLE_Cubit");
+      return _wifiNotifChar;
+    }
     BluetoothDevice? device;
-    if (_wifiProvChar != null) {
+    if (_wifiProvChar != null && _wifiProvChar!.device.isConnected) {
       device = _wifiProvChar!.device;
+    } else if (_wifiNotifChar != null && _wifiNotifChar!.device.isConnected) {
+      device = _wifiNotifChar!.device;
     } else {
       final connected = FlutterBluePlus.connectedDevices;
       if (connected.isNotEmpty) {
@@ -2217,7 +2288,7 @@ class BleCubit extends Cubit<BleState> with WidgetsBindingObserver implements Hy
       }
     }
 
-    if (device == null) return null;
+    if (device == null || !device.isConnected) return null;
 
     try {
       final services = await device.discoverServices();
@@ -2234,7 +2305,18 @@ class BleCubit extends Cubit<BleState> with WidgetsBindingObserver implements Hy
             if (c.uuid == water30DaysDataUUID) _hydration30DaysChar = c;
             if (c.uuid == configUUID) _configChar = c;
             if (c.uuid == resetUUID) _resetChar = c;
-            if (c.uuid == wifiProvUUID) _wifiProvChar = c;
+            if (c.uuid == wifiProvUUID) {
+              Console.log(
+                  tag: "[WIFI_PROV] Wifi reference found and stored",
+                  value: "BLE_Cubit");
+              _wifiProvChar = c;
+            }
+            if (c.uuid == wifiNotifUUID) {
+              Console.log(
+                  tag: "[WIFI_NOTIF] Wifi notif reference found and stored",
+                  value: "BLE_Cubit");
+              _wifiNotifChar = c;
+            }
           }
           if (c.uuid == charUuid) {
             return c;
@@ -2242,7 +2324,8 @@ class BleCubit extends Cubit<BleState> with WidgetsBindingObserver implements Hy
         }
       }
     } catch (e) {
-      Console.log(tag: "Error getting fresh characteristic: $e", value: "BLE_Cubit");
+      Console.log(
+          tag: "Error getting fresh characteristic: $e", value: "BLE_Cubit");
     }
 
     // Fallback to the currently cached reference if discovery failed
@@ -2259,6 +2342,7 @@ class BleCubit extends Cubit<BleState> with WidgetsBindingObserver implements Hy
     if (uuid == configUUID) return _configChar;
     if (uuid == resetUUID) return _resetChar;
     if (uuid == wifiProvUUID) return _wifiProvChar;
+    if (uuid == wifiNotifUUID) return _wifiNotifChar;
     return null;
   }
 }

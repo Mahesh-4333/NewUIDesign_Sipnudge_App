@@ -20,6 +20,7 @@ class BackgroundSessionManager: NSObject, URLSessionDelegate, URLSessionTaskDele
     static let sessionIdentifier = "com.sipnudge.bg-upload"
 
     private var session: URLSession!
+    private let lock = NSLock()
 
     /// Stored by AppDelegate when iOS calls handleEventsForBackgroundURLSession.
     /// Must be called after all background events are delivered so the OS knows
@@ -70,11 +71,13 @@ class BackgroundSessionManager: NSObject, URLSessionDelegate, URLSessionTaskDele
         }
 
         let task = session.uploadTask(with: request, fromFile: tempFile)
+        lock.lock()
         tempFiles[task.taskIdentifier] = tempFile
 
         if let nURL = notificationURL, let nBody = notificationBody {
             pendingNotifications[task.taskIdentifier] = (url: nURL, body: nBody)
         }
+        lock.unlock()
 
         task.resume()
         NSLog("[BGSession] 📤 Scheduled background upload task #\(task.taskIdentifier) → \(url.absoluteString)")
@@ -86,16 +89,21 @@ class BackgroundSessionManager: NSObject, URLSessionDelegate, URLSessionTaskDele
                     task: URLSessionTask,
                     didCompleteWithError error: Error?) {
         // Always clean up the temp file regardless of success/failure
-        defer {
-            if let tempFile = tempFiles.removeValue(forKey: task.taskIdentifier) {
-                try? FileManager.default.removeItem(at: tempFile)
-                NSLog("[BGSession] 🗑 Deleted temp file for task #\(task.taskIdentifier)")
-            }
+        var tempFile: URL? = nil
+        lock.lock()
+        tempFile = tempFiles.removeValue(forKey: task.taskIdentifier)
+        lock.unlock()
+
+        if let fileURL = tempFile {
+            try? FileManager.default.removeItem(at: fileURL)
+            NSLog("[BGSession] 🗑 Deleted temp file for task #\(task.taskIdentifier)")
         }
 
         if let error = error {
             NSLog("[BGSession] ❌ Task #\(task.taskIdentifier) failed: \(error.localizedDescription)")
+            lock.lock()
             pendingNotifications.removeValue(forKey: task.taskIdentifier)
+            lock.unlock()
             return
         }
 
@@ -103,18 +111,22 @@ class BackgroundSessionManager: NSObject, URLSessionDelegate, URLSessionTaskDele
         NSLog("[BGSession] ✅ Task #\(task.taskIdentifier) completed — HTTP \(statusCode)")
 
         // Only send the push notification if the main upload returned 200 OK
+        lock.lock()
+        let pending = pendingNotifications.removeValue(forKey: task.taskIdentifier)
+        lock.unlock()
+
         guard statusCode == 200,
-              let pending = pendingNotifications.removeValue(forKey: task.taskIdentifier) else {
+              let p = pending else {
             return
         }
 
         // The push notification payload is tiny — fire it as a regular data task.
         // We are inside an OS-delivered background session callback, so iOS gives us
         // sufficient time to make this small follow-up request safely.
-        var notifRequest = URLRequest(url: pending.url)
+        var notifRequest = URLRequest(url: p.url)
         notifRequest.httpMethod = "POST"
         notifRequest.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        notifRequest.httpBody = pending.body
+        notifRequest.httpBody = p.body
         URLSession.shared.dataTask(with: notifRequest) { _, _, err in
             if let err = err {
                 NSLog("[BGSession] ❌ Push notification request failed: \(err.localizedDescription)")
@@ -151,6 +163,16 @@ class BackgroundSessionManager: NSObject, URLSessionDelegate, URLSessionTaskDele
         _ application: UIApplication,
         didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
     ) -> Bool {
+        // Initialize Google Maps SDK immediately on iOS startup from Secrets.plist
+        if let path = Bundle.main.path(forResource: "Secrets", ofType: "plist"),
+           let dict = NSDictionary(contentsOfFile: path) as? [String: Any],
+           let mapsApiKey = dict["GoogleMapsAPIKey"] as? String, !mapsApiKey.isEmpty {
+            GMSServices.provideAPIKey(mapsApiKey)
+            NSLog("[AppDelegate] ✅ Google Maps API Key initialized from Secrets.plist")
+        } else {
+            NSLog("[AppDelegate] ⚠️ Secrets.plist or GoogleMapsAPIKey not found in bundle!")
+        }
+
         // Register MethodChannel to receive Google Maps API Key dynamically from Dart
         if let controller = window?.rootViewController as? FlutterViewController {
             let mapsChannel = FlutterMethodChannel(name: "com.sipnudge.sipnudge/google_maps",
@@ -371,30 +393,36 @@ class SipnudgeBackgroundBLE: NSObject, CBCentralManagerDelegate, CBPeripheralDel
                 log("[BG-BLE] Restored peripheral: \(p.identifier) state=\(p.state.rawValue)")
                 peripheral = p
                 peripheral?.delegate = self
+                
                 // Re-subscribe to characteristics that were already discovered
                 for service in p.services ?? [] {
-                    for char in service.characteristics ?? [] {
-                        if char.uuid == kChar30DaysUUID {
-                            char30Days = char
-                            // Always force subscription — even if isNotifying appears true.
-                            // If flutter_blue_plus already set the CCCD, iOS reports isNotifying=true
-                            // on our proxy too, causing us to skip subscription. Forcing it ensures
-                            // our CBCentralManager session is registered as a subscriber independently.
-                            p.setNotifyValue(true, for: char)
-                            log("[BG-BLE] willRestoreState: setNotifyValue(true) for 30-day char")
-                        } else if char.uuid == kCharAckUUID {
-                            charAck = char
-                            log("[BG-BLE] willRestoreState: restored charAck")
+                    if service.uuid == kServiceUUID {
+                        var char30DaysFound = false
+                        var charAckFound = false
+                        for char in service.characteristics ?? [] {
+                            if char.uuid == kChar30DaysUUID {
+                                char30Days = char
+                                char30DaysFound = true
+                                p.setNotifyValue(true, for: char)
+                                log("[BG-BLE] willRestoreState: setNotifyValue(true) for 30-day char")
+                            } else if char.uuid == kCharAckUUID {
+                                charAck = char
+                                charAckFound = true
+                                log("[BG-BLE] willRestoreState: restored charAck")
+                            }
+                        }
+                        if !char30DaysFound || !charAckFound {
+                            log("[BG-BLE] willRestoreState: service found but chars missing — discovering characteristics")
+                            p.discoverCharacteristics([kChar30DaysUUID, kCharAckUUID], for: service)
                         }
                     }
                 }
-                // If the peripheral is not currently connected, issue a pending connect.
-                // CoreBluetooth will fulfil this automatically when the bottle next
-                // wakes up and starts advertising — even if the app is fully suspended.
-                if p.state != .connected {
-                    log("[BG-BLE] willRestoreState: peripheral not connected — issuing pending connect")
-                    central.connect(p, options: nil)
-                }
+                
+                // Always call connect to register our app's connection reference.
+                // This ensures we get centralManager(_:didConnect:) if it is already system-connected,
+                // or establishes a pending connection if it is disconnected.
+                log("[BG-BLE] willRestoreState: issuing connect for restored peripheral \(p.identifier)")
+                central.connect(p, options: nil)
             }
         }
     }
@@ -521,31 +549,39 @@ class SipnudgeBackgroundBLE: NSObject, CBCentralManagerDelegate, CBPeripheralDel
         // ── Debug notification: visible on lock screen without Xcode ──────────
         // This fires IMMEDIATELY when BLE data arrives in background, proving
         // the OS wake-up is working. Remove once background sync is confirmed.
-        if inBackground {
-            let dbgContent = UNMutableNotificationContent()
-            dbgContent.title = "📶 BG BLE Data Received"
-            dbgContent.body = "Native background sync triggered. Uploading \(data.count) bytes..."
-            dbgContent.sound = .default
-            let dbgReq = UNNotificationRequest(
-                identifier: "bg_ble_rx_\(Int(Date().timeIntervalSince1970))",
-                content: dbgContent,
-                trigger: UNTimeIntervalNotificationTrigger(timeInterval: 1, repeats: false)
-            )
-            UNUserNotificationCenter.current().add(dbgReq, withCompletionHandler: nil)
-            NSLog("[BG-BLE] Debug notification scheduled")
-        }
+        // if inBackground {
+        //     let dbgContent = UNMutableNotificationContent()
+        //     dbgContent.title = "📶 BG BLE Data Received"
+        //     dbgContent.body = "Native background sync triggered. Uploading \(data.count) bytes..."
+        //     dbgContent.sound = .default
+        //     let dbgReq = UNNotificationRequest(
+        //         identifier: "bg_ble_rx_\(Int(Date().timeIntervalSince1970))",
+        //         content: dbgContent,
+        //         trigger: UNTimeIntervalNotificationTrigger(timeInterval: 1, repeats: false)
+        //     )
+        //     UNUserNotificationCenter.current().add(dbgReq, withCompletionHandler: nil)
+        //     NSLog("[BG-BLE] Debug notification scheduled")
+        // }
 
         // ── B: Parse today's consumed value ───────────────────────────────────
         var todayConsumed = 0
         var todayDate = Calendar.current.startOfDay(for: Date())
         var todayDayIndex = 0
 
-        let parts = payload
+        // Strip ALL invisible characters (\r, \n, null bytes, etc.) from the full payload
+        // before splitting. BLE payloads from some firmware revisions include \r\n line
+        // endings that survive a simple .whitespaces trim on individual segments and cause
+        // Double()/Int() to return nil — leaving todayConsumed at 0 and firing a "0ml" notification.
+        let cleanPayload = payload
+            .components(separatedBy: .controlCharacters)
+            .joined()
             .trimmingCharacters(in: .whitespacesAndNewlines)
-            .components(separatedBy: "|")
+
+        let parts = cleanPayload.components(separatedBy: "|")
 
         if parts.count >= 2,
-           let epochStr = parts.first?.trimmingCharacters(in: .whitespaces),
+           let epochStr = parts.first?.trimmingCharacters(in: .whitespacesAndNewlines),
+           !epochStr.isEmpty,
            let epochNum = Int(epochStr) {
 
             let epochMs = epochStr.count == 13 ? epochNum : epochNum * 1000
@@ -557,19 +593,37 @@ class SipnudgeBackgroundBLE: NSObject, CBCentralManagerDelegate, CBPeripheralDel
             var latestConsumed = 0
 
             for seg in parts.dropFirst() {
-                let s = seg.trimmingCharacters(in: .whitespacesAndNewlines)
+                // Aggressively strip any remaining control/whitespace characters from each segment
+                let s = seg
+                    .components(separatedBy: .controlCharacters)
+                    .joined()
+                    .trimmingCharacters(in: .whitespacesAndNewlines)
                 guard !s.isEmpty, s.lowercased() != "na" else { continue }
 
                 let segParts = s.components(separatedBy: "/")
-                guard segParts.count >= 3,
-                      let dayIndex = Int(segParts[0].trimmingCharacters(in: .whitespaces)),
-                      let consumed = Double(segParts[2].trimmingCharacters(in: .whitespaces)) else {
+                guard segParts.count >= 3 else { continue }
+
+                let rawDay = segParts[0]
+                    .components(separatedBy: .controlCharacters).joined()
+                    .trimmingCharacters(in: .whitespacesAndNewlines)
+                let rawConsumed = segParts[2]
+                    .components(separatedBy: .controlCharacters).joined()
+                    .trimmingCharacters(in: .whitespacesAndNewlines)
+
+                guard let dayIndex = Int(rawDay),
+                      let consumed = Double(rawConsumed) else {
+                    NSLog("[BG-BLE] ⚠️ Skipping malformed segment: '\(s)' (rawDay='\(rawDay)' rawConsumed='\(rawConsumed)')")
                     continue
                 }
 
                 if dayIndex > latestDayIndex {
                     latestDayIndex = dayIndex
-                    latestConsumed = Int(consumed)
+                    // Only count days that have actual consumption — day 29 (and most
+                    // future slots) will have consumed=0, making the fallback useless
+                    // if we naively track the last dayIndex regardless of its value.
+                    if Int(consumed) > 0 {
+                        latestConsumed = Int(consumed)
+                    }
                 }
 
                 let segDate = calendar.startOfDay(for: startDate.addingTimeInterval(Double(dayIndex) * 86400))
@@ -577,11 +631,13 @@ class SipnudgeBackgroundBLE: NSObject, CBCentralManagerDelegate, CBPeripheralDel
                     todayConsumed = Int(consumed)
                     todayDate = segDate
                     todayDayIndex = dayIndex
+                    NSLog("[BG-BLE] ✅ Today's segment matched: dayIndex=\(dayIndex) consumed=\(consumed)ml")
                     break
                 }
             }
 
             if todayConsumed == 0 && latestConsumed > 0 {
+                NSLog("[BG-BLE] ⚠️ No exact today match — falling back to latest segment: dayIndex=\(latestDayIndex) consumed=\(latestConsumed)ml")
                 todayConsumed = latestConsumed
                 todayDate = calendar.startOfDay(for: startDate.addingTimeInterval(Double(latestDayIndex) * 86400))
                 todayDayIndex = latestDayIndex
@@ -627,11 +683,17 @@ class SipnudgeBackgroundBLE: NSObject, CBCentralManagerDelegate, CBPeripheralDel
         // Hand the network task to the iOS background daemon (nsurlsessiond).
         // It will complete the upload independently, even on a 0.15 Mbps connection,
         // even if the app is fully suspended after step D below.
+        //
+        // IMPORTANT: Only send a push notification when consumed > 0.
+        // The bottle fires BLE notifications on every lid-open, including early
+        // morning before the user has had their first sip, resulting in a
+        // misleading "You have consumed 0ml so far today." notification.
         uploadTodayDataViaBackgroundSession(
             consumed: Double(todayConsumed),
             date: todayDate,
             dayIndex: todayDayIndex,
-            deviceId: peripheral.identifier.uuidString
+            deviceId: peripheral.identifier.uuidString,
+            sendNotification: todayConsumed > 0
         )
 
         // ── D: End background task IMMEDIATELY ────────────────────────────────
@@ -644,7 +706,13 @@ class SipnudgeBackgroundBLE: NSObject, CBCentralManagerDelegate, CBPeripheralDel
 
     // ── Private helpers ───────────────────────────────────────────────────────
 
-    private func uploadTodayDataViaBackgroundSession(consumed: Double, date: Date, dayIndex: Int, deviceId: String) {
+    private func uploadTodayDataViaBackgroundSession(
+        consumed: Double,
+        date: Date,
+        dayIndex: Int,
+        deviceId: String,
+        sendNotification: Bool
+    ) {
         guard let userId = UserDefaults.standard.string(forKey: "flutter.user_id")
                 ?? UserDefaults(suiteName: kAppGroupId)?.string(forKey: "flutter.user_id")
                 ?? UserDefaults.standard.string(forKey: "user_id")
@@ -685,22 +753,32 @@ class SipnudgeBackgroundBLE: NSObject, CBCentralManagerDelegate, CBPeripheralDel
 
         do {
             let jsonData = try JSONSerialization.data(withJSONObject: body, options: [])
-            let notificationBody = try JSONSerialization.data(withJSONObject: [
-                "userId": userId,
-                "consumed": consumed
-            ], options: [])
 
-            NSLog("[BG-BLE] 📤 Scheduling background upload for user \(userId) (consumed: \(consumed)ml, target: \(goal)ml)")
-            writeDebug("api_tx", "scheduling bg upload \(consumed)ml")
+            NSLog("[BG-BLE] 📤 Scheduling background upload for user \(userId) (consumed: \(consumed)ml, target: \(goal)ml, notify: \(sendNotification))")
+            writeDebug("api_tx", "scheduling bg upload \(consumed)ml notify=\(sendNotification)")
 
-            BackgroundSessionManager.shared.scheduleUpload(
-                url: uploadURL,
-                method: "PATCH",
-                headers: ["Content-Type": "application/json"],
-                body: jsonData,
-                notificationURL: notificationURL,
-                notificationBody: notificationBody
-            )
+            if sendNotification {
+                let notificationBody = try JSONSerialization.data(withJSONObject: [
+                    "userId": userId,
+                    "consumed": consumed
+                ], options: [])
+                BackgroundSessionManager.shared.scheduleUpload(
+                    url: uploadURL,
+                    method: "PATCH",
+                    headers: ["Content-Type": "application/json"],
+                    body: jsonData,
+                    notificationURL: notificationURL,
+                    notificationBody: notificationBody
+                )
+            } else {
+                // Upload DB record silently — consumed is 0 so no notification is warranted.
+                BackgroundSessionManager.shared.scheduleUpload(
+                    url: uploadURL,
+                    method: "PATCH",
+                    headers: ["Content-Type": "application/json"],
+                    body: jsonData
+                )
+            }
         } catch {
             NSLog("[BG-BLE] ❌ JSON serialization error: \(error.localizedDescription)")
             writeDebug("api_tx", "JSON_ERR")
@@ -709,6 +787,11 @@ class SipnudgeBackgroundBLE: NSObject, CBCentralManagerDelegate, CBPeripheralDel
 
     /// Internal (not private) so AppDelegate can trigger it via MethodChannel.
     func connectToSavedDevice() {
+        if let p = peripheral, p.state == .connected, char30Days != nil {
+            log("[BG-BLE] Already connected and subscribed — skipping redundant connect")
+            return
+        }
+
         let rawUUIDStr = UserDefaults.standard.string(forKey: kPrefsDeviceKey)
         log("[BG-BLE] Saved device UUID from prefs (key=\(kPrefsDeviceKey)): \(rawUUIDStr ?? "NIL")")
         writeDebug("uuid", rawUUIDStr ?? "NIL")

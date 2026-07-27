@@ -41,6 +41,7 @@ import 'package:hydrify/screens/widgets/setting_screen_widget/editableProfileAva
 import 'package:hydrify/screens/widgets/setting_screen_widget/profile_menu_item.dart';
 import 'package:hydrify/screens/widgets/setting_screen_widget/sipnudgeshopwidget.dart';
 import 'package:hydrify/services/user_manager.dart';
+import 'package:hydrify/widgets/sipnudge_debug_overlay.dart';
 
 class SettingScreen extends StatefulWidget {
   const SettingScreen({super.key});
@@ -247,6 +248,12 @@ class _SettingScreenState extends State<SettingScreen> {
 
         case 'Add Millisecond':
           _showFlushDelayDialog(context);
+          break;
+
+        case 'BLE Debug Logs':
+        case 'BLE Debug Breadcrumbs':
+        case 'Debug Breadcrumbs':
+          SipnudgeDebugOverlay.show();
           break;
 
         case 'Active Notifications':

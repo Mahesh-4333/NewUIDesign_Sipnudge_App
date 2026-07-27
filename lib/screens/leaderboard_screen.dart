@@ -9,10 +9,14 @@ import 'package:hydrify/helpers/shared_pref_helper.dart';
 import 'package:hydrify/screens/sip_map_screen.dart';
 import 'package:hydrify/screens/widgets/leaderboard_achievement_badge.dart';
 import 'package:hydrify/services/api_service.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:geocoding/geocoding.dart';
 import 'package:provider/provider.dart';
 
 class LeaderboardScreen extends StatefulWidget {
-  const LeaderboardScreen({super.key});
+  final bool showBackButton;
+  const LeaderboardScreen({super.key, this.showBackButton = true});
 
   @override
   State<LeaderboardScreen> createState() => _LeaderboardScreenState();
@@ -23,11 +27,155 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
   bool _isLoading = true;
   Map<String, dynamic>? _leaderboardData;
 
+  List<LatLng> _serverLocations = [];
+  LatLng? _currentUserCoords;
+  bool _ghostMode = true;
+  bool _fuzzyLocation = true;
+  String _currentCityName = "Active Zone";
+  GoogleMapController? _miniMapController;
+
   @override
   void initState() {
     super.initState();
     _loadData();
-    context.read<BottomNavCubit>().hideBar();
+    _loadMapData();
+    if (widget.showBackButton) {
+      context.read<BottomNavCubit>().hideBar();
+    }
+  }
+
+  Future<void> _loadMapData() async {
+    try {
+      final ghost = await SharedPrefsHelper.getGhostMode();
+      final fuzzy = await SharedPrefsHelper.getFuzzyLocation();
+      double? lat = await SharedPrefsHelper.getUserLatitude();
+      double? lng = await SharedPrefsHelper.getUserLongitude();
+
+      if (lat != null && lng != null && mounted) {
+        setState(() {
+          _currentUserCoords = LatLng(lat!, lng!);
+          _ghostMode = ghost;
+          _fuzzyLocation = fuzzy;
+        });
+      }
+
+      final locations = await _apiService.getUsersLocations();
+
+      try {
+        LocationPermission permission = await Geolocator.checkPermission();
+        if (permission == LocationPermission.denied) {
+          permission = await Geolocator.requestPermission();
+        }
+
+        if (permission == LocationPermission.whileInUse ||
+            permission == LocationPermission.always) {
+          final pos = await Geolocator.getCurrentPosition(
+            locationSettings:
+                const LocationSettings(accuracy: LocationAccuracy.medium),
+          ).timeout(const Duration(seconds: 3));
+          lat = pos.latitude;
+          lng = pos.longitude;
+          await SharedPrefsHelper.setUserLatitude(lat);
+          await SharedPrefsHelper.setUserLongitude(lng);
+        }
+      } catch (e) {
+        debugPrint("Error fetching live GPS: $e");
+      }
+
+      if (lat == null || lng == null) {
+        lat = await SharedPrefsHelper.getUserLatitude();
+        lng = await SharedPrefsHelper.getUserLongitude();
+      }
+
+      String placeName = "Active Zone";
+      if (lat != null && lng != null) {
+        try {
+          final placemarks = await placemarkFromCoordinates(lat, lng)
+              .timeout(const Duration(seconds: 2));
+          if (placemarks.isNotEmpty) {
+            final p = placemarks.first;
+            final city = p.locality ??
+                p.subAdministrativeArea ??
+                p.administrativeArea ??
+                '';
+            final state = p.administrativeArea ?? p.country ?? '';
+            if (city.isNotEmpty && state.isNotEmpty && city != state) {
+              placeName = "$city, $state";
+            } else if (city.isNotEmpty) {
+              placeName = city;
+            } else if (state.isNotEmpty) {
+              placeName = state;
+            }
+          }
+        } catch (_) {}
+      }
+
+      if (mounted) {
+        setState(() {
+          _ghostMode = ghost;
+          _fuzzyLocation = fuzzy;
+          _serverLocations = locations
+              .map((loc) => LatLng(loc['latitude']!, loc['longitude']!))
+              .toList();
+          if (lat != null && lng != null) {
+            _currentUserCoords = LatLng(lat, lng);
+          }
+          _currentCityName = placeName;
+        });
+
+        if (_currentUserCoords != null) {
+          _miniMapController?.animateCamera(
+            CameraUpdate.newCameraPosition(
+              CameraPosition(target: _getUserDisplayCoords(), zoom: 8.0),
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      debugPrint("Error loading mini map data: $e");
+    }
+  }
+
+  LatLng _getUserDisplayCoords() {
+    final base = _currentUserCoords ??
+        (_serverLocations.isNotEmpty
+            ? _serverLocations.first
+            : const LatLng(19.0760, 72.8777));
+    if (!_fuzzyLocation) return base;
+    return LatLng(base.latitude + 0.008, base.longitude + 0.008);
+  }
+
+  Set<Marker> _buildMiniMapMarkers() {
+    final Set<Marker> markers = {};
+    int index = 1;
+    for (final latLng in _serverLocations) {
+      markers.add(
+        Marker(
+          markerId: MarkerId('mini_server_$index'),
+          position: latLng,
+          icon: BitmapDescriptor.defaultMarkerWithHue(
+              BitmapDescriptor.hueAzure),
+        ),
+      );
+      index++;
+    }
+
+    if (!_ghostMode && _currentUserCoords != null) {
+      markers.add(
+        Marker(
+          markerId: const MarkerId('mini_user_pin'),
+          position: _getUserDisplayCoords(),
+          icon: BitmapDescriptor.defaultMarkerWithHue(
+              BitmapDescriptor.hueCyan),
+          infoWindow: const InfoWindow(title: "You"),
+        ),
+      );
+    }
+    return markers;
+  }
+
+  Set<Circle> _buildMiniMapCircles(LatLng center) {
+    return {};
   }
 
   Future<void> _loadData() async {
@@ -61,13 +209,16 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
   @override
   Widget build(BuildContext context) {
     return PopScope(
-      canPop: false,
+      canPop: !widget.showBackButton,
       onPopInvokedWithResult: (didPop, _) {
         if (didPop) {
           return;
         }
 
-        Navigator.pop(context);
+        if (widget.showBackButton) {
+          context.read<BottomNavCubit>().showBar();
+          Navigator.pop(context);
+        }
       },
       child: Scaffold(
         body: Container(
@@ -89,35 +240,29 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
                       vertical: AppDimensions.dim10.h),
                   child: Row(
                     children: [
-                      GestureDetector(
-                        onTap: () {
-                          context.read<BottomNavCubit>().showBar();
-                          Navigator.pop(context);
-                        },
-                        child: Container(
-                          padding: EdgeInsets.all(AppDimensions.dim8.w),
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: AppColors.white.withOpacity(0.2),
-                          ),
-                          child: const Icon(Icons.arrow_back_ios_new,
-                              color: AppColors.bluegray, size: 20),
-                        ),
-                      ),
-                      Expanded(
-                        child: Center(
-                          child: Text(
-                            "Leaderboard",
-                            style: TextStyle(
-                              fontSize: AppFontStyles.fontSize_20.sp,
-                              fontFamily: AppFontStyles.urbanistFontFamily,
-                              color: AppColors.bluegray,
-                              fontVariations: [AppFontStyles.boldFontVariation],
+                      if (widget.showBackButton)
+                        GestureDetector(
+                          onTap: () {
+                            context.read<BottomNavCubit>().showBar();
+                            Navigator.pop(context);
+                          },
+                          child: Container(
+                            padding: EdgeInsets.all(AppDimensions.dim8.w),
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: AppColors.white.withOpacity(0.2),
                             ),
+                            child: const Icon(Icons.arrow_back_ios_new,
+                                color: AppColors.bluegray, size: 20),
                           ),
-                        ),
+                        )
+                      else
+                        SizedBox(width: 36.w),
+                      const Expanded(
+                        child: SizedBox(),
                       ),
-                      SizedBox(width: 40.w), // Balance back button
+                      if (widget.showBackButton)
+                        SizedBox(width: 40.w), // Balance back button
                     ],
                   ),
                 ),
@@ -144,7 +289,10 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
                                   _buildImpactStorySection(),
                                   SizedBox(height: AppDimensions.dim24.h),
                                   _buildSocialLeagueSection(),
-                                  SizedBox(height: 40.h),
+                                  SizedBox(
+                                      height: widget.showBackButton
+                                          ? 120.h
+                                          : 150.h),
                                 ],
                               ),
                             ),
@@ -194,20 +342,21 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
   Widget _buildGlobalRankingCard() {
     final ranking = _leaderboardData?['globalRanking'] ??
         {
-          'rank': 2,
-          'totalUsers': 100,
-          'percentile': 'Top 3%',
-          'level': 10,
-          'points': 850,
-          'nextTierPoints': 1000,
-          'tierName': 'Elite Tier'
+          'rank': 1,
+          'totalUsers': 1,
+          'percentile': 'Top 100%',
+          'level': 1,
+          'points': 0,
+          'nextTierPoints': 500,
+          'tierName': 'Bronze Tier'
         };
 
     final double progress = (ranking['points'] as num).toDouble() /
         (ranking['nextTierPoints'] as num).toDouble();
 
     // Percentile comes pre-computed from backend
-    final String percentileDisplay = ranking['percentile'] as String? ?? 'Top 1%';
+    final String percentileDisplay =
+        ranking['percentile'] as String? ?? 'Top 1%';
 
     return Container(
       width: double.infinity,
@@ -335,8 +484,28 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
   }
 
   Widget _buildSocialImpactSection() {
-    final socialImpact =
-        _leaderboardData?['socialImpact'] ?? {'activeFriendsCount': 3};
+    final targetCenter = _currentUserCoords != null
+        ? _getUserDisplayCoords()
+        : (_serverLocations.isNotEmpty
+            ? _serverLocations.first
+            : const LatLng(19.0760, 72.8777));
+
+    // Count hydrators located within the current local 40km heatmap circle
+    int activeCount = 0;
+    for (final loc in _serverLocations) {
+      final dist = Geolocator.distanceBetween(
+        targetCenter.latitude,
+        targetCenter.longitude,
+        loc.latitude,
+        loc.longitude,
+      );
+      if (dist <= 40000) { // 40km local heatmap circle radius
+        activeCount++;
+      }
+    }
+    if (activeCount == 0 && !_ghostMode && _currentUserCoords != null) {
+      activeCount = 1;
+    }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -345,7 +514,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text(
-              "Social Impact",
+              "Social Impact Map",
               style: TextStyle(
                   fontSize: 18.sp,
                   fontFamily: AppFontStyles.urbanistFontFamily,
@@ -362,7 +531,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
               child: Row(
                 children: [
                   Text(
-                    "VIEW ALL",
+                    "EXPAND MAP",
                     style: TextStyle(
                       fontSize: 12.sp,
                       fontFamily: AppFontStyles.urbanistFontFamily,
@@ -388,87 +557,164 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
           },
           child: Container(
             width: double.infinity,
-            height: 160.h,
+            height: 190.h,
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(20.r),
-              border: Border.all(color: Colors.grey.shade300, width: 1),
-              color: Colors.blue.withOpacity(0.05),
-            ),
-            child: Stack(
-              children: [
-                // Stylized grid or dots to simulate map roads
-                Positioned.fill(
-                  child: CustomPaint(
-                    painter: _MapGridPainter(),
-                  ),
-                ),
-                Positioned(
-                  top: 12.h,
-                  left: 12.w,
-                  child: Container(
-                    padding:
-                        EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(100.r),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.05),
-                          blurRadius: 4,
-                        ),
-                      ],
-                    ),
-                    child: Row(
-                      children: [
-                        Container(
-                          width: 8.w,
-                          height: 8.w,
-                          decoration: const BoxDecoration(
-                            color: Color(0xFF00C853),
-                            shape: BoxShape.circle,
-                          ),
-                        ),
-                        SizedBox(width: 6.w),
-                        Text(
-                          "${socialImpact['activeFriendsCount']} Friends Active Now",
-                          style: TextStyle(
-                            fontSize: 11.sp,
-                            fontFamily: AppFontStyles.urbanistFontFamily,
-                            color: AppColors.black,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                Center(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(Icons.location_on,
-                          color: Color(0xFFFF5252), size: 36),
-                      Container(
-                        padding:
-                            EdgeInsets.symmetric(horizontal: 10.w, vertical: 4.h),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.9),
-                          borderRadius: BorderRadius.circular(8.r),
-                        ),
-                        child: Text(
-                          "San Francisco",
-                          style: TextStyle(
-                            fontSize: 12.sp,
-                            fontFamily: AppFontStyles.urbanistFontFamily,
-                            fontWeight: FontWeight.bold,
-                            color: const Color(0xFF003057),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
+              borderRadius: BorderRadius.circular(24.r),
+              border: Border.all(color: Colors.white.withOpacity(0.4), width: 1.5),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.08),
+                  blurRadius: 12,
+                  offset: const Offset(0, 4),
                 ),
               ],
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(24.r),
+              child: Stack(
+                children: [
+                  GoogleMap(
+                    initialCameraPosition: CameraPosition(
+                      target: targetCenter,
+                      zoom: 8.0,
+                    ),
+                    onMapCreated: (controller) {
+                      _miniMapController = controller;
+                      if (_currentUserCoords != null) {
+                        _miniMapController?.animateCamera(
+                          CameraUpdate.newCameraPosition(
+                            CameraPosition(
+                                target: _getUserDisplayCoords(), zoom: 8.0),
+                          ),
+                        );
+                      }
+                    },
+                    markers: _buildMiniMapMarkers(),
+                    circles: _buildMiniMapCircles(targetCenter),
+                    zoomControlsEnabled: false,
+                    zoomGesturesEnabled: false,
+                    scrollGesturesEnabled: false,
+                    rotateGesturesEnabled: false,
+                    tiltGesturesEnabled: false,
+                    myLocationButtonEnabled: false,
+                    mapToolbarEnabled: false,
+                    onTap: (_) {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (context) => const SipMapScreen()),
+                      );
+                    },
+                  ),
+                  Positioned(
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    height: 50.h,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [
+                            Colors.black.withOpacity(0.35),
+                            Colors.transparent,
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                  Positioned(
+                    top: 12.h,
+                    left: 12.w,
+                    child: Container(
+                      padding:
+                          EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.95),
+                        borderRadius: BorderRadius.circular(100.r),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.1),
+                            blurRadius: 6,
+                          ),
+                        ],
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Container(
+                            width: 8.w,
+                            height: 8.w,
+                            decoration: const BoxDecoration(
+                              color: Color(0xFF00C853),
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                          SizedBox(width: 6.w),
+                          Text(
+                            "$activeCount Hydrator${activeCount == 1 ? '' : 's'} Active",
+                            style: TextStyle(
+                              fontSize: 11.sp,
+                              fontFamily: AppFontStyles.urbanistFontFamily,
+                              color: const Color(0xFF0F172A),
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  Positioned(
+                    bottom: 12.h,
+                    left: 12.w,
+                    child: Container(
+                      padding:
+                          EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF003057).withOpacity(0.85),
+                        borderRadius: BorderRadius.circular(12.r),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.location_on,
+                              color: Color(0xFF00A2FF), size: 16),
+                          SizedBox(width: 4.w),
+                          Text(
+                            _currentCityName,
+                            style: TextStyle(
+                              fontSize: 12.sp,
+                              fontFamily: AppFontStyles.urbanistFontFamily,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
+                          if (_fuzzyLocation && !_ghostMode) ...[
+                            SizedBox(width: 6.w),
+                            Container(
+                              padding: EdgeInsets.symmetric(
+                                  horizontal: 6.w, vertical: 2.h),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF00A2FF).withOpacity(0.3),
+                                borderRadius: BorderRadius.circular(4.r),
+                              ),
+                              child: Text(
+                                "Fuzzy",
+                                style: TextStyle(
+                                  fontSize: 9.sp,
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ),
@@ -644,66 +890,24 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
   }
 
   Widget _buildSocialLeagueSection() {
-    final league = _leaderboardData?['socialLeague'] as List? ??
-        [
-          {
-            'rank': 1,
-            'name': 'Sarah J.',
-            'level': 42,
-            'points': 1240,
-            'isMe': false,
-            'avatar': 'assets/images/sarah.png'
-          },
-          {
-            'rank': 2,
-            'name': 'You',
-            'level': 38,
-            'points': 850,
-            'isMe': true,
-            'avatar': 'assets/images/user.png'
-          },
-          {
-            'rank': 3,
-            'name': 'Mike T.',
-            'level': 35,
-            'points': 720,
-            'isMe': false,
-            'avatar': 'assets/images/mike.png'
-          }
-        ];
+    final league = (_leaderboardData?['socialLeague'] as List?) ?? [];
+
+    if (league.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    final top50League = league.take(50).toList();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(
-              "Social League",
-              style: TextStyle(
-                  fontSize: 18.sp,
-                  fontFamily: AppFontStyles.urbanistFontFamily,
-                  color: const Color(0xFF003057),
-                  fontVariations: [AppFontStyles.extraBoldFontVariation]),
-            ),
-            GestureDetector(
-              onTap: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                      content: Text("Social League search coming soon!")),
-                );
-              },
-              child: Text(
-                "View All",
-                style: TextStyle(
-                  fontSize: 12.sp,
-                  fontFamily: AppFontStyles.urbanistFontFamily,
-                  color: const Color(0xFF007BFF),
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
-          ],
+        Text(
+          "Social League",
+          style: TextStyle(
+              fontSize: 18.sp,
+              fontFamily: AppFontStyles.urbanistFontFamily,
+              color: const Color(0xFF003057),
+              fontVariations: [AppFontStyles.extraBoldFontVariation]),
         ),
         SizedBox(height: 12.h),
         Container(
@@ -713,8 +917,23 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
             borderRadius: BorderRadius.circular(20.r),
             border: Border.all(color: Colors.grey.shade200, width: 1.5),
           ),
-          child: Column(
-            children: league.map((player) => _buildPlayerRow(player)).toList(),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(20.r),
+            child: ConstrainedBox(
+              constraints: BoxConstraints(
+                maxHeight: 330.h, // Height of ~5 items
+              ),
+              child: ListView.builder(
+                padding: EdgeInsets.zero,
+                shrinkWrap: true,
+                physics: const ClampingScrollPhysics(),
+                itemCount: top50League.length,
+                itemBuilder: (context, index) {
+                  final player = top50League[index] as Map<String, dynamic>;
+                  return _buildPlayerRow(player);
+                },
+              ),
+            ),
           ),
         ),
       ],
@@ -829,36 +1048,4 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
       ),
     );
   }
-}
-
-class _MapGridPainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = Colors.blue.withOpacity(0.1)
-      ..strokeWidth = 2
-      ..style = PaintingStyle.stroke;
-
-    // Draw stylized roads/grid lines
-    canvas.drawLine(Offset(0, size.height * 0.3),
-        Offset(size.width, size.height * 0.4), paint);
-    canvas.drawLine(Offset(0, size.height * 0.7),
-        Offset(size.width, size.height * 0.6), paint);
-    canvas.drawLine(Offset(size.width * 0.3, 0),
-        Offset(size.width * 0.4, size.height), paint);
-    canvas.drawLine(Offset(size.width * 0.7, 0),
-        Offset(size.width * 0.6, size.height), paint);
-
-    // Draw park circles
-    final parkPaint = Paint()
-      ..color = Colors.green.withOpacity(0.08)
-      ..style = PaintingStyle.fill;
-    canvas.drawCircle(
-        Offset(size.width * 0.15, size.height * 0.2), 30.r, parkPaint);
-    canvas.drawCircle(
-        Offset(size.width * 0.8, size.height * 0.75), 45.r, parkPaint);
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

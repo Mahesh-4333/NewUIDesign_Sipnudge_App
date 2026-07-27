@@ -1,5 +1,8 @@
+import 'dart:io';
+import 'package:hydrify/constants/app_api_constants.dart';
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -78,13 +81,14 @@ Future<void> main() async {
     options: DefaultFirebaseOptions.currentPlatform,
   );
 
-  if (kDebugMode) {
-    try {
-      FirebaseFunctions.instance.useFunctionsEmulator('127.0.0.1', 5001);
-    } catch (e) {
-      print('Error connecting to functions emulator: $e');
-    }
-  }
+  // Uncomment if using local Firebase Functions emulator:
+  // if (kDebugMode) {
+  //   try {
+  //     FirebaseFunctions.instance.useFunctionsEmulator('127.0.0.1', 5001);
+  //   } catch (e) {
+  //     print('Error connecting to functions emulator: $e');
+  //   }
+  // }
 
   final httpClient = http.Client();
   final locationService = LocationService();
@@ -100,12 +104,18 @@ Future<void> main() async {
   await FirebaseMessagingService().init();
 
   FlutterError.onError = (FlutterErrorDetails details) {
+    FirebaseCrashlytics.instance.recordFlutterError(details);
     //this line prints the default flutter gesture caught exception in console
     //FlutterError.dumpErrorToConsole(details);
     print("Error From INSIDE FRAME_WORK");
     print("----------------------");
     print("Error :  ${details.exception}");
     print("StackTrace :  ${details.stack}");
+  };
+
+  PlatformDispatcher.instance.onError = (error, stack) {
+    FirebaseCrashlytics.instance.recordError(error, stack, fatal: true);
+    return true;
   };
 
   runApp(
@@ -246,11 +256,13 @@ class MyApp extends StatelessWidget {
                       '/aboutus': (context) => AboutUs(),
 
                       '/contact_support': (context) => ContactSupportPage(),
-                      
-                      '/help_support_ticket': (context) => HelpAndSupportTicketPage(),
+
+                      '/help_support_ticket': (context) =>
+                          HelpAndSupportTicketPage(),
 
                       '/ticket_chat': (context) {
-                        final args = ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>;
+                        final args = ModalRoute.of(context)!.settings.arguments
+                            as Map<String, dynamic>;
                         return TicketChatScreen(ticket: args);
                       },
 

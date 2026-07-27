@@ -22,6 +22,15 @@ class AuthenticationProvider with ChangeNotifier {
 
   bool get isBiometricAuthenticated => _isBiometricAuthenticated;
 
+  Future<bool> canCheckBiometrics() async {
+    try {
+      return await _localAuth.canCheckBiometrics ||
+          await _localAuth.isDeviceSupported();
+    } catch (e) {
+      return false;
+    }
+  }
+
   Future<bool> authenticateWithBiometrics() async {
     try {
       final canCheck = await _localAuth.canCheckBiometrics ||
