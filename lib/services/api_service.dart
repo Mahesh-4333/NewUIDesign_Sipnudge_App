@@ -391,6 +391,7 @@ class ApiService {
     bool isPerfect, {
     double? target,
     int? dayIndex,
+    int? battery,
   }) async {
     try {
       final response = await _dio.patch(
@@ -402,11 +403,33 @@ class ApiService {
           'isPerfect': isPerfect,
           if (target != null) 'target': target,
           if (dayIndex != null) 'dayIndex': dayIndex,
+          if (battery != null) 'battery': battery,
         },
       );
       return response.statusCode == 204 || (response.data != null && response.data['success'] == true);
     } on DioException catch (e) {
       Console.log(tag: "APP", value: "Exception in updateTodayConsumed: $e");
+      return false;
+    }
+  }
+
+  Future<bool> sendBgConsumedNotification(
+    String userId,
+    double consumed, {
+    String? date,
+  }) async {
+    try {
+      final response = await _dio.post(
+        '/api/database/send-bg-consumed-notification',
+        data: {
+          'userId': userId,
+          'consumed': consumed,
+          if (date != null) 'date': date,
+        },
+      );
+      return response.data != null && response.data['success'] == true;
+    } on DioException catch (e) {
+      Console.log(tag: "APP", value: "Exception in sendBgConsumedNotification: $e");
       return false;
     }
   }

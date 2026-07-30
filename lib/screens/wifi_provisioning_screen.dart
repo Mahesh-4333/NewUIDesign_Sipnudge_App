@@ -8,6 +8,7 @@ import 'package:hydrify/constants/app_font_styles.dart';
 import 'package:hydrify/constants/app_style.dart';
 import 'package:hydrify/cubit/ble/ble_cubit.dart';
 import 'package:hydrify/cubit/bottom_nav/bottom_nav_cubit.dart';
+import 'package:hydrify/helpers/logger.dart';
 import 'package:hydrify/helpers/shared_pref_helper.dart';
 import 'package:network_info_plus/network_info_plus.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -36,6 +37,23 @@ class _WifiProvisioningScreenState extends State<WifiProvisioningScreen> {
     super.initState();
     context.read<BottomNavCubit>().hideBar();
     _loadUserId();
+    _loadCredentialsForPriority(_selectedPriority);
+  }
+
+  Future<void> _loadCredentialsForPriority(int priority) async {
+    final ssid = await SharedPrefsHelper.getWifiSsidForPriority(priority);
+    final password =
+        await SharedPrefsHelper.getWifiPasswordForPriority(priority);
+    Console.log(
+        tag: "WIFI_PROV",
+        value:
+            "Loaded for priority $priority: SSID='$ssid', Password='${password != null ? '***' : 'null'}'");
+    if (mounted) {
+      setState(() {
+        _ssidController.text = ssid ?? "";
+        _passController.text = password ?? "";
+      });
+    }
   }
 
   Future<void> _autofillWifiSSID() async {
@@ -190,6 +208,13 @@ class _WifiProvisioningScreenState extends State<WifiProvisioningScreen> {
   Future<void> _provisionWifi() async {
     if (!_formKey.currentState!.validate()) return;
 
+    // Save credentials locally first so they are never lost
+    await SharedPrefsHelper.setWifiCredentialsForPriority(
+      _selectedPriority,
+      _ssidController.text.trim(),
+      _passController.text,
+    );
+
     final bleCubit = context.read<BleCubit>();
     final bool isConnected = bleCubit.state.status == BleStatus.connected;
 
@@ -217,6 +242,14 @@ class _WifiProvisioningScreenState extends State<WifiProvisioningScreen> {
           isSuccess: true,
         );
       } else if (response.result == 'ok') {
+        // Shift priority selector to the next tab (Primary -> Secondary -> Tertiary)
+        final nextPriority =
+            _selectedPriority == 1 ? 2 : (_selectedPriority == 2 ? 3 : 3);
+        setState(() {
+          _selectedPriority = nextPriority;
+        });
+        await _loadCredentialsForPriority(nextPriority);
+
         _showResultDialog(
           title: "Provisioned Successfully",
           message:
@@ -263,72 +296,6 @@ class _WifiProvisioningScreenState extends State<WifiProvisioningScreen> {
       _showResultDialog(
         title: "System Error",
         message: "Failed to communicate with the bottle:\n$e",
-        isSuccess: false,
-      );
-    }
-  }
-
-  Future<void> _storeUserIdOnly() async {
-    if (_userIdController.text.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Please enter a User ID to save.")),
-      );
-      return;
-    }
-
-    final bleCubit = context.read<BleCubit>();
-    final bool isConnected = bleCubit.state.status == BleStatus.connected;
-
-    if (isConnected) {
-      setState(() {
-        _isLoading = true;
-      });
-    }
-
-    try {
-      final response = await bleCubit.provisionWifi(
-        priority: 1, // dummy, not used when ssid is omitted
-        ssid: "",
-        pass: "",
-        userId: _userIdController.text.trim(),
-      );
-
-      if (isConnected) {
-        setState(() {
-          _isLoading = false;
-        });
-      }
-
-      if (response.result == 'saved_pending') {
-        _showResultDialog(
-          title: "Saved Offline",
-          message:
-              "User ID configuration saved to pending queue!\n\nIt will be sent to the SipNudge bottle automatically the next time it connects.",
-          isSuccess: true,
-        );
-      } else if (response.result == 'saved') {
-        _showResultDialog(
-          title: "Saved successfully",
-          message: "User ID stored on the bottle successfully.",
-          isSuccess: true,
-        );
-      } else {
-        _showResultDialog(
-          title: "Save Failed",
-          message:
-              "Could not save User ID.\nReason: ${response.reason ?? response.result}",
-          isSuccess: false,
-        );
-      }
-    } catch (e) {
-      if (isConnected) {
-        setState(() {
-          _isLoading = false;
-        });
-      }
-      _showResultDialog(
-        title: "Error",
-        message: "An error occurred:\n$e",
         isSuccess: false,
       );
     }
@@ -466,6 +433,7 @@ class _WifiProvisioningScreenState extends State<WifiProvisioningScreen> {
                 ],
               ),
             ),
+
             if (_isLoading) _buildLoadingOverlay(),
           ],
         ),
@@ -580,73 +548,6 @@ class _WifiProvisioningScreenState extends State<WifiProvisioningScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            "Account Settings",
-            style: TextStyle(
-              fontSize: 14.sp,
-              fontVariations: [AppFontStyles.boldFontVariation],
-              color: const Color(0xFF5D7B91),
-              letterSpacing: 0.5,
-            ),
-          ),
-          SizedBox(height: 12.h),
-          TextFormField(
-            controller: _userIdController,
-            decoration: InputDecoration(
-              prefixIcon:
-                  const Icon(Icons.person_outline, color: Color(0xFF94A3B8)),
-              labelText: "User ID",
-              labelStyle: const TextStyle(color: Color(0xFF94A3B8)),
-              hintText: "Enter User Account ID",
-              hintStyle: const TextStyle(color: Color(0xFFCBD5E1)),
-              filled: true,
-              fillColor: Colors.grey[50],
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(16.r),
-                borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(16.r),
-                borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(16.r),
-                borderSide:
-                    const BorderSide(color: Color(0xFF3B82F6), width: 1.5),
-              ),
-            ),
-            style: TextStyle(
-              fontSize: 14.sp,
-              fontFamily: AppFontStyles.urbanistFontFamily,
-              color: AppColors.raisinblack,
-            ),
-          ),
-          SizedBox(height: 8.h),
-          SizedBox(
-            width: double.infinity,
-            child: OutlinedButton(
-              onPressed: _storeUserIdOnly,
-              style: OutlinedButton.styleFrom(
-                side: const BorderSide(color: Color(0xFF5D7B91)),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16.r),
-                ),
-                padding: EdgeInsets.symmetric(vertical: 10.h),
-              ),
-              child: Text(
-                "Save User ID Only (No Wi-Fi Test)",
-                style: TextStyle(
-                  color: const Color(0xFF5D7B91),
-                  fontSize: 12.sp,
-                  fontVariations: [AppFontStyles.boldFontVariation],
-                  fontFamily: AppFontStyles.urbanistFontFamily,
-                ),
-              ),
-            ),
-          ),
-          SizedBox(height: 24.h),
-          const Divider(color: Color(0xFFE2E8F0)),
-          SizedBox(height: 16.h),
-          Text(
             "Wi-Fi Settings",
             style: TextStyle(
               fontSize: 14.sp,
@@ -672,7 +573,7 @@ class _WifiProvisioningScreenState extends State<WifiProvisioningScreen> {
               suffixIcon: IconButton(
                 icon: const Icon(Icons.refresh, color: Color(0xFF3B82F6)),
                 tooltip: "Autofill Connected Wi-Fi SSID",
-                onPressed: _autofillWifiSSID,
+                onPressed: _isLoading ? null : _autofillWifiSSID,
               ),
               labelText: "SSID (Network Name)",
               labelStyle: const TextStyle(color: Color(0xFF94A3B8)),
@@ -766,7 +667,7 @@ class _WifiProvisioningScreenState extends State<WifiProvisioningScreen> {
           SizedBox(
             width: double.infinity,
             child: ElevatedButton(
-              onPressed: _provisionWifi,
+              onPressed: _isLoading ? null : _provisionWifi,
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFF3B82F6),
                 shape: RoundedRectangleBorder(
@@ -813,11 +714,14 @@ class _WifiProvisioningScreenState extends State<WifiProvisioningScreen> {
     final isSelected = _selectedPriority == priority;
     return Expanded(
       child: GestureDetector(
-        onTap: () {
-          setState(() {
-            _selectedPriority = priority;
-          });
-        },
+        onTap: _isLoading
+            ? null
+            : () {
+                setState(() {
+                  _selectedPriority = priority;
+                });
+                _loadCredentialsForPriority(priority);
+              },
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 200),
           decoration: BoxDecoration(

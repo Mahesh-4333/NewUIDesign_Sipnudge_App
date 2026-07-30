@@ -90,18 +90,39 @@ class HomeWidgetService {
     final todayStr = DateTime.now().toIso8601String().substring(0, 10);
     await HomeWidget.saveWidgetData<String>('last_update_date', todayStr);
 
-    // Calculate and save upcoming slot data
+    // Calculate and save upcoming slot data and battery
     try {
       final dbHelper = DatabaseHelper();
+      
+      // 1. Fetch battery from local database
+      int battery = 0;
+      try {
+        final db = await dbHelper.database;
+        final List<Map<String, dynamic>> maps = await db.query(
+          'bottle_data',
+          orderBy: 'timestamp DESC',
+          limit: 1,
+        );
+        if (maps.isNotEmpty) {
+          battery = maps.first['battery'] as int? ?? 0;
+        }
+      } catch (e) {
+        Console.log(tag: "HomeWidget", value: "Error fetching battery from database: $e");
+      }
+      await HomeWidget.saveWidgetData<int>('battery', battery);
+
       final slots = await dbHelper.getAllSlots();
       if (slots.isNotEmpty) {
         // Save all slots as a JSON string for dynamic calculations in widget when app is closed
         final List<Map<String, dynamic>> slotsJsonList = slots.map((entry) {
-          final tod = entry.startTime;
+          final start = entry.startTime;
+          final end = entry.endTime;
           return {
             'label': entry.slot.label,
-            'hour': tod.hour,
-            'minute': tod.minute,
+            'hour': start.hour,
+            'minute': start.minute,
+            'endHour': end.hour,
+            'endMinute': end.minute,
             'target': entry.amount.round(),
           };
         }).toList();
@@ -120,6 +141,31 @@ class HomeWidgetService {
           final bMin = b.startTime.hour * 60 + b.startTime.minute;
           return aMin.compareTo(bMin);
         });
+
+        // 2. Compute expected cumulative target at current time (linear)
+        double expectedCumulative = 0.0;
+        for (int i = 0; i < slots.length; i++) {
+          final entry = slots[i];
+          final startMin = entry.startTime.hour * 60 + entry.startTime.minute;
+          final endMin = entry.endTime.hour * 60 + entry.endTime.minute;
+
+          if (nowMinutes >= endMin) {
+            expectedCumulative += entry.amount;
+          } else if (nowMinutes >= startMin && nowMinutes < endMin) {
+            final slotDuration = endMin - startMin;
+            if (slotDuration > 0) {
+              final elapsed = nowMinutes - startMin;
+              final fraction = elapsed / slotDuration;
+              expectedCumulative += entry.amount * fraction;
+            }
+            break;
+          } else {
+            break;
+          }
+        }
+        final double expectedPercent = (expectedCumulative / dailyGoal.toDouble()) * 100.0;
+        await HomeWidget.saveWidgetData<int>('expected_cumulative_target', expectedCumulative.round());
+        await HomeWidget.saveWidgetData<double>('expected_percent', expectedPercent);
 
         HydrationEntry? upcomingEntry;
         for (final entry in slots) {
@@ -145,10 +191,10 @@ class HomeWidgetService {
         await HomeWidget.saveWidgetData<String>('upcoming_slot_time', timeStr);
         Console.log(
             tag: "HomeWidget",
-            value: "Widget upcoming slot: ${upcomingEntry.slot.label} at $timeStr, target: ${upcomingEntry.amount.round()} ml");
+            value: "Widget upcoming slot: ${upcomingEntry.slot.label} at $timeStr, target: ${upcomingEntry.amount.round()} ml, expectedCumulative: $expectedCumulative ml, expectedPercent: $expectedPercent%");
       }
     } catch (e) {
-      Console.log(tag: "HomeWidget", value: "Error updating widget data with upcoming slot: $e");
+      Console.log(tag: "HomeWidget", value: "Error updating widget data: $e");
     }
     
     // Trigger an update for both platforms

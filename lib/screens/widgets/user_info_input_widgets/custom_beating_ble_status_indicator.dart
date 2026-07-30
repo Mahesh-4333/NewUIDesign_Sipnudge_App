@@ -38,10 +38,6 @@ class _CustomBeatingBleStatusIndicatorState
     _spreadAnimation = Tween<double>(begin: 1, end: 4).animate(
       CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
     );
-
-    _controller.addListener(() {
-      setState(() {});
-    });
   }
 
   @override
@@ -62,36 +58,50 @@ class _CustomBeatingBleStatusIndicatorState
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: AppDimensions.dim10.w,
-      height: AppDimensions.dim10.h,
-      alignment: Alignment.center,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        color: const Color(0XFF9677E9),
-        boxShadow: [
-          BoxShadow(
-            blurRadius: _blurAnimation.value,
-            spreadRadius: _spreadAnimation.value,
-            color: Colors.black.withOpacity(0.3),
-          ),
-        ],
-      ),
-      child: BlocBuilder<BleCubit, BleState>(
-        builder: (context, state) {
-          Color connectionColor = state.status != BleStatus.connected
-              ? AppColors.redColor
-              : AppColors.batteryIndicator;
-          return Container(
-            width: AppDimensions.dim8.w,
-            height: AppDimensions.dim8.h,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: connectionColor,
-            ),
-          );
-        },
-      ),
+    return BlocBuilder<BleCubit, BleState>(
+      builder: (context, state) {
+        final bool isConnected = state.status == BleStatus.connected ||
+            state.status == BleStatus.readingData ||
+            state.status == BleStatus.sendingAck;
+
+        final bool isTransitional = state.status == BleStatus.connecting ||
+            state.status == BleStatus.scanning ||
+            state.status == BleStatus.initializing;
+
+        final Color connectionColor = isConnected
+            ? AppColors.batteryIndicator
+            : (isTransitional ? const Color(0xFFFFA500) : AppColors.redColor);
+
+        return AnimatedBuilder(
+          animation: _controller,
+          builder: (context, child) {
+            return Container(
+              width: AppDimensions.dim10.w,
+              height: AppDimensions.dim10.h,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: const Color(0XFF9677E9),
+                boxShadow: [
+                  BoxShadow(
+                    blurRadius: _blurAnimation.value,
+                    spreadRadius: _spreadAnimation.value,
+                    color: Colors.black.withOpacity(0.3),
+                  ),
+                ],
+              ),
+              child: Container(
+                width: AppDimensions.dim8.w,
+                height: AppDimensions.dim8.h,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: connectionColor,
+                ),
+              ),
+            );
+          },
+        );
+      },
     );
   }
 }

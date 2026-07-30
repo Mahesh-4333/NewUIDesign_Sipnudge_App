@@ -68,6 +68,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
   bool _isPickerShown = false;
   bool _isRetryDialogShown = false;
+  bool _isWifiConnectedDialogShown = false;
+  bool _isWifiFailedDialogShown = false;
+  BuildContext? _wifiProgressDialogContext;
   bool hasConnectedBefore = false;
   bool isGuest = false;
   String selectedBottle = 'purple';
@@ -703,6 +706,317 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             });
           });
         }
+
+        // 1. Wi-Fi Provisioning Progress Dialog
+        if (state.isWifiProvisioning && _wifiProgressDialogContext == null) {
+          if (ModalRoute.of(context)?.isCurrent ?? false) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (!context.mounted) return;
+              if (!context.read<BleCubit>().state.isWifiProvisioning) return;
+              showDialog(
+                context: context,
+                barrierDismissible: false,
+                builder: (ctx) {
+                  _wifiProgressDialogContext = ctx;
+                  return PopScope(
+                    canPop: false,
+                    child: AlertDialog(
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      backgroundColor: Colors.white,
+                      content: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const SizedBox(height: 16),
+                          const CircularProgressIndicator(
+                            valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF007AFF)),
+                            strokeWidth: 4,
+                          ),
+                          const SizedBox(height: 24),
+                          Text(
+                            "Configuring Wi-Fi",
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.black,
+                              fontFamily: AppFontStyles.urbanistFontFamily,
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          Text(
+                            "SipNudge is setting up your Wi-Fi connection. Please keep your bottle close.",
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: const Color(0xFF555555),
+                              fontFamily: AppFontStyles.urbanistFontFamily,
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              ).then((_) {
+                _wifiProgressDialogContext = null;
+              });
+            });
+          }
+        }
+
+        if (!state.isWifiProvisioning && _wifiProgressDialogContext != null) {
+          final dialogContext = _wifiProgressDialogContext!;
+          _wifiProgressDialogContext = null;
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (Navigator.of(dialogContext).canPop()) {
+              Navigator.of(dialogContext).pop();
+            }
+          });
+        }
+
+        // 2. Wi-Fi Connected Success Dialog
+        if (state.showWifiConnectedDialog && !_isWifiConnectedDialogShown) {
+          _isWifiConnectedDialogShown = true;
+          context.read<BleCubit>().dismissWifiConnectedDialog();
+          if (ModalRoute.of(context)?.isCurrent ?? false) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              showDialog(
+                context: context,
+                builder: (ctx) => AlertDialog(
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  backgroundColor: Colors.white,
+                  content: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF34C759).withOpacity(0.12),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(
+                              Icons.wifi_tethering_rounded,
+                              color: Color(0xFF34C759),
+                              size: 24,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Text(
+                              'Wi-Fi Connected',
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.black,
+                                fontFamily: AppFontStyles.urbanistFontFamily,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        "Your SipNudge bottle is now connected!",
+                        style: TextStyle(
+                          color: const Color(0xFF555555),
+                          fontSize: 14,
+                          height: 1.5,
+                          fontFamily: AppFontStyles.urbanistFontFamily,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF8FAFC),
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: const Color(0xFFE2E8F0),
+                            width: 1,
+                          ),
+                        ),
+                        child: Column(
+                          children: [
+                            buildInfoRow(
+                              "Network SSID",
+                              state.wifiConnectedSsid ?? "Connected",
+                              Icons.wifi,
+                            ),
+                            const SizedBox(height: 12),
+                            const Divider(height: 1, color: Color(0xFFE2E8F0)),
+                            const SizedBox(height: 12),
+                            buildInfoRow(
+                              "IP Address",
+                              state.wifiConnectedIp ?? "0.0.0.0",
+                              Icons.lan_outlined,
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF007AFF),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                          ),
+                          onPressed: () => Navigator.of(ctx).pop(),
+                          child: Text(
+                            "Awesome",
+                            style: TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                              fontFamily: AppFontStyles.urbanistFontFamily,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ).then((_) {
+                _isWifiConnectedDialogShown = false;
+              });
+            });
+          }
+        }
+
+        // 3. Wi-Fi Connection Failed Dialog
+        if (state.showWifiFailedDialog && !_isWifiFailedDialogShown) {
+          _isWifiFailedDialogShown = true;
+          context.read<BleCubit>().dismissWifiFailedDialog();
+          if (ModalRoute.of(context)?.isCurrent ?? false) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              showDialog(
+                context: context,
+                builder: (ctx) => AlertDialog(
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  backgroundColor: Colors.white,
+                  content: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFFF3B30).withOpacity(0.12),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(
+                              Icons.wifi_off_rounded,
+                              color: Color(0xFFFF3B30),
+                              size: 24,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Text(
+                              'Connection Failed',
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.black,
+                                fontFamily: AppFontStyles.urbanistFontFamily,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        "Your SipNudge bottle could not connect to Wi-Fi.",
+                        style: TextStyle(
+                          color: const Color(0xFF555555),
+                          fontSize: 14,
+                          height: 1.5,
+                          fontFamily: AppFontStyles.urbanistFontFamily,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFFFF5F5),
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: const Color(0xFFFEE2E2),
+                            width: 1,
+                          ),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              "Reason",
+                              style: TextStyle(
+                                color: const Color(0xFFEF4444),
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                fontFamily: AppFontStyles.urbanistFontFamily,
+                              ),
+                            ),
+                        const SizedBox(height: 6),
+                        Text(
+                          state.wifiFailedReason ?? "Unknown Error",
+                          style: TextStyle(
+                            color: const Color(0xFF991B1B),
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold,
+                            fontFamily: AppFontStyles.urbanistFontFamily,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFFFF3B30),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                      ),
+                      onPressed: () => Navigator.of(ctx).pop(),
+                      child: Text(
+                        "Close",
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                          fontFamily: AppFontStyles.urbanistFontFamily,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ).then((_) {
+            _isWifiFailedDialogShown = false;
+          });
+        });
+      }
+    }
       },
       child: Scaffold(
         body: Container(
@@ -1176,28 +1490,57 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                   }
                   return false;
                 }, builder: (context, state) {
-                  return FutureBuilder<(double, double)>(future: () async {
+                  return FutureBuilder<(double, double, double)>(future: () async {
                     final history = await context
                         .read<BottleDataCubit>()
                         .getCurrentDayHistory();
-                    // Console.log(
-                    //     tag: "getCurrentDayHistory_progress",
-                    //     value: history.toString());
 
                     double waterVolumeConsumed = history;
                     double completionPercent = await WaterConsumptionCalculator
                         .calculateCompletionPercentage(waterVolumeConsumed);
 
-                    return (completionPercent, waterVolumeConsumed);
+                    // Compute expected cumulative slot-schedule target at current time
+                    double expectedPercent = 0.0;
+                    try {
+                      final dbHelper = DatabaseHelper();
+                      final goalMl = await dbHelper.getDailyWaterGoal(DateTime.now()) ?? 2500;
+                      final slots = await dbHelper.getAllSlots();
+                      if (slots.isNotEmpty) {
+                        final now = DateTime.now();
+                        final nowMin = now.hour * 60 + now.minute;
+                        slots.sort((a, b) {
+                          final aMin = a.startTime.hour * 60 + a.startTime.minute;
+                          final bMin = b.startTime.hour * 60 + b.startTime.minute;
+                          return aMin.compareTo(bMin);
+                        });
+                        double cum = 0.0;
+                        for (final s in slots) {
+                          final startMin = s.startTime.hour * 60 + s.startTime.minute;
+                          final endMin = s.endTime.hour * 60 + s.endTime.minute;
+                          if (nowMin >= endMin) {
+                            cum += s.amount;
+                          } else if (nowMin >= startMin && nowMin < endMin) {
+                            final dur = endMin - startMin;
+                            if (dur > 0) cum += s.amount * ((nowMin - startMin) / dur);
+                            break;
+                          } else {
+                            break;
+                          }
+                        }
+                        expectedPercent = goalMl > 0 ? (cum / goalMl) * 100.0 : 0.0;
+                      }
+                    } catch (_) {}
+
+                    return (completionPercent, waterVolumeConsumed, expectedPercent);
                   }(), builder: (context, snapshot) {
-                    final (completionPercent, waterVolumeConsumed) =
-                        snapshot.data ?? (0.0, 0.0);
+                    final (completionPercent, waterVolumeConsumed, expectedPercent) =
+                        snapshot.data ?? (0.0, 0.0, 0.0);
 
                     if (snapshot.connectionState == ConnectionState.waiting) {
                       return const Center(child: CircularProgressIndicator());
                     }
                     return _progressCircleWidget(
-                        completionPercent, waterVolumeConsumed);
+                        completionPercent, waterVolumeConsumed, expectedPercent);
                   });
                 }),
               ),
@@ -1312,8 +1655,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     );
   }
 
-  CustomCircularWaterProgressIndicator _progressCircleWidget(
-      double completionPercent, double waterVolumeConsumed) {
+  Widget _progressCircleWidget(
+      double completionPercent, double waterVolumeConsumed, double expectedPercent) {
     return CustomCircularWaterProgressIndicator(
       height: AppDimensions.dim70.h,
       width: AppDimensions.dim70.w,
@@ -1327,8 +1670,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       ],
       backgroundColor: Color(0xffB8B8B8),
       progressBackgroundColor: Color(0xffB3FF4A),
-      //needsInnerShadow: false,
       percentageValue: completionPercent,
+      expectedPercentage: expectedPercent,
       center: Container(
         width: AppDimensions.dim50.w,
         decoration: BoxDecoration(
@@ -2168,6 +2511,38 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           ),
         ),
       ),
+    );
+  }
+
+  Widget buildInfoRow(String label, String value, IconData icon) {
+    return Row(
+      children: [
+        Icon(icon, color: const Color(0xFF007AFF), size: 20),
+        const SizedBox(width: 12),
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              label,
+              style: TextStyle(
+                color: const Color(0xFF64748B),
+                fontSize: 12,
+                fontFamily: AppFontStyles.urbanistFontFamily,
+              ),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              value,
+              style: TextStyle(
+                color: Colors.black,
+                fontSize: 14,
+                fontWeight: FontWeight.bold,
+                fontFamily: AppFontStyles.urbanistFontFamily,
+              ),
+            ),
+          ],
+        ),
+      ],
     );
   }
 }

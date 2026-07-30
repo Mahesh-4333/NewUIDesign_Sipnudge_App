@@ -74,21 +74,15 @@ final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await HomeWidgetService.initialize();
-  await FlutterBluePlus.setLogLevel(LogLevel.verbose, color: true);
 
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
-
-  // Uncomment if using local Firebase Functions emulator:
-  // if (kDebugMode) {
-  //   try {
-  //     FirebaseFunctions.instance.useFunctionsEmulator('127.0.0.1', 5001);
-  //   } catch (e) {
-  //     print('Error connecting to functions emulator: $e');
-  //   }
-  // }
+  // Run core initializations concurrently to minimize launch time
+  await Future.wait([
+    Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    ),
+    HomeWidgetService.initialize(),
+    UserManager().init(),
+  ]);
 
   final httpClient = http.Client();
   final locationService = LocationService();
@@ -99,9 +93,10 @@ Future<void> main() async {
 
   FlutterBluePlus.setLogLevel(LogLevel.none);
 
-  await UserManager().init();
   InternetConnectionHelper().initialize();
-  await FirebaseMessagingService().init();
+
+  // Initialize Firebase Messaging asynchronously in background without blocking runApp
+  FirebaseMessagingService().init();
 
   FlutterError.onError = (FlutterErrorDetails details) {
     FirebaseCrashlytics.instance.recordFlutterError(details);

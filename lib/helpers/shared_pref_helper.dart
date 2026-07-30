@@ -36,6 +36,10 @@ class SharedPrefsHelper {
   static const String _keyPendingConfigData = 'pending_config_data';
   static const String _keyPendingResetCommand = 'pending_reset_command';
   static const String _keyPendingWifiProvData = 'pending_wifi_prov_data';
+  static const String _keyActiveWifiSsid = 'active_wifi_ssid';
+  static const String _keyActiveWifiPassword = 'active_wifi_password';
+  static const String _keyActiveWifiIp = 'active_wifi_ip';
+  static const String _keyActiveWifiPriority = 'active_wifi_priority';
 
   static const String _keyReminderMode = "reminder_mode";
   static const String _keyAlarmRepeatIndex = "alarm_repeat_index";
@@ -702,5 +706,71 @@ class SharedPrefsHelper {
   static Future<void> clearPendingWifiProvData() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_keyPendingWifiProvData);
+  }
+
+  static Future<void> setActiveWifiSsid(String value) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_keyActiveWifiSsid, value);
+  }
+
+  static Future<String?> getActiveWifiSsid() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_keyActiveWifiSsid);
+  }
+
+  static Future<void> setActiveWifiPassword(String value) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_keyActiveWifiPassword, value);
+  }
+
+  static Future<String?> getActiveWifiPassword() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_keyActiveWifiPassword);
+  }
+
+  static Future<void> setActiveWifiIp(String value) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_keyActiveWifiIp, value);
+  }
+
+  static Future<String?> getActiveWifiIp() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_keyActiveWifiIp);
+  }
+
+  static Future<void> setActiveWifiPriority(int value) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt(_keyActiveWifiPriority, value);
+  }
+
+  static Future<int?> getActiveWifiPriority() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getInt(_keyActiveWifiPriority);
+  }
+
+  static Future<void> setWifiCredentialsForPriority(int priority, String ssid, String password) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('wifi_ssid_$priority', ssid);
+    await prefs.setString('wifi_password_$priority', password);
+  }
+
+  static Future<String?> getWifiSsidForPriority(int priority) async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString('wifi_ssid_$priority');
+  }
+
+  static Future<String?> getWifiPasswordForPriority(int priority) async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString('wifi_password_$priority');
+  }
+
+  static Future<void> setIsErasingData(bool value) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('is_erasing_data', value);
+  }
+
+  static Future<bool> isErasingData() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool('is_erasing_data') ?? false;
   }
 }

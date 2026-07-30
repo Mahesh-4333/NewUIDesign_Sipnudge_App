@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:io';
 import 'package:firebase_messaging/firebase_messaging.dart';
-import 'package:flutter/material.dart';
 import 'package:hydrify/helpers/logger.dart';
 import 'package:hydrify/helpers/shared_pref_helper.dart';
 import 'package:hydrify/main.dart'; // To access navigatorKey
@@ -39,10 +38,16 @@ class FirebaseMessagingService {
         
         // Sometimes getAPNSToken returns null immediately, we can wait a bit or try again,
         // but typically awaiting it is enough to resolve the 'apns-token-not-set' error.
+        // Sometimes getAPNSToken returns null immediately. Poll every 500ms for up to 3s.
         if (apnsToken == null) {
-           await Future.delayed(const Duration(seconds: 3));
-           apnsToken = await _firebaseMessaging.getAPNSToken();
-           Console.log(tag: "FCM", value: 'APNS Token (after delay): $apnsToken');
+          for (int i = 0; i < 6; i++) {
+            await Future.delayed(const Duration(milliseconds: 500));
+            apnsToken = await _firebaseMessaging.getAPNSToken();
+            if (apnsToken != null) {
+              Console.log(tag: "FCM", value: 'APNS Token (after ${ (i + 1) * 500 }ms): $apnsToken');
+              break;
+            }
+          }
         }
 
         // If it's STILL null, we are likely on an iOS simulator which does not support APNS natively.

@@ -100,7 +100,7 @@ class PreferencesCubit extends Cubit<PreferencesState> {
   /// Map LED brightness label → float and persist
   void setLedBrightness(String label) {
     final double intensity = switch (label) {
-      'Dim' => 0.3,
+      'Dim' => 0.1,
       'Bright' => 1.0,
       _ => 0.7, // Medium
     };

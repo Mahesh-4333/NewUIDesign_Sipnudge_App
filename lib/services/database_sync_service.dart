@@ -1,4 +1,5 @@
 import 'dart:math';
+import 'package:flutter/widgets.dart';
 import 'package:hydrify/helpers/database_helper.dart';
 import 'package:hydrify/helpers/shared_pref_helper.dart';
 import 'package:hydrify/services/achievement_notifier.dart';
@@ -12,7 +13,15 @@ class DatabaseSyncService {
   final DatabaseHelper _dbHelper = DatabaseHelper();
   final ApiService _apiService = ApiService();
 
-  Future<void> syncAll({bool isFromBle = false}) async {
+  Future<void> syncAll({bool isFromBle = false, int? battery}) async {
+    final isErasing = await SharedPrefsHelper.isErasingData();
+    if (isErasing) {
+      Console.log(
+          tag: "SYNC",
+          value: "DatabaseSyncService skipped: Erase operation in progress.");
+      return;
+    }
+
     var userId = await SharedPrefsHelper.getUserId();
 
     // If userId is missing, try to fetch it using the saved email
@@ -88,7 +97,9 @@ class DatabaseSyncService {
     }
 
     Console.log(
-        tag: "SYNC", value: "Starting full database sync for user: $userId (isFromBle: $isFromBle)");
+        tag: "SYNC",
+        value:
+            "Starting full database sync for user: $userId (isFromBle: $isFromBle)");
 
     try {
       // 1. Sync User Info
@@ -187,19 +198,48 @@ class DatabaseSyncService {
       // First, pull daily summaries from the server to update the local SQLite database (in case background BLE sync updated the server)
       try {
         final now = DateTime.now();
-        final startDate = DateTime(now.year, now.month, now.day);
-        final endDate = startDate.add(const Duration(days: 1));
-        final serverSummaries = await _apiService.getDailySummaries(userId, startDate, endDate);
+        // Use local-date boundaries converted to UTC for the server query so
+        // the server returns only records that belong to *today* in the local
+        // timezone, not UTC midnight.
+        final startDate = DateTime(now.year, now.month, now.day).toUtc();
+        final endDate = DateTime(now.year, now.month, now.day, 23, 59, 59).toUtc();
+        final todayLocalDateStr =
+            '${now.year.toString().padLeft(4, '0')}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
+        final serverSummaries =
+            await _apiService.getDailySummaries(userId, startDate, endDate);
         if (serverSummaries != null && serverSummaries.isNotEmpty) {
           for (final m in serverSummaries) {
             final String dateStr = m['date'] as String;
-            final datePart = dateStr.length >= 10 ? dateStr.substring(0, 10) : dateStr;
-            final DateTime rawDate = DateTime.tryParse(datePart) ?? DateTime.parse(dateStr);
+            // Parse as UTC first, then convert to local so we get the correct
+            // local calendar date (avoids UTC+5:30 date-shift bug).
+            DateTime parsedUtc;
+            try {
+              parsedUtc = DateTime.parse(dateStr).toUtc();
+            } catch (_) {
+              parsedUtc = DateTime.now().toUtc();
+            }
+            final DateTime rawDateLocal = parsedUtc.toLocal();
+            final String rawDateLocalStr =
+                '${rawDateLocal.year.toString().padLeft(4, '0')}-${rawDateLocal.month.toString().padLeft(2, '0')}-${rawDateLocal.day.toString().padLeft(2, '0')}';
+
+            // Skip if the server record does not belong to today in local time.
+            if (rawDateLocalStr != todayLocalDateStr) {
+              Console.log(
+                  tag: "SYNC",
+                  value:
+                      "Skipping server summary for $rawDateLocalStr (not today: $todayLocalDateStr)");
+              continue;
+            }
+
+            // Use local-midnight as the canonical date key for SQLite.
+            final DateTime rawDate = DateTime(
+                rawDateLocal.year, rawDateLocal.month, rawDateLocal.day);
+
             final targetVal = (m['target'] as num).toDouble();
             final consumedVal = (m['consumed'] as num).toDouble();
             final isPerfectDay = targetVal > 0 && consumedVal >= targetVal;
 
-            // Prevent overwriting a larger local SQLite consumed value
+            // Prevent overwriting a larger local SQLite consumed value.
             final localSummary = await _dbHelper.getSummaryForDate(rawDate);
             if (localSummary == null || localSummary.consumed < consumedVal) {
               final updatedSummary = HydrationDaySummary(
@@ -211,97 +251,54 @@ class DatabaseSyncService {
                 isPerfect: isPerfectDay,
               );
               await _dbHelper.bulkUpsert30Days([updatedSummary]);
-              Console.log(tag: "SYNC", value: "Successfully pulled daily summary from server for $rawDate: $consumedVal ml");
+              Console.log(
+                  tag: "SYNC",
+                  value:
+                      "Successfully pulled daily summary from server for $rawDate: $consumedVal ml");
             }
           }
         }
       } catch (e) {
-        Console.log(tag: "SYNC", value: "Failed to pull today's daily summary from server: $e");
+        Console.log(
+            tag: "SYNC",
+            value: "Failed to pull today's daily summary from server: $e");
       }
 
-      final String todayDateStr = DateTime.now().toIso8601String().split('T').first;
-      final String? lastSummarySyncDate = await SharedPrefsHelper.getLastSummarySyncDate();
-      final bool alreadySynced30 = await SharedPrefsHelper.hasSynced30Days();
+      // ── Push today's consumed to server ─────────────────────────────────
+      final today = await _dbHelper.getSummaryForDate(DateTime.now());
+      if (today != null) {
+        // Send date as UTC midnight string (YYYY-MM-DDT00:00:00.000Z) so the
+        // backend normalises it consistently regardless of server timezone.
+        final dateUtc =
+            '${today.date.toIso8601String().substring(0, 10)}T00:00:00.000Z';
+        await _apiService.updateTodayConsumed(
+          userId!,
+          dateUtc,
+          today.consumed,
+          today.isPerfect,
+          target: today.target,
+          dayIndex: today.dayIndex,
+          battery: battery,
+        );
 
-      final bool shouldDoFullSync = !alreadySynced30 || (lastSummarySyncDate != todayDateStr && isFromBle);
-
-      if (shouldDoFullSync) {
-        // Fetch manual logs from server on first install
-        if (!alreadySynced30) {
-          try {
-            final serverManualLogs = await _apiService.getManualLogs(userId!);
-            if (serverManualLogs != null && serverManualLogs.isNotEmpty) {
-              final localLogs = await _dbHelper.getHydrationLogs();
-              final localLogKeys = localLogs.map((l) {
-                final timestampStr = l['timestamp'] as String;
-                final typeStr = l['type'] as String;
-                final consumedVal = (l['consumed'] as num).toDouble();
-                return "$timestampStr|$typeStr|$consumedVal";
-              }).toSet();
-
-              for (var log in serverManualLogs) {
-                final String logTimestamp = log['timestamp'];
-                final String logType = log['type'];
-                final double logConsumed = (log['consumed'] as num).toDouble();
-                final String key = "$logTimestamp|$logType|$logConsumed";
-
-                if (!localLogKeys.contains(key)) {
-                  await _dbHelper.insertHydrationLog(
-                    logType,
-                    logConsumed,
-                    DateTime.parse(logTimestamp),
-                  );
-                }
-              }
-            }
-          } catch (e) {
-            Console.log(tag: "SYNC", value: "Failed to fetch manual logs: $e");
-          }
-          await SharedPrefsHelper.setHasSynced30Days(true);
-        }
-
-        final summaries = await _dbHelper.getHydrationSummariesForRange();
-        if (summaries.isNotEmpty) {
-          final mappedSummaries = summaries
-              .map((e) => {
-                    'date': e.date.toIso8601String(),
-                    'dayIndex': e.dayIndex,
-                    'target': e.target,
-                    'consumed': e.consumed,
-                    'isPerfect': e.isPerfect,
-                    'deviceId': e.deviceId,
-                    'createdAt': e.createdAt.toIso8601String(),
-                    'updatedAt': e.updatedAt?.toIso8601String(),
-                  })
-              .toList();
-          
-          final success = await _apiService.syncDailySummaries(userId!, mappedSummaries);
-          if (success) {
-            await SharedPrefsHelper.setLastSummarySyncDate(todayDateStr);
-            Console.log(tag: "SYNC", value: "Full daily summaries sync complete (total: ${summaries.length})");
-          } else {
-            Console.log(tag: "SYNC", value: "Full daily summaries sync failed");
-          }
-        }
-      } else {
-        // ── Lightweight today-only update ───────────────────────────────────
-        final today = await _dbHelper.getSummaryForDate(DateTime.now());
-        if (today != null) {
-          // Send date as UTC midnight string (YYYY-MM-DDT00:00:00.000Z) so the
-          // backend normalises it consistently regardless of server timezone.
-          final dateUtc =
-              '${today.date.toIso8601String().substring(0, 10)}T00:00:00.000Z';
-          await _apiService.updateTodayConsumed(
+        // If the app is currently in background (lifecycle state != resumed)
+        // and today's consumed > 0, fire the background notification API.
+        final lifecycle = WidgetsBinding.instance.lifecycleState;
+        final isInBackground =
+            lifecycle != null && lifecycle != AppLifecycleState.resumed;
+        if (isInBackground && today.consumed > 0) {
+          Console.log(
+              tag: "SYNC",
+              value:
+                  "App is in background (lifecycle=$lifecycle). Triggering sendBgConsumedNotification (${today.consumed}ml)...");
+          await _apiService.sendBgConsumedNotification(
             userId!,
-            dateUtc,
             today.consumed,
-            today.isPerfect,
-            target: today.target,
-            dayIndex: today.dayIndex,
+            date: today.date.toIso8601String(),
           );
         }
-        Console.log(tag: "SYNC", value: "Today-only consumed sync complete");
       }
+      Console.log(tag: "SYNC", value: "Today-only consumed sync complete");
 
       // 6. Sync AI Logs
       final todayStr = DateTime.now().toIso8601String().split('T').first;

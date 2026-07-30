@@ -28,6 +28,7 @@ import 'package:hydrify/screens/widgets/preferences_widgets/section_header.dart'
 import 'package:hydrify/screens/widgets/preferences_widgets/erase_data_dialog.dart';
 import 'package:hydrify/screens/widgets/preferences_widgets/segmented_choice_tile.dart';
 import 'package:hydrify/services/notification/notification_service.dart';
+import 'package:hydrify/services/api_service.dart';
 import 'package:intl/intl.dart';
 
 class PreferencesPage extends StatelessWidget {
@@ -228,6 +229,23 @@ class PreferencesPage extends StatelessWidget {
                                     return EraseDataDialog(
                                       onErase: () async {
                                         try {
+                                          await SharedPrefsHelper.setIsErasingData(true);
+
+                                          // Set today's consumed to 0 on the server first
+                                          final userId = await SharedPrefsHelper.getUserId();
+                                          if (userId != null) {
+                                            final todayStr = DateTime.now().toIso8601String().substring(0, 10);
+                                            final dateUtc = '${todayStr}T00:00:00.000Z';
+                                            final goal = await SharedPrefsHelper.getUserGoal() ?? 2500;
+                                            await ApiService().updateTodayConsumed(
+                                              userId,
+                                              dateUtc,
+                                              0.0,
+                                              false,
+                                              target: goal.toDouble(),
+                                            );
+                                          }
+
                                           final bottleDataCubit =
                                               context.read<BottleDataCubit>();
                                           await bottleDataCubit
@@ -268,12 +286,14 @@ class PreferencesPage extends StatelessWidget {
                                           await SharedPrefsHelper
                                               .updateAndSaveDeviceConfig(
                                                   triggerStream: true);
+                                          await SharedPrefsHelper.setIsErasingData(false);
                                           Fluttertoast.showToast(
                                               msg: "Local data cleared.");
                                           Fluttertoast.showToast(
                                               msg:
                                                   "Tracking restarted. Connect your device again.");
                                         } catch (e) {
+                                          await SharedPrefsHelper.setIsErasingData(false);
                                           Fluttertoast.showToast(
                                               msg:
                                                   "Error clearing local data: $e");

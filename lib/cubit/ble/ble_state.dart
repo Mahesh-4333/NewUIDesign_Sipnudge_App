@@ -34,6 +34,14 @@ class BleState {
   final bool? isServiceDiscoveryDone;
   final bool manualRetryRequired;
   final int refreshTrigger;
+  /// True when iOS Low Power Mode is active — background BLE uploads are deferred.
+  final bool isLowPowerModeActive;
+  final bool showWifiConnectedDialog;
+  final String? wifiConnectedSsid;
+  final String? wifiConnectedIp;
+  final bool isWifiProvisioning;
+  final bool showWifiFailedDialog;
+  final String? wifiFailedReason;
 
   const BleState({
     this.status = BleStatus.idle,
@@ -57,6 +65,13 @@ class BleState {
     this.isServiceDiscoveryDone,
     this.manualRetryRequired = false,
     this.refreshTrigger = 0,
+    this.isLowPowerModeActive = false,
+    this.showWifiConnectedDialog = false,
+    this.wifiConnectedSsid,
+    this.wifiConnectedIp,
+    this.isWifiProvisioning = false,
+    this.showWifiFailedDialog = false,
+    this.wifiFailedReason,
   });
 
   BleState copyWith({
@@ -81,6 +96,13 @@ class BleState {
     bool? isServiceDiscoveryDone,
     bool? manualRetryRequired,
     int? refreshTrigger,
+    bool? isLowPowerModeActive,
+    bool? showWifiConnectedDialog,
+    String? wifiConnectedSsid,
+    String? wifiConnectedIp,
+    bool? isWifiProvisioning,
+    bool? showWifiFailedDialog,
+    String? wifiFailedReason,
   }) {
     return BleState(
       status: status ?? this.status,
@@ -107,6 +129,13 @@ class BleState {
           isServiceDiscoveryDone ?? this.isServiceDiscoveryDone,
       manualRetryRequired: manualRetryRequired ?? this.manualRetryRequired,
       refreshTrigger: refreshTrigger ?? this.refreshTrigger,
+      isLowPowerModeActive: isLowPowerModeActive ?? this.isLowPowerModeActive,
+      showWifiConnectedDialog: showWifiConnectedDialog ?? this.showWifiConnectedDialog,
+      wifiConnectedSsid: wifiConnectedSsid ?? this.wifiConnectedSsid,
+      wifiConnectedIp: wifiConnectedIp ?? this.wifiConnectedIp,
+      isWifiProvisioning: isWifiProvisioning ?? this.isWifiProvisioning,
+      showWifiFailedDialog: showWifiFailedDialog ?? this.showWifiFailedDialog,
+      wifiFailedReason: wifiFailedReason ?? this.wifiFailedReason,
     );
   }
 }

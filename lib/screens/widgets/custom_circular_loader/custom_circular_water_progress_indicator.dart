@@ -15,6 +15,7 @@ class CustomCircularWaterProgressIndicator extends StatelessWidget {
     this.progressColor,
     this.center,
     this.boxShadow,
+    this.expectedPercentage = 0.0,
   });
 
   final double width;
@@ -23,6 +24,9 @@ class CustomCircularWaterProgressIndicator extends StatelessWidget {
   final Color? progressColor;
   final Color progressBackgroundColor;
   final double percentageValue;
+
+  /// Expected cumulative slot target % at current time (draws a yellow arc).
+  final double expectedPercentage;
   final Widget? center;
   final List<BoxShadow>? boxShadow;
 
@@ -49,6 +53,7 @@ class CustomCircularWaterProgressIndicator extends StatelessWidget {
           size: Size(width, height),
           painter: _WaterArcPainter(
             percentage: percentageValue,
+            expectedPercentage: expectedPercentage,
             baseArcColor: Colors.white,
             progressBackgroundColor: AppColors.white.withValues(alpha: 0.40),
             progressColor: progressColor ?? Color(0XFF1C8DBB),
@@ -63,6 +68,7 @@ class CustomCircularWaterProgressIndicator extends StatelessWidget {
 
 class _WaterArcPainter extends CustomPainter {
   final double percentage;
+  final double expectedPercentage;
   final double strokeWidth;
   final Color baseArcColor;
   final Color progressBackgroundColor;
@@ -74,14 +80,15 @@ class _WaterArcPainter extends CustomPainter {
     required this.baseArcColor,
     required this.progressBackgroundColor,
     required this.progressColor,
+    this.expectedPercentage = 0.0,
   });
 
   @override
   void paint(Canvas canvas, Size size) {
     final rect = Offset.zero & size;
 
-    final startAngle = -pi * 0.33;
-    final sweepAngle = pi * 1.65;
+    final startAngle = -pi / 3;
+    final sweepAngle = 5 * pi / 3;
 
     final deflatedRect = rect.deflate(strokeWidth / 1.5);
 
@@ -130,7 +137,26 @@ class _WaterArcPainter extends CustomPainter {
       baseArc,
     );
 
-    // --- PROGRESS ARC ---
+    // --- YELLOW ARC (Expected slot-schedule target progress) ---
+    if (expectedPercentage > 0) {
+      final yellowArc = Paint()
+        ..color = const Color(0xFFFACC15) // FACC15 — matches iOS widget
+        ..strokeWidth = strokeWidth
+        ..style = PaintingStyle.stroke
+        ..strokeCap = StrokeCap.round;
+
+      final expectedSweep =
+          sweepAngle * (expectedPercentage.clamp(0, 100) / 100);
+      canvas.drawArc(
+        deflatedRect,
+        startAngle,
+        expectedSweep,
+        false,
+        yellowArc,
+      );
+    }
+
+    // --- PROGRESS ARC (Actual intake — drawn on top of yellow) ---
     final progressArc = Paint()
       ..color = progressColor
       ..strokeWidth = strokeWidth

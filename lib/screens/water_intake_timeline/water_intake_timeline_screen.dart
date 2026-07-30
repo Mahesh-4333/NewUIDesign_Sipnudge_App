@@ -18,6 +18,7 @@ import 'package:hydrify/cubit/bottle/bottle_data_cubit.dart';
 import 'package:hydrify/cubit/bottom_nav/bottom_nav_cubit.dart';
 import 'package:hydrify/cubit/hydration/hydration_cubit.dart';
 import 'package:hydrify/cubit/hydration/hydration_state.dart';
+import 'package:hydrify/helpers/database_helper.dart';
 import 'package:hydrify/helpers/logger.dart';
 import 'package:hydrify/helpers/shared_pref_helper.dart';
 import 'package:hydrify/helpers/water_consumption_data_helper.dart';
@@ -26,7 +27,6 @@ import 'package:hydrify/models/hydration_entry.dart';
 import 'package:hydrify/models/hydration_summary.dart';
 import 'package:hydrify/screens/water_intake_timeline/widgets/dialy_target_widget.dart';
 import 'package:hydrify/screens/water_intake_timeline/widgets/inline_time_column_update_widget.dart';
-import 'package:hydrify/screens/widgets/custom_wheel_inline_time_widget.dart';
 import 'package:hydrify/services/ui_utils_service.dart';
 import 'package:intl/intl.dart';
 
@@ -1427,10 +1427,6 @@ class ProgressCircle extends StatelessWidget {
           future: () async {
             // 🔹 Fetch daily history data
             DateTime now = DateTime.now();
-            DateTime startDate = DateTime(now.year, now.month, now.day);
-            DateTime endDate = startDate
-                .add(const Duration(days: 1))
-                .subtract(const Duration(milliseconds: 1));
 
             final history =
                 await context.read<BottleDataCubit>().getCurrentDayHistory();
@@ -1438,38 +1434,70 @@ class ProgressCircle extends StatelessWidget {
             // 🔹 Fetch user goal (in mL) dynamically from SharedPreferences
             final userGoalMl = await SharedPrefsHelper.getUserGoal() ?? 2000;
 
+            // Compute expected cumulative slot-schedule target at current time
+            double expectedPercent = 0.0;
+            try {
+              final dbHelper = DatabaseHelper();
+              final slots = await dbHelper.getAllSlots();
+              if (slots.isNotEmpty) {
+                final nowMinutes = now.hour * 60 + now.minute;
+                slots.sort((a, b) {
+                  final aMin = a.startTime.hour * 60 + a.startTime.minute;
+                  final bMin = b.startTime.hour * 60 + b.startTime.minute;
+                  return aMin.compareTo(bMin);
+                });
+                double cum = 0.0;
+                for (final s in slots) {
+                  final startMin = s.startTime.hour * 60 + s.startTime.minute;
+                  final endMin = s.endTime.hour * 60 + s.endTime.minute;
+                  if (nowMinutes >= endMin) {
+                    cum += s.amount;
+                  } else if (nowMinutes >= startMin && nowMinutes < endMin) {
+                    final dur = endMin - startMin;
+                    if (dur > 0) cum += s.amount * ((nowMinutes - startMin) / dur);
+                    break;
+                  } else {
+                    break;
+                  }
+                }
+                expectedPercent = userGoalMl > 0 ? ((cum / userGoalMl) * 100.0).clamp(0.0, 100.0) : 0.0;
+              }
+            } catch (_) {}
+
             return {
               'history': history,
               'userGoalLiters': userGoalMl / 1000.0,
+              'expectedPercent': expectedPercent,
             };
           }(),
           builder: (context, snapshot) {
             if (!snapshot.hasData) {
               return const SizedBox(
-                width: 200,
-                height: 200,
+                width: 100,
+                height: 100,
                 child: Center(child: CircularProgressIndicator()),
               );
             }
 
-            final history = snapshot.data!['history'] as double ?? 0;
+            final history = (snapshot.data!['history'] as num?)?.toDouble() ?? 0.0;
             final userGoalMl =
-                (snapshot.data!['userGoalLiters'] as double? ?? 2.0) * 1000;
+                ((snapshot.data!['userGoalLiters'] as num?)?.toDouble() ?? 2.0) * 1000;
+            final expectedPercent = (snapshot.data!['expectedPercent'] as num?)?.toDouble() ?? 0.0;
 
             double waterVolumeConsumed = history;
-
-            double percent = (waterVolumeConsumed / userGoalMl).clamp(0.0, 1.0);
+            double completionPercent = userGoalMl > 0
+                ? ((waterVolumeConsumed / userGoalMl) * 100.0).clamp(0.0, 100.0)
+                : 0.0;
 
             return SizedBox(
+              width: 100.w,
+              height: 100.w,
               child: CustomPaint(
-                painter: GradientCirclePainter(
-                  percent: percent,
-                  gradientColors: gradientColors,
-                  progressColor: progressColor,
-                  backgroundColor: backgroundColor,
-                  elevation: elevation,
-                  shadowOffset: shadowOffset,
-                  strokeWidth: strokeWidth,
+                painter: _TimelineArcPainter(
+                  percent: completionPercent,
+                  expectedPercent: expectedPercent,
+                  strokeWidth: strokeWidth > 0 ? strokeWidth : AppDimensions.dim8.w,
+                  progressColor: progressColor ?? const Color(0xFF1C8DBB),
                 ),
                 child: Center(
                   child: Column(
@@ -1495,93 +1523,101 @@ class ProgressCircle extends StatelessWidget {
   }
 }
 
-class GradientCirclePainter extends CustomPainter {
+class _TimelineArcPainter extends CustomPainter {
   final double percent;
-  final List<Color>? gradientColors;
-  final Color? progressColor;
-  final Color backgroundColor;
-  final double elevation;
-  final Offset shadowOffset;
+  final double expectedPercent;
   final double strokeWidth;
+  final Color progressColor;
 
-  GradientCirclePainter({
+  _TimelineArcPainter({
     required this.percent,
-    required this.gradientColors,
-    required this.progressColor,
-    required this.backgroundColor,
-    required this.elevation,
-    required this.shadowOffset,
+    required this.expectedPercent,
     required this.strokeWidth,
+    required this.progressColor,
   });
 
   @override
   void paint(Canvas canvas, Size size) {
-    final radius = (size.width / 2) - strokeWidth / 2;
-    final center = Offset(size.width / 2, size.height / 2);
-    final rect = Rect.fromCircle(center: center, radius: radius);
+    final rect = Offset.zero & size;
+    final deflatedRect = rect.deflate(strokeWidth * 0.8);
 
-    // --- Unified shadow for the whole ring ---
+    // Perfectly centered at 12 o'clock top center (gap is 60° centered at top)
+    final startAngle = -pi / 3; // -60 degrees
+    final sweepAngle = 5 * pi / 3; // 300 degrees total sweep
+
+    // 1. Soft Drop Shadow for Base Arc
     final shadowPaint = Paint()
-      ..color = Colors.black.withOpacity(0.35)
+      ..color = Colors.black.withValues(alpha: 0.12)
       ..style = PaintingStyle.stroke
       ..strokeWidth = strokeWidth
       ..strokeCap = StrokeCap.round
-      ..maskFilter = ui.MaskFilter.blur(ui.BlurStyle.normal, elevation);
+      ..maskFilter = MaskFilter.blur(BlurStyle.normal, 4.0.r);
 
-    canvas.save();
-    canvas.translate(shadowOffset.dx, shadowOffset.dy);
-    canvas.drawCircle(center, radius, shadowPaint);
-    canvas.restore();
+    canvas.drawArc(
+      deflatedRect.translate(0, 2),
+      startAngle,
+      sweepAngle,
+      false,
+      shadowPaint,
+    );
 
-    // Background (unfinished part)
-    final backgroundPaint = Paint()
-      ..color = backgroundColor
-      ..style = PaintingStyle.stroke
+    // 2. Base Arc (Clean White)
+    final baseArcPaint = Paint()
+      ..color = Colors.white
       ..strokeWidth = strokeWidth
+      ..style = PaintingStyle.stroke
       ..strokeCap = StrokeCap.round;
 
-    canvas.drawCircle(center, radius, backgroundPaint);
-    Paint progressPaint;
-    if (gradientColors != null && gradientColors!.length > 1) {
-      final colors = List<Color>.from(gradientColors!);
-      colors.add(gradientColors!.first);
+    canvas.drawArc(
+      deflatedRect,
+      startAngle,
+      sweepAngle,
+      false,
+      baseArcPaint,
+    );
 
-      final stops =
-          List<double>.generate(colors.length, (i) => i / (colors.length - 1));
-
-      final gradient = SweepGradient(
-        startAngle: 0,
-        endAngle: 2 * pi,
-        transform: GradientRotation(-pi / 2),
-        colors: colors,
-        stops: stops,
-        tileMode: TileMode.clamp,
-      );
-
-      progressPaint = Paint()
-        ..shader = gradient.createShader(rect)
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = strokeWidth - 1.5
-        ..strokeCap = StrokeCap.round;
-    } else {
-      progressPaint = Paint()
-        ..color = progressColor ?? Colors.blue
-        ..style = PaintingStyle.stroke
+    // 3. Expected Target Arc (Yellow FACC15)
+    if (expectedPercent > 0) {
+      final yellowArcPaint = Paint()
+        ..color = const Color(0xFFFACC15)
         ..strokeWidth = strokeWidth
+        ..style = PaintingStyle.stroke
         ..strokeCap = StrokeCap.round;
+
+      final expectedSweep = sweepAngle * (expectedPercent.clamp(0.0, 100.0) / 100.0);
+      canvas.drawArc(
+        deflatedRect,
+        startAngle,
+        expectedSweep,
+        false,
+        yellowArcPaint,
+      );
     }
 
-    canvas.drawArc(rect, -pi / 2, 2 * pi * percent, false, progressPaint);
+    // 4. Progress Arc (Blue)
+    if (percent > 0) {
+      final progressArcPaint = Paint()
+        ..color = progressColor
+        ..strokeWidth = strokeWidth
+        ..style = PaintingStyle.stroke
+        ..strokeCap = StrokeCap.round;
+
+      final progressSweep = sweepAngle * (percent.clamp(0.0, 100.0) / 100.0);
+      canvas.drawArc(
+        deflatedRect,
+        startAngle,
+        progressSweep,
+        false,
+        progressArcPaint,
+      );
+    }
   }
 
   @override
-  bool shouldRepaint(covariant GradientCirclePainter oldDelegate) {
+  bool shouldRepaint(covariant _TimelineArcPainter oldDelegate) {
     return oldDelegate.percent != percent ||
-        oldDelegate.gradientColors != gradientColors ||
-        oldDelegate.progressColor != progressColor ||
-        oldDelegate.backgroundColor != backgroundColor ||
-        oldDelegate.elevation != elevation ||
-        oldDelegate.shadowOffset != shadowOffset ||
-        oldDelegate.strokeWidth != strokeWidth;
+        oldDelegate.expectedPercent != expectedPercent ||
+        oldDelegate.strokeWidth != strokeWidth ||
+        oldDelegate.progressColor != progressColor;
   }
 }

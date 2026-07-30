@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -169,6 +170,7 @@ class _BottomNavScreenNewState extends State<BottomNavScreenNew> {
                     ),
                   ),
                 ),
+
                 Positioned(
                   bottom: 0.h,
                   child: SafeArea(

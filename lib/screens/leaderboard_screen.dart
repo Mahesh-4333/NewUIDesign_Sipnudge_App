@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:hydrify/constants/app_api_constants.dart';
 import 'package:hydrify/constants/app_colors.dart';
 import 'package:hydrify/constants/app_dimensions.dart';
 import 'package:hydrify/constants/app_font_styles.dart';
@@ -32,7 +33,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
   bool _ghostMode = true;
   bool _fuzzyLocation = true;
   String _currentCityName = "Active Zone";
-  GoogleMapController? _miniMapController;
+
 
   @override
   void initState() {
@@ -122,14 +123,6 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
           }
           _currentCityName = placeName;
         });
-
-        if (_currentUserCoords != null) {
-          _miniMapController?.animateCamera(
-            CameraUpdate.newCameraPosition(
-              CameraPosition(target: _getUserDisplayCoords(), zoom: 8.0),
-            ),
-          );
-        }
       }
     } catch (e) {
       debugPrint("Error loading mini map data: $e");
@@ -145,37 +138,38 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
     return LatLng(base.latitude + 0.008, base.longitude + 0.008);
   }
 
-  Set<Marker> _buildMiniMapMarkers() {
-    final Set<Marker> markers = {};
-    int index = 1;
-    for (final latLng in _serverLocations) {
-      markers.add(
-        Marker(
-          markerId: MarkerId('mini_server_$index'),
-          position: latLng,
-          icon: BitmapDescriptor.defaultMarkerWithHue(
-              BitmapDescriptor.hueAzure),
-        ),
-      );
-      index++;
+  /// Builds a Google Static Maps API URL for the mini-map preview.
+  /// This avoids the live GoogleMap widget render issues inside ScrollView.
+  String _buildStaticMapUrl(LatLng center) {
+    final lat = center.latitude;
+    final lng = center.longitude;
+    final apiKey = AppApiConstants.googleMapsApiKey;
+
+    // Build marker params for server locations (up to 10 to keep URL short)
+    final markerParams = StringBuffer();
+    final limited = _serverLocations.take(10);
+    for (final loc in limited) {
+      markerParams.write(
+          '&markers=size:mid%7Ccolor:blue%7C${loc.latitude},${loc.longitude}');
     }
 
+    // User's own marker (unless in ghost mode)
+    String userMarker = '';
     if (!_ghostMode && _currentUserCoords != null) {
-      markers.add(
-        Marker(
-          markerId: const MarkerId('mini_user_pin'),
-          position: _getUserDisplayCoords(),
-          icon: BitmapDescriptor.defaultMarkerWithHue(
-              BitmapDescriptor.hueCyan),
-          infoWindow: const InfoWindow(title: "You"),
-        ),
-      );
+      final coords = _getUserDisplayCoords();
+      userMarker =
+          '&markers=size:mid%7Ccolor:cyan%7Clabel:U%7C${coords.latitude},${coords.longitude}';
     }
-    return markers;
-  }
 
-  Set<Circle> _buildMiniMapCircles(LatLng center) {
-    return {};
+    return 'https://maps.googleapis.com/maps/api/staticmap'
+        '?center=$lat,$lng'
+        '&zoom=8'
+        '&size=600x400'
+        '&scale=2'
+        '&maptype=roadmap'
+        '$markerParams'
+        '$userMarker'
+        '&key=$apiKey';
   }
 
   Future<void> _loadData() async {
@@ -573,38 +567,48 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
               borderRadius: BorderRadius.circular(24.r),
               child: Stack(
                 children: [
-                  GoogleMap(
-                    initialCameraPosition: CameraPosition(
-                      target: targetCenter,
-                      zoom: 8.0,
-                    ),
-                    onMapCreated: (controller) {
-                      _miniMapController = controller;
-                      if (_currentUserCoords != null) {
-                        _miniMapController?.animateCamera(
-                          CameraUpdate.newCameraPosition(
-                            CameraPosition(
-                                target: _getUserDisplayCoords(), zoom: 8.0),
+                  // Static map image — always renders correctly, no controller issues
+                  Positioned.fill(
+                    child: Image.network(
+                      _buildStaticMapUrl(targetCenter),
+                      fit: BoxFit.cover,
+                      loadingBuilder: (context, child, loadingProgress) {
+                        if (loadingProgress == null) return child;
+                        return Container(
+                          color: const Color(0xFFCCE3F5),
+                          child: const Center(
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                  Color(0xFF00A2FF)),
+                            ),
                           ),
                         );
-                      }
-                    },
-                    markers: _buildMiniMapMarkers(),
-                    circles: _buildMiniMapCircles(targetCenter),
-                    zoomControlsEnabled: false,
-                    zoomGesturesEnabled: false,
-                    scrollGesturesEnabled: false,
-                    rotateGesturesEnabled: false,
-                    tiltGesturesEnabled: false,
-                    myLocationButtonEnabled: false,
-                    mapToolbarEnabled: false,
-                    onTap: (_) {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                            builder: (context) => const SipMapScreen()),
-                      );
-                    },
+                      },
+                      errorBuilder: (context, error, stackTrace) {
+                        return Container(
+                          color: const Color(0xFFDCEEFA),
+                          child: Center(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(Icons.map_rounded,
+                                    color: const Color(0xFF00A2FF), size: 38.sp),
+                                SizedBox(height: 6.h),
+                                Text(
+                                  "Tap to view live map",
+                                  style: TextStyle(
+                                    fontSize: 12.sp,
+                                    color: const Color(0xFF00A2FF),
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      },
+                    ),
                   ),
                   Positioned(
                     top: 0,

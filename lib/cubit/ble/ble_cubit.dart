@@ -41,9 +41,10 @@ class BleCubit extends Cubit<BleState>
   }
 
   /// Registers a handler for incoming MethodChannel calls FROM the native side.
-  /// Currently handles "onNativeConnected" — fired by SipnudgeBackgroundBLE's
-  /// didConnect callback — so the Flutter UI stays in sync with BLE state even
-  /// when flutter_blue_plus's 30-second scan has already timed out (BT toggle).
+  /// Handles:
+  ///   • "onNativeConnected"    — native CBCentralManager connected after BT toggle
+  ///   • "onLowPowerModeChanged" — iOS Low Power Mode toggled; updates BleState so
+  ///                               the UI can show "Sync paused — Low Power Mode"
   void _setupNativeBleChannel() {
     const MethodChannel('com.sipnudge.sipnudge/native_ble')
         .setMethodCallHandler((call) async {
@@ -99,6 +100,15 @@ class BleCubit extends Cubit<BleState>
                   '[BLE_Cubit] FBP connect after native trigger failed (non-fatal): $e',
               value: 'BLE_Cubit');
         }
+      } else if (call.method == 'onLowPowerModeChanged') {
+        // Fired by SipnudgeBackgroundBLE whenever iOS Low Power Mode toggles.
+        // isActive = true  → LPM on,  background uploads are deferred by nsurlsessiond.
+        // isActive = false → LPM off, deferred uploads resume automatically.
+        final isActive = call.arguments as bool? ?? false;
+        Console.log(
+            tag: '[BLE_Cubit] Low Power Mode changed: isActive=$isActive',
+            value: 'BLE_Cubit');
+        emit(state.copyWith(isLowPowerModeActive: isActive));
       }
     });
   }
@@ -691,6 +701,7 @@ class BleCubit extends Cubit<BleState>
     _connectionSub?.cancel();
     _adapterStateSub?.cancel();
     _clearCharacteristicSubscriptions();
+    _clearCharacteristicReferences();
     _hydrationController.close();
     return super.close();
   }
@@ -755,6 +766,7 @@ class BleCubit extends Cubit<BleState>
 
         _isConnecting = false;
         _clearCharacteristicSubscriptions();
+        _clearCharacteristicReferences();
         emit(state.copyWith(
           status: BleStatus.disconnected,
           isServiceDiscoveryDone: false,
@@ -783,6 +795,7 @@ class BleCubit extends Cubit<BleState>
     _connectionSub?.cancel();
     _adapterStateSub?.cancel();
     _clearCharacteristicSubscriptions();
+    _clearCharacteristicReferences();
 
     try {
       if (FlutterBluePlus.isScanningNow) {
@@ -974,8 +987,16 @@ class BleCubit extends Cubit<BleState>
             if (c.uuid == water30DaysDataUUID) _hydration30DaysChar = c;
             if (c.uuid == configUUID) _configChar = c;
             if (c.uuid == resetUUID) _resetChar = c;
-            if (c.uuid == wifiProvUUID) _wifiProvChar = c;
-            if (c.uuid == wifiNotifUUID) _wifiNotifChar = c;
+            if (c.uuid == wifiProvUUID) {
+              _wifiProvChar = c;
+              Console.log(
+                  tag: 'BLE_Cubit', value: "Wifi prov cha: ${_wifiProvChar}");
+            }
+            if (c.uuid == wifiNotifUUID) {
+              _wifiNotifChar = c;
+              Console.log(
+                  tag: 'BLE_Cubit', value: "Wifi notif cha: ${_wifiNotifChar}");
+            }
           }
 
           // Setup notifications and log characteristic status
@@ -1114,7 +1135,7 @@ class BleCubit extends Cubit<BleState>
 
               _syncWithLocalConsumption(history, historyPrevious);
 
-              DatabaseSyncService().syncAll(isFromBle: true);
+              DatabaseSyncService().syncAll(isFromBle: true, battery: state.battery);
 
               final updatedHistory = await getCurrentDayHistory();
               emit(state.copyWith(currentHydrationValue: updatedHistory));
@@ -1163,7 +1184,10 @@ class BleCubit extends Cubit<BleState>
       }
 
       if (_wifiNotifChar != null) {
+        Console.log(
+            tag: 'BLE_Cubit', value: "Wifi notif cha: ${_wifiNotifChar}");
         _wifiNotifSub = _wifiNotifChar!.onValueReceived.listen((value) {
+          Console.log(tag: "⬇️ [WIFI_NOTIF] Raw Data", value: 'BLE_Cubit');
           final data = String.fromCharCodes(value);
           Console.log(
               tag: "⬇️ [WIFI_NOTIF] Raw Data: $data", value: 'BLE_Cubit');
@@ -1171,6 +1195,7 @@ class BleCubit extends Cubit<BleState>
         });
       }
 
+      Console.log(tag: 'BLE_Cubit', value: "Data cha: ${_dataChar}");
       if (_dataChar != null) {
         _dataSub = _dataChar!.onValueReceived.listen((value) {
           final data = String.fromCharCodes(value);
@@ -1627,6 +1652,7 @@ class BleCubit extends Cubit<BleState>
           // ✅ Clear the connecting guard so the next connection attempt is allowed
           _isConnecting = false;
           _clearCharacteristicSubscriptions();
+          _clearCharacteristicReferences();
           emit(state.copyWith(
             status: BleStatus.disconnected,
             isServiceDiscoveryDone: false,
@@ -1740,52 +1766,102 @@ class BleCubit extends Cubit<BleState>
         // ));
       }
       // 4. Sync Pending Wi-Fi Provisioning
-      final pendingWifi = await SharedPrefsHelper.getPendingWifiProvData();
-      Console.log(
-          tag: "BLE_Cubit",
-          value: "Sending pending Wi-Fi provisioning data: $pendingWifi");
-      final freshWifiProvChar = await _getFreshCharacteristic(wifiProvUUID);
-      if (pendingWifi != null &&
-          pendingWifi.isNotEmpty &&
-          freshWifiProvChar != null) {
-        try {
-          Console.log(
-              tag: "BLE_Cubit",
-              value: "Sending pending Wi-Fi provisioning data: $pendingWifi");
+      if (_wifiProvCompleter == null || _wifiProvCompleter!.isCompleted) {
+        final pendingWifi = await SharedPrefsHelper.getPendingWifiProvData();
+        Console.log(
+            tag: "BLE_Cubit",
+            value: "Sending pending Wi-Fi provisioning data: $pendingWifi");
+        final freshWifiProvChar = await _getFreshCharacteristic(wifiProvUUID);
+        if (pendingWifi != null &&
+            pendingWifi.isNotEmpty &&
+            freshWifiProvChar != null) {
+          final completer = Completer<WifiProvResponse>();
+          _wifiProvCompleter = completer;
 
-          // if (freshWifiProvChar.properties.notify ||
-          //     freshWifiProvChar.properties.indicate) {
-          //   try {
-          //     await freshWifiProvChar.setNotifyValue(true);
-          //     Console.log(
-          //         tag: "BLE_Cubit",
-          //         value:
-          //             "Enabled notify for wifiProvChar in _flushPendingSlots");
-          //   } catch (e) {
-          //     final errorStr = e.toString();
-          //     String diagnostic = "";
-          //     if (errorStr.contains('apple-code: 10') ||
-          //         errorStr.contains('Attribute could not be found')) {
-          //       diagnostic =
-          //           " | DIAGNOSTIC: iOS CoreBluetooth cannot find the CCCD (0x2902) descriptor for wifiProvChar. "
-          //           "Check for stale iOS BLE cache or ensure peripheral firmware includes the CCCD descriptor.";
-          //     }
-          //     Console.log(
-          //         tag:
-          //             "Failed to enable notify for wifiProvChar: $e$diagnostic",
-          //         value: 'BLE_Cubit');
-          //   }
-          // }
+          emit(state.copyWith(isWifiProvisioning: true));
 
-          final bool writeWithoutResp = !freshWifiProvChar.properties.write &&
-              freshWifiProvChar.properties.writeWithoutResponse;
-          await freshWifiProvChar.write(utf8.encode(pendingWifi),
-              withoutResponse: writeWithoutResp);
-          await SharedPrefsHelper.clearPendingWifiProvData();
-        } catch (e) {
-          Console.log(
-              tag: "Failed to send pending Wi-Fi provisioning data: $e",
-              value: 'BLE_Cubit');
+          bool isSuccess = false;
+          String? ssid;
+          String? ip;
+          String? errorReason;
+
+          try {
+            Console.log(
+                tag: "BLE_Cubit",
+                value: "Sending pending Wi-Fi provisioning data: $pendingWifi");
+
+            final bool writeWithoutResp = !freshWifiProvChar.properties.write &&
+                freshWifiProvChar.properties.writeWithoutResponse;
+            await freshWifiProvChar.write(utf8.encode(pendingWifi),
+                withoutResponse: writeWithoutResp);
+            await SharedPrefsHelper.clearPendingWifiProvData();
+
+            // Wait for response with a 30-second timeout
+            final response = await completer.future.timeout(
+              const Duration(seconds: 30),
+              onTimeout: () {
+                if (_wifiProvCompleter == completer) {
+                  _wifiProvCompleter = null;
+                }
+                return WifiProvResponse(
+                  result: 'fail',
+                  reason: 'timeout',
+                  saved: false,
+                  savedUserId: false,
+                );
+              },
+            );
+
+            if (response.result == 'ok') {
+              isSuccess = true;
+              ip = response.ip;
+              try {
+                final Map<String, dynamic> wifiMap = jsonDecode(pendingWifi);
+                ssid = wifiMap['ssid'];
+                if (ssid != null) {
+                  await SharedPrefsHelper.setActiveWifiSsid(ssid);
+                }
+                if (wifiMap['password'] != null) {
+                  await SharedPrefsHelper.setActiveWifiPassword(
+                      wifiMap['password']);
+                }
+                if (response.ip != null) {
+                  await SharedPrefsHelper.setActiveWifiIp(response.ip!);
+                }
+                if (response.priority != null) {
+                  await SharedPrefsHelper.setActiveWifiPriority(
+                      response.priority!);
+                }
+              } catch (e) {
+                Console.log(
+                    tag: "BLE_Cubit", value: "Error saving active Wi-Fi: $e");
+              }
+            } else {
+              errorReason = response.reason;
+            }
+
+            Console.log(
+                tag: "BLE_Cubit",
+                value:
+                    "Pending Wi-Fi provisioning response: ${response.result}, IP: ${response.ip}");
+          } catch (e) {
+            if (_wifiProvCompleter == completer) {
+              _wifiProvCompleter = null;
+            }
+            errorReason = e.toString();
+            Console.log(
+                tag: "Failed to send pending Wi-Fi provisioning data: $e",
+                value: 'BLE_Cubit');
+          } finally {
+            emit(state.copyWith(
+              isWifiProvisioning: false,
+              showWifiConnectedDialog: isSuccess,
+              wifiConnectedSsid: ssid,
+              wifiConnectedIp: ip,
+              showWifiFailedDialog: !isSuccess && errorReason != null,
+              wifiFailedReason: errorReason,
+            ));
+          }
         }
       }
     } catch (e) {
@@ -1939,6 +2015,7 @@ class BleCubit extends Cubit<BleState>
     savedDeviceId = null;
     savedDeviceName = null;
     _clearCharacteristicSubscriptions();
+    _clearCharacteristicReferences();
 
     emit(
       state.copyWith(
@@ -1987,6 +2064,17 @@ class BleCubit extends Cubit<BleState>
     _hydrationSlotsSub = null;
     _hydration30DaysSub = null;
     _wifiNotifSub = null;
+  }
+
+  void _clearCharacteristicReferences() {
+    _dataChar = null;
+    _ackChar = null;
+    _hydrationGoalDataChar = null;
+    _rtcSyncChar = null;
+    _hydrationSlotsChar = null;
+    _hydration30DaysChar = null;
+    _configChar = null;
+    _resetChar = null;
     _wifiProvChar = null;
     _wifiNotifChar = null;
   }
@@ -2108,15 +2196,22 @@ class BleCubit extends Cubit<BleState>
     emit(state.copyWith(refreshTrigger: state.refreshTrigger + 1));
   }
 
-  void _handleWifiProvNotification(String data) {
-    if (_wifiProvCompleter == null || _wifiProvCompleter!.isCompleted) {
-      Console.log(
-          tag:
-              "[WIFI_PROV] Notification received but no pending completer: $data",
-          value: "BLE_Cubit");
-      return;
-    }
+  void dismissWifiConnectedDialog() {
+    emit(state.copyWith(
+      showWifiConnectedDialog: false,
+      wifiConnectedSsid: null,
+      wifiConnectedIp: null,
+    ));
+  }
 
+  void dismissWifiFailedDialog() {
+    emit(state.copyWith(
+      showWifiFailedDialog: false,
+      wifiFailedReason: null,
+    ));
+  }
+
+  void _handleWifiProvNotification(String data) {
     String cleanedData = data.trim();
     final firstBrace = cleanedData.indexOf('{');
     final lastBrace = cleanedData.lastIndexOf('}');
@@ -2124,21 +2219,28 @@ class BleCubit extends Cubit<BleState>
       cleanedData = cleanedData.substring(firstBrace, lastBrace + 1);
     }
 
-    try {
-      final Map<String, dynamic> json = jsonDecode(cleanedData);
-      final response = WifiProvResponse.fromJson(json);
-      _wifiProvCompleter!.complete(response);
-      _wifiProvCompleter = null;
-    } catch (e) {
+    if (_wifiProvCompleter != null && !_wifiProvCompleter!.isCompleted) {
+      try {
+        final Map<String, dynamic> json = jsonDecode(cleanedData);
+        final response = WifiProvResponse.fromJson(json);
+        _wifiProvCompleter!.complete(response);
+        _wifiProvCompleter = null;
+      } catch (e) {
+        Console.log(
+            tag:
+                "[WIFI_PROV] Error parsing notification JSON (original: '$data', cleaned: '$cleanedData'): $e",
+            value: "BLE_Cubit");
+        _wifiProvCompleter!.complete(WifiProvResponse(
+          result: 'error',
+          reason: 'bad_json',
+        ));
+        _wifiProvCompleter = null;
+      }
+    } else {
       Console.log(
           tag:
-              "[WIFI_PROV] Error parsing notification JSON (original: '$data', cleaned: '$cleanedData'): $e",
+              "[WIFI_PROV] Notification received but no pending completer: $data",
           value: "BLE_Cubit");
-      _wifiProvCompleter!.complete(WifiProvResponse(
-        result: 'error',
-        reason: 'bad_json',
-      ));
-      _wifiProvCompleter = null;
     }
   }
 
@@ -2190,7 +2292,10 @@ class BleCubit extends Cubit<BleState>
         reason: 'Operation superseded by new request',
       ));
     }
-    _wifiProvCompleter = Completer<WifiProvResponse>();
+    final completer = Completer<WifiProvResponse>();
+    _wifiProvCompleter = completer;
+
+    emit(state.copyWith(isWifiProvisioning: true));
 
     try {
       Console.log(
@@ -2203,7 +2308,7 @@ class BleCubit extends Cubit<BleState>
           (freshWifiNotifChar.properties.notify ||
               freshWifiNotifChar.properties.indicate)) {
         try {
-          await freshWifiNotifChar.setNotifyValue(true);
+          // await freshWifiNotifChar.setNotifyValue(true);
           Console.log(
               tag: "BLE_Cubit",
               value: "Enabled notify for wifiNotifChar in provisionWifi");
@@ -2232,11 +2337,13 @@ class BleCubit extends Cubit<BleState>
       ); // Successfully written, clear the pending config
       await SharedPrefsHelper.clearPendingWifiProvData();
 
-      // Return the future with a 20-second timeout
-      return await _wifiProvCompleter!.future.timeout(
-        const Duration(seconds: 20),
+      // Return the future with a 30-second timeout
+      final response = await completer.future.timeout(
+        const Duration(seconds: 30),
         onTimeout: () {
-          _wifiProvCompleter = null;
+          if (_wifiProvCompleter == completer) {
+            _wifiProvCompleter = null;
+          }
           return WifiProvResponse(
             result: 'fail',
             reason: 'timeout',
@@ -2245,8 +2352,27 @@ class BleCubit extends Cubit<BleState>
           );
         },
       );
+
+      if (response.result == 'ok') {
+        if (ssid != null) {
+          await SharedPrefsHelper.setActiveWifiSsid(ssid);
+        }
+        if (pass != null) {
+          await SharedPrefsHelper.setActiveWifiPassword(pass);
+        }
+        if (response.ip != null) {
+          await SharedPrefsHelper.setActiveWifiIp(response.ip!);
+        }
+        if (response.priority != null) {
+          await SharedPrefsHelper.setActiveWifiPriority(response.priority!);
+        }
+      }
+
+      return response;
     } catch (e) {
-      _wifiProvCompleter = null;
+      if (_wifiProvCompleter == completer) {
+        _wifiProvCompleter = null;
+      }
       Console.log(
           tag: "[WIFI_PROV] Error sending Wi-Fi provisioning: $e",
           value: "BLE_Cubit");
@@ -2254,6 +2380,8 @@ class BleCubit extends Cubit<BleState>
         result: 'error',
         reason: e.toString(),
       );
+    } finally {
+      emit(state.copyWith(isWifiProvisioning: false));
     }
   }
 

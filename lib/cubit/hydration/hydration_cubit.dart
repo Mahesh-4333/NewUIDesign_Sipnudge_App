@@ -415,24 +415,40 @@ class HydrationCubit extends Cubit<HydrationState> {
       int badgesUnlocked = 0;
       Map<int, String> levelMap = {};
       Map<int, String> exactLevelMap = {};
-      // Use a set to de-duplicate same calendar day (handles DB duplicates)
+      
+      // Group perfect days by Monday-start weeks
+      final Map<String, int> weeklyPerfectCount = {};
+      final Map<String, double> weeklyIntake = {};
       final Set<String> seenDates = {};
 
+      DateTime getMonday(DateTime date) {
+        return DateTime(date.year, date.month, date.day).subtract(Duration(days: date.weekday - 1));
+      }
+
       for (var day in summaries) {
-        if (day.isPerfect) {
-          final dateKey = DateFormat('yyyy-MM-dd').format(day.date);
-          if (!seenDates.contains(dateKey)) {
-            seenDates.add(dateKey);
-            badgesUnlocked++;
-            final litres = (day.consumed / 1000).toStringAsFixed(1);
-            levelMap[badgesUnlocked] = '${litres}L';
-            exactLevelMap[badgesUnlocked] = day.consumed.toStringAsFixed(0);
-            Console.log(
-                tag: "DEBUG: 🏆 Level $badgesUnlocked unlocked! ",
-                value: "($dateKey, ${day.consumed.toStringAsFixed(0)}L)");
-          } else {
-            log("DEBUG: Duplicate date $dateKey — skipping.");
-          }
+        final dateKey = DateFormat('yyyy-MM-dd').format(day.date);
+        if (!seenDates.contains(dateKey)) {
+          seenDates.add(dateKey);
+          
+          final monday = getMonday(day.date);
+          final weekKey = DateFormat('yyyy-MM-dd').format(monday);
+          
+          weeklyPerfectCount[weekKey] = (weeklyPerfectCount[weekKey] ?? 0) + (day.isPerfect ? 1 : 0);
+          weeklyIntake[weekKey] = (weeklyIntake[weekKey] ?? 0.0) + day.consumed;
+        }
+      }
+
+      final sortedWeeks = weeklyPerfectCount.keys.toList()..sort();
+      for (final weekKey in sortedWeeks) {
+        if (weeklyPerfectCount[weekKey]! >= 5) {
+          badgesUnlocked++;
+          final totalIntake = weeklyIntake[weekKey] ?? 0.0;
+          final litres = (totalIntake / 1000).toStringAsFixed(1);
+          levelMap[badgesUnlocked] = '${litres}L';
+          exactLevelMap[badgesUnlocked] = totalIntake.toStringAsFixed(0);
+          Console.log(
+              tag: "DEBUG: 🏆 Weekly Level $badgesUnlocked unlocked! ",
+              value: "($weekKey, ${totalIntake.toStringAsFixed(0)} ml)");
         }
       }
 
