@@ -159,26 +159,40 @@ class DatabaseSyncService {
         // Map keys to match backend model (camelCase if needed, but backend routes often use snake_case or specific names)
         // Backend model has: dishName, imagePath, imageBase64, weightG, waterContentMl, etc.
         // Local DB has: dish_name, image_path, image_base64, weight_g, water_content_ml, etc.
-        final mappedScans = foodScans
-            .map((s) => {
-                  'dishName': s['dish_name'],
-                  'imagePath': s['image_path'],
-                  'imageBase64': s['image_base64'],
-                  'weightG': s['weight_g'],
-                  'waterContentMl': s['water_content_ml'],
-                  'waterPercentage': s['water_percentage'],
-                  'caloriesKcal': s['calories_kcal'],
-                  'proteinG': s['protein_g'],
-                  'carbsG': s['carbs_g'],
-                  'fatG': s['fat_g'],
-                  'sodiumMg': s['sodium_mg'],
-                  'fiberG': s['fiber_g'],
-                  'confidenceScore': s['confidence_score'],
-                  'ingredients': s['ingredients'],
-                  'reasoning': s['reasoning'],
-                  'timestamp': s['timestamp'],
-                })
-            .toList();
+        final List<Map<String, dynamic>> mappedScans = [];
+        for (final s in foodScans) {
+          String? serverImageUrl;
+          final base64Str = s['image_base64'];
+          if (base64Str != null && base64Str.toString().isNotEmpty) {
+            try {
+              final localPath = s['image_path'] as String?;
+              final filename = localPath != null ? localPath.split('/').last : 'food_scan.jpg';
+              serverImageUrl = await _apiService.uploadFoodImage(base64Str, filename);
+            } catch (err) {
+              Console.log(tag: "SYNC", value: "Error uploading batch image: $err");
+            }
+          }
+
+          mappedScans.add({
+            'dishName': s['dish_name'],
+            'imagePath': serverImageUrl ?? s['image_path'],
+            'imageBase64': null, // No need to send base64 anymore
+            'weightG': s['weight_g'],
+            'waterContentMl': s['water_content_ml'],
+            'waterPercentage': s['water_percentage'],
+            'caloriesKcal': s['calories_kcal'],
+            'proteinG': s['protein_g'],
+            'carbsG': s['carbs_g'],
+            'fatG': s['fat_g'],
+            'sodiumMg': s['sodium_mg'],
+            'fiberG': s['fiber_g'],
+            'confidenceScore': s['confidence_score'],
+            'ingredients': s['ingredients'],
+            'reasoning': s['reasoning'],
+            'timestamp': s['timestamp'],
+          });
+        }
+
         await _syncInChunks<Map<String, dynamic>>(mappedScans, 10,
             (chunk) async {
           await _apiService.syncFoodScans(userId!, chunk);
@@ -404,65 +418,99 @@ class DatabaseSyncService {
 
   // Helper for one-off sync of a food scan
   Future<void> syncFoodScan(Map<String, dynamic> scanData) async {
-    var userId = await SharedPrefsHelper.getUserId();
+    try {
+      var userId = await SharedPrefsHelper.getUserId();
+      Console.log(
+          tag: "SYNC", value: "[syncFoodScan] Initial userId = $userId");
 
-    // If userId is missing, try to fetch it using the saved email
-    if (userId == null) {
-      final email = await SharedPrefsHelper.getUserEmail();
-      if (email != null && email.isNotEmpty) {
-        final userData = await _apiService.getUserByEmail(email);
-        if (userData != null && userData['_id'] != null) {
-          userId = userData['_id'];
-          await SharedPrefsHelper.setUserId(userId!);
-        } else {
-          final userInfo = await _dbHelper.getUserInfo();
-
-          final random = Random.secure();
-          final newUserId = List<int>.generate(12, (i) => random.nextInt(256))
-              .map((b) => b.toRadixString(16).padLeft(2, '0'))
-              .join();
-
-          Map<String, dynamic> syncData = {'email': email, 'userId': newUserId};
-          if (userInfo != null) {
-            syncData.addAll({
-              'gender': userInfo.gender?.toString().split('.').last,
-              'height': userInfo.height,
-              'heightUnit': userInfo.heightUnit,
-              'weight': userInfo.weight,
-              'weightUnit': userInfo.weightUnit,
-              'age': userInfo.age,
-              'wakeupHour': userInfo.wakeupHour,
-              'wakeupMinute': userInfo.wakeupMinute,
-              'wakeupPeriod': userInfo.wakeupPeriod,
-              'bedtimeHour': userInfo.bedtimeHour,
-              'bedtimeMinute': userInfo.bedtimeMinute,
-              'bedtimePeriod': userInfo.bedtimePeriod,
-              'activityLevel':
-                  userInfo.activityLevel?.toString().split('.').last,
-              'dietType': userInfo.dietType?.toString().split('.').last,
-              'stepGoal': userInfo.stepGoal,
-              'coffeeIntake': userInfo.coffeeIntake?.toString().split('.').last,
-              'teaIntake': userInfo.teaIntake?.toString().split('.').last,
-              'typicalWaterIntake': userInfo.typicalWaterIntake,
-              'waterUnit': userInfo.waterUnit,
-            });
-          }
-          final createResult = await _apiService.syncUserInfoData(syncData);
-          if (createResult != null && createResult['_id'] != null) {
-            userId = createResult['_id'];
+      // If userId is missing, try to fetch it using the saved email
+      if (userId == null) {
+        final email = await SharedPrefsHelper.getUserEmail();
+        Console.log(tag: "SYNC", value: "[syncFoodScan] Email = $email");
+        if (email != null && email.isNotEmpty) {
+          final userData = await _apiService.getUserByEmail(email);
+          if (userData != null && userData['_id'] != null) {
+            userId = userData['_id'];
             await SharedPrefsHelper.setUserId(userId!);
+            Console.log(
+                tag: "SYNC",
+                value: "[syncFoodScan] Fetched existing userId = $userId");
+          } else {
+            final userInfo = await _dbHelper.getUserInfo();
+            final random = Random.secure();
+            final newUserId = List<int>.generate(12, (i) => random.nextInt(256))
+                .map((b) => b.toRadixString(16).padLeft(2, '0'))
+                .join();
+
+            Map<String, dynamic> syncData = {
+              'email': email,
+              'userId': newUserId
+            };
+            if (userInfo != null) {
+              syncData.addAll({
+                'gender': userInfo.gender?.toString().split('.').last,
+                'height': userInfo.height,
+                'heightUnit': userInfo.heightUnit,
+                'weight': userInfo.weight,
+                'weightUnit': userInfo.weightUnit,
+                'age': userInfo.age,
+                'wakeupHour': userInfo.wakeupHour,
+                'wakeupMinute': userInfo.wakeupMinute,
+                'wakeupPeriod': userInfo.wakeupPeriod,
+                'bedtimeHour': userInfo.bedtimeHour,
+                'bedtimeMinute': userInfo.bedtimeMinute,
+                'bedtimePeriod': userInfo.bedtimePeriod,
+                'activityLevel':
+                    userInfo.activityLevel?.toString().split('.').last,
+                'dietType': userInfo.dietType?.toString().split('.').last,
+                'stepGoal': userInfo.stepGoal,
+                'coffeeIntake':
+                    userInfo.coffeeIntake?.toString().split('.').last,
+                'teaIntake': userInfo.teaIntake?.toString().split('.').last,
+                'typicalWaterIntake': userInfo.typicalWaterIntake,
+                'waterUnit': userInfo.waterUnit,
+              });
+            }
+            Console.log(
+                tag: "SYNC",
+                value: "[syncFoodScan] Creating new user profile for email $email");
+            final createResult = await _apiService.syncUserInfoData(syncData);
+            if (createResult != null && createResult['_id'] != null) {
+              userId = createResult['_id'];
+              await SharedPrefsHelper.setUserId(userId!);
+              Console.log(
+                  tag: "SYNC",
+                  value: "[syncFoodScan] Created and saved new userId = $userId");
+            }
           }
         }
       }
-    }
 
-    if (userId == null) return;
+      if (userId == null) {
+        Console.log(
+            tag: "SYNC", value: "[syncFoodScan] Aborted: userId is null");
+        return;
+      }
 
-    await _apiService.syncFoodScans(userId, [
-      {
+      String? serverImageUrl;
+      final base64Str = scanData['image_base64'];
+      if (base64Str != null && base64Str.toString().isNotEmpty) {
+        final localPath = scanData['image_path'] as String?;
+        final filename = localPath != null ? localPath.split('/').last : 'food_scan.jpg';
+        try {
+          serverImageUrl = await _apiService.uploadFoodImage(base64Str, filename);
+          Console.log(
+              tag: "SYNC",
+              value: "[syncFoodScan] Uploaded image to server, URL: $serverImageUrl");
+        } catch (err) {
+          Console.log(tag: "SYNC", value: "[syncFoodScan] Error uploading image: $err");
+        }
+      }
+
+      final payload = {
         'dishName': scanData['dish_name'],
-        'imagePath': scanData['image_path'],
-        'imageBase64': scanData['image_base64'],
+        'imagePath': serverImageUrl ?? scanData['image_path'],
+        'imageBase64': null, // No need to send base64 anymore
         'weightG': scanData['weight_g'],
         'waterContentMl': scanData['water_content_ml'],
         'waterPercentage': scanData['water_percentage'],
@@ -476,8 +524,21 @@ class DatabaseSyncService {
         'ingredients': scanData['ingredients'],
         'reasoning': scanData['reasoning'],
         'timestamp': scanData['timestamp'],
-      }
-    ]);
+      };
+
+      Console.log(
+          tag: "SYNC",
+          value:
+              "[syncFoodScan] Sending food scan: ${payload['dishName']} (payload length: ${payload.toString().length} chars)");
+      final success = await _apiService.syncFoodScans(userId, [payload]);
+      Console.log(
+          tag: "SYNC",
+          value: "[syncFoodScan] Completed. Sync status: $success");
+    } catch (e, stack) {
+      Console.log(
+          tag: "SYNC",
+          value: "[syncFoodScan] Exception occurred: $e\nStack: $stack");
+    }
   }
 
   Future<void> _syncInChunks<T>(List<T> data, int chunkSize,

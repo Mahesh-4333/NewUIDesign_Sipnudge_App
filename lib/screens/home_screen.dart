@@ -10,6 +10,7 @@ import 'package:hydrify/constants/app_colors.dart';
 import 'package:hydrify/constants/app_dimensions.dart';
 import 'package:hydrify/constants/app_font_styles.dart';
 import 'package:hydrify/constants/app_strings.dart';
+import 'package:hydrify/l10n/app_localizations.dart';
 import 'package:hydrify/constants/assets_path.dart';
 import 'package:hydrify/cubit/ble/ble_cubit.dart';
 import 'package:hydrify/cubit/bottle/bottle_data_cubit.dart';
@@ -1379,7 +1380,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                             style: TextStyle(height: 1.2.h),
                             children: [
                               TextSpan(
-                                text: AppStrings.itsA,
+                                text: AppLocalizations.of(context)?.itsA ?? AppStrings.itsA,
                                 style: TextStyle(
                                   color: AppColors.bluegray,
                                   fontFamily:
@@ -1403,7 +1404,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                                 ),
                               ),
                               TextSpan(
-                                text: AppStrings.today,
+                                text: AppLocalizations.of(context)?.today ?? AppStrings.today,
                                 style: TextStyle(
                                   color: AppColors.bluegray,
                                   fontFamily:
@@ -1422,7 +1423,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                       SizedBox(
                         width: AppDimensions.dim330.w,
                         child: Text(
-                          AppStrings.waterBottleReminder,
+                          AppLocalizations.of(context)?.waterBottleReminder ?? AppStrings.waterBottleReminder,
                           style: TextStyle(
                             color: AppColors.bluegray,
                             fontSize: AppFontStyles.fontSize_14,
@@ -1783,7 +1784,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                       crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
                         Text(
-                          "Today's Refills",
+                          AppLocalizations.of(context)?.todaysRefills ?? "Today's Refills",
                           overflow: TextOverflow.ellipsis,
                           textAlign: TextAlign.center,
                           maxLines: 1,
@@ -1918,7 +1919,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                       crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
                         Text(
-                          "Completed",
+                          AppLocalizations.of(context)?.completed ?? "Completed",
                           overflow: TextOverflow.ellipsis,
                           textAlign: TextAlign.center,
                           maxLines: 1,
@@ -1990,7 +1991,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           children: [
             TextSpan(
                 text:
-                    "You have reached  ${todayConsumptionPercentage.toStringAsFixed(0)}% of today's goal"),
+                    AppLocalizations.of(context)?.youHaveReachedGoal(todayConsumptionPercentage.toStringAsFixed(0)) ?? "You have reached  ${todayConsumptionPercentage.toStringAsFixed(0)}% of today's goal"),
             TextSpan(
               text: "\n(",
               style: TextStyle(
@@ -2459,7 +2460,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    "AMBIENT TEMPERATURE",
+                    (AppLocalizations.of(context)?.ambientTemperature ?? "AMBIENT TEMPERATURE").toUpperCase(),
                     style: TextStyle(
                       fontFamily: AppFontStyles.urbanistFontFamily,
                       color: Color(0xff515F74),
@@ -2473,7 +2474,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                   Row(
                     children: [
                       Text(
-                        "Room Temperature: ",
+                        AppLocalizations.of(context)?.roomTemperature ?? "Room Temperature: ",
                         style: TextStyle(
                           fontFamily: AppFontStyles.urbanistFontFamily,
                           color: AppColors.black,

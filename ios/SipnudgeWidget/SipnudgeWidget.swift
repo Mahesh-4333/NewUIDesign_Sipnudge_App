@@ -12,13 +12,13 @@ struct SlotItem: Codable {
 
 struct Provider: TimelineProvider {
     func placeholder(in context: Context) -> SimpleEntry {
-        SimpleEntry(date: Date(), intake: 0, goal: 2000, upcomingSlotName: "Wakeup Time", upcomingSlotTarget: 500, upcomingSlotTime: "07:00 AM", streak: 7,
+        SimpleEntry(date: Date(), intake: 0, goal: 2000, coffeeIntake: 200, upcomingSlotName: "Wakeup Time", upcomingSlotTarget: 500, upcomingSlotTime: "07:00 AM", streak: 7,
                     battery: 72, expectedPercent: 30.0,
                     dbgUUID: "-", dbgConnected: "-", dbgSubscribed: "-", dbgBleRx: "-")
     }
 
     func getSnapshot(in context: Context, completion: @escaping (SimpleEntry) -> ()) {
-        let entry = SimpleEntry(date: Date(), intake: 750, goal: 2500, upcomingSlotName: "Lunch Time", upcomingSlotTarget: 300, upcomingSlotTime: "01:00 PM", streak: 7,
+        let entry = SimpleEntry(date: Date(), intake: 750, goal: 2500, coffeeIntake: 200, upcomingSlotName: "Lunch Time", upcomingSlotTarget: 300, upcomingSlotTime: "01:00 PM", streak: 7,
                                 battery: 72, expectedPercent: 40.0,
                                 dbgUUID: "-", dbgConnected: "-", dbgSubscribed: "-", dbgBleRx: "-")
         completion(entry)
@@ -38,6 +38,10 @@ struct Provider: TimelineProvider {
         }
         
         let goal = userDefaults?.integer(forKey: "daily_goal") ?? 2000
+        var coffeeIntake = userDefaults?.integer(forKey: "coffee_intake") ?? 0
+        if coffeeIntake == 0 {
+            coffeeIntake = 200
+        }
         let streak = userDefaults?.integer(forKey: "streak") ?? 0
         
         var upcomingSlotName = userDefaults?.string(forKey: "upcoming_slot_name") ?? "Next Slot"
@@ -112,7 +116,7 @@ struct Provider: TimelineProvider {
             expectedPercent = userDefaults?.double(forKey: "expected_percent") ?? 0.0
         }
         
-        return SimpleEntry(date: date, intake: intake, goal: goal, upcomingSlotName: upcomingSlotName, upcomingSlotTarget: upcomingSlotTarget, upcomingSlotTime: upcomingSlotTime, streak: streak,
+        return SimpleEntry(date: date, intake: intake, goal: goal, coffeeIntake: coffeeIntake, upcomingSlotName: upcomingSlotName, upcomingSlotTarget: upcomingSlotTarget, upcomingSlotTime: upcomingSlotTime, streak: streak,
                            battery: battery, expectedPercent: expectedPercent,
                            dbgUUID: userDefaults?.string(forKey: "dbg_uuid") ?? "nil",
                            dbgConnected: userDefaults?.string(forKey: "dbg_connected") ?? "nil",
@@ -189,6 +193,7 @@ struct SimpleEntry: TimelineEntry {
     let date: Date
     let intake: Int
     let goal: Int
+    let coffeeIntake: Int
     let upcomingSlotName: String
     let upcomingSlotTarget: Int
     let upcomingSlotTime: String
@@ -315,7 +320,7 @@ struct SipnudgeWidgetEntryView : View {
     // MARK: - Medium Layout
     private var mediumLayout: some View {
         VStack(spacing: 0) {
-            HStack(spacing: 28) {
+            HStack(spacing: 16) {
                 // Left Side: Circular Progress Ring with top gap and double progress arcs (Blue and Yellow)
                 VStack(spacing: 6) {
                     ZStack {
@@ -330,7 +335,7 @@ struct SipnudgeWidgetEntryView : View {
                             Circle()
                                 .trim(from: 0.0, to: CGFloat(min(entry.expectedPercent / 100.0, 1.0)) * 0.833)
                                 .stroke(
-                                    Color(red: 250/255.0, green: 204/255.0, blue: 21/255.0), // Yellow (FACC15)
+                                    Color(red: 245/255.0, green: 185/255.0, blue: 30/255.0), // Amber/Yellow
                                     style: StrokeStyle(lineWidth: 8, lineCap: .round)
                                 )
                                 .rotationEffect(Angle(degrees: 300))
@@ -354,10 +359,19 @@ struct SipnudgeWidgetEntryView : View {
                                 .rotationEffect(Angle(degrees: 300))
                         }
                         
-                        VStack(spacing: 1) {
+                        VStack(spacing: 0) {
                             Text(percentageString)
                                 .font(.system(size: 24, weight: .bold, design: .rounded))
                                 .foregroundColor(Color(red: 0.09, green: 0.15, blue: 0.27))
+                            
+                            Text("+")
+                                .font(.system(size: 11, weight: .semibold, design: .rounded))
+                                .foregroundColor(Color(red: 0.76, green: 0.61, blue: 0.49))
+                                .padding(.vertical, -3)
+                            
+                            Text("\(entry.coffeeIntake) ml")
+                                .font(.system(size: 12, weight: .bold, design: .rounded))
+                                .foregroundColor(Color(red: 0.76, green: 0.61, blue: 0.49))
                         }
                     }
                     .frame(width: 90, height: 90)
@@ -374,8 +388,8 @@ struct SipnudgeWidgetEntryView : View {
                     .padding(.top, 4)
                 }
                 
-                // Right Side: Details (Battery progress, status, Next sip & Only X ml left)
-                VStack(alignment: .leading, spacing: 6) {
+                // Right Side: Details (Battery progress, status, Next sip & Coffee/Water quick actions)
+                VStack(alignment: .leading, spacing: 4) {
                     // Battery indicator
                     VStack(alignment: .leading, spacing: 2) {
                         HStack(spacing: 4) {
@@ -404,7 +418,7 @@ struct SipnudgeWidgetEntryView : View {
                         }
                         .frame(height: 4)
                     }
-                    .padding(.bottom, 4)
+                    .padding(.bottom, 2)
                     
                     // Heading (Dynamic color depending on "on-track" state)
                     Text(headingText)
@@ -413,65 +427,89 @@ struct SipnudgeWidgetEntryView : View {
                         .lineLimit(1)
                         .minimumScaleFactor(0.7)
                     
-                    // Info rows
-                    VStack(alignment: .leading, spacing: 0) {
-                        // Row 1: Next Sip
-                        HStack(spacing: 8) {
-                            ZStack {
-                                Circle()
-                                    .fill(Color(red: 0.92, green: 0.96, blue: 1.00))
-                                    .frame(width: 24, height: 24)
-                                Image(systemName: "clock.fill")
-                                    .font(.system(size: 10, weight: .semibold))
-                                    .foregroundColor(Color(red: 0.00, green: 0.48, blue: 1.00))
-                            }
-                            VStack(alignment: .leading, spacing: 0) {
-                                Text("Next sip")
-                                    .font(.system(size: 8, weight: .medium, design: .rounded))
-                                    .foregroundColor(Color(red: 77/255.0, green: 117/255.0, blue: 139/255.0))
-                                Text(entry.upcomingSlotTime)
-                                    .font(.system(size: 11, weight: .bold, design: .rounded))
-                                    .foregroundColor(Color(red: 0.09, green: 0.15, blue: 0.27))
-                            }
+                    // Next Sip Row
+                    HStack(spacing: 8) {
+                        ZStack {
+                            Circle()
+                                .fill(Color(red: 0.92, green: 0.96, blue: 1.00))
+                                .frame(width: 26, height: 26)
+                            Image(systemName: "clock.fill")
+                                .font(.system(size: 11, weight: .semibold))
+                                .foregroundColor(Color(red: 0.00, green: 0.48, blue: 1.00))
                         }
-                        .padding(.vertical, 3)
-                        
-                        Divider()
-                            .padding(.leading, 32)
-                            .padding(.vertical, 1)
-                        
-                        // Row 2: Water Left
-                        HStack(spacing: 8) {
-                            ZStack {
-                                Circle()
-                                    .fill(Color(red: 0.92, green: 0.96, blue: 1.00))
-                                    .frame(width: 24, height: 24)
-                                Image(systemName: "drop.fill")
-                                    .font(.system(size: 10, weight: .semibold))
-                                    .foregroundColor(Color(red: 0.00, green: 0.48, blue: 1.00))
-                            }
-                            VStack(alignment: .leading, spacing: 0) {
-                                Text("Only")
-                                    .font(.system(size: 8, weight: .medium, design: .rounded))
-                                    .foregroundColor(Color(red: 77/255.0, green: 117/255.0, blue: 139/255.0))
-                                Text("\(formatNumber(max(0, entry.goal - entry.intake))) ml left")
-                                    .font(.system(size: 11, weight: .bold, design: .rounded))
-                                    .foregroundColor(Color(red: 0.09, green: 0.15, blue: 0.27))
-                            }
+                        VStack(alignment: .leading, spacing: 0) {
+                            Text("Next sip")
+                                .font(.system(size: 9, weight: .medium, design: .rounded))
+                                .foregroundColor(Color(red: 77/255.0, green: 117/255.0, blue: 139/255.0))
+                            Text(entry.upcomingSlotTime)
+                                .font(.system(size: 13, weight: .bold, design: .rounded))
+                                .foregroundColor(Color(red: 0.09, green: 0.15, blue: 0.27))
                         }
-                        .padding(.vertical, 3)
                     }
+                    .padding(.vertical, 2)
+                    
+                    // Coffee & Water Action Buttons Row
+                    HStack(spacing: 8) {
+                        // Coffee Button
+                        Link(destination: URL(string: "sipnudge://quick-add?type=coffee")!) {
+                            HStack(spacing: 4) {
+                                Text("Coffee")
+                                    .font(.system(size: 13, weight: .semibold, design: .rounded))
+                                    .foregroundColor(Color(red: 0.09, green: 0.15, blue: 0.27))
+                                
+                                Spacer(minLength: 2)
+                                
+                                ZStack {
+                                    Circle()
+                                        .fill(Color(red: 120/255.0, green: 72/255.0, blue: 30/255.0))
+                                        .frame(width: 20, height: 20)
+                                    Text("+")
+                                        .font(.system(size: 12, weight: .bold, design: .rounded))
+                                        .foregroundColor(.white)
+                                }
+                            }
+                            .padding(.leading, 10)
+                            .padding(.trailing, 5)
+                            .padding(.vertical, 6)
+                            .background(
+                                Capsule()
+                                    .fill(Color(red: 243/255.0, green: 220/255.0, blue: 195/255.0))
+                            )
+                        }
+
+                        // Water Button
+                        Link(destination: URL(string: "sipnudge://quick-add?type=water")!) {
+                            HStack(spacing: 4) {
+                                Text("Water")
+                                    .font(.system(size: 13, weight: .semibold, design: .rounded))
+                                    .foregroundColor(Color(red: 0.09, green: 0.15, blue: 0.27))
+                                
+                                Spacer(minLength: 2)
+                                
+                                ZStack {
+                                    Circle()
+                                        .fill(Color(red: 0/255.0, green: 163/255.0, blue: 255/255.0))
+                                        .frame(width: 20, height: 20)
+                                    Text("+")
+                                        .font(.system(size: 12, weight: .bold, design: .rounded))
+                                        .foregroundColor(.white)
+                                }
+                            }
+                            .padding(.leading, 10)
+                            .padding(.trailing, 5)
+                            .padding(.vertical, 6)
+                            .background(
+                                Capsule()
+                                    .fill(Color(red: 224/255.0, green: 242/255.0, blue: 254/255.0))
+                            )
+                        }
+                    }
+                    .padding(.top, 2)
                 }
             }
-            
-            // // Bottom branding label
-            // Text("Sipnudge")
-            //     .font(.system(size: 9, weight: .bold, design: .rounded))
-            //     .foregroundColor(Color(red: 0.60, green: 0.65, blue: 0.75))
-            //     .padding(.top, 8)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
-        .padding(.horizontal, 16)
+        .padding(.horizontal, 14)
         .padding(.vertical, 8)
     }
 

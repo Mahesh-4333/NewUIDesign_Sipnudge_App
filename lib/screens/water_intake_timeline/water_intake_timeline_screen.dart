@@ -12,6 +12,7 @@ import 'package:hydrify/constants/app_dimensions.dart';
 import 'package:hydrify/constants/app_enums.dart';
 import 'package:hydrify/constants/app_font_styles.dart';
 import 'package:hydrify/constants/app_strings.dart';
+import 'package:hydrify/l10n/app_localizations.dart';
 import 'package:hydrify/constants/assets_path.dart';
 import 'package:hydrify/cubit/ble/ble_cubit.dart';
 import 'package:hydrify/cubit/bottle/bottle_data_cubit.dart';
@@ -258,9 +259,9 @@ class _WaterIntakeTimelineState extends State<WaterIntakeTimelineScreen> {
       ),
       child: Row(
         children: [
-          _buildTabItem("Completed", 0),
-          _buildTabItem("Pending", 1),
-          _buildTabItem("Schedule", 2),
+          _buildTabItem(AppLocalizations.of(context)?.completed ?? "Completed", 0),
+          _buildTabItem(AppLocalizations.of(context)?.pending ?? "Pending", 1),
+          _buildTabItem(AppLocalizations.of(context)?.schedule ?? "Schedule", 2),
         ],
       ),
     );
@@ -437,7 +438,7 @@ class _WaterIntakeTimelineState extends State<WaterIntakeTimelineScreen> {
                   ),
                 ),
                 Text(
-                  "Completed Slots",
+                  AppLocalizations.of(context)?.completedSlots ?? "Completed Slots",
                   style: TextStyle(
                     color: Color(0xFF3FB7FF),
                     fontSize: 14.sp,
@@ -454,8 +455,8 @@ class _WaterIntakeTimelineState extends State<WaterIntakeTimelineScreen> {
                 ? Center(
                     child: Text(
                       _activeTabIndex == 0
-                          ? "No completed slots yet"
-                          : "All slots completed!",
+                          ? (AppLocalizations.of(context)?.noCompletedSlotsYet ?? "No completed slots yet")
+                          : (AppLocalizations.of(context)?.allSlotsCompleted ?? "All slots completed!"),
                       style: TextStyle(
                         color: AppColors.greyColor,
                         fontFamily: AppFontStyles.urbanistFontFamily,
@@ -513,7 +514,7 @@ class _WaterIntakeTimelineState extends State<WaterIntakeTimelineScreen> {
                   ),
                 ),
                 Text(
-                  "Pending Slots",
+                  AppLocalizations.of(context)?.pendingSlots ?? "Pending Slots",
                   style: TextStyle(
                     color: Color(0xFF3FB7FF),
                     fontSize: 14.sp,
@@ -530,8 +531,8 @@ class _WaterIntakeTimelineState extends State<WaterIntakeTimelineScreen> {
                 ? Center(
                     child: Text(
                       _activeTabIndex == 0
-                          ? "No completed slots yet"
-                          : "All slots completed!",
+                          ? (AppLocalizations.of(context)?.noCompletedSlotsYet ?? "No completed slots yet")
+                          : (AppLocalizations.of(context)?.allSlotsCompleted ?? "All slots completed!"),
                       style: TextStyle(
                         color: AppColors.greyColor,
                         fontFamily: AppFontStyles.urbanistFontFamily,
@@ -641,7 +642,7 @@ class _WaterIntakeTimelineState extends State<WaterIntakeTimelineScreen> {
                           children: [
                             TextSpan(
                               text: status == HydrationStatus.completed
-                                  ? "Target Met"
+                                  ? (AppLocalizations.of(context)?.targetMet ?? "Target Met")
                                   : "${(entry.amount - entry.waterDrank).toInt()}ml",
                               style: TextStyle(
                                 color: status == HydrationStatus.completed
@@ -1182,7 +1183,7 @@ class _WaterIntakeTimelineState extends State<WaterIntakeTimelineScreen> {
             children: [
               TextButton(
                 onPressed: () => setState(() => _expandedIndex = null),
-                child: Text("CANCEL",
+                child: Text(AppLocalizations.of(context)?.cancelUpper ?? "CANCEL",
                     style: TextStyle(
                         color: AppColors.greyColor,
                         fontFamily: AppFontStyles.urbanistFontFamily,
@@ -1200,7 +1201,7 @@ class _WaterIntakeTimelineState extends State<WaterIntakeTimelineScreen> {
                   if (isConflict) {
                     context
                         .read<HydrationCubit>()
-                        .showError("Time slot overlapping!");
+                        .showError(AppLocalizations.of(context)?.timeSlotOverlapping ?? "Time slot overlapping!");
                     return;
                   }
 
@@ -1227,7 +1228,7 @@ class _WaterIntakeTimelineState extends State<WaterIntakeTimelineScreen> {
                       topRight: Radius.circular(15.r),
                     ),
                   ),
-                  child: Text("UPDATE",
+                  child: Text(AppLocalizations.of(context)?.updateUpper ?? "UPDATE",
                       style: TextStyle(
                           color: Colors.white,
                           fontFamily: AppFontStyles.urbanistFontFamily,

@@ -31,6 +31,7 @@ class SharedPrefsHelper {
 
   // NEW: Ringtone key
   static const String _keySelectedRingtone = 'selected_ringtone';
+  static const String _keySelectedLanguage = 'selected_language';
   static const String _keySelectedRingtoneName = 'selected_ringtone_name';
   static const String _keyRingtoneFeedback = 'ringtone_feedback';
   static const String _keyPendingConfigData = 'pending_config_data';
@@ -772,5 +773,27 @@ class SharedPrefsHelper {
   static Future<bool> isErasingData() async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getBool('is_erasing_data') ?? false;
+  }
+
+  static const String _keyIsFirstTimeLaunch = 'is_first_time_launch';
+
+  static Future<bool> isFirstTimeLaunch() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool(_keyIsFirstTimeLaunch) ?? true;
+  }
+
+  static Future<void> setFirstTimeLaunch(bool value) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_keyIsFirstTimeLaunch, value);
+  }
+
+  static Future<void> setSelectedLanguage(String languageCode) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_keySelectedLanguage, languageCode);
+  }
+
+  static Future<String?> getSelectedLanguage() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_keySelectedLanguage);
   }
 }

@@ -3,6 +3,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:hydrify/constants/app_style.dart';
 import 'package:hydrify/helpers/logger.dart';
 import 'package:hydrify/screens/data_n_analytics/data_n_analytics_screen.dart';
 import 'package:path/path.dart' as p;
@@ -14,6 +15,8 @@ import 'package:hydrify/constants/assets_path.dart';
 import 'package:hydrify/constants/app_dimensions.dart';
 import 'package:hydrify/constants/app_font_styles.dart';
 import 'package:hydrify/constants/app_strings.dart';
+import 'package:hydrify/l10n/app_localizations.dart';
+import 'package:hydrify/cubit/locale/locale_cubit.dart';
 import 'package:hydrify/cubit/bottle/bottle_data_cubit.dart';
 import 'package:hydrify/cubit/bottom_nav/bottom_nav_cubit.dart';
 import 'package:hydrify/cubit/profile_screen_in_setting/profile_cubit.dart';
@@ -29,6 +32,8 @@ import 'package:hydrify/screens/faq_page.dart';
 import 'package:hydrify/screens/calendar/calendar_screen.dart';
 import 'package:hydrify/screens/help&support_page.dart';
 import 'package:hydrify/screens/preferences_page.dart';
+import 'package:hydrify/screens/widgets/preferences_widgets/language_selection_dialog.dart';
+import 'package:hydrify/screens/language_selection_screen.dart';
 import 'package:hydrify/screens/account&security_page.dart';
 import 'package:hydrify/screens/user_personal_info_input_screen..dart';
 import 'package:hydrify/screens/widgets/logout_widgets/logout_bottom_sheet.dart';
@@ -175,6 +180,14 @@ class _SettingScreenState extends State<SettingScreen> {
           );
           break;
 
+        case "Language":
+          navigator.push(
+            MaterialPageRoute(
+              builder: (_) => const LanguageSelectionScreen(isFirstTime: false),
+            ),
+          );
+          break;
+
         case AppStrings.dataAnalytics:
           navigator.push(
             MaterialPageRoute(
@@ -307,7 +320,7 @@ class _SettingScreenState extends State<SettingScreen> {
     } catch (e, s) {
       debugPrint("Navigation error for '$title': $e\n$s");
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Page Coming Soon...')),
+        const SnackBar(content: Text(AppStrings.pageComingSoon)),
       );
     }
   }
@@ -435,7 +448,7 @@ class _SettingScreenState extends State<SettingScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      "Upgrade Plan Now!",
+                      AppStrings.upgradePlan,
                       style: TextStyle(
                           color: Colors.white,
                           fontSize: 17.sp,
@@ -444,7 +457,7 @@ class _SettingScreenState extends State<SettingScreen> {
                     ),
                     SizedBox(height: 4.h),
                     Text(
-                      "Enjoy all the benefits and explore more possibilities",
+                      AppStrings.upgradePlan2,
                       style: TextStyle(
                           color: Colors.white.withOpacity(0.9),
                           fontSize: 11.sp,
@@ -488,7 +501,7 @@ class _SettingScreenState extends State<SettingScreen> {
     } catch (e) {
       debugPrint("Error navigating to Bottle Info: $e");
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Unable to load bottle information')),
+        const SnackBar(content: Text(AppStrings.unableToLoadBottleInfo)),
       );
     }
   }
@@ -526,8 +539,7 @@ class _SettingScreenState extends State<SettingScreen> {
       } else {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-                content: Text('No logs or database found to export.')),
+            const SnackBar(content: Text(AppStrings.noLogsOrDbToExport)),
           );
         }
       }
@@ -535,7 +547,7 @@ class _SettingScreenState extends State<SettingScreen> {
       debugPrint("Error exporting logs: $e");
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Failed to export logs')),
+          const SnackBar(content: Text(AppStrings.failedToExportLogs)),
         );
       }
     }
@@ -768,155 +780,318 @@ class _SettingScreenState extends State<SettingScreen> {
     );
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return BlocBuilder<ProfileCubit, ProfileState>(
-      builder: (context, state) {
-        return Scaffold(
-          body: Container(
-            width: double.infinity,
-            height: double.infinity,
-            decoration: const BoxDecoration(
-              image: DecorationImage(
-                image: AssetImage("assets/images/app_background.png"),
-                fit: BoxFit.cover,
+  String _getLocalizedTitle(BuildContext context, String title) {
+    final l10n = AppLocalizations.of(context);
+    if (l10n == null) return title;
+    switch (title) {
+      case "Personal Info":
+        return l10n.personalinfo;
+      case "Preferences":
+        return l10n.preferences;
+      case "Language":
+        return l10n.language;
+      case "Drink Reminder":
+        return l10n.drinkreminder;
+      case "Account & Security":
+        return l10n.accountandsecurity;
+      case "Help & Support":
+        return l10n.helpandsupport;
+      case "Water Intake Timeline":
+        return l10n.waterintaketimeline;
+      case "Logout":
+        return l10n.logout;
+      case "Achievement":
+        return l10n.achievement;
+      case "Leaderboard":
+        return l10n.leaderboard;
+      case "Support Tickets":
+        return l10n.supportTickets;
+      case "faq":
+      case "F&Q":
+      case "FAQ":
+        return l10n.faq;
+      case "contact_support":
+      case "Contact Support":
+        return l10n.contactSupport;
+      case "Sipnudge Bottle":
+        return l10n.sipnudgeBottle;
+      case "Connect Wi-Fi":
+        return l10n.connectWifi;
+      case "Data & Analytics":
+        return l10n.dataAnalytics;
+      default:
+        return title;
+    }
+  }
+
+  List<Widget> _buildGroupedSections(
+      BuildContext context, List<ProfileMenuItem> items) {
+    final List<Widget> sections = [];
+
+    // Separate logout (no group) from grouped items
+    final groupedItems = items.where((i) => i.groupLabel != null).toList();
+    final logoutItem = items.where((i) => i.groupLabel == null).toList();
+
+    // Collect unique group labels (preserving insertion order)
+    final groupLabels = <String>[];
+    for (final item in groupedItems) {
+      if (!groupLabels.contains(item.groupLabel!)) {
+        groupLabels.add(item.groupLabel!);
+      }
+    }
+
+    for (final label in groupLabels) {
+      final groupItems =
+          groupedItems.where((i) => i.groupLabel == label).toList();
+      sections.add(_buildSettingsGroup(context, label, groupItems));
+      sections.add(SizedBox(height: 16.h));
+    }
+
+    // Logout button standalone below all groups
+    if (logoutItem.isNotEmpty) {
+      final item = logoutItem.first;
+      sections.add(
+        Padding(
+          padding: EdgeInsets.symmetric(
+              horizontal: AppDimensions.dim24.w,
+              vertical: AppDimensions.dim10.h),
+          child: GestureDetector(
+            onTap: () => _handleNavigation(context, item.title),
+            child: Container(
+              width: double.infinity,
+              padding: EdgeInsets.symmetric(vertical: 14.h, horizontal: 20.w),
+              decoration: BoxDecoration(
+                color: AppColors.white.withValues(alpha: 0.7),
+                border: Border.all(color: const Color(0xCCC6C6C6)),
+                borderRadius: BorderRadius.circular(AppDimensions.radius_100.r),
               ),
-            ),
-            child: SafeArea(
-              child: SingleChildScrollView(
-                child: Column(
-                  children: [
-                    Padding(
-                      padding: EdgeInsets.only(
-                        top: AppDimensions.dim50.h,
-                        left: AppDimensions.dim25.w,
-                        right: AppDimensions.dim25.w,
-                      ),
-                      child: Row(
-                        children: [
-                          const EditableProfileAvatar(),
-                          SizedBox(width: AppDimensions.dim16.w),
-                          Expanded(
-                            child: Text(
-                              _nameController.text,
-                              style: TextStyle(
-                                color: AppColors.bluegray,
-                                fontSize: AppFontStyles.fontSize_18.sp,
-                                fontFamily:
-                                    AppFontStyles.museoModernoFontFamily,
-                                fontVariations: [
-                                  AppFontStyles.fontWeightVariation600,
-                                ],
-                                shadows: [
-                                  Shadow(
-                                    offset: Offset(
-                                      AppDimensions.radius_1.r,
-                                      AppDimensions.radius_1.r,
-                                    ),
-                                    blurRadius: AppDimensions.radius_4.r,
-                                    color: AppColors.black.withOpacity(0.25),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Image.asset(
+                    item.iconPath,
+                    width: 20.w,
+                    height: 20.h,
+                    color: AppColors.redAccent,
+                    errorBuilder: (_, __, ___) => Icon(
+                      Icons.logout,
+                      color: AppColors.redAccent,
+                      size: 20.sp,
                     ),
-                    SizedBox(height: AppDimensions.dim30.h),
-                    _buildUpgradeBanner(),
-                    SizedBox(height: AppDimensions.dim20.h),
-
-                    // Menu group 1
-                    Padding(
-                      padding: EdgeInsets.symmetric(
-                        horizontal: AppDimensions.dim24.w,
-                      ),
-                      child: Container(
-                        decoration: BoxDecoration(
-                          borderRadius:
-                              BorderRadius.circular(AppDimensions.radius_16.r),
-                          // boxShadow: [
-                          //   BoxShadow(
-                          //     color: Colors.black.withOpacity(0.10),
-                          //     blurRadius: 4.r,
-                          //     spreadRadius: 3.r,
-                          //     offset: Offset(4.r, 4.r),
-                          //   ),
-                          // ],
-                        ),
-                        child: Container(
-                          decoration: BoxDecoration(
-                            color: AppColors.white1A,
-                            border: Border.all(color: Color(0xCCC6C6C6)),
-                            borderRadius: BorderRadius.circular(
-                                AppDimensions.radius_16.r),
-                          ),
-                          child: Column(
-                            children: state.menuItems
-                                .map(
-                                  (item) => ProfileMenuItemWidget(
-                                    iconPath: item.iconPath,
-                                    title: item.title,
-                                    isRed: item.isRed,
-                                    iconPathArrow: "assets/arrow.png",
-                                    onTap: () => _handleNavigation(
-                                      context,
-                                      item.title,
-                                    ),
-                                  ),
-                                )
-                                .toList(),
-                          ),
-                        ),
-                      ),
+                  ),
+                  SizedBox(width: 10.w),
+                  Text(
+                    _getLocalizedTitle(context, item.title),
+                    style: TextStyle(
+                      color: AppColors.redAccent,
+                      fontFamily: AppFontStyles.urbanistFontFamily,
+                      fontVariations: [AppFontStyles.boldFontVariation],
+                      fontSize: AppFontStyles.fontSize_18.sp,
                     ),
-                    //SizedBox(height: AppDimensions.dim34.h),
-
-                    // 🔥 NEW: Bottle Info Menu Item
-                    // Padding(
-                    //   padding: EdgeInsets.symmetric(
-                    //     horizontal: AppDimensions.dim24.w,
-                    //   ),
-                    //   child: Container(
-                    //     decoration: BoxDecoration(
-                    //       color: AppColors.white1A,
-                    //       border: Border.all(color: Color(0xCCC6C6C6)),
-                    //       borderRadius:
-                    //           BorderRadius.circular(AppDimensions.radius_16.r),
-                    //     ),
-                    //     child: ProfileMenuItemWidget(
-                    //       iconPath:
-                    //           "assets/images/bottle_icon.png", // 🔥 Add your bottle icon
-                    //       title: "Sipnudge Bottle",
-                    //       isRed: false,
-                    //       iconPathArrow: "assets/arrow.png",
-                    //       onTap: () =>
-                    //           _handleNavigation(context, 'Sipnudge Bottle'),
-                    //     ),
-                    //   ),
-                    // ),
-
-                    // Menu group 2
-                    SizedBox(height: AppDimensions.dim34.h),
-                    const SipnudgeShopWidget(),
-                    SizedBox(height: 100.h),
-                    if (_appVersion.isNotEmpty)
-                      Text(
-                        _appVersion,
-                        style: TextStyle(
-                          color: AppColors.bluegray,
-                          fontSize: AppFontStyles.fontSize_14.sp,
-                          fontFamily: AppFontStyles.museoModernoFontFamily,
-                          fontVariations: [AppFontStyles.semiBoldFontVariation],
-                        ),
-                      ),
-                    SizedBox(height: AppDimensions.dim149.h),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ),
           ),
+        ),
+      );
+    }
+
+    return sections;
+  }
+
+  Widget _buildSettingsGroup(
+      BuildContext context, String label, List<ProfileMenuItem> items) {
+    return Padding(
+      padding: EdgeInsets.symmetric(horizontal: AppDimensions.dim24.w),
+      child: Container(
+        padding: EdgeInsets.only(bottom: AppDimensions.dim10.h),
+        decoration: BoxDecoration(
+          color: AppColors.white,
+          border: Border.all(color: const Color(0xCCC6C6C6)),
+          borderRadius: BorderRadius.circular(AppDimensions.radius_16.r),
+          boxShadow: AppStyle.boxShadowVariation3,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Group label INSIDE the card at top
+            Padding(
+              padding: EdgeInsets.only(
+                left: AppDimensions.dim16.w,
+                right: AppDimensions.dim16.w,
+                top: 14.h,
+                bottom: 4.h,
+              ),
+              child: Text(
+                label,
+                style: TextStyle(
+                  color: const Color(0xFF369FFF),
+                  fontSize: 11.sp,
+                  fontFamily: AppFontStyles.urbanistFontFamily,
+                  fontVariations: [AppFontStyles.boldFontVariation],
+                  letterSpacing: 1.0,
+                ),
+              ),
+            ),
+            // Divider below label
+            // Divider(
+            //   height: 1,
+            //   thickness: 1,
+            //   color: const Color(0xCCC6C6C6),
+            // ),
+            // Items with BLE battery badge
+            BlocBuilder<BleCubit, BleState>(
+              builder: (context, bleState) {
+                return Column(
+                  children: List.generate(items.length, (index) {
+                    final item = items[index];
+                    final isLast = index == items.length - 1;
+
+                    // Battery badge for Sipnudge Bottle
+                    Widget? badge;
+                    if (item.title == "Sipnudge Bottle" &&
+                        bleState.battery != null &&
+                        bleState.battery! > 0) {
+                      badge = Container(
+                        padding: EdgeInsets.symmetric(
+                            horizontal: 8.w, vertical: 2.h),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFE8F5E9),
+                          borderRadius: BorderRadius.circular(12.r),
+                        ),
+                        child: Text(
+                          "${bleState.battery}%",
+                          style: TextStyle(
+                            color: const Color(0xFF2E7D32),
+                            fontSize: 12.sp,
+                            fontFamily: AppFontStyles.urbanistFontFamily,
+                            fontVariations: [
+                              AppFontStyles.semiBoldFontVariation
+                            ],
+                          ),
+                        ),
+                      );
+                    }
+
+                    return Column(
+                      children: [
+                        ProfileMenuItemWidget(
+                          iconPath: item.iconPath,
+                          title: _getLocalizedTitle(context, item.title),
+                          isRed: item.isRed,
+                          iconPathArrow: "assets/arrow.png",
+                          onTap: () => _handleNavigation(context, item.title),
+                          badge: badge,
+                        ),
+                        if (!isLast)
+                          Divider(
+                            height: 1,
+                            thickness: 1,
+                            color: const Color(0xCCC6C6C6),
+                            indent: AppDimensions.dim16.w,
+                            endIndent: AppDimensions.dim16.w,
+                          ),
+                      ],
+                    );
+                  }),
+                );
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocBuilder<LocaleCubit, Locale>(
+      builder: (context, currentLocale) {
+        return BlocBuilder<ProfileCubit, ProfileState>(
+          builder: (context, state) {
+            return Scaffold(
+              body: Container(
+                width: double.infinity,
+                height: double.infinity,
+                decoration: const BoxDecoration(
+                  image: DecorationImage(
+                    image: AssetImage("assets/images/app_background.png"),
+                    fit: BoxFit.cover,
+                  ),
+                ),
+                child: SafeArea(
+                  child: SingleChildScrollView(
+                    child: Column(
+                      children: [
+                        Padding(
+                          padding: EdgeInsets.only(
+                            top: AppDimensions.dim50.h,
+                            left: AppDimensions.dim25.w,
+                            right: AppDimensions.dim25.w,
+                          ),
+                          child: Row(
+                            children: [
+                              const EditableProfileAvatar(),
+                              SizedBox(width: AppDimensions.dim16.w),
+                              Expanded(
+                                child: Text(
+                                  _nameController.text,
+                                  style: TextStyle(
+                                    color: AppColors.bluegray,
+                                    fontSize: AppFontStyles.fontSize_18.sp,
+                                    fontFamily:
+                                        AppFontStyles.museoModernoFontFamily,
+                                    fontVariations: [
+                                      AppFontStyles.fontWeightVariation600,
+                                    ],
+                                    shadows: [
+                                      Shadow(
+                                        offset: Offset(
+                                          AppDimensions.radius_1.r,
+                                          AppDimensions.radius_1.r,
+                                        ),
+                                        blurRadius: AppDimensions.radius_4.r,
+                                        color:
+                                            AppColors.black.withOpacity(0.25),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        SizedBox(height: AppDimensions.dim30.h),
+                        // _buildUpgradeBanner(),
+                        SizedBox(height: AppDimensions.dim20.h),
+
+                        // Build grouped sections
+                        ..._buildGroupedSections(context, state.menuItems),
+
+                        SizedBox(height: AppDimensions.dim34.h),
+                        const SipnudgeShopWidget(),
+                        SizedBox(height: 100.h),
+                        if (_appVersion.isNotEmpty)
+                          Text(
+                            _appVersion,
+                            style: TextStyle(
+                              color: AppColors.bluegray,
+                              fontSize: AppFontStyles.fontSize_14.sp,
+                              fontFamily: AppFontStyles.museoModernoFontFamily,
+                              fontVariations: [
+                                AppFontStyles.semiBoldFontVariation
+                              ],
+                            ),
+                          ),
+                        SizedBox(height: AppDimensions.dim149.h),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            );
+          },
         );
       },
     );

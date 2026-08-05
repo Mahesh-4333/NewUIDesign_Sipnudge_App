@@ -5,6 +5,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:hydrify/constants/app_colors.dart';
 import 'package:hydrify/constants/app_dimensions.dart';
 import 'package:hydrify/constants/app_font_styles.dart';
+import 'package:hydrify/l10n/app_localizations.dart';
 import 'package:hydrify/constants/app_style.dart';
 import 'package:hydrify/cubit/ble/ble_cubit.dart';
 import 'package:hydrify/cubit/bottle/bottle_data_cubit.dart';
@@ -82,7 +83,7 @@ class _TodayGoalWidgetState extends State<TodayGoalWidget>
                         children: [
                           ...[
                             Text(
-                              "Today's Goal",
+                              AppLocalizations.of(context)?.todaysGoal ?? "Today's Goal",
                               style: TextStyle(
                                 color: AppColors.bluegray,
                                 fontSize: AppFontStyles.fontSize_20,

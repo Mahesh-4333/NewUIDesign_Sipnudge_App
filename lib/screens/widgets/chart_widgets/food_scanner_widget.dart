@@ -4,10 +4,8 @@ import 'dart:math';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_inner_shadow/flutter_inner_shadow.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_generative_ai/google_generative_ai.dart';
-import 'package:hydrify/constants/app_style.dart';
 import 'package:hydrify/constants/assets_path.dart';
 import 'package:hydrify/cubit/bottom_nav/bottom_nav_cubit.dart';
 import 'package:hydrify/helpers/logger.dart';
@@ -16,6 +14,7 @@ import 'package:hydrify/constants/app_colors.dart';
 import 'package:hydrify/constants/app_dimensions.dart';
 import 'package:hydrify/helpers/shared_pref_helper.dart';
 import 'package:hydrify/constants/app_font_styles.dart';
+import 'package:hydrify/l10n/app_localizations.dart';
 import 'package:hydrify/constants/app_api_constants.dart';
 import 'package:hydrify/helpers/database_helper.dart';
 import 'package:hydrify/models/food_scan_data.dart';
@@ -26,7 +25,8 @@ import 'package:hydrify/cubit/hydration/hydration_cubit.dart';
 import 'package:hydrify/models/hydration_entry.dart';
 
 class FoodScannerWidget extends StatefulWidget {
-  const FoodScannerWidget({super.key});
+  final VoidCallback? onScanCompleted;
+  const FoodScannerWidget({super.key, this.onScanCompleted});
 
   @override
   State<FoodScannerWidget> createState() => _FoodScannerWidgetState();
@@ -344,6 +344,7 @@ class _FoodScannerWidgetState extends State<FoodScannerWidget> {
       setState(() {
         _currentScanId = id;
       });
+      widget.onScanCompleted?.call();
 
       // Sync to backend
       await DatabaseSyncService().syncFoodScan(scan.toMap());
@@ -524,155 +525,187 @@ class _FoodScannerWidgetState extends State<FoodScannerWidget> {
         _loadTodayScan();
       },
       child: Container(
-      width: double.maxFinite,
-      margin: EdgeInsets.symmetric(horizontal: AppDimensions.defaultPadding.w),
-      clipBehavior: Clip.antiAlias,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20.r),
-        boxShadow: [
-          BoxShadow(
-            blurRadius: AppDimensions.radius_4,
-            color: AppColors.black.withAlpha((0.25 * 255).round()),
-            offset: Offset(
-              AppDimensions.dim2,
-              AppDimensions.dim2,
+        margin: EdgeInsets.symmetric(horizontal: 8.w),
+        width: double.maxFinite,
+        clipBehavior: Clip.antiAlias,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20.r),
+          boxShadow: [
+            BoxShadow(
+              blurRadius: AppDimensions.radius_4,
+              color: AppColors.black.withAlpha((0.25 * 255).round()),
+              offset: Offset(
+                AppDimensions.dim2,
+                AppDimensions.dim2,
+              ),
+            )
+          ],
+        ),
+        child: Stack(
+          children: [
+            // SizedBox(height: 200.h),
+            // Background Image
+            // if (_imageBytes != null || _image != null)
+            //   Positioned.fill(
+            //     child: _imageBytes != null
+            //       ? Image.memory(
+            //           _imageBytes!,
+            //           fit: BoxFit.cover,
+            //           color: Colors.black.withOpacity(0.1),
+            //           colorBlendMode: BlendMode.darken,
+            //         )
+            //       : Image.file(
+            //           _image!,
+            //           fit: BoxFit.cover,
+            //           color: Colors.black.withOpacity(0.1),
+            //           colorBlendMode: BlendMode.darken,
+            //         ),
+            //   ),
+
+            Positioned.fill(
+              left: 0,
+              right: 0,
+              top: -80.h,
+              bottom: isLoaded ? 120 : -300,
+              child: Image.asset(
+                AssetsPath.foodImage,
+                fit: BoxFit.cover,
+              ),
             ),
-          )
-        ],
-      ),
-      child: Stack(
-        children: [
-          // SizedBox(height: 200.h),
-          // Background Image
-          // if (_imageBytes != null || _image != null)
-          //   Positioned.fill(
-          //     child: _imageBytes != null
-          //       ? Image.memory(
-          //           _imageBytes!,
-          //           fit: BoxFit.cover,
-          //           color: Colors.black.withOpacity(0.1),
-          //           colorBlendMode: BlendMode.darken,
-          //         )
-          //       : Image.file(
-          //           _image!,
-          //           fit: BoxFit.cover,
-          //           color: Colors.black.withOpacity(0.1),
-          //           colorBlendMode: BlendMode.darken,
-          //         ),
-          //   ),
 
-          Positioned.fill(
-            left: 0,
-            right: 0,
-            bottom: isLoaded ? 120 : -300,
-            child: Image.asset(
-              AssetsPath.foodImage,
-              fit: BoxFit.cover,
-            ),
-          ),
-
-          // Foreground Content
-          Align(
-            alignment: Alignment.center,
-            child: Column(
-              children: [
-                Padding(
-                  padding: EdgeInsets.symmetric(vertical: 20.h),
-                  child: Column(
-                    children: [
-                      // Confidence Badge
-                      if (_confidenceScore != '0%') _buildConfidenceBadge(),
-                      SizedBox(height: 10.h),
-
-                      // Title
-                      Padding(
-                        padding: EdgeInsets.symmetric(vertical: 13.h),
-                        child: Text(
-                          "Snap food pics for quick\nAI-driven nutrition facts",
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            fontSize: 16.sp,
-                            color: _image != null
-                                ? const Color(0xFF456173)
-                                : AppColors.bluegray,
-                            fontVariations: [AppFontStyles.boldFontVariation],
-                            height: 1.2,
-                            fontFamily: AppFontStyles.urbanistFontFamily,
+            // Foreground Content
+            Align(
+              alignment: Alignment.center,
+              child: Column(
+                children: [
+                  Padding(
+                    padding: EdgeInsets.only(top: 28.h, bottom: 60.h),
+                    child: Column(
+                      children: [
+                        // Title
+                        SizedBox(
+                          width: 320.w,
+                          child: Text(
+                            AppLocalizations.of(context)?.snapFoodPics ??
+                                "Snap food pics for quick\nAI-driven nutrition facts",
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              fontSize: 18.sp,
+                              color: const Color(0xFF456173),
+                              fontVariations: [AppFontStyles.boldFontVariation],
+                              height: 1.25,
+                              fontFamily: AppFontStyles.urbanistFontFamily,
+                            ),
                           ),
                         ),
-                      ),
-                      // Scanner Card
-                      Container(
-                        padding: EdgeInsets.symmetric(
-                            horizontal: 8.w, vertical: 10.h),
-                        decoration: BoxDecoration(
-                          color: (_imageBytes != null || _image != null)
-                              ? Colors.white.withOpacity(0.4)
-                              : Colors.white,
-                          borderRadius: BorderRadius.circular(20.r),
-                          boxShadow: [
-                            if (_imageBytes == null && _image == null)
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.05),
-                                blurRadius: 15,
-                                offset: const Offset(0, 5),
+                        SizedBox(height: 24.h),
+
+                        // Scanner Card
+                        InkWell(
+                          onTap: _isAnalyzing ? null : _captureAndAnalyze,
+                          borderRadius: BorderRadius.circular(28.r),
+                          child: Container(
+                            width: 260.w,
+                            height: 260.w,
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.5),
+                              borderRadius: BorderRadius.circular(22.r),
+                              border: Border.all(
+                                color: Colors.white.withValues(alpha: 0.6),
+                                width: 1.8,
                               ),
-                          ],
-                          border: Border.all(
-                              color: AppColors.greyColorText1
-                                  .withValues(alpha: 0.4),
-                              width: 1.9),
-                        ),
-                        child: Column(
-                          children: [
-                            _buildImageFrame(),
-                            if (_imageBytes == null && _image == null) ...[
-                              SizedBox(height: 16.h),
-                              Text(
-                                "Click to scan or add food item",
-                                style: TextStyle(
-                                  fontSize: 14.sp,
-                                  color: const Color(0xFF456173),
-                                  fontVariations: [
-                                    AppFontStyles.semiBoldFontVariation
-                                  ],
-                                  fontFamily: AppFontStyles.urbanistFontFamily,
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withValues(alpha: 0.08),
+                                  blurRadius: 15,
+                                  offset: const Offset(0, 5),
                                 ),
-                              )
-                            ],
-                          ],
-                        ),
-                      ),
-
-                      if (_errorMessage != null) ...[
-                        SizedBox(height: 12.h),
-                        Text(
-                          _errorMessage!,
-                          style: TextStyle(
-                            fontSize: 11.sp,
-                            color: Colors.red,
-                            fontVariations: [AppFontStyles.boldFontVariation],
+                              ],
+                            ),
+                            child: Stack(
+                              alignment: Alignment.center,
+                              children: [
+                                // Captured Image
+                                if (_imageBytes != null || _image != null)
+                                  Positioned.fill(
+                                    child: ClipRRect(
+                                      borderRadius: BorderRadius.circular(20.r),
+                                      child: _imageBytes != null
+                                          ? Image.memory(_imageBytes!,
+                                              fit: BoxFit.cover)
+                                          : Image.file(_image!,
+                                              fit: BoxFit.cover),
+                                    ),
+                                  ),
+                                // Translucent white background inside brackets
+                                if (_imageBytes == null && _image == null)
+                                  Positioned.fill(
+                                    child: Container(
+                                      margin: EdgeInsets.all(12.w),
+                                      decoration: BoxDecoration(
+                                        color:
+                                            Colors.white.withValues(alpha: 0.3),
+                                        borderRadius:
+                                            BorderRadius.circular(20.r),
+                                      ),
+                                    ),
+                                  ),
+                                // Scanner Corners (brackets)
+                                Positioned.fill(
+                                  child: CustomPaint(
+                                    painter: ScannerCornersPainter(
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                ),
+                                // Camera Icon
+                                if (_imageBytes == null &&
+                                    _image == null &&
+                                    !_isAnalyzing)
+                                  Image.asset(
+                                    AssetsPath.camera_food_scn,
+                                    width: 50.sp,
+                                    height: 50.sp,
+                                    color: const Color(
+                                        0xFF7A8E9E), // outline gray color matching mockup
+                                  ),
+                                // Analyzing Loader
+                                if (_isAnalyzing)
+                                  const CircularProgressIndicator(
+                                      color: AppColors.blueWaterIntake),
+                              ],
+                            ),
                           ),
                         ),
+
+                        if (_errorMessage != null) ...[
+                          SizedBox(height: 12.h),
+                          Text(
+                            _errorMessage!,
+                            style: TextStyle(
+                              fontSize: 11.sp,
+                              color: Colors.red,
+                              fontVariations: [AppFontStyles.boldFontVariation],
+                            ),
+                          ),
+                        ],
                       ],
-                    ],
+                    ),
                   ),
-                ),
-                if (isLoaded) ...[
                   SizedBox(height: 24.h),
-                  _buildFoodDetails(),
+                  _buildFoodDetails(isDummy: !isLoaded),
                 ],
-              ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
-    ),
     );
   }
 
-  Widget _buildConfidenceBadge() {
+  Widget _buildConfidenceBadge({bool isDummy = false}) {
+    final String score = isDummy ? "68%" : _confidenceScore;
     return Container(
       padding: EdgeInsets.symmetric(horizontal: 15.w, vertical: 8.h),
       decoration: BoxDecoration(
@@ -704,7 +737,7 @@ class _FoodScannerWidgetState extends State<FoodScannerWidget> {
           ),
           SizedBox(width: 14.w),
           Text(
-            "$_confidenceScore CONFIDENCE",
+            "$score CONFIDENCE",
             style: TextStyle(
               fontSize: 15.sp,
               fontVariations: [AppFontStyles.boldFontVariation],
@@ -718,50 +751,20 @@ class _FoodScannerWidgetState extends State<FoodScannerWidget> {
     );
   }
 
-  Widget _buildImageFrame() {
-    return InkWell(
-      onTap: _isAnalyzing ? null : _captureAndAnalyze,
-      child: Stack(
-        alignment: Alignment.center,
-        children: [
-          Container(
-            width: 195.w,
-            height: 195.w,
-            padding: EdgeInsets.all(12.w),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(20.r),
-              color: Colors.white.withValues(alpha: 0.5),
-            ),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(25.r),
-              child: _imageBytes != null
-                  ? Image.memory(_imageBytes!, fit: BoxFit.cover)
-                  : _image != null
-                      ? Image.file(_image!, fit: BoxFit.cover)
-                      : Container(color: Colors.white),
-            ),
-          ),
-          // Scanner Corners
-          SizedBox(
-            width: 220.w,
-            height: 220.w,
-            child: CustomPaint(
-                painter: ScannerCornersPainter(
-                    color: (_imageBytes != null || _image != null)
-                        ? Colors.white
-                        : Colors.grey.withOpacity(0.4))),
-          ),
-          if (_imageBytes == null && _image == null)
-            Image.asset(AssetsPath.camera_food_scn,
-                width: 50.sp, height: 50.sp),
-          if (_isAnalyzing)
-            const CircularProgressIndicator(color: AppColors.blueWaterIntake),
-        ],
-      ),
-    );
-  }
+  Widget _buildFoodDetails({bool isDummy = false}) {
+    final String dishName = isDummy ? "Dish Name" : (_dishName ?? "");
+    final double waterPercentage = isDummy ? 70.0 : _waterPercentage;
+    final double waterMl = isDummy ? 70.0 : _waterMl;
+    final List<String> ingredients =
+        isDummy ? ["Avocado", "Tomato", "Cucumber"] : _ingredients;
+    final String? reasoning = isDummy
+        ? "Capture a food image to view nutritional details."
+        : _reasoning;
+    final double carbs = isDummy ? 45.0 : _carbs;
+    final double protein = isDummy ? 25.0 : _protein;
+    final double fat = isDummy ? 15.0 : _fat;
+    final Color mainTextColor = isDummy ? Colors.grey : AppColors.bluegray;
 
-  Widget _buildFoodDetails() {
     return Container(
       padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 20.h),
       decoration: BoxDecoration(
@@ -774,11 +777,11 @@ class _FoodScannerWidgetState extends State<FoodScannerWidget> {
             children: [
               Expanded(
                 child: Text(
-                  _dishName ?? "",
+                  dishName,
                   style: TextStyle(
                     fontSize: 18.sp,
                     fontVariations: [AppFontStyles.boldFontVariation],
-                    color: AppColors.bluegray,
+                    color: mainTextColor,
                     fontFamily: AppFontStyles.urbanistFontFamily,
                   ),
                 ),
@@ -786,9 +789,9 @@ class _FoodScannerWidgetState extends State<FoodScannerWidget> {
               Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  _buildWeightSelector(),
+                  _buildWeightSelector(isDummy: isDummy),
                   SizedBox(height: 8.h),
-                  _buildCaloriesBadge(),
+                  _buildCaloriesBadge(isDummy: isDummy),
                 ],
               ),
             ],
@@ -807,7 +810,8 @@ class _FoodScannerWidgetState extends State<FoodScannerWidget> {
                   width: 160.w,
                   height: 80.w,
                   child: CustomPaint(
-                    painter: SemiCircleGaugePainter(_waterPercentage),
+                    painter: SemiCircleGaugePainter(waterPercentage,
+                        isDummy: isDummy),
                   ),
                 ),
                 SizedBox(height: 8.h),
@@ -819,11 +823,11 @@ class _FoodScannerWidgetState extends State<FoodScannerWidget> {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Text(
-                        "${_waterMl.toInt()}mL",
+                        "${waterMl.toInt()}mL",
                         style: TextStyle(
                           fontSize: 24.sp,
                           fontVariations: [AppFontStyles.boldFontVariation],
-                          color: AppColors.bluegray,
+                          color: mainTextColor,
                         ),
                       ),
                       Text(
@@ -832,7 +836,7 @@ class _FoodScannerWidgetState extends State<FoodScannerWidget> {
                         style: TextStyle(
                           fontSize: 12.sp,
                           fontVariations: [AppFontStyles.boldFontVariation],
-                          color: AppColors.bluegray.withOpacity(0.6),
+                          color: mainTextColor.withOpacity(0.6),
                         ),
                       ),
                     ],
@@ -849,9 +853,10 @@ class _FoodScannerWidgetState extends State<FoodScannerWidget> {
               Expanded(
                 child: _buildInfoColumn(
                   "Water: ",
-                  "${_waterPercentage.toInt()}% (${_waterMl.toInt()}ml)",
-                  _ingredients,
-                  "Item Contains",
+                  "${waterPercentage.toInt()}% (${waterMl.toInt()}ml)",
+                  ingredients.take((ingredients.length / 2).round()).toList(),
+                  "",
+                  isDummy: isDummy,
                 ),
               ),
               Container(
@@ -859,19 +864,27 @@ class _FoodScannerWidgetState extends State<FoodScannerWidget> {
               SizedBox(width: 12.w),
               Expanded(
                 child: _buildInfoColumn(
+                  "Confidence: ",
+                  isDummy ? "Medium" : _confidenceLevel,
+                  ingredients.skip((ingredients.length / 2).round()).toList(),
                   "",
-                  "",
-                  _ingredients.reversed.take(3).toList(),
-                  // Just for design variety
-                  "Item Contains",
-                  valueColor: _confidenceLevel == "High"
-                      ? Colors.green
-                      : (_confidenceLevel == "Medium"
-                          ? Colors.orange
-                          : Colors.red),
+                  valueColor: isDummy
+                      ? Colors.orange
+                      : (_confidenceLevel == "High"
+                          ? Colors.green
+                          : (_confidenceLevel == "Medium"
+                              ? Colors.orange
+                              : Colors.red)),
+                  isDummy: isDummy,
                 ),
               ),
             ],
+          ),
+          SizedBox(height: 24.h),
+
+          // Confidence Badge
+          Center(
+            child: _buildConfidenceBadge(isDummy: isDummy),
           ),
           SizedBox(height: 24.h),
 
@@ -879,20 +892,23 @@ class _FoodScannerWidgetState extends State<FoodScannerWidget> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
-              _buildMacroRing("Carbs", _carbs, Color(0xffFFB53A)),
-              _buildMacroRing("Protein", _protein, Colors.blueAccent),
-              _buildMacroRing("Fat", _fat, Color(0xffB084D1)),
+              _buildMacroRing("Carbs", carbs, const Color(0xffFFB53A),
+                  isDummy: isDummy),
+              _buildMacroRing("Protein", protein, Colors.blueAccent,
+                  isDummy: isDummy),
+              _buildMacroRing("Fat", fat, const Color(0xffB084D1),
+                  isDummy: isDummy),
             ],
           ),
 
-          if (_reasoning != null) ...[
+          if (reasoning != null) ...[
             SizedBox(height: 20.h),
             Text(
-              _reasoning!,
+              reasoning,
               style: TextStyle(
                   fontSize: 10.sp,
                   fontStyle: FontStyle.italic,
-                  color: AppColors.bluegray,
+                  color: mainTextColor,
                   fontVariations: [AppFontStyles.semiBoldFontVariation]),
             ),
           ],
@@ -900,7 +916,7 @@ class _FoodScannerWidgetState extends State<FoodScannerWidget> {
           SizedBox(height: 20.h),
           Center(
             child: Text(
-              "Calculated based on ${_currentWeight.toInt()}g portion size",
+              "Calculated based on ${isDummy ? 100 : _currentWeight.toInt()}g portion size",
               style: TextStyle(
                   fontSize: 10.sp,
                   fontStyle: FontStyle.italic,
@@ -913,46 +929,47 @@ class _FoodScannerWidgetState extends State<FoodScannerWidget> {
     );
   }
 
-  Widget _buildWeightSelector() {
+  Widget _buildWeightSelector({bool isDummy = false}) {
     return InkWell(
-      onTap: _showWeightPicker,
+      onTap: isDummy ? null : _showWeightPicker,
       child: Container(
         padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 4.h),
         decoration: BoxDecoration(
-          color: const Color(0xFFD4E9FF),
+          color: isDummy ? const Color(0xFFEAEAEA) : const Color(0xFFD4E9FF),
           borderRadius: BorderRadius.circular(10.r),
         ),
         child: Row(
           children: [
             Text(
-              "${_currentWeight.toInt()} g",
+              isDummy ? "100 g" : "${_currentWeight.toInt()} g",
               style: TextStyle(
                 fontSize: 12.sp,
                 fontVariations: [AppFontStyles.boldFontVariation],
-                color: AppColors.blueWaterIntake,
+                color: isDummy ? Colors.grey : AppColors.blueWaterIntake,
               ),
             ),
             Icon(Icons.unfold_more,
-                size: 14.sp, color: AppColors.blueWaterIntake),
+                size: 14.sp,
+                color: isDummy ? Colors.grey : AppColors.blueWaterIntake),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildCaloriesBadge() {
+  Widget _buildCaloriesBadge({bool isDummy = false}) {
     return Container(
       padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 4.h),
       decoration: BoxDecoration(
-        color: const Color(0xFFD4E9FF),
+        color: isDummy ? const Color(0xFFEAEAEA) : const Color(0xFFD4E9FF),
         borderRadius: BorderRadius.circular(10.r),
       ),
       child: Text(
-        "$_calories kcal",
+        isDummy ? "150 kcal" : "$_calories kcal",
         style: TextStyle(
           fontSize: 12.sp,
           fontVariations: [AppFontStyles.boldFontVariation],
-          color: AppColors.blueWaterIntake,
+          color: isDummy ? Colors.grey : AppColors.blueWaterIntake,
         ),
       ),
     );
@@ -960,7 +977,8 @@ class _FoodScannerWidgetState extends State<FoodScannerWidget> {
 
   Widget _buildInfoColumn(
       String label, String value, List<String> items, String subHeader,
-      {Color? valueColor}) {
+      {Color? valueColor, bool isDummy = false}) {
+    final textColor = isDummy ? Colors.grey : AppColors.bluegray;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -970,32 +988,38 @@ class _FoodScannerWidgetState extends State<FoodScannerWidget> {
               TextSpan(
                   text: label,
                   style: TextStyle(
-                      color: AppColors.bluegray,
+                      color: textColor,
                       fontSize: 12.sp,
                       fontVariations: [AppFontStyles.boldFontVariation],
                       fontFamily: AppFontStyles.urbanistFontFamily)),
               TextSpan(
                   text: value,
                   style: TextStyle(
-                      color: valueColor ?? AppColors.blueWaterIntake,
+                      color: isDummy
+                          ? Colors.grey
+                          : (valueColor ?? AppColors.blueWaterIntake),
                       fontSize: 12.sp,
                       fontVariations: [AppFontStyles.extraBoldFontVariation],
                       fontFamily: AppFontStyles.urbanistFontFamily)),
             ],
           ),
         ),
-        SizedBox(height: 12.h),
-        Text(subHeader,
-            style: TextStyle(
-                color: AppColors.bluegray,
-                fontSize: 12.sp,
-                fontVariations: [AppFontStyles.boldFontVariation])),
-        SizedBox(height: 4.h),
+        if (subHeader.isNotEmpty) ...[
+          SizedBox(height: 12.h),
+          Text(subHeader,
+              style: TextStyle(
+                  color: textColor,
+                  fontSize: 12.sp,
+                  fontVariations: [AppFontStyles.boldFontVariation])),
+          SizedBox(height: 4.h),
+        ] else ...[
+          SizedBox(height: 12.h),
+        ],
         ...items.map((item) => Padding(
               padding: EdgeInsets.only(bottom: 2.h),
               child: Text("• $item",
                   style: TextStyle(
-                      color: AppColors.bluegray,
+                      color: textColor,
                       fontSize: 11.sp,
                       fontVariations: [AppFontStyles.semiBoldFontVariation])),
             )),
@@ -1003,7 +1027,9 @@ class _FoodScannerWidgetState extends State<FoodScannerWidget> {
     );
   }
 
-  Widget _buildMacroRing(String label, double value, Color color) {
+  Widget _buildMacroRing(String label, double value, Color color,
+      {bool isDummy = false}) {
+    final ringColor = isDummy ? Colors.grey.shade300 : color;
     return Column(
       children: [
         Text(label,
@@ -1025,13 +1051,13 @@ class _FoodScannerWidgetState extends State<FoodScannerWidget> {
                   startDegreeOffset: 270,
                   sections: [
                     PieChartSectionData(
-                      color: color,
+                      color: ringColor,
                       value: value,
                       radius: 6.w,
                       showTitle: false,
                     ),
                     PieChartSectionData(
-                      color: color.withOpacity(0.1),
+                      color: ringColor.withOpacity(0.1),
                       value: 100 - value,
                       radius: 6.w,
                       showTitle: false,
@@ -1044,7 +1070,7 @@ class _FoodScannerWidgetState extends State<FoodScannerWidget> {
                 style: TextStyle(
                     fontSize: 11.sp,
                     fontVariations: [AppFontStyles.boldFontVariation],
-                    color: AppColors.bluegray),
+                    color: isDummy ? Colors.grey : AppColors.bluegray),
               ),
             ],
           ),
@@ -1140,8 +1166,9 @@ class ScannerCornersPainter extends CustomPainter {
 
 class SemiCircleGaugePainter extends CustomPainter {
   final double percentage;
+  final bool isDummy;
 
-  SemiCircleGaugePainter(this.percentage);
+  SemiCircleGaugePainter(this.percentage, {this.isDummy = false});
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -1156,8 +1183,10 @@ class SemiCircleGaugePainter extends CustomPainter {
       ..strokeCap = StrokeCap.round;
 
     final progressPaint = Paint()
-      ..shader = const LinearGradient(
-        colors: [Color(0xFF369FFF), Color(0xFF6FB9FF)],
+      ..shader = LinearGradient(
+        colors: isDummy
+            ? [Colors.grey.shade400, Colors.grey.shade300]
+            : const [Color(0xFF369FFF), Color(0xFF6FB9FF)],
       ).createShader(Rect.fromCircle(center: center, radius: radius))
       ..style = PaintingStyle.stroke
       ..strokeWidth = strokeWidth
@@ -1182,5 +1211,5 @@ class SemiCircleGaugePainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant SemiCircleGaugePainter oldDelegate) =>
-      oldDelegate.percentage != percentage;
+      oldDelegate.percentage != percentage || oldDelegate.isDummy != isDummy;
 }

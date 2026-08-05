@@ -36,7 +36,7 @@ class AppStrings {
   static const password = "Password";
   static const iAgree = "I agree to Sipnudge ";
   static const goToHome = "Go to Homepage";
-  static const termsAndConditions = "T&C.";
+  static const termsAndConditions = "Terms of Service";
   static const clickToContinue = " Click to continue.";
   static const alreadyHaveAnAccount = "Already have an account? ";
   static const getStartedWithSipnudge = "Get started with SipNudge ✨";
@@ -156,7 +156,7 @@ class AppStrings {
   static const privacyandpolicy = "Privacy & Policy";
   static const termsandservices = "Terms & Services";
   static const helpandsupport = "Help & Support";
-  static const faq = "F&Q";
+  static const faq = "FAQ";
   static const contactus = "Contact Us";
   static const aboutus = "About Us";
   static const linkyouraccounts = "Link Your Accounts";
@@ -253,8 +253,82 @@ class AppStrings {
       "Pulse base light during hydration";
   static const lastSynced = "Last synced: ";
   static const lastReset = "Last reset: ";
-  static const estimatedDailyWaterConsumption = "Estimated Daily Water Consumption";
-  static const typicalIntakeSubtitle = "Your current typical intake before using the app.";
+  static const estimatedDailyWaterConsumption =
+      "Estimated Daily Water Consumption";
+  static const typicalIntakeSubtitle =
+      "Your current typical intake before using the app.";
   static const savingReminder = "Saving reminder";
   static const calendar = "Calendar";
+
+  // Preferences & Haptics Strings
+  static const vibrationHapticIntensity = "Vibration: Haptic Intensity";
+  static const ledNotificationLight = "LED: Notification Light";
+  static const low = "Low";
+  static const medium = "Medium";
+  static const high = "High";
+  static const dim = "Dim";
+  static const bright = "Bright";
+  static const normal = "Normal";
+  static const fast = "Fast";
+  static const resetAllTrackings = "RESET ALL TRACKINGS";
+  static const localDataCleared = "Local data cleared.";
+  static const trackingRestarted =
+      "Tracking restarted. Connect your device again.";
+  static const errorClearingLocalData = "Error clearing local data: ";
+
+  // Erase Data Dialog Strings
+  static const eraseAllData = "Erase All Data";
+  static const eraseAllDataDescription =
+      "Are you sure that erasing your data is permanent. All your history, preferences, and saved content will be deleted immediately.";
+  static const secondsUpper = "SECONDS";
+  static const deleting = "Deleting";
+  static const slideToEraseAllData = "SLIDE TO EARSE ALL DATA";
+  static const cancelAction = "Cancel Action";
+
+  // Ringtone Screen Strings
+  static const selectRingtone = "Select Ringtone";
+  static const topPicks = "Top Picks";
+  static const natureCategory = "NATURE";
+  static const electronicCategory = "ELECTRONIC";
+  static const saving = "Saving";
+  static const saveChanges = "Save Changes";
+  static const ringtoneSavedSuccessfully = "Ringtone saved successfully!";
+  static const failedToSaveChanges = "Failed to save changes: ";
+
+  // Common Dialogs & SnackBars
+  static const pageComingSoon = "Page Coming Soon...";
+  static const unableToLoadBottleInfo = "Unable to load bottle information";
+  static const noLogsOrDbToExport = "No logs or database found to export.";
+  static const failedToExportLogs = "Failed to export logs";
+  static const deviceUnlinkedSuccessfully = "Device unlinked successfully.";
+  static const failedToUnlinkDevice = "Failed to unlink device.";
+  static const couldNotOpenWebpage = "Could not open the webpage";
+  static const noActionAvailable = "No action available";
+  static const failedToSendReply = "Failed to send reply";
+
+  // Subscription Page Strings
+  static const cancelSubscriptionTitle = "Cancel Subscription?";
+  static const cancelSubscriptionDesc =
+      "Are you sure you want to cancel your Premium Upgrade? You will lose access to all premium features instantly.";
+  static const keepMembership = "Keep Membership";
+  static const confirmCancel = "Confirm Cancel";
+  static const subscriptionCancelledSuccessfully =
+      "Subscription cancelled successfully.";
+  static const failedToCancelSubscription =
+      "Failed to cancel subscription. Please try again.";
+  static const userAccountNotFound =
+      "Error: User account not found. Please log in again.";
+  static const subscriptionFailed =
+      "Subscription failed. Please check your network.";
+
+  // Wi-Fi Provisioning Strings
+  static const autofilledSsid = "Autofilled SSID: ";
+  static const errorFetchingWifiName = "Error fetching Wi-Fi name: ";
+  static const openSettings = "Open Settings";
+
+  // Language & Localization Strings
+  static const language = "Language";
+  static const selectLanguage = "Select Language";
+  static const english = "English";
+  static const hindi = "Hindi (हिंदी)";
 }

@@ -5,6 +5,7 @@ import 'package:hydrify/constants/app_colors.dart';
 import 'package:hydrify/constants/app_dimensions.dart';
 import 'package:hydrify/constants/app_font_styles.dart';
 import 'package:hydrify/constants/app_strings.dart';
+import 'package:hydrify/constants/app_style.dart';
 import 'package:hydrify/screens/widgets/help&support_widgets/help&support_menu_items.dart';
 
 class HelpAndSupportPage extends StatelessWidget {
@@ -123,16 +124,7 @@ class HelpAndSupportPage extends StatelessWidget {
                     borderRadius: BorderRadius.circular(
                       AppDimensions.radius_16,
                     ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(
-                          0.10,
-                        ), // shadow color only
-                        blurRadius: 2.r,
-                        spreadRadius: 3.r,
-                        offset: Offset(3.5.r, 3.5.r), // even shadow
-                      ),
-                    ],
+                    boxShadow: AppStyle.boxShadowVariation3,
                   ),
                   child: Column(
                     children: const [
@@ -180,6 +172,28 @@ class HelpAndSupportPage extends StatelessWidget {
               //       left: AppDimensions.dim15.w,
               //     ),
               //     child: AnimatedBottomNavBar()),
+              SizedBox(height: AppDimensions.dim30.h),
+
+              // 🔹 Support Ticket - separate card (as per UI screenshot)
+              Padding(
+                padding: EdgeInsets.symmetric(
+                  horizontal: AppDimensions.dim20.w,
+                ),
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: AppColors.white,
+                    borderRadius: BorderRadius.circular(
+                      AppDimensions.radius_16,
+                    ),
+                    boxShadow: AppStyle.boxShadowVariation3,
+                  ),
+                  child: const HelpMenuItem(
+                    title: "Support Ticket",
+                    iconPathArrow: "assets/arrow.png",
+                    route: "support_ticket",
+                  ),
+                ),
+              ),
             ],
           ),
         ),

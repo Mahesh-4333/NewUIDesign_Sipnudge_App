@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -335,7 +334,7 @@ class _UserInfoInputScreenState extends State<UserInfoInputScreen> {
           backgroundColor: Colors.transparent,
           centerTitle: true,
           title: Text(
-            AppStrings.personalInformation,
+            "Profile Setup",
             style: TextStyle(
                 color: AppColors.bluegray,
                 fontSize: AppFontStyles.fontSize_AppBar,
@@ -379,197 +378,15 @@ class _UserInfoInputScreenState extends State<UserInfoInputScreen> {
           ),
           child: ListView(
             padding: EdgeInsets.only(
-              left: AppDimensions.defaultPadding.w,
-              right: AppDimensions.defaultPadding.w,
+              left: AppDimensions.defaultPadding.w + 12,
+              right: AppDimensions.defaultPadding.w + 12,
               top: AppDimensions.defaultPadding.h,
               bottom: AppDimensions.dim80.h,
             ),
             children: [
-              // ── Gender ──────────────────────────────────────────────────
+              // ── Header ──────────────────────────────────────────────────
               Text(
-                AppStrings.whatsYourGender,
-                style: TextStyle(
-                    fontFamily: AppFontStyles.urbanistFontFamily,
-                    fontSize: AppFontStyles.fontSize_16,
-                    height: AppFontStyles.getLineHeight(
-                        AppFontStyles.fontSize_16, 160),
-                    color: AppColors.bluegray,
-                    fontVariations: [
-                      AppFontStyles.fontWeightVariation600,
-                    ]),
-              ),
-              SizedBox(
-                height: AppDimensions.dim20.h,
-              ),
-              CustomRadioSelectionWidget(
-                type: 1,
-              ),
-              SizedBox(
-                height: AppDimensions.dim32.h,
-              ),
-              Text(
-                AppStrings.howTall,
-                style: TextStyle(
-                    fontFamily: AppFontStyles.urbanistFontFamily,
-                    fontSize: AppFontStyles.fontSize_16,
-                    color: AppColors.bluegray,
-                    fontVariations: [
-                      AppFontStyles.fontWeightVariation600,
-                    ]),
-              ),
-              SizedBox(
-                height: AppDimensions.dim20.h,
-              ),
-              BlocBuilder<UserInfoCubit, UserInfoState>(
-                builder: (context, state) {
-                  final selectedDisplay = (state.displayHeight).isEmpty
-                      ? null
-                      : state.displayHeight;
-
-                  int cmInitial =
-                      state.height != null ? state.height!.round() : 170;
-                  final int totalInches = state.height != null
-                      ? (state.height! / 2.54).round()
-                      : 65; // default 65in
-                  final int ftInitial = totalInches ~/ 12;
-                  final int inInitial = totalInches % 12;
-
-                  return CustomCupertinoInputWidget(
-                    title: AppStrings.heightSelection,
-                    placeholderText: AppStrings.enterHeight,
-                    leftToggleLabel: "ft",
-                    rightToggleLabel: "cm",
-                    defaultToggleValue: state.heightUnit ?? "cm",
-                    primaryInitialValue: cmInitial,
-                    primaryMinValue: 50,
-                    primaryMaxValue: 250,
-                    primaryInitialFt: ftInitial,
-                    primaryMinFt: 3,
-                    primaryMaxFt: 8,
-                    hasSecondaryValue: false,
-                    secondaryInitialValue: inInitial,
-                    secondaryMinValue: 0,
-                    secondaryMaxValue: 11,
-                    selectedValue: selectedDisplay,
-                    onUnitChanged: (unit) {
-                      final cubit = context.read<UserInfoCubit>();
-                      final state = cubit.state;
-
-                      if (state.height == null) {
-                        cubit.updateHeight(unit: unit);
-                        return;
-                      }
-
-                      cubit.updateHeight(height: state.height, unit: unit);
-                    },
-                    onValueSelected: (result) {
-                      if (result["suffix"] == "cm") {
-                        final int cmValue = result["primaryValue"];
-                        context
-                            .read<UserInfoCubit>()
-                            .setHeight(cmValue.toDouble(), "cm");
-                      } else {
-                        final int feet = result["primaryValue"];
-                        final int inches = result["secondaryValue"] ?? 0;
-                        context
-                            .read<UserInfoCubit>()
-                            .setHeight(feet.toDouble(), "ft", inches: inches);
-                      }
-                    },
-                  );
-                },
-              ),
-              SizedBox(
-                height: AppDimensions.dim20.h,
-              ),
-              Text(
-                AppStrings.howMuchWeight,
-                style: TextStyle(
-                    fontFamily: AppFontStyles.urbanistFontFamily,
-                    fontSize: AppFontStyles.fontSize_16,
-                    color: AppColors.bluegray,
-                    fontVariations: [
-                      AppFontStyles.fontWeightVariation600,
-                    ]),
-              ),
-              SizedBox(
-                height: AppDimensions.dim20.h,
-              ),
-              BlocBuilder<UserInfoCubit, UserInfoState>(
-                builder: (context, state) {
-                  final displayValue = state.displayWeight;
-
-                  return CustomCupertinoInputWidget(
-                    title: AppStrings.weightSelection,
-                    placeholderText: AppStrings.enterYourWeight,
-                    leftToggleLabel: "kg",
-                    rightToggleLabel: "lbs",
-                    defaultToggleValue: "kg",
-                    primaryInitialValue: 40,
-                    primaryMinValue: 20,
-                    primaryMaxValue: 300,
-                    selectedValue: displayValue,
-                    hasSecondaryValue: false,
-                    onUnitChanged: (value) {
-                      context.read<UserInfoCubit>().updateWeight(unit: value);
-                    },
-                    onValueSelected: (result) {
-                      final int userWeight = result["primaryValue"] ?? 0;
-                      final String weightUnit = result["suffix"] ?? "kg";
-                      context
-                          .read<UserInfoCubit>()
-                          .setWeight(userWeight.toDouble(), weightUnit);
-                    },
-                  );
-                },
-              ),
-              SizedBox(
-                height: AppDimensions.dim20.h,
-              ),
-              Text(
-                AppStrings.whatIsYourAge,
-                style: TextStyle(
-                    fontFamily: AppFontStyles.urbanistFontFamily,
-                    fontSize: AppFontStyles.fontSize_16,
-                    color: AppColors.bluegray,
-                    fontVariations: [
-                      AppFontStyles.fontWeightVariation600,
-                    ]),
-              ),
-              SizedBox(
-                height: AppDimensions.dim20.h,
-              ),
-              BlocBuilder<UserInfoCubit, UserInfoState>(
-                builder: (context, state) {
-                  final selectedAge = state.age;
-
-                  final displayValue = (selectedAge != null)
-                      ? selectedAge.toStringAsFixed(0)
-                      : null;
-                  return CustomCupertinoInputWidget(
-                    title: AppStrings.ageSelection,
-                    placeholderText: AppStrings.enterYourAge,
-                    leftToggleLabel: "",
-                    rightToggleLabel: "",
-                    defaultToggleValue: "",
-                    suffix: "",
-                    primaryInitialValue: 30,
-                    primaryMinValue: 10,
-                    primaryMaxValue: 150,
-                    selectedValue: displayValue,
-                    onUnitChanged: (value) {},
-                    onValueSelected: (result) {
-                      final int userAge = result["primaryValue"] ?? 0;
-                      context.read<UserInfoCubit>().setAge(userAge);
-                    },
-                    unitSelectionRequired: false,
-                  );
-                },
-              ),
-              SizedBox(height: AppDimensions.dim20.h),
-              // ── Name field ──────────────────────────────────────────────
-              Text(
-                "Add User Name",
+                "Your State",
                 style: TextStyle(
                   fontFamily: AppFontStyles.urbanistFontFamily,
                   fontSize: AppFontStyles.fontSize_16,
@@ -577,20 +394,46 @@ class _UserInfoInputScreenState extends State<UserInfoInputScreen> {
                   fontVariations: [AppFontStyles.fontWeightVariation600],
                 ),
               ),
-              SizedBox(height: AppDimensions.dim20.h),
+              SizedBox(height: AppDimensions.dim8.h),
+              Text(
+                "Let's personalize your hydration profile.",
+                style: TextStyle(
+                  fontFamily: AppFontStyles.urbanistFontFamily,
+                  fontSize: AppFontStyles.fontSize_14,
+                  color: AppColors.greyColorText1,
+                  fontVariations: [AppFontStyles.regularFontVariation],
+                ),
+              ),
+              SizedBox(height: AppDimensions.dim24.h),
+
+              // ── Username ────────────────────────────────────────────────
+              Text(
+                "USERNAME",
+                style: TextStyle(
+                  fontFamily: AppFontStyles.urbanistFontFamily,
+                  fontSize: AppFontStyles.fontSize_13,
+                  color: AppColors.bluegray,
+                  fontVariations: [AppFontStyles.fontWeightVariation600],
+                  letterSpacing: 0.8,
+                ),
+              ),
+              SizedBox(height: AppDimensions.dim12.h),
               Container(
-                padding: EdgeInsets.all(AppDimensions.dim12.w),
+                padding: EdgeInsets.symmetric(
+                  horizontal: AppDimensions.dim16.w,
+                  vertical: AppDimensions.dim14.h,
+                ),
                 decoration: BoxDecoration(
-                  color: const Color(0xffffffff),
+                  color: Colors.white,
                   border: Border.all(
-                    color: AppColors.lightgray,
+                    color: AppColors.greywith80,
                     width: AppDimensions.dim1,
                   ),
                   borderRadius: BorderRadius.circular(AppDimensions.radius_25),
                   boxShadow: [
                     BoxShadow(
                       blurRadius: AppDimensions.dim4,
-                      color: Colors.black.withOpacity(.4),
+                      color: Colors.black.withValues(alpha: 0.08),
                       offset:
                           Offset(AppDimensions.dim2.w, AppDimensions.dim2.h),
                     ),
@@ -613,12 +456,12 @@ class _UserInfoInputScreenState extends State<UserInfoInputScreen> {
                     color: _isUsernameReadOnly ? Colors.grey : AppColors.black,
                   ),
                   decoration: InputDecoration(
-                    hintText: 'Enter your username',
+                    hintText: 'e.g. Ram1z1',
                     hintStyle: TextStyle(
                       fontFamily: AppFontStyles.urbanistFontFamily,
                       fontSize: AppFontStyles.fontSize_16,
                       fontVariations: [AppFontStyles.regularFontVariation],
-                      color: const Color(0xCCCFCFCF),
+                      color: AppColors.greywith80,
                     ),
                     isDense: true,
                     contentPadding: EdgeInsets.zero,
@@ -688,7 +531,179 @@ class _UserInfoInputScreenState extends State<UserInfoInputScreen> {
                   ),
                 ),
               ],
-              SizedBox(height: AppDimensions.dim100.h),
+
+              SizedBox(height: AppDimensions.dim24.h),
+
+              // ── Age ─────────────────────────────────────────────────────
+              Text(
+                "AGE",
+                style: TextStyle(
+                  fontFamily: AppFontStyles.urbanistFontFamily,
+                  fontSize: AppFontStyles.fontSize_13,
+                  color: AppColors.bluegray,
+                  fontVariations: [AppFontStyles.fontWeightVariation600],
+                  letterSpacing: 0.8,
+                ),
+              ),
+              SizedBox(height: AppDimensions.dim12.h),
+              BlocBuilder<UserInfoCubit, UserInfoState>(
+                builder: (context, state) {
+                  final selectedAge = state.age;
+                  final displayValue =
+                      (selectedAge != null) ? "$selectedAge YRS" : null;
+                  return CustomCupertinoInputWidget(
+                    title: AppStrings.ageSelection,
+                    placeholderText: "25",
+                    leftToggleLabel: "",
+                    rightToggleLabel: "YRS",
+                    defaultToggleValue: "",
+                    suffix: "YRS",
+                    primaryInitialValue: 30,
+                    primaryMinValue: 10,
+                    primaryMaxValue: 150,
+                    selectedValue: displayValue,
+                    onUnitChanged: (value) {},
+                    onValueSelected: (result) {
+                      final int userAge = result["primaryValue"] ?? 0;
+                      context.read<UserInfoCubit>().setAge(userAge);
+                    },
+                    unitSelectionRequired: false,
+                  );
+                },
+              ),
+
+              SizedBox(height: AppDimensions.dim24.h),
+
+              // ── Gender ──────────────────────────────────────────────────
+              Text(
+                "GENDER IDENTITY",
+                style: TextStyle(
+                  fontFamily: AppFontStyles.urbanistFontFamily,
+                  fontSize: AppFontStyles.fontSize_13,
+                  color: AppColors.bluegray,
+                  fontVariations: [AppFontStyles.fontWeightVariation600],
+                  letterSpacing: 0.8,
+                ),
+              ),
+              SizedBox(height: AppDimensions.dim12.h),
+              CustomRadioSelectionWidget(type: 1),
+              SizedBox(height: AppDimensions.dim24.h),
+
+              // ── Height ──────────────────────────────────────────────────
+              Text(
+                "HEIGHT",
+                style: TextStyle(
+                  fontFamily: AppFontStyles.urbanistFontFamily,
+                  fontSize: AppFontStyles.fontSize_13,
+                  color: AppColors.bluegray,
+                  fontVariations: [AppFontStyles.fontWeightVariation600],
+                  letterSpacing: 0.8,
+                ),
+              ),
+              SizedBox(
+                height: AppDimensions.dim20.h,
+              ),
+              BlocBuilder<UserInfoCubit, UserInfoState>(
+                builder: (context, state) {
+                  final selectedDisplay = (state.displayHeight).isEmpty
+                      ? null
+                      : state.displayHeight;
+
+                  int cmInitial =
+                      state.height != null ? state.height!.round() : 170;
+                  final int totalInches = state.height != null
+                      ? (state.height! / 2.54).round()
+                      : 65; // default 65in
+                  final int ftInitial = totalInches ~/ 12;
+                  final int inInitial = totalInches % 12;
+
+                  return CustomCupertinoInputWidget(
+                    title: AppStrings.heightSelection,
+                    placeholderText: AppStrings.enterHeight,
+                    leftToggleLabel: "ft",
+                    rightToggleLabel: "cm",
+                    defaultToggleValue: state.heightUnit ?? "cm",
+                    primaryInitialValue: cmInitial,
+                    primaryMinValue: 50,
+                    primaryMaxValue: 250,
+                    primaryInitialFt: ftInitial,
+                    primaryMinFt: 3,
+                    primaryMaxFt: 8,
+                    hasSecondaryValue: false,
+                    secondaryInitialValue: inInitial,
+                    secondaryMinValue: 0,
+                    secondaryMaxValue: 11,
+                    selectedValue: selectedDisplay,
+                    onUnitChanged: (unit) {
+                      final cubit = context.read<UserInfoCubit>();
+                      final state = cubit.state;
+
+                      if (state.height == null) {
+                        cubit.updateHeight(unit: unit);
+                        return;
+                      }
+
+                      cubit.updateHeight(height: state.height, unit: unit);
+                    },
+                    onValueSelected: (result) {
+                      if (result["suffix"] == "cm") {
+                        final int cmValue = result["primaryValue"];
+                        context
+                            .read<UserInfoCubit>()
+                            .setHeight(cmValue.toDouble(), "cm");
+                      } else {
+                        final int feet = result["primaryValue"];
+                        final int inches = result["secondaryValue"] ?? 0;
+                        context
+                            .read<UserInfoCubit>()
+                            .setHeight(feet.toDouble(), "ft", inches: inches);
+                      }
+                    },
+                  );
+                },
+              ),
+              SizedBox(height: AppDimensions.dim24.h),
+              // ── Weight ──────────────────────────────────────────────────
+              Text(
+                "WEIGHT",
+                style: TextStyle(
+                  fontFamily: AppFontStyles.urbanistFontFamily,
+                  fontSize: AppFontStyles.fontSize_13,
+                  color: AppColors.bluegray,
+                  fontVariations: [AppFontStyles.fontWeightVariation600],
+                  letterSpacing: 0.8,
+                ),
+              ),
+              SizedBox(height: AppDimensions.dim12.h),
+              BlocBuilder<UserInfoCubit, UserInfoState>(
+                builder: (context, state) {
+                  final displayValue = state.displayWeight;
+
+                  return CustomCupertinoInputWidget(
+                    title: AppStrings.weightSelection,
+                    placeholderText: AppStrings.enterYourWeight,
+                    leftToggleLabel: "kg",
+                    rightToggleLabel: "lbs",
+                    defaultToggleValue: "kg",
+                    primaryInitialValue: 40,
+                    primaryMinValue: 20,
+                    primaryMaxValue: 300,
+                    selectedValue: displayValue,
+                    hasSecondaryValue: false,
+                    onUnitChanged: (value) {
+                      context.read<UserInfoCubit>().updateWeight(unit: value);
+                    },
+                    onValueSelected: (result) {
+                      final int userWeight = result["primaryValue"] ?? 0;
+                      final String weightUnit = result["suffix"] ?? "kg";
+                      context
+                          .read<UserInfoCubit>()
+                          .setWeight(userWeight.toDouble(), weightUnit);
+                    },
+                  );
+                },
+              ),
+              SizedBox(height: AppDimensions.dim80.h),
             ],
           ),
         ),

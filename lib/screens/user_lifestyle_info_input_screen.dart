@@ -5,14 +5,11 @@ import 'package:flutter_svg/svg.dart';
 import 'package:hydrify/constants/app_colors.dart';
 import 'package:hydrify/constants/app_dimensions.dart';
 import 'package:hydrify/constants/app_font_styles.dart';
-import 'package:hydrify/constants/app_strings.dart';
 import 'package:hydrify/cubit/user_info/user_info_cubit.dart';
-import 'package:hydrify/helpers/water_consumption_data_helper.dart';
-import 'package:hydrify/screens/user_info_analyzing_screen.dart';
+import 'package:hydrify/helpers/cupertino_bottom_sheet.dart';
+import 'package:hydrify/helpers/vibration_helper.dart';
+import 'package:hydrify/screens/fuel_flow_info_screen.dart';
 import 'package:hydrify/screens/widgets/user_info_input_widgets/custom_radio_selection_widget.dart';
-import 'package:hydrify/screens/widgets/user_info_input_widgets/custom_time_input_widget.dart';
-import 'package:hydrify/screens/widgets/user_info_input_widgets/beverage_intake_widget.dart';
-import 'package:hydrify/screens/widgets/user_info_input_widgets/daily_water_consumption_widget.dart';
 import 'package:hydrify/screens/widgets/user_info_input_widgets/next_button_widget.dart';
 import 'package:hydrify/services/ui_utils_service.dart';
 
@@ -28,50 +25,6 @@ class UserLifestyleInfoInputScreen extends StatefulWidget {
 
 class _UserLifestyleInfoInputScreenState
     extends State<UserLifestyleInfoInputScreen> {
-  final ScrollController _scrollController = ScrollController();
-  bool _isAtBottom = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _scrollController.addListener(_scrollListener);
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _checkIfAtBottom();
-    });
-  }
-
-  void _scrollListener() {
-    _checkIfAtBottom();
-  }
-
-  void _checkIfAtBottom() {
-    if (!_scrollController.hasClients) return;
-
-    final maxScroll = _scrollController.position.maxScrollExtent;
-    if (maxScroll <= 0) {
-      if (!_isAtBottom) {
-        setState(() {
-          _isAtBottom = true;
-        });
-      }
-      return;
-    }
-
-    final isAtBottom = _scrollController.offset >= (maxScroll - 50);
-    if (isAtBottom != _isAtBottom) {
-      setState(() {
-        _isAtBottom = isAtBottom;
-      });
-    }
-  }
-
-  @override
-  void dispose() {
-    _scrollController.removeListener(_scrollListener);
-    _scrollController.dispose();
-    super.dispose();
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -82,7 +35,7 @@ class _UserLifestyleInfoInputScreenState
         backgroundColor: Colors.transparent,
         centerTitle: true,
         title: Text(
-          AppStrings.sleepAndLifecycle,
+          "Profile Setup",
           style: TextStyle(
               color: AppColors.bluegray,
               fontSize: AppFontStyles.fontSize_AppBar,
@@ -105,148 +58,176 @@ class _UserLifestyleInfoInputScreenState
         width: double.maxFinite,
         decoration: BoxDecoration(
           image: DecorationImage(
-            image: AssetImage(
-                "assets/images/app_background.png"), // your image path
+            image: AssetImage("assets/images/app_background.png"),
             fit: BoxFit.cover,
           ),
-          // gradient: LinearGradient(
-          //   begin: Alignment.topCenter,
-          //   end: Alignment.bottomCenter,
-          //   colors: [AppColors.gradientStart, AppColors.gradientEnd],
-          // ),
         ),
         padding: EdgeInsets.only(
             top: AppDimensions.dim120.h, bottom: AppDimensions.bottomBarHeight),
         child: ListView(
-          controller: _scrollController,
-          padding: EdgeInsets.all(
-            AppDimensions.defaultPadding,
+          padding: EdgeInsets.symmetric(
+            horizontal: AppDimensions.defaultPadding.w,
+            vertical: AppDimensions.defaultPadding.h,
           ),
           children: [
+            // ── Centered Page Header ─────────────────────────────────────
+            Column(
+              children: [
+                Container(
+                  width: 72.w,
+                  height: 72.w,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: AppColors.bluegray,
+                      width: 2.w,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.06),
+                        blurRadius: 12,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: Center(
+                    child: Icon(
+                      Icons.alarm_on_rounded,
+                      color: AppColors.bluegray,
+                      size: 34.sp,
+                    ),
+                  ),
+                ),
+                SizedBox(height: 14.h),
+                Text(
+                  "Quiet Hours & Activity",
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontFamily: AppFontStyles.urbanistFontFamily,
+                    fontSize: AppFontStyles.fontSize_22,
+                    color: AppColors.bluegray,
+                    fontVariations: [AppFontStyles.boldFontVariation],
+                  ),
+                ),
+                SizedBox(height: 6.h),
+                Text(
+                  "Set your sleep schedule so Sipnudge stays\ncompletely silent overnight.",
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontFamily: AppFontStyles.urbanistFontFamily,
+                    fontSize: AppFontStyles.fontSize_13,
+                    color: AppColors.greyColorText1,
+                    fontVariations: [AppFontStyles.regularFontVariation],
+                  ),
+                ),
+              ],
+            ),
+
+            SizedBox(height: AppDimensions.dim24.h),
+
+            // ── Sleep Cycle Card ─────────────────────────────────────────
+            Container(
+              width: double.maxFinite,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(24.r),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.05),
+                    blurRadius: 12,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 20.h),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Card Header
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.access_time_rounded,
+                        color: const Color(0xFF38BDF8),
+                        size: 20.sp,
+                      ),
+                      SizedBox(width: 8.w),
+                      Text(
+                        "Sleep Cycle",
+                        style: TextStyle(
+                          fontFamily: AppFontStyles.urbanistFontFamily,
+                          fontSize: AppFontStyles.fontSize_16,
+                          color: const Color(0xFF475569),
+                          fontVariations: [AppFontStyles.boldFontVariation],
+                        ),
+                      ),
+                    ],
+                  ),
+
+                  SizedBox(height: 16.h),
+
+                  // Wake Time Row
+                  BlocBuilder<UserInfoCubit, UserInfoState>(
+                    builder: (context, state) {
+                      return _buildTimeCapsule(
+                        context: context,
+                        label: "Wake Time",
+                        icon: Icons.wb_sunny_outlined,
+                        iconColor: const Color(0xFF38BDF8),
+                        hour: state.wakeupHour,
+                        minute: state.wakeupMinute,
+                        period: state.wakeupPeriod ?? "AM",
+                        isBedtime: false,
+                      );
+                    },
+                  ),
+
+                  SizedBox(height: 12.h),
+
+                  Divider(
+                    color: const Color(0xFFF1F5F9),
+                    thickness: 1,
+                    height: 1,
+                  ),
+
+                  SizedBox(height: 12.h),
+
+                  // Bed Time Row
+                  BlocBuilder<UserInfoCubit, UserInfoState>(
+                    builder: (context, state) {
+                      return _buildTimeCapsule(
+                        context: context,
+                        label: "Bed Time",
+                        icon: Icons.nightlight_round,
+                        iconColor: const Color(0xFFFACC15),
+                        hour: state.bedtimeHour,
+                        minute: state.bedtimeMinute,
+                        period: state.bedtimePeriod ?? "PM",
+                        isBedtime: true,
+                      );
+                    },
+                  ),
+                ],
+              ),
+            ),
+
+            SizedBox(height: AppDimensions.dim24.h),
+
+            // ── Activity Level Section ───────────────────────────────────
             Text(
-              AppStrings.whenDoYouWakeup,
+              "ACTIVITY LEVEL",
               style: TextStyle(
-                  fontFamily: AppFontStyles.urbanistFontFamily,
-                  fontSize: AppFontStyles.fontSize_16,
-                  height: AppFontStyles.getLineHeight(
-                      AppFontStyles.fontSize_16, 160),
-                  color: AppColors.bluegray,
-                  fontVariations: [
-                    AppFontStyles.fontWeightVariation600,
-                  ]),
+                fontFamily: AppFontStyles.urbanistFontFamily,
+                fontSize: AppFontStyles.fontSize_13,
+                color: AppColors.bluegray,
+                fontVariations: [AppFontStyles.fontWeightVariation600],
+                letterSpacing: 0.8,
+              ),
             ),
-            SizedBox(
-              height: AppDimensions.dim11.h,
-            ),
-            BlocBuilder<UserInfoCubit, UserInfoState>(
-              builder: (context, state) {
-                var selectedHours = state.wakeupHour;
-                var selectedMins = state.wakeupMinute;
-                var selectedPeriod = state.wakeupPeriod;
-                return CustomTimeInputWidget(
-                  isBedtime: false,
-                  selectedHours: selectedHours,
-                  selectedMins: selectedMins,
-                  selectedPeriod: selectedPeriod,
-                );
-              },
-            ),
-            SizedBox(
-              height: AppDimensions.dim15.h,
-            ),
-            Text(
-              AppStrings.whatsBedTime,
-              style: TextStyle(
-                  fontFamily: AppFontStyles.urbanistFontFamily,
-                  fontSize: AppFontStyles.fontSize_16,
-                  height: AppFontStyles.getLineHeight(
-                      AppFontStyles.fontSize_16, 160),
-                  color: AppColors.bluegray,
-                  fontVariations: [
-                    AppFontStyles.fontWeightVariation600,
-                  ]),
-            ),
-            SizedBox(
-              height: AppDimensions.dim11.h,
-            ),
-            BlocBuilder<UserInfoCubit, UserInfoState>(
-              builder: (context, state) {
-                var selectedHours = state.bedtimeHour;
-                var selectedMins = state.bedtimeMinute;
-                var selectedPeriod = state.bedtimePeriod;
-                return CustomTimeInputWidget(
-                  isBedtime: true,
-                  selectedHours: selectedHours,
-                  selectedMins: selectedMins,
-                  selectedPeriod: selectedPeriod,
-                );
-              },
-            ),
-            SizedBox(
-              height: AppDimensions.dim20.h,
-            ),
-            Text(
-              AppStrings.whatsYourActivityLevel,
-              style: TextStyle(
-                  fontFamily: AppFontStyles.urbanistFontFamily,
-                  fontSize: AppFontStyles.fontSize_16,
-                  height: AppFontStyles.getLineHeight(
-                      AppFontStyles.fontSize_16, 160),
-                  color: AppColors.bluegray,
-                  fontVariations: [
-                    AppFontStyles.fontWeightVariation600,
-                  ]),
-            ),
-            SizedBox(
-              height: AppDimensions.dim20.h,
-            ),
-            CustomRadioSelectionWidget(
-              type: 2,
-            ),
-            SizedBox(
-              height: AppDimensions.dim20.h,
-            ),
-            Text(
-              AppStrings.whatsYourDiet,
-              style: TextStyle(
-                  fontFamily: AppFontStyles.urbanistFontFamily,
-                  fontSize: AppFontStyles.fontSize_16,
-                  height: AppFontStyles.getLineHeight(
-                      AppFontStyles.fontSize_16, 160),
-                  color: AppColors.bluegray,
-                  fontVariations: [
-                    AppFontStyles.fontWeightVariation600,
-                  ]),
-            ),
-            SizedBox(
-              height: AppDimensions.dim20.h,
-            ),
-            CustomRadioSelectionWidget(
-              type: 3,
-            ),
-            SizedBox(
-              height: AppDimensions.dim20.h,
-            ),
-            Text(
-              "Whats your daily Coffee/Tea  type?",
-              style: TextStyle(
-                  fontFamily: AppFontStyles.urbanistFontFamily,
-                  fontSize: AppFontStyles.fontSize_16,
-                  height: AppFontStyles.getLineHeight(
-                      AppFontStyles.fontSize_16, 160),
-                  color: AppColors.bluegray,
-                  fontVariations: [
-                    AppFontStyles.fontWeightVariation600,
-                  ]),
-            ),
-            SizedBox(
-              height: AppDimensions.dim20.h,
-            ),
-            BeverageIntakeWidget(),
-            SizedBox(
-              height: AppDimensions.dim20.h,
-            ),
-            DailyWaterConsumptionWidget(),
+            SizedBox(height: AppDimensions.dim12.h),
+            const CustomRadioSelectionWidget(type: 2),
+            SizedBox(height: AppDimensions.dim80.h),
           ],
         ),
       ),
@@ -258,69 +239,237 @@ class _UserLifestyleInfoInputScreenState
           right: AppDimensions.defaultPadding.w,
         ),
         child: CustomNextButton(
-            text: _isAtBottom ? AppStrings.submit : "Scroll Down",
+            text: "Next",
             onNextPressed: () async {
-              if (!_isAtBottom) {
-                _scrollController.animateTo(
-                  _scrollController.position.maxScrollExtent,
-                  duration: const Duration(milliseconds: 300),
-                  curve: Curves.easeInOut,
+              final state = context.read<UserInfoCubit>().state;
+
+              if (state.wakeupHour == null || state.wakeupMinute == null) {
+                UiUtilsService.showToast(
+                  context: context,
+                  text: "Please enter your wakeup time",
+                  textColor: Colors.red,
                 );
                 return;
               }
 
-              UiUtilsService.showLoading(context, "Please wait");
-
-              try {
-                final cubit = context.read<UserInfoCubit>();
-                final state = cubit.state;
-                if (state.wakeupHour == null || state.wakeupMinute == null) {
-                  UiUtilsService.dismissLoading(context);
-                  UiUtilsService.showToast(
-                    context: context,
-                    textColor: Colors.red,
-                    text: "Please enter your wakeup time",
-                  );
-                  return;
-                }
-
-                if (state.bedtimeHour == null || state.bedtimeMinute == null) {
-                  UiUtilsService.dismissLoading(context);
-                  UiUtilsService.showToast(
-                    context: context,
-                    textColor: Colors.red,
-                    text: "Please enter your bedtime",
-                  );
-                  return;
-                }
-
-                double calculatedGoal =
-                    WaterConsumptionCalculator.calculateWaterIntakeGoal(state);
-
-                Map<String, double> breakdown =
-                    WaterConsumptionCalculator.getCalculationBreakdown(state);
-                print('Water intake calculation breakdown: $breakdown');
-                double waterIntakeGoalInt = calculatedGoal;
-
-                UiUtilsService.dismissLoading(context);
-
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => UserInfoAnalyzingScreen(
-                      goal: waterIntakeGoalInt.toDouble(),
-                      isViaSettingsScreen: widget.isViaSettingsScreen,
-                    ),
-                  ),
-                );
-              } catch (e) {
-                UiUtilsService.dismissLoading(context);
+              if (state.bedtimeHour == null || state.bedtimeMinute == null) {
                 UiUtilsService.showToast(
                   context: context,
-                  text: 'Error calculating water intake: ${e.toString()}',
+                  text: "Please enter your bedtime",
+                  textColor: Colors.red,
                 );
+                return;
               }
+
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => FuelFlowInfoScreen(
+                    isViaSettingsScreen: widget.isViaSettingsScreen,
+                  ),
+                ),
+              );
             }),
+      ),
+    );
+  }
+
+  // ── Time Capsule Row Widget (Capsule shape matching mockup) ─────────────
+  Widget _buildTimeCapsule({
+    required BuildContext context,
+    required String label,
+    required IconData icon,
+    required Color iconColor,
+    required int? hour,
+    required int? minute,
+    required String period,
+    required bool isBedtime,
+  }) {
+    final displayHour = (hour ?? (isBedtime ? 10 : 6)).toString().padLeft(2, '0');
+    final displayMinute = (minute ?? (isBedtime ? 30 : 30)).toString().padLeft(2, '0');
+
+    return GestureDetector(
+      onTap: () => _pickTime(
+        context: context,
+        isBedtime: isBedtime,
+        currentHour: hour,
+        currentMinute: minute,
+      ),
+      child: Container(
+        height: 54.h,
+        padding: EdgeInsets.only(left: 16.w, right: 3.w),
+        decoration: BoxDecoration(
+          color: const Color(0xFFF7FAF9),
+          borderRadius: BorderRadius.circular(50.r),
+          border: Border.all(color: const Color(0xFFE2E8F0), width: 1.2),
+        ),
+        child: Row(
+          children: [
+            Icon(icon, color: iconColor, size: 22.sp),
+            SizedBox(width: 10.w),
+            Text(
+              label,
+              style: TextStyle(
+                fontFamily: AppFontStyles.urbanistFontFamily,
+                fontSize: 16.sp,
+                color: const Color(0xFF4A5A67),
+                fontVariations: [AppFontStyles.fontWeightVariation600],
+              ),
+            ),
+            const Spacer(),
+            Text(
+              "$displayHour:$displayMinute",
+              style: TextStyle(
+                fontFamily: AppFontStyles.urbanistFontFamily,
+                fontSize: 18.sp,
+                color: const Color(0xFF2C3E50),
+                fontVariations: [AppFontStyles.boldFontVariation],
+              ),
+            ),
+            const Spacer(),
+            _AmPmToggle(
+              currentPeriod: period,
+              onChanged: (newPeriod) {
+                VibrationHelper.vibrate(duration: 10, amplitude: 80);
+                final cubit = context.read<UserInfoCubit>();
+                if (isBedtime) {
+                  cubit.updateBedTime(period: newPeriod);
+                } else {
+                  cubit.updateWakeupTime(period: newPeriod);
+                }
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _pickTime({
+    required BuildContext context,
+    required bool isBedtime,
+    required int? currentHour,
+    required int? currentMinute,
+  }) async {
+    VibrationHelper.vibrate(duration: 10, amplitude: 80);
+    final cubit = context.read<UserInfoCubit>();
+    final h = currentHour ?? (isBedtime ? 10 : 6);
+    final m = currentMinute ?? 30;
+
+    final result = await showCupertinoPickerBottomSheet(
+      context: context,
+      title: isBedtime ? 'Select Bed Time' : 'Select Wake Time',
+      initialValue: h,
+      minValue: 1,
+      maxValue: 12,
+      suffix: 'hrs',
+      hasSecondaryValue: true,
+      secondaryInitialValue: m,
+      secondaryMinValue: 0,
+      secondaryMaxValue: 59,
+      secondarySuffix: 'min',
+    );
+
+    if (result != null && result.isNotEmpty) {
+      final returnedHour = result['primaryValue'] as int?;
+      final returnedMinute = result['secondaryValue'] as int?;
+
+      if (isBedtime) {
+        cubit.updateBedTime(
+          hour: returnedHour ?? h,
+          minute: returnedMinute ?? m,
+        );
+      } else {
+        cubit.updateWakeupTime(
+          hour: returnedHour ?? h,
+          minute: returnedMinute ?? m,
+        );
+      }
+    }
+  }
+}
+
+// ── Custom AM/PM Toggle Pill ──────────────────────────────────────────────────
+class _AmPmToggle extends StatelessWidget {
+  final String currentPeriod;
+  final ValueChanged<String> onChanged;
+
+  const _AmPmToggle({
+    required this.currentPeriod,
+    required this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    bool isAm = currentPeriod == "AM";
+    final double circleSize = 36.w;
+
+    return Container(
+      padding: EdgeInsets.all(3.w),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(30.r),
+        border: Border.all(color: const Color(0xFFDCDCDC), width: 1.2),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          GestureDetector(
+            onTap: () => onChanged("AM"),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 150),
+              width: circleSize,
+              height: circleSize,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: isAm ? const Color(0xFFD5DBDE) : Colors.transparent,
+              ),
+              child: Center(
+                child: Text(
+                  "AM",
+                  style: TextStyle(
+                    fontFamily: AppFontStyles.urbanistFontFamily,
+                    fontSize: 13.sp,
+                    color: isAm ? const Color(0xFF3B5266) : const Color(0xFFCCCCCC),
+                    fontVariations: [
+                      isAm
+                          ? AppFontStyles.boldFontVariation
+                          : AppFontStyles.regularFontVariation
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+          SizedBox(width: 2.w),
+          GestureDetector(
+            onTap: () => onChanged("PM"),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 150),
+              width: circleSize,
+              height: circleSize,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: !isAm ? const Color(0xFFD5DBDE) : Colors.transparent,
+              ),
+              child: Center(
+                child: Text(
+                  "PM",
+                  style: TextStyle(
+                    fontFamily: AppFontStyles.urbanistFontFamily,
+                    fontSize: 13.sp,
+                    color: !isAm ? const Color(0xFF3B5266) : const Color(0xFFCCCCCC),
+                    fontVariations: [
+                      !isAm
+                          ? AppFontStyles.boldFontVariation
+                          : AppFontStyles.regularFontVariation
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

@@ -134,7 +134,7 @@ class _RingtoneScreenState extends State<RingtoneScreen> {
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Ringtone saved successfully!")),
+          const SnackBar(content: Text(AppStrings.ringtoneSavedSuccessfully)),
         );
         Navigator.of(context).pop();
       }
@@ -143,7 +143,7 @@ class _RingtoneScreenState extends State<RingtoneScreen> {
       if (mounted) {
         setState(() => _isSaving = false);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Failed to save changes: $e")),
+          SnackBar(content: Text("${AppStrings.failedToSaveChanges}$e")),
         );
       }
     }
@@ -188,7 +188,7 @@ class _RingtoneScreenState extends State<RingtoneScreen> {
             backgroundColor: Colors.transparent,
             centerTitle: true,
             title: Text(
-              "Select Ringtone",
+              AppStrings.selectRingtone,
               style: TextStyle(
                   color: AppColors.bluegray,
                   fontSize: AppFontStyles.fontSize_AppBar,
@@ -218,7 +218,7 @@ class _RingtoneScreenState extends State<RingtoneScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         CategoryHeader(
-                          title: "Top Picks",
+                          title: AppStrings.topPicks,
                           actionText: "",
                           titleSize: 17.sp,
                         ),
@@ -231,7 +231,7 @@ class _RingtoneScreenState extends State<RingtoneScreen> {
                           ],
                         ),
                         CategoryHeader(
-                          title: "NATURE",
+                          title: AppStrings.natureCategory,
                           actionText: "",
                           titleSize: 13.sp,
                           color: AppColors.greyColorText1,
@@ -257,7 +257,7 @@ class _RingtoneScreenState extends State<RingtoneScreen> {
                                       _onFavoriteTap(ringtone.id),
                                 )),
                         const CategoryHeader(
-                          title: "ELECTRONIC",
+                          title: AppStrings.electronicCategory,
                           actionText: "",
                         ),
                         ...mockRingtones
@@ -300,7 +300,7 @@ class _RingtoneScreenState extends State<RingtoneScreen> {
                         children: _isSaving
                             ? [
                                 Text(
-                                  "Saving",
+                                  AppStrings.saving,
                                   style: TextStyle(
                                       color: Colors.white,
                                       fontSize: 18.sp,
@@ -320,7 +320,7 @@ class _RingtoneScreenState extends State<RingtoneScreen> {
                               ]
                             : [
                                 Text(
-                                  "Save Changes",
+                                  AppStrings.saveChanges,
                                   style: TextStyle(
                                       color: Colors.white,
                                       fontSize: 18.sp,

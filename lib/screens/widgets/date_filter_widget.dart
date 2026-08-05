@@ -6,6 +6,8 @@ import 'package:hydrify/constants/app_dimensions.dart';
 import 'package:hydrify/constants/app_font_styles.dart';
 import 'package:hydrify/cubit/filter/filter_cubit.dart';
 
+import 'package:hydrify/l10n/app_localizations.dart';
+
 class DateFilterWidget extends StatelessWidget {
   const DateFilterWidget({super.key});
 
@@ -41,6 +43,18 @@ class DateFilterWidget extends StatelessWidget {
 class IntervalSelector extends StatelessWidget {
   const IntervalSelector({super.key});
 
+  String _getLocalizedInterval(BuildContext context, FilterInterval interval) {
+    final loc = AppLocalizations.of(context);
+    switch (interval) {
+      case FilterInterval.weekly:
+        return loc?.weeklyTab ?? "Weekly";
+      case FilterInterval.monthly:
+        return loc?.monthlyTab ?? "Monthly";
+      case FilterInterval.yearly:
+        return loc?.yearly ?? "Yearly";
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return BlocBuilder<FilterCubit, FilterState>(
@@ -73,8 +87,7 @@ class IntervalSelector extends StatelessWidget {
                           BorderRadius.circular(AppDimensions.radius_25.w),
                     ),
                     child: Text(
-                      interval.name[0].toUpperCase() +
-                          interval.name.substring(1),
+                      _getLocalizedInterval(context, interval),
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         color: isSelected ? Colors.white : AppColors.bluegray,

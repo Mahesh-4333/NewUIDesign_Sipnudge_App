@@ -10,6 +10,7 @@ import 'package:hydrify/constants/app_dimensions.dart';
 import 'package:hydrify/constants/app_font_styles.dart';
 import 'package:hydrify/constants/app_strings.dart';
 import 'package:hydrify/cubit/bottom_nav/bottom_nav_cubit.dart';
+import 'package:hydrify/l10n/app_localizations.dart';
 
 class AnimatedBottomNavBar extends StatefulWidget {
   const AnimatedBottomNavBar({super.key});
@@ -41,16 +42,10 @@ class _AnimatedBottomNavBarState extends State<AnimatedBottomNavBar>
 
   static const List<dynamic> _icons = [
     "assets/images/home_ic.svg",
+    "assets/images/water_drop_ic.svg",
     "assets/images/analysis_ic.svg",
     "assets/images/trophy_ic.svg",
     "assets/images/settings_ic.svg"
-  ];
-
-  static const List<String> _labels = [
-    AppStrings.home,
-    AppStrings.analysis,
-    'Goals',
-    AppStrings.setting,
   ];
 
   @override
@@ -286,7 +281,7 @@ class _AnimatedBottomNavBarState extends State<AnimatedBottomNavBar>
                   return Transform.scale(
                     scale: barScale,
                     child: Container(
-                      width: AppDimensions.dim408.w,
+                      width: AppDimensions.dim428.w,
                       height: AppDimensions.dim88.h,
                       decoration: BoxDecoration(
                         boxShadow: [
@@ -339,7 +334,7 @@ class _AnimatedBottomNavBarState extends State<AnimatedBottomNavBar>
                                     _icons.length,
                                     (index) {
                                       return Container(
-                                        width: AppDimensions.dim82.w,
+                                        width: 56.w,
                                         height: AppDimensions.dim60.h,
                                         alignment: Alignment.center,
                                         child: AnimatedBuilder(
@@ -348,21 +343,28 @@ class _AnimatedBottomNavBarState extends State<AnimatedBottomNavBar>
                                             return Transform.scale(
                                               scale:
                                                   _scaleAnimations[index].value,
-                                              child: Stack(
-                                                alignment: Alignment.center,
-                                                children: [
-                                                  // Always render the unselected base component
-                                                  _buildNavBarItem(
-                                                      index, false),
-                                                  // Fade the original selected button over top seamlessly
-                                                  Opacity(
-                                                    opacity: _getButtonOpacity(
-                                                        index, slideProgress),
-                                                    child:
-                                                        _buildSelectedOriginal(
-                                                            index),
-                                                  ),
-                                                ],
+                                              child: OverflowBox(
+                                                maxWidth: 90.w,
+                                                maxHeight:
+                                                    AppDimensions.dim60.h,
+                                                child: Stack(
+                                                  alignment: Alignment.center,
+                                                  children: [
+                                                    // Always render the unselected base component
+                                                    _buildNavBarItem(
+                                                        index, false),
+                                                    // Fade the original selected button over top seamlessly
+                                                    Opacity(
+                                                      opacity:
+                                                          _getButtonOpacity(
+                                                              index,
+                                                              slideProgress),
+                                                      child:
+                                                          _buildSelectedOriginal(
+                                                              index),
+                                                    ),
+                                                  ],
+                                                ),
                                               ),
                                             );
                                           },
@@ -378,17 +380,14 @@ class _AnimatedBottomNavBarState extends State<AnimatedBottomNavBar>
                                     (slideProgress > 0.0 &&
                                         slideProgress < 1.0))
                                   LiquidGlass(
-                                    width: AppDimensions.dim82.w * dragScale,
+                                    width: 82.w * dragScale,
                                     height: AppDimensions.dim60.h * dragScale,
                                     magnification: currentMagnification,
                                     distortion: 0.1,
                                     position: LiquidGlassOffsetPosition(
                                       left: currentLeft +
                                           AppDimensions.dim20.w +
-                                          ((AppDimensions.dim82.w -
-                                                  (AppDimensions.dim82.w *
-                                                      dragScale)) /
-                                              2),
+                                          ((56.w - (82.w * dragScale)) / 2),
                                       top: AppDimensions.dim14.h +
                                           ((AppDimensions.dim60.h -
                                                   (AppDimensions.dim60.h *
@@ -449,7 +448,7 @@ class _AnimatedBottomNavBarState extends State<AnimatedBottomNavBar>
                                     onHorizontalDragEnd: (details) =>
                                         _onDragEnd(details, cubit),
                                     child: SizedBox(
-                                      width: AppDimensions.dim82.w,
+                                      width: 56.w,
                                       height: AppDimensions.dim60.h,
                                     ),
                                   ),
@@ -470,7 +469,7 @@ class _AnimatedBottomNavBarState extends State<AnimatedBottomNavBar>
   // Purana wala button code for the resting highlighted state
   Widget _buildSelectedOriginal(int index) {
     return Container(
-      width: AppDimensions.dim82.w,
+      width: 82.w,
       height: AppDimensions.dim60.h,
       decoration: BoxDecoration(
         color: AppColors.white,
@@ -508,16 +507,28 @@ class _AnimatedBottomNavBarState extends State<AnimatedBottomNavBar>
   }
 
   double _getGlassLeftOffset(int currentIndex) {
-    double itemWidth = AppDimensions.dim82.w;
+    double itemWidth = 56.w;
     double totalWidth = AppDimensions.dim408.w;
     double paddingHorizontal = AppDimensions.dim20.w;
-    double gap = (totalWidth - (paddingHorizontal * 2) - (itemWidth * 4)) / 3;
+    double gap = (totalWidth - (paddingHorizontal * 2) - (itemWidth * 5)) / 4;
     return currentIndex * (itemWidth + gap);
   }
 
+  List<String> _getLabels(BuildContext context) {
+    final loc = AppLocalizations.of(context);
+    return [
+      loc?.home ?? AppStrings.home,
+      loc?.log ?? "Log",
+      loc?.insights ?? "Insights",
+      loc?.goals ?? 'Goals',
+      loc?.setting ?? AppStrings.setting,
+    ];
+  }
+
   Widget _buildNavBarItem(int index, bool isSelected) {
+    final labels = _getLabels(context);
     return SizedBox(
-      width: AppDimensions.dim82.w,
+      width: isSelected ? 82.w : 56.w,
       height: AppDimensions.dim60.h,
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -525,13 +536,16 @@ class _AnimatedBottomNavBarState extends State<AnimatedBottomNavBar>
           SvgPicture.asset(
             _icons[index],
             color: AppColors.darkgray,
+            width: 22.w,
+            height: 22.w,
           ),
+          SizedBox(height: 3.h),
           Text(
-            _labels[index],
+            labels[index],
             style: TextStyle(
               color: AppColors.darkgray,
               fontFamily: AppFontStyles.lexendFontFamily,
-              fontSize: AppFontStyles.fontSize_12,
+              fontSize: 11.5.sp,
               fontVariations: isSelected
                   ? [AppFontStyles.regularFontVariation]
                   : [

@@ -4,6 +4,7 @@ import 'package:hydrify/constants/app_colors.dart';
 import 'package:hydrify/constants/app_dimensions.dart';
 import 'package:hydrify/constants/app_font_styles.dart';
 import 'package:hydrify/constants/assets_path.dart';
+import 'package:hydrify/l10n/app_localizations.dart';
 
 class WaterCardWidget extends StatelessWidget {
   final bool isExpanded;
@@ -48,7 +49,7 @@ class WaterCardWidget extends StatelessWidget {
                 border: Border.all(color: AppColors.bluegray.withOpacity(0.1)),
               ),
               child: Text(
-                "Log Hydration",
+                AppLocalizations.of(context)?.logHydration ?? "Log Hydration",
                 style: TextStyle(
                   color: AppColors.bluegray,
                   fontFamily: AppFontStyles.urbanistFontFamily,

@@ -18,6 +18,8 @@ import 'package:showcaseview/showcaseview.dart';
 import 'package:hydrify/helpers/showcase_keys.dart';
 import 'package:hydrify/screens/widgets/custom_showcase.dart';
 
+import 'package:hydrify/l10n/app_localizations.dart';
+
 class GreetingWidget extends StatefulWidget {
   const GreetingWidget({super.key});
 
@@ -103,17 +105,18 @@ class _GreetingWidgetState extends State<GreetingWidget> with WidgetsBindingObse
     }
   }
 
-  String _getGreeting() {
+  String _getGreeting(BuildContext context) {
+    final loc = AppLocalizations.of(context);
     final hourNow = DateTime.now().hour;
 
     if (hourNow >= 5 && hourNow < 12) {
-      return AppStrings.goodMorning;
+      return loc?.goodMorning ?? AppStrings.goodMorning;
     } else if (hourNow >= 12 && hourNow < 17) {
-      return AppStrings.goodAfternoon;
+      return loc?.goodAfternoon ?? AppStrings.goodAfternoon;
     } else if (hourNow >= 17 && hourNow < 21) {
-      return AppStrings.goodEvening;
+      return loc?.goodEvening ?? AppStrings.goodEvening;
     } else {
-      return AppStrings.goodNight;
+      return loc?.goodNight ?? AppStrings.goodNight;
     }
   }
 
@@ -127,7 +130,7 @@ class _GreetingWidgetState extends State<GreetingWidget> with WidgetsBindingObse
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          _getGreeting(),
+          _getGreeting(context),
           style: TextStyle(
             fontSize: AppFontStyles.fontSize_14,
             fontFamily: AppFontStyles.museoModernoFontFamily,

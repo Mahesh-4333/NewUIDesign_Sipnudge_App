@@ -196,7 +196,7 @@ class _LogHydrationWidgetState extends State<LogHydrationWidget> {
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: EdgeInsets.symmetric(horizontal: 16.w),
+      margin: EdgeInsets.symmetric(horizontal: 0.w),
       padding: EdgeInsets.all(18.w),
       decoration: BoxDecoration(
         color: Color(0xffF7F9FB),

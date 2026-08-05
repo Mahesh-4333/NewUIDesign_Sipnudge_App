@@ -167,6 +167,7 @@ class AssetsPath {
   static const String awMilk = "assets/aw_milk.png";
 
   static const String calendar = "assets/calendar.png";
+  static const String wify = "assets/wify.png";
   static const String NAIcon = "assets/NA_icon.png";
   static const String ticketSupportIcon = "assets/ticket_support_icon.png";
   static const String message = "assets/message.png";
@@ -183,4 +184,16 @@ class AssetsPath {
       "assets/achievement_badge/bottle_ring_cap.png";
 
   static const String conftyImg = "assets/confty_img.png";
+  static const String foodIntake = "assets/food_intake.png";
+  static const String liquidIntake = "assets/liquid_intake.png";
+
+  // onboarding
+  static const String onboardingBlack = "assets/onboarding/black.png";
+  static const String onboardingRed = "assets/onboarding/red.png";
+  static const String onboardingPurple = "assets/onboarding/purple.png";
+  static const String onboardingBluetooth = "assets/onboarding/bluetooth.png";
+  static const String onboardingBottleTouch = "assets/onboarding/bottle_touch.webp";
+  static const String onboardingScanningBottle = "assets/onboarding/scanning_bottle.webp";
+  static const String onboardingHalfBottle = "assets/onboarding/half_bottle.webp";
+  static const String onboardingOverlay = "assets/onboarding/Overlay (2).png";
 }

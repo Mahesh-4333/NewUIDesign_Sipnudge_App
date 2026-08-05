@@ -10,6 +10,7 @@ import 'package:hydrify/constants/app_colors.dart';
 import 'package:hydrify/constants/app_dimensions.dart';
 import 'package:hydrify/constants/app_font_styles.dart';
 import 'package:hydrify/constants/app_strings.dart';
+import 'package:hydrify/l10n/app_localizations.dart';
 import 'package:hydrify/cubit/ble/ble_cubit.dart';
 import 'package:hydrify/cubit/bottom_nav/bottom_nav_cubit.dart';
 import 'package:hydrify/cubit/user_info/user_info_cubit.dart';
@@ -75,7 +76,7 @@ class _UserInfoDailyGoalScreenNewState extends State<UserInfoDailyGoalScreen> {
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             Text(
-              "Your Daily goal",
+              AppLocalizations.of(context)?.dailyGoal ?? "Your Daily goal",
               style: TextStyle(
                   color: AppColors.bluegray,
                   fontSize: 24.sp,

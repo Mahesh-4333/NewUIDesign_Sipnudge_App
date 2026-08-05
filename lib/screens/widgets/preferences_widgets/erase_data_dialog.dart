@@ -6,6 +6,7 @@ import 'package:hydrify/constants/assets_path.dart';
 import 'package:percent_indicator/circular_percent_indicator.dart';
 import 'package:hydrify/constants/app_colors.dart';
 import 'package:hydrify/constants/app_font_styles.dart';
+import 'package:hydrify/constants/app_strings.dart';
 
 class EraseDataDialog extends StatefulWidget {
   final Future<void> Function() onErase;
@@ -95,7 +96,7 @@ class _EraseDataDialogState extends State<EraseDataDialog> {
 
               // Title
               Text(
-                "Erase All Data",
+                AppStrings.eraseAllData,
                 style: TextStyle(
                     color: const Color(0xffB91C1C),
                     fontSize: 22.sp,
@@ -109,7 +110,7 @@ class _EraseDataDialogState extends State<EraseDataDialog> {
               Padding(
                 padding: EdgeInsets.symmetric(horizontal: 10.w),
                 child: Text(
-                  "Are you sure that erasing your data is permanent. All your history, preferences, and saved content will be deleted immediately.",
+                  AppStrings.eraseAllDataDescription,
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     color: AppColors.greyColorText1,
@@ -141,7 +142,7 @@ class _EraseDataDialogState extends State<EraseDataDialog> {
                             fontVariations: [AppFontStyles.boldFontVariation]),
                       ),
                       Text(
-                        "SECONDS",
+                        AppStrings.secondsUpper,
                         style: TextStyle(
                           height: 2,
                           color: AppColors.greyColor,
@@ -165,7 +166,7 @@ class _EraseDataDialogState extends State<EraseDataDialog> {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Text(
-                          "Deleting ",
+                          "${AppStrings.deleting} ",
                           style: TextStyle(
                             color: AppColors.bluegray,
                             fontSize: 18.sp,
@@ -244,7 +245,7 @@ class _EraseDataDialogState extends State<EraseDataDialog> {
                           child: Text(
                             _isSwiped
                                 ? "ERASING IN $_secondsRemaining..."
-                                : "SLIDE TO EARSE ALL DATA",
+                                : AppStrings.slideToEraseAllData,
                             style: TextStyle(
                               color: const Color(0xffB91C1C),
                               fontSize: 15.sp,
@@ -327,7 +328,7 @@ class _EraseDataDialogState extends State<EraseDataDialog> {
                       ),
                     ),
                     child: Text(
-                      "Cancel Action",
+                      AppStrings.cancelAction,
                       style: TextStyle(
                         color: AppColors.bluegray,
                         fontSize: 15.sp,

@@ -58,6 +58,11 @@ class HelpMenuItem extends StatelessWidget {
 
               break;
 
+            case 'support_ticket':
+              Navigator.of(context, rootNavigator: true)
+                  .pushNamed('/help_support_ticket');
+              break;
+
             default:
           }
 

@@ -7,12 +7,15 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:hydrify/l10n/app_localizations.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:http/http.dart' as http;
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:hydrify/constants/app_font_styles.dart';
 import 'package:hydrify/cubit/Preferences/preferences_cubit.dart';
+import 'package:hydrify/cubit/locale/locale_cubit.dart';
 import 'package:hydrify/cubit/account&security/account&security_cubit.dart';
 import 'package:hydrify/cubit/ble/ble_cubit.dart';
 import 'package:hydrify/cubit/bottle/bottle_data_cubit.dart';
@@ -173,6 +176,7 @@ class MyApp extends StatelessWidget {
         BlocProvider(create: (context) => PreferencesCubit()),
         BlocProvider(create: (context) => DataAnalyticsCubit()),
         BlocProvider(create: (context) => CalendarCubit()),
+        BlocProvider(create: (context) => LocaleCubit()),
 
         // BlocProvider(create: (Context) => NotificationCubit()),
       ],
@@ -184,22 +188,28 @@ class MyApp extends StatelessWidget {
             builder: (_, child) {
               return Padding(
                   padding: EdgeInsets.only(bottom: 0),
-                  child: MaterialApp(
-                    navigatorKey: navigatorKey,
-                    debugShowCheckedModeBanner: false,
-                    theme: ThemeData(
-                      appBarTheme: const AppBarTheme(
-                        systemOverlayStyle: SystemUiOverlayStyle(
-                          statusBarIconBrightness: Brightness.dark,
-                          statusBarBrightness: Brightness.light,
+                  child: BlocBuilder<LocaleCubit, Locale>(
+                    builder: (context, currentLocale) {
+                      return MaterialApp(
+                        locale: currentLocale,
+                        supportedLocales: AppLocalizations.supportedLocales,
+                        localizationsDelegates:
+                            AppLocalizations.localizationsDelegates,
+                        navigatorKey: navigatorKey,
+                        debugShowCheckedModeBanner: false,
+                        theme: ThemeData(
+                          appBarTheme: const AppBarTheme(
+                            systemOverlayStyle: SystemUiOverlayStyle(
+                              statusBarIconBrightness: Brightness.dark,
+                              statusBarBrightness: Brightness.light,
+                            ),
+                            centerTitle: true,
+                            iconTheme: IconThemeData(),
+                          ),
+                          fontFamily: AppFontStyles.museoModernoFontFamily,
                         ),
-                        centerTitle: true,
-                        iconTheme: IconThemeData(),
-                      ),
-                      fontFamily: AppFontStyles.museoModernoFontFamily,
-                    ),
-                    home: child,
-                    routes: {
+                        home: child,
+                        routes: {
                       //'/dailygoalpage': (context) => DailyGoalPage(),
 
                       '/dailygoalpage': (context) => UserInfoDailyGoalScreen(
@@ -267,7 +277,9 @@ class MyApp extends StatelessWidget {
 
                       // '/termsofservices': (context) => TermsOfServices(),
                     },
-                  ));
+                  );
+                },
+              ));
               //);
               // );
             },

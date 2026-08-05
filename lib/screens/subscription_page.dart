@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:hydrify/constants/app_font_styles.dart';
+import 'package:hydrify/constants/app_strings.dart';
 import 'package:hydrify/helpers/shared_pref_helper.dart';
 import 'package:hydrify/services/api_service.dart';
 
@@ -152,17 +153,17 @@ class _SubscriptionPageState extends State<SubscriptionPage> {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Cancel Subscription?'),
-        content: const Text('Are you sure you want to cancel your Premium Upgrade? You will lose access to all premium features instantly.'),
+        title: const Text(AppStrings.cancelSubscriptionTitle),
+        content: const Text(AppStrings.cancelSubscriptionDesc),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Keep Membership'),
+            child: const Text(AppStrings.keepMembership),
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
             style: TextButton.styleFrom(foregroundColor: Colors.red),
-            child: const Text('Confirm Cancel'),
+            child: const Text(AppStrings.confirmCancel),
           ),
         ],
       ),
@@ -177,14 +178,14 @@ class _SubscriptionPageState extends State<SubscriptionPage> {
         await SharedPrefsHelper.setUserType('regular');
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Subscription cancelled successfully.')),
+            const SnackBar(content: Text(AppStrings.subscriptionCancelledSuccessfully)),
           );
           Navigator.pop(context, true);
         }
       } else {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Failed to cancel subscription. Please try again.')),
+            const SnackBar(content: Text(AppStrings.failedToCancelSubscription)),
           );
         }
       }

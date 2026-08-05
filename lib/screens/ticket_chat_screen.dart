@@ -5,6 +5,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:hydrify/constants/app_colors.dart';
 import 'package:hydrify/constants/app_dimensions.dart';
 import 'package:hydrify/constants/app_font_styles.dart';
+import 'package:hydrify/constants/app_strings.dart';
 import 'package:hydrify/helpers/shared_pref_helper.dart';
 import 'package:hydrify/services/api_service.dart';
 import 'package:hydrify/services/firebase_messaging_service.dart';
@@ -74,7 +75,7 @@ class _TicketChatScreenState extends State<TicketChatScreen> {
       _replyController.clear();
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Failed to send reply')),
+        const SnackBar(content: Text(AppStrings.failedToSendReply)),
       );
     }
 

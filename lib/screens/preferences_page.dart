@@ -10,6 +10,7 @@ import 'package:hydrify/constants/app_colors.dart';
 import 'package:hydrify/constants/app_dimensions.dart';
 import 'package:hydrify/constants/app_font_styles.dart';
 import 'package:hydrify/constants/app_strings.dart';
+import 'package:hydrify/l10n/app_localizations.dart';
 import 'package:hydrify/cubit/Preferences/preferences_cubit.dart';
 import 'package:hydrify/cubit/ble/ble_cubit.dart';
 import 'package:hydrify/cubit/bottle/bottle_data_cubit.dart';
@@ -52,7 +53,7 @@ class PreferencesPage extends StatelessWidget {
               backgroundColor: Colors.transparent,
               centerTitle: true,
               title: Text(
-                AppStrings.preferences,
+                AppLocalizations.of(context)?.preferences ?? AppStrings.preferences,
                 style: TextStyle(
                     color: AppColors.bluegray,
                     fontSize: AppFontStyles.fontSize_AppBar,
@@ -87,7 +88,9 @@ class PreferencesPage extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       SizedBox(height: 10.h),
-                      const SectionHeader(title: AppStrings.general),
+                      SectionHeader(
+                          title: AppLocalizations.of(context)?.general ??
+                              AppStrings.general),
                       FutureBuilder<int?>(
                         future: SharedPrefsHelper.getWaterGoal(),
                         builder: (context, snapshot) {
@@ -95,7 +98,8 @@ class PreferencesPage extends StatelessWidget {
                           String formattedGoal = "${goal.toString()} mL";
 
                           return MenuItemTile(
-                            title: AppStrings.waterIntakeGoal,
+                            title: AppLocalizations.of(context)?.waterIntakeGoal ??
+                                AppStrings.waterIntakeGoal,
                             info: formattedGoal,
                             iconpatharrow: "assets/arrow.png",
                             onTap: () {
@@ -115,12 +119,17 @@ class PreferencesPage extends StatelessWidget {
                           );
                         },
                       ),
-                      const SectionHeader(title: AppStrings.alerts),
+                      SectionHeader(
+                          title: AppLocalizations.of(context)?.alerts ??
+                              AppStrings.alerts),
                       PreferenceCard(
                         children: [
                           CustomToggleTile(
-                            title: AppStrings.ringtoneFeedback,
-                            description: AppStrings.playAudioWhenTargetIsMet,
+                            title: AppLocalizations.of(context)?.ringtoneFeedback ??
+                                AppStrings.ringtoneFeedback,
+                            description: AppLocalizations.of(context)
+                                    ?.playAudioWhenTargetIsMet ??
+                                AppStrings.playAudioWhenTargetIsMet,
                             value: state.ringtoneFeedback,
                             onChanged: (value) {
                               cubit.toggleRingtoneFeedback(value);
@@ -132,7 +141,8 @@ class PreferencesPage extends StatelessWidget {
                               endIndent: 20.w,
                               color: AppColors.stonegray.withOpacity(0.1)),
                           MenuItemTile(
-                            title: AppStrings.ringtone,
+                            title: AppLocalizations.of(context)?.ringtone ??
+                                AppStrings.ringtone,
                             info: "",
                             hideDecoration: true,
                             iconpatharrow: "assets/arrow.png",
@@ -151,13 +161,22 @@ class PreferencesPage extends StatelessWidget {
                           ),
                         ],
                       ),
-                      const SectionHeader(title: AppStrings.hapticsAndVisuals),
+                      SectionHeader(
+                          title: AppLocalizations.of(context)?.hapticsAndVisuals ??
+                              AppStrings.hapticsAndVisuals),
                       PreferenceCard(
                         children: [
                           // Vibration: Haptic Intensity — segmented (Green)
                           SegmentedChoiceTile(
-                            title: 'Vibration: Haptic Intensity',
-                            options: const ['Low', 'Medium', 'High'],
+                            title: AppLocalizations.of(context)
+                                    ?.vibrationHapticIntensity ??
+                                AppStrings.vibrationHapticIntensity,
+                            options: [
+                              AppLocalizations.of(context)?.low ?? AppStrings.low,
+                              AppLocalizations.of(context)?.medium ??
+                                  AppStrings.medium,
+                              AppLocalizations.of(context)?.high ?? AppStrings.high,
+                            ],
                             selectedOption: state.hapticIntensity,
                             activeColor: const Color(0xFF4CAF50),
                             onSelected: (v) => cubit.setHapticIntensity(v),
@@ -169,8 +188,16 @@ class PreferencesPage extends StatelessWidget {
                               color: AppColors.stonegray.withOpacity(0.1)),
                           // LED: Notification Light — segmented (Blue)
                           SegmentedChoiceTile(
-                            title: 'LED: Notification Light',
-                            options: const ['Dim', 'Medium', 'Bright'],
+                            title: AppLocalizations.of(context)
+                                    ?.ledNotificationLight ??
+                                AppStrings.ledNotificationLight,
+                            options: [
+                              AppLocalizations.of(context)?.dim ?? AppStrings.dim,
+                              AppLocalizations.of(context)?.medium ??
+                                  AppStrings.medium,
+                              AppLocalizations.of(context)?.bright ??
+                                  AppStrings.bright,
+                            ],
                             selectedOption: state.ledBrightness,
                             activeColor: const Color(0xFF4285F4),
                             onSelected: (v) => cubit.setLedBrightness(v),
@@ -187,8 +214,13 @@ class PreferencesPage extends StatelessWidget {
                               color: AppColors.stonegray.withOpacity(0.1)),
                           // UV Cleaning speed — segmented (Purple)
                           SegmentedChoiceTile(
-                            title: 'UV Cleaning',
-                            options: const ['Normal', 'Fast'],
+                            title: AppLocalizations.of(context)?.uvCleaning ??
+                                AppStrings.uvCleaning,
+                            options: [
+                              AppLocalizations.of(context)?.normal ??
+                                  AppStrings.normal,
+                              AppLocalizations.of(context)?.fast ?? AppStrings.fast,
+                            ],
                             selectedOption: state.uvSpeed,
                             activeColor: const Color(0xFF9C27B0),
                             onSelected: (v) => cubit.setUvSpeed(v),
@@ -288,15 +320,14 @@ class PreferencesPage extends StatelessWidget {
                                                   triggerStream: true);
                                           await SharedPrefsHelper.setIsErasingData(false);
                                           Fluttertoast.showToast(
-                                              msg: "Local data cleared.");
+                                              msg: AppStrings.localDataCleared);
                                           Fluttertoast.showToast(
-                                              msg:
-                                                  "Tracking restarted. Connect your device again.");
+                                              msg: AppStrings.trackingRestarted);
                                         } catch (e) {
                                           await SharedPrefsHelper.setIsErasingData(false);
                                           Fluttertoast.showToast(
                                               msg:
-                                                  "Error clearing local data: $e");
+                                                  "${AppStrings.errorClearingLocalData}$e");
                                           return;
                                         }
                                       },
@@ -310,7 +341,8 @@ class PreferencesPage extends StatelessWidget {
                                 ),
                               ),
                               child: Text(
-                                "RESET ALL TRACKINGS",
+                                AppLocalizations.of(context)?.resetAllTrackings ??
+                                    AppStrings.resetAllTrackings,
                                 style: TextStyle(
                                     color: const Color(0xffE53935),
                                     fontSize: 16.sp,

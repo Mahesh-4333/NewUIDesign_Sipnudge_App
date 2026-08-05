@@ -434,6 +434,23 @@ class ApiService {
     }
   }
 
+  Future<String?> uploadFoodImage(
+      String imageBase64, String filename) async {
+    try {
+      final response = await _dio.post(
+        '/api/database/upload-image',
+        data: {'imageBase64': imageBase64, 'filename': filename},
+      );
+      if (response.data != null && response.data['success'] == true) {
+        return response.data['url'] as String?;
+      }
+      return null;
+    } on DioException catch (e) {
+      Console.log(tag: "APP", value: "Exception in uploadFoodImage: $e");
+      return null;
+    }
+  }
+
   Future<bool> syncFoodScans(
       String userId, List<Map<String, dynamic>> scans) async {
     try {
@@ -445,6 +462,19 @@ class ApiService {
     } on DioException catch (e) {
       Console.log(tag: "APP", value: "Exception in syncFoodScans: $e");
       return false;
+    }
+  }
+
+  Future<List<Map<String, dynamic>>?> getFoodScans(String userId) async {
+    try {
+      final response = await _dio.get('/api/database/food-scans/$userId');
+      if (response.statusCode == 200 && response.data['success'] == true) {
+        return List<Map<String, dynamic>>.from(response.data['data']);
+      }
+      return null;
+    } on DioException catch (e) {
+      Console.log(tag: "APP", value: "Exception in getFoodScans: $e");
+      return null;
     }
   }
 

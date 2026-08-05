@@ -87,6 +87,7 @@ class HomeWidgetService {
     // Save data to be read by the native widgets
     await HomeWidget.saveWidgetData<int>('current_intake', currentIntake);
     await HomeWidget.saveWidgetData<int>('daily_goal', dailyGoal);
+    await HomeWidget.saveWidgetData<int>('coffee_intake', 200);
     final todayStr = DateTime.now().toIso8601String().substring(0, 10);
     await HomeWidget.saveWidgetData<String>('last_update_date', todayStr);
 

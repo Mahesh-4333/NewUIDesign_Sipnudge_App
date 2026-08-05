@@ -13,6 +13,7 @@ import 'package:hydrify/cubit/hydration/hydration_cubit.dart';
 import 'package:hydrify/cubit/hydration/hydration_state.dart';
 import 'package:hydrify/helpers/shared_pref_helper.dart';
 import 'package:hydrify/models/hydration_entry.dart';
+import 'package:hydrify/l10n/app_localizations.dart';
 import 'package:intl/intl.dart';
 
 class AnalysisHydrationSlotsWidget extends StatefulWidget {
@@ -98,9 +99,9 @@ class _AnalysisHydrationSlotsWidgetState
       ),
       child: Row(
         children: [
-          _buildTabItem("Scheduled", 0),
-          _buildTabItem("All", 1),
-          _buildTabItem("Off-Slot", 2),
+          _buildTabItem(AppLocalizations.of(context)?.scheduled ?? "Scheduled", 0),
+          _buildTabItem(AppLocalizations.of(context)?.allTab ?? "All", 1),
+          _buildTabItem(AppLocalizations.of(context)?.offSlot ?? "Off-Slot", 2),
         ],
       ),
     );
@@ -451,7 +452,7 @@ class _AnalysisHydrationSlotsWidgetState
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  "Scheduled Records",
+                  AppLocalizations.of(context)?.scheduledRecords ?? "Scheduled Records",
                   style: TextStyle(
                     color: AppColors.bluegray,
                     fontSize: AppFontStyles.fontSize_20,
@@ -460,7 +461,7 @@ class _AnalysisHydrationSlotsWidgetState
                   ),
                 ),
                 Text(
-                  "VIEW ALL",
+                  (AppLocalizations.of(context)?.viewAll ?? "VIEW ALL").toUpperCase(),
                   style: TextStyle(
                     color: AppColors.bluegray.withOpacity(0.7),
                     fontSize: AppFontStyles.fontSize_12,
@@ -488,7 +489,7 @@ class _AnalysisHydrationSlotsWidgetState
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  "History",
+                  AppLocalizations.of(context)?.history ?? "History",
                   style: TextStyle(
                     color: AppColors.bluegray,
                     fontSize: AppFontStyles.fontSize_20,
@@ -529,7 +530,7 @@ class _AnalysisHydrationSlotsWidgetState
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Text(
-                          "DETAIL",
+                          (AppLocalizations.of(context)?.details ?? "DETAIL").toUpperCase(),
                           style: TextStyle(
                             color: AppColors.bluegray,
                             fontSize: AppFontStyles.fontSize_12,
@@ -555,7 +556,7 @@ class _AnalysisHydrationSlotsWidgetState
             ),
             if (state.todayHydrationHistory.isEmpty)
               _buildSlotItemIndicator(
-                  "No History", "Record your sips", "0 ml", false)
+                  AppLocalizations.of(context)?.noHistory ?? "No History", AppLocalizations.of(context)?.recordYourSips ?? "Record your sips", "0 ml", false)
             else
               ...state.todayHydrationHistory
                   .take(4)

@@ -20,6 +20,9 @@ class CustomRadioSelectionWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     return BlocBuilder<UserInfoCubit, UserInfoState>(
       builder: (context, state) {
+        if (type == 1) {
+          return _buildGenderSelectionRow(context, state);
+        }
         return LayoutBuilder(
           builder: (context, constraints) {
             final double totalSpacing = AppDimensions.dim10.h;
@@ -36,39 +39,115 @@ class CustomRadioSelectionWidget extends StatelessWidget {
     );
   }
 
+  Widget _buildGenderSelectionRow(BuildContext context, UserInfoState state) {
+    final cubit = context.read<UserInfoCubit>();
+    return Row(
+      children: [
+        Expanded(
+          child: _buildGenderTile(
+            name: AppStrings.male,
+            iconData: Icons.male_rounded,
+            isSelected: state.gender == Gender.male,
+            onTap: () => cubit.setGender(Gender.male),
+          ),
+        ),
+        SizedBox(width: 10.w),
+        Expanded(
+          child: _buildGenderTile(
+            name: AppStrings.female,
+            iconData: Icons.female_rounded,
+            isSelected: state.gender == Gender.female,
+            onTap: () => cubit.setGender(Gender.female),
+          ),
+        ),
+        SizedBox(width: 10.w),
+        Expanded(
+          child: _buildGenderTile(
+            name: "Other",
+            iconData: Icons.transgender_rounded,
+            isSelected: state.gender == Gender.preferNotToSay,
+            onTap: () => cubit.setGender(Gender.preferNotToSay),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildGenderTile({
+    required String name,
+    required IconData iconData,
+    required bool isSelected,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: () {
+        VibrationHelper.vibrate(duration: 15, amplitude: 100);
+        onTap();
+      },
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        height: 104.h,
+        decoration: BoxDecoration(
+          color: isSelected ? AppColors.offwhiteblue : Colors.white,
+          border: Border.all(
+            color: isSelected
+                ? AppColors.bluegray
+                : AppColors.greywith80.withValues(alpha: 0.5),
+            width: isSelected ? 2.w : 1.w,
+          ),
+          borderRadius: BorderRadius.circular(AppDimensions.radius_16.w),
+          boxShadow: [
+            BoxShadow(
+              blurRadius: 8,
+              color: Colors.black.withValues(alpha: 0.04),
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              width: 48.w,
+              height: 48.w,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: isSelected
+                    ? AppColors.bluegray
+                    : const Color(0xFFE9EDF0),
+              ),
+              child: Icon(
+                iconData,
+                size: 26.sp,
+                color: isSelected ? Colors.white : const Color(0xFF9EA3A8),
+              ),
+            ),
+            SizedBox(height: 8.h),
+            Text(
+              name,
+              style: TextStyle(
+                fontFamily: AppFontStyles.urbanistFontFamily,
+                fontSize: AppFontStyles.fontSize_15,
+                color:
+                    isSelected ? AppColors.bluegray : const Color(0xFF9EA3A8),
+                fontVariations: [
+                  isSelected
+                      ? AppFontStyles.boldFontVariation
+                      : AppFontStyles.semiBoldFontVariation,
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   List<Widget> getRadioOptionsBasedOnType(
       BuildContext context, UserInfoState state, double tileWidth) {
     final cubit = context.read<UserInfoCubit>();
     if (type == 1) {
-      return [
-        buildTile(
-          name: AppStrings.male,
-          icon: "assets/images/maleicon_selected.svg",
-          isSelected: state.gender == Gender.male,
-          onTap: () {
-            cubit.setGender(Gender.male);
-          },
-          width: tileWidth,
-        ),
-        buildTile(
-          name: AppStrings.female,
-          icon: "assets/images/femaleicon_selected.svg",
-          isSelected: state.gender == Gender.female,
-          onTap: () {
-            cubit.setGender(Gender.female);
-          },
-          width: tileWidth,
-        ),
-        buildTile(
-          name: AppStrings.preferNotToSay,
-          icon: "",
-          isSelected: state.gender == Gender.preferNotToSay,
-          onTap: () {
-            cubit.setGender(Gender.preferNotToSay);
-          },
-          width: tileWidth,
-        )
-      ];
+      return [];
     } else if (type == 2) {
       return [
         buildTile(

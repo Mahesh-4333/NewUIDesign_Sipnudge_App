@@ -11,6 +11,8 @@ class ProfileMenuItemWidget extends StatelessWidget {
   final bool isRed;
   final String iconPathArrow;
   final VoidCallback onTap;
+  /// Optional badge widget shown between title and arrow (e.g. "85%" battery label)
+  final Widget? badge;
 
   const ProfileMenuItemWidget({
     super.key,
@@ -19,6 +21,7 @@ class ProfileMenuItemWidget extends StatelessWidget {
     this.isRed = false,
     required this.iconPathArrow,
     required this.onTap,
+    this.badge,
   });
 
   @override
@@ -42,7 +45,7 @@ class ProfileMenuItemWidget extends StatelessWidget {
                   ? AppDimensions.dim31.h
                   : AppDimensions.dim24.h,
               fit: BoxFit.contain,
-              color: isLogout ? AppColors.redAccent : AppColors.bluegray,
+              color: isRed ? AppColors.redAccent : AppColors.bluegray,
               errorBuilder: (_, __, ___) => Icon(
                 Icons.error,
                 color: AppColors.redAccent,
@@ -64,6 +67,10 @@ class ProfileMenuItemWidget extends StatelessWidget {
                 fontSize: AppFontStyles.fontSize_18.sp,
               ),
             ),
+            if (badge != null) ...[
+              SizedBox(width: 8.w),
+              badge!,
+            ],
             const Spacer(),
             if (!isRed)
               Image.asset(

@@ -2,18 +2,17 @@ import 'dart:io' show Platform;
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:hydrify/constants/app_colors.dart';
 import 'package:hydrify/constants/app_dimensions.dart';
 import 'package:hydrify/constants/app_font_styles.dart';
+import 'package:hydrify/l10n/app_localizations.dart';
 import 'package:hydrify/helpers/shared_pref_helper.dart';
+import 'package:hydrify/cubit/data_analytics/data_analytics_cubit.dart';
+import 'package:hydrify/screens/data_n_analytics/data_n_analytics_screen.dart';
 import 'package:hydrify/screens/widgets/chart_widgets/custom_chart_data_widget.dart';
 import 'package:hydrify/screens/widgets/chart_widgets/drink_types_widget.dart';
-import 'package:hydrify/screens/widgets/chart_widgets/today_goal_widget.dart';
-import 'package:hydrify/screens/widgets/chart_widgets/analysis_hydration_slots_widget.dart';
-import 'package:hydrify/screens/widgets/chart_widgets/food_scanner_widget.dart';
-import 'package:hydrify/screens/widgets/chart_widgets/water_card_widget.dart';
-import 'package:hydrify/screens/widgets/chart_widgets/log_hydration_widget.dart';
 import 'package:hydrify/screens/widgets/date_filter_widget.dart';
 
 class AnalysisScreen extends StatefulWidget {
@@ -92,38 +91,17 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
                   bottom: AppDimensions.dim200.h,
                 ),
                 child: ListView(
-                  physics: NeverScrollableScrollPhysics(),
+                  physics: const NeverScrollableScrollPhysics(),
                   children: [
                     const DateFilterWidget(),
-                    SizedBox(height: AppDimensions.dim25.h),
-                    WaterCardWidget(
-                      isExpanded: isLoggingActive,
-                      onTap: () {
-                        setState(() {
-                          isLoggingActive = !isLoggingActive;
-                        });
-                      },
-                    ),
-                    AnimatedSize(
-                      duration: const Duration(milliseconds: 400),
-                      curve: Curves.easeInOut,
-                      child: isLoggingActive
-                          ? Column(
-                              children: [
-                                SizedBox(height: AppDimensions.dim20.h),
-                                const LogHydrationWidget(),
-                              ],
-                            )
-                          : const SizedBox.shrink(),
-                    ),
-                    SizedBox(height: AppDimensions.dim25.h),
+                    SizedBox(height: AppDimensions.dim20.h),
+                    _buildHabitConsistencyCard(),
+                    SizedBox(height: AppDimensions.dim20.h),
                     const CustomChartDataWidget(),
-                    SizedBox(height: AppDimensions.dim25.h),
+                    SizedBox(height: AppDimensions.dim20.h),
                     const DrinkTypesWidget(),
-                    SizedBox(height: AppDimensions.dim25.h),
-                    const TodayGoalWidget(),
-                    SizedBox(height: AppDimensions.dim25.h),
-                    const AnalysisHydrationSlotsWidget(),
+                    SizedBox(height: AppDimensions.dim20.h),
+                    _buildAnalyticsButton(),
                   ],
                 ),
               ),
@@ -168,7 +146,7 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
                 ),
               ),
               child: Text(
-                "Connect to Sipnudge bottle to access analysis",
+                AppLocalizations.of(context)?.trackingRestarted ?? "Connect to Sipnudge bottle to access analysis",
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   color: AppColors.bluegray,
@@ -204,39 +182,17 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
             ),
             child: ListView(
               cacheExtent: 1000,
+              physics: const BouncingScrollPhysics(),
               children: [
                 const DateFilterWidget(),
-                SizedBox(height: AppDimensions.dim25.h),
-                WaterCardWidget(
-                  isExpanded: isLoggingActive,
-                  onTap: () {
-                    setState(() {
-                      isLoggingActive = !isLoggingActive;
-                    });
-                  },
-                ),
-                AnimatedSize(
-                  duration: const Duration(milliseconds: 400),
-                  curve: Curves.easeInOut,
-                  child: isLoggingActive
-                      ? Column(
-                          children: [
-                            SizedBox(height: AppDimensions.dim20.h),
-                            const LogHydrationWidget(),
-                          ],
-                        )
-                      : const SizedBox.shrink(),
-                ),
-                SizedBox(height: AppDimensions.dim25.h),
+                SizedBox(height: AppDimensions.dim20.h),
+                _buildHabitConsistencyCard(),
+                SizedBox(height: AppDimensions.dim20.h),
                 const CustomChartDataWidget(),
-                SizedBox(height: AppDimensions.dim25.h),
+                SizedBox(height: AppDimensions.dim20.h),
                 const DrinkTypesWidget(),
-                SizedBox(height: AppDimensions.dim25.h),
-                const TodayGoalWidget(),
-                SizedBox(height: AppDimensions.dim25.h),
-                const FoodScannerWidget(),
-                SizedBox(height: AppDimensions.dim25.h),
-                const AnalysisHydrationSlotsWidget(),
+                SizedBox(height: AppDimensions.dim20.h),
+                _buildAnalyticsButton(),
                 SizedBox(
                   height: AppDimensions.dim120.h,
                 ),
@@ -247,4 +203,308 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
       ),
     );
   }
+
+  Widget _buildHabitConsistencyCard() {
+    return BlocBuilder<DataAnalyticsCubit, DataAnalyticsState>(
+      builder: (context, state) {
+        final habit = state.analyticsData?['habitConsistency'];
+        final efficiency = habit?['efficiency']?.toString() ?? '0';
+        final streak = habit?['streak']?.toString() ?? '0';
+        final percentage =
+            state.analyticsData?['monthlyIntake']?['percentage'] ?? 0;
+        final tierLabel = percentage >= 80
+            ? 'Elite Tier'
+            : percentage >= 60
+                ? 'Good'
+                : 'Improving';
+
+        return Container(
+          margin: EdgeInsets.symmetric(horizontal: AppDimensions.defaultPadding.w),
+          decoration: BoxDecoration(
+            color: AppColors.white,
+            borderRadius: BorderRadius.circular(AppDimensions.dim12.r),
+            border: Border.all(color: AppColors.color_136DEC0D),
+            boxShadow: [
+              BoxShadow(
+                color: AppColors.black40,
+                offset: const Offset(0, 1),
+                blurRadius: 10,
+                spreadRadius: 0,
+              ),
+            ],
+          ),
+          padding: EdgeInsets.symmetric(
+              vertical: AppDimensions.dim16.h,
+              horizontal: AppDimensions.dim24.w),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Container(
+                    alignment: Alignment.topLeft,
+                    child: Text(
+                      "Habit Consistency",
+                      style: TextStyle(
+                        color: AppColors.bluegray,
+                        fontSize: AppFontStyles.fontSize_18,
+                        fontFamily: AppFontStyles.urbanistFontFamily,
+                        fontVariations: [AppFontStyles.boldFontVariation],
+                      ),
+                    ),
+                  ),
+                  Container(
+                    padding:
+                        EdgeInsets.symmetric(horizontal: 8.w, vertical: 2.h),
+                    decoration: BoxDecoration(
+                        color: AppColors.color_136DEC.withOpacity(.1),
+                        borderRadius: BorderRadius.circular(4)),
+                    child: Text(
+                      tierLabel,
+                      style: TextStyle(
+                        color: AppColors.color_136DEC,
+                        fontSize: AppFontStyles.fontSize_10,
+                        fontFamily: AppFontStyles.urbanistFontFamily,
+                        fontVariations: [AppFontStyles.boldFontVariation],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              SizedBox(
+                height: 16.h,
+              ),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: _buildConsistencyWidget(
+                        isStreak: false, value: efficiency),
+                  ),
+                  SizedBox(width: 16.w),
+                  Expanded(
+                    child:
+                        _buildConsistencyWidget(isStreak: true, value: streak),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildConsistencyWidget({
+    required String value,
+    required bool isStreak,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          isStreak ? "Streak" : "Consistency",
+          style: TextStyle(
+            color: AppColors.color_4D758B,
+            fontSize: AppFontStyles.fontSize_14,
+            fontFamily: AppFontStyles.urbanistFontFamily,
+            fontVariations: [AppFontStyles.regularFontVariation],
+          ),
+        ),
+        SizedBox(
+          height: 4.h,
+        ),
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Text(
+              "$value${isStreak ? "" : "%"}",
+              style: TextStyle(
+                color: AppColors.color_0F172A,
+                fontSize: AppFontStyles.fontSize_24,
+                fontFamily: AppFontStyles.urbanistFontFamily,
+                fontVariations: [AppFontStyles.semiBoldFontVariation],
+              ),
+            ),
+            SizedBox(
+              width: 8.w,
+            ),
+            Visibility(
+              visible: isStreak,
+              replacement: Icon(
+                Icons.verified_outlined,
+                size: 20.w,
+                color: AppColors.color_22C55E,
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(
+                    "days",
+                    style: TextStyle(
+                      color: AppColors.color_64748B,
+                      fontSize: AppFontStyles.fontSize_12,
+                      fontFamily: AppFontStyles.urbanistFontFamily,
+                      fontVariations: [AppFontStyles.boldFontVariation],
+                    ),
+                  ),
+                  SizedBox(
+                    width: 8.w,
+                  ),
+                  Icon(
+                    Icons.local_fire_department_rounded,
+                    size: 24.w,
+                    color: AppColors.color_F97316,
+                  )
+                ],
+              ),
+            ),
+          ],
+        ),
+        SizedBox(
+          height: 4.h,
+        ),
+        Text(
+          isStreak
+              ? "Consecutive days reaching daily goal"
+              : "Following schedule vs off-slot drinking",
+          style: TextStyle(
+            color: AppColors.color_4D758B,
+            fontSize: AppFontStyles.fontSize_10,
+            fontFamily: AppFontStyles.urbanistFontFamily,
+            fontVariations: [AppFontStyles.semiBoldFontVariation],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildAnalyticsButton() {
+    return Container(
+      margin: EdgeInsets.symmetric(horizontal: AppDimensions.defaultPadding.w),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(100.r),
+        border: Border.all(color: const Color(0xFFDCDCE2), width: 1.5.w),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(100.r),
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const DataNAnalyticsScreen(),
+              ),
+            );
+          },
+          child: Padding(
+            padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 10.h),
+            child: Row(
+              children: [
+                Container(
+                  width: 48.w,
+                  height: 48.w,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF1F5F9),
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: const Color(0xFFD0D7DE),
+                      width: 1.w,
+                    ),
+                  ),
+                  alignment: Alignment.center,
+                  child: CustomPaint(
+                    size: Size(22.w, 22.w),
+                    painter: _PulseIconPainter(
+                      color: const Color(0xFF1E88E5),
+                      strokeWidth: 2.5,
+                    ),
+                  ),
+                ),
+                Expanded(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      Text(
+                        "Analytics",
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: AppColors.bluegray,
+                          fontSize: 18.sp,
+                          fontFamily: AppFontStyles.urbanistFontFamily,
+                          fontVariations: [AppFontStyles.boldFontVariation],
+                        ),
+                      ),
+                      SizedBox(height: 2.h),
+                      Text(
+                        "Hydration Data",
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: AppColors.greyColorText1,
+                          fontSize: 13.sp,
+                          fontFamily: AppFontStyles.urbanistFontFamily,
+                          fontVariations: [AppFontStyles.regularFontVariation],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                SizedBox(width: 48.w),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }
+
+class _PulseIconPainter extends CustomPainter {
+  final Color color;
+  final double strokeWidth;
+
+  _PulseIconPainter({
+    required this.color,
+    this.strokeWidth = 2.5,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = strokeWidth
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round;
+
+    final path = Path();
+    final w = size.width;
+    final h = size.height;
+
+    path.moveTo(0, h * 0.5);
+    path.lineTo(w * 0.22, h * 0.5);
+    path.lineTo(w * 0.35, h * 0.72);
+    path.lineTo(w * 0.52, h * 0.22);
+    path.lineTo(w * 0.68, h * 0.78);
+    path.lineTo(w * 0.78, h * 0.5);
+    path.lineTo(w, h * 0.5);
+
+    canvas.drawPath(path, paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+

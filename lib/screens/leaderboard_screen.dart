@@ -4,6 +4,7 @@ import 'package:hydrify/constants/app_api_constants.dart';
 import 'package:hydrify/constants/app_colors.dart';
 import 'package:hydrify/constants/app_dimensions.dart';
 import 'package:hydrify/constants/app_font_styles.dart';
+import 'package:hydrify/l10n/app_localizations.dart';
 import 'package:hydrify/constants/assets_path.dart';
 import 'package:hydrify/cubit/bottom_nav/bottom_nav_cubit.dart';
 import 'package:hydrify/helpers/shared_pref_helper.dart';
@@ -307,7 +308,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
       children: [
         Center(
           child: Text(
-            "Global Impact",
+            AppLocalizations.of(context)?.globalImpact ?? "Global Impact",
             style: TextStyle(
               fontSize: 30.sp,
               fontFamily: AppFontStyles.urbanistFontFamily,
@@ -319,7 +320,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
         SizedBox(height: 6.h),
         Center(
           child: Text(
-            "Track your contribution and social standing.",
+            AppLocalizations.of(context)?.trackYourContribution ?? "Track your contribution and social standing.",
             style: TextStyle(
               fontSize: 16.sp,
               fontFamily: AppFontStyles.urbanistFontFamily,
@@ -391,7 +392,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      "Global \nRanking",
+                      AppLocalizations.of(context)?.globalRanking ?? "Global \nRanking",
                       style: TextStyle(
                           fontSize: 20.sp,
                           color: Colors.white.withOpacity(0.9),
@@ -438,7 +439,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      "Progress to ${ranking['tierName']}",
+                      AppLocalizations.of(context)?.progressTo(ranking['tierName'] as String? ?? '') ?? "Progress to ${ranking['tierName']}",
                       style: TextStyle(
                           fontSize: 16.sp,
                           color: Colors.white,
@@ -508,7 +509,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text(
-              "Social Impact Map",
+              AppLocalizations.of(context)?.socialImpactMap ?? "Social Impact Map",
               style: TextStyle(
                   fontSize: 18.sp,
                   fontFamily: AppFontStyles.urbanistFontFamily,
@@ -525,7 +526,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
               child: Row(
                 children: [
                   Text(
-                    "EXPAND MAP",
+                    (AppLocalizations.of(context)?.expandMap ?? "EXPAND MAP").toUpperCase(),
                     style: TextStyle(
                       fontSize: 12.sp,
                       fontFamily: AppFontStyles.urbanistFontFamily,
@@ -757,7 +758,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
               Image.asset(AssetsPath.leaderWorld, width: 24.w, height: 24.h),
               SizedBox(width: 10.w),
               Text(
-                "Your Impact Story",
+                AppLocalizations.of(context)?.yourImpactStory ?? "Your Impact Story",
                 style: TextStyle(
                   fontSize: 18.sp,
                   fontFamily: AppFontStyles.urbanistFontFamily,
@@ -819,7 +820,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
                               ),
                             ),
                             Text(
-                              "BOTTLES SAVED",
+                              (AppLocalizations.of(context)?.bottleSaved ?? "BOTTLES SAVED").toUpperCase(),
                               style: TextStyle(
                                 fontSize: 12.sp,
                                 fontFamily: AppFontStyles.urbanistFontFamily,
@@ -871,7 +872,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
                                   ]),
                             ),
                             Text(
-                              "CARBON REDUCED",
+                              (AppLocalizations.of(context)?.carbonReduced ?? "CARBON REDUCED").toUpperCase(),
                               style: TextStyle(
                                 fontSize: 12.sp,
                                 fontFamily: AppFontStyles.urbanistFontFamily,
@@ -906,7 +907,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          "Social League",
+          AppLocalizations.of(context)?.socialLeague ?? "Social League",
           style: TextStyle(
               fontSize: 18.sp,
               fontFamily: AppFontStyles.urbanistFontFamily,

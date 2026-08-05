@@ -6,6 +6,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:hydrify/constants/app_colors.dart';
 import 'package:hydrify/constants/app_font_styles.dart';
+import 'package:hydrify/l10n/app_localizations.dart';
 import 'package:hydrify/constants/assets_path.dart';
 import 'package:hydrify/cubit/bottle/bottle_data_cubit.dart';
 import 'package:hydrify/cubit/hydration/hydration_cubit.dart';
@@ -154,7 +155,7 @@ class _DrinkTypesWidgetState extends State<DrinkTypesWidget>
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  "Goal Tracking",
+                  AppLocalizations.of(context)?.goalTracking ?? "Goal Tracking",
                   style: TextStyle(
                     color: AppColors.bluegray,
                     fontSize: AppFontStyles.fontSize_20,
@@ -241,7 +242,8 @@ class _DrinkTypesWidgetState extends State<DrinkTypesWidget>
                                   width: AppDimensions.dim8.w,
                                 ),
                                 Text(
-                                  "Goal",
+                                  AppLocalizations.of(context)?.dailyGoal ??
+                                      "Goal",
                                   style: TextStyle(
                                     color: AppColors.switchReminderColor,
                                     fontSize: 18.sp,
@@ -285,7 +287,8 @@ class _DrinkTypesWidgetState extends State<DrinkTypesWidget>
                                   width: AppDimensions.dim8.w,
                                 ),
                                 Text(
-                                  "Steps",
+                                  AppLocalizations.of(context)?.steps ??
+                                      "Steps",
                                   style: TextStyle(
                                     color: AppColors.switchReminderColor,
                                     fontSize: 18.sp,

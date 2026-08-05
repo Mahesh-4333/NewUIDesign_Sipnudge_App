@@ -5,6 +5,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:hydrify/constants/app_colors.dart';
 import 'package:hydrify/constants/app_font_styles.dart';
+import 'package:hydrify/constants/app_strings.dart';
 import 'package:hydrify/constants/app_style.dart';
 import 'package:hydrify/cubit/ble/ble_cubit.dart';
 import 'package:hydrify/cubit/bottom_nav/bottom_nav_cubit.dart';
@@ -84,7 +85,7 @@ class _WifiProvisioningScreenState extends State<WifiProvisioningScreen> {
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(dialogContext),
-                child: const Text("Cancel",
+                child: const Text(AppStrings.cancel,
                     style: TextStyle(color: Color(0xFF5D7B91))),
               ),
               ElevatedButton(
@@ -98,7 +99,7 @@ class _WifiProvisioningScreenState extends State<WifiProvisioningScreen> {
                     borderRadius: BorderRadius.circular(12.r),
                   ),
                 ),
-                child: const Text("Open Settings",
+                child: const Text(AppStrings.openSettings,
                     style: TextStyle(color: Colors.white)),
               ),
             ],
@@ -137,7 +138,7 @@ class _WifiProvisioningScreenState extends State<WifiProvisioningScreen> {
             _ssidController.text = wifiName!;
           });
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text("Autofilled SSID: $wifiName")),
+            SnackBar(content: Text("${AppStrings.autofilledSsid}$wifiName")),
           );
         }
       } else {
@@ -154,7 +155,7 @@ class _WifiProvisioningScreenState extends State<WifiProvisioningScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Error fetching Wi-Fi name: $e")),
+          SnackBar(content: Text("${AppStrings.errorFetchingWifiName}$e")),
         );
       }
     }

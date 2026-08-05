@@ -8,92 +8,94 @@ class ProfileCubit extends Cubit<ProfileState> {
           ProfileState(
             activeTab: "Home",
             menuItems: [
+              // ACCOUNT group
               ProfileMenuItem(
                 iconPath: "assets/personalinfo.png",
                 title: "Personal Info",
+                groupLabel: "ACCOUNT",
               ),
               ProfileMenuItem(
-                iconPath: "assets/performance.png",
-                title: "Billing & Subscription",
+                iconPath: "assets/acc_security.png",
+                title: "Account & Security",
+                groupLabel: "ACCOUNT",
               ),
+              // ProfileMenuItem(
+              //   iconPath: "assets/performance.png",
+              //   title: "Billing & Subscription",
+              //   groupLabel: "ACCOUNT",
+              // ),
+
+              // PREFERENCES group
               ProfileMenuItem(
                 iconPath: "assets/drink_rem.png",
                 title: "Drink Reminder",
+                groupLabel: "PREFERENCES",
               ),
               ProfileMenuItem(
                 iconPath: "assets/performance.png",
                 title: "Preferences",
-              ),
-              ProfileMenuItem(
-                iconPath: "assets/help_support.png",
-                title: "Help & Support",
-              ),
-              ProfileMenuItem(
-                iconPath: AssetsPath.supportTicket,
-                title: "Support Tickets",
-              ),
-              ProfileMenuItem(
-                iconPath: "assets/bottle_icon11.png",
-                title: "Sipnudge Bottle",
+                groupLabel: "PREFERENCES",
               ),
               ProfileMenuItem(
                 iconPath: "assets/personalinfo.png",
-                title: "Connect Wi-Fi",
+                title: "Language",
+                groupLabel: "PREFERENCES",
               ),
+
+              // CONNECTED HARDWARE group
+              ProfileMenuItem(
+                iconPath: "assets/bottle_icon11.png",
+                title: "Sipnudge Bottle",
+                groupLabel: "CONNECTED HARDWARE",
+              ),
+              ProfileMenuItem(
+                iconPath: AssetsPath.wify,
+                title: "Connect Wi-Fi",
+                groupLabel: "CONNECTED HARDWARE",
+              ),
+              ProfileMenuItem(
+                iconPath: "assets/unlink1.png",
+                title: "Unlink Device",
+                isRed: true,
+                groupLabel: "CONNECTED HARDWARE",
+              ),
+
+              // DATA & SUPPORT group
               ProfileMenuItem(
                 iconPath: AssetsPath.calendar,
                 title: "Calendar",
+                groupLabel: "DATA & SUPPORT",
               ),
               ProfileMenuItem(
                 iconPath: "assets/data_analytics_icon.png",
                 title: "Data & Analytics",
+                groupLabel: "DATA & SUPPORT",
               ),
+              ProfileMenuItem(
+                iconPath: "assets/help_support.png",
+                title: "Help & Support",
+                groupLabel: "DATA & SUPPORT",
+              ),
+
+              // OTHER group
               ProfileMenuItem(
                 iconPath: "assets/data_analytics_icon.png",
                 title: "Export Log",
+                groupLabel: "OTHER",
               ),
               // ProfileMenuItem(
-              //   iconPath: "assets/drink_rem.png",
-              //   title: "Active Notifications",
+              //   iconPath: "assets/data_analytics_icon.png",
+              //   title: "Leaderboard",
+              //   groupLabel: "OTHER",
               // ),
-              ProfileMenuItem(
-                iconPath: "assets/acc_security.png",
-                title: "Account & Security",
-              ),
-              ProfileMenuItem(
-                iconPath:
-                    "assets/unlink1.png", // A reasonable icon path that already exists for link accounts
-                title: "Unlink Device",
-              ),
+
+              // LOGOUT (standalone)
               ProfileMenuItem(
                 iconPath: "assets/logout.png",
                 title: "Logout",
                 isRed: true,
               ),
             ],
-            // secondaryMenuItems: [
-            //   ProfileMenuItem(
-            //     iconPath: "assets/data_analytics_icon.png",
-            //     title: "Data & Analytics",
-            //   ),
-            //   ProfileMenuItem(
-            //     iconPath: "assets/acc_security.png",
-            //     title: "Account & Security",
-            //   ),
-            //   ProfileMenuItem(
-            //     iconPath: "assets/link_account.png",
-            //     title: "Linked Accounts",
-            //   ),
-            //   ProfileMenuItem(
-            //     iconPath: "assets/help_support.png",
-            //     title: "Help & Support",
-            //   ),
-            //   ProfileMenuItem(
-            //     iconPath: "assets/logout.png",
-            //     title: "Logout",
-            //     isRed: true,
-            //   ),
-            // ],
           ),
         );
 

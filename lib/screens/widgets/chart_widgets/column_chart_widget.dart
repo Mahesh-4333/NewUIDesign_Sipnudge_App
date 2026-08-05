@@ -10,6 +10,7 @@ import 'package:hydrify/cubit/filter/filter_cubit.dart';
 import 'package:hydrify/models/chart_data.dart';
 import 'package:hydrify/models/hydration_summary.dart';
 import 'package:hydrify/helpers/shared_pref_helper.dart';
+import 'package:hydrify/helpers/database_helper.dart';
 import 'package:hydrify/screens/widgets/chart_widgets/tool_tip_widget.dart';
 
 class FlColumnChartWidget extends StatefulWidget {
@@ -33,6 +34,7 @@ class _FlColumnChartWidgetState extends State<FlColumnChartWidget> {
   List<ChartData> chartData = [];
   double maxY = 100;
   double? currentUserGoal;
+  List<Map<String, dynamic>> _allLogs = [];
   final ScrollController _scrollController = ScrollController();
 
   double barWidth = AppDimensions.dim35.w; // default bar width
@@ -41,6 +43,20 @@ class _FlColumnChartWidgetState extends State<FlColumnChartWidget> {
   Offset? tappedIndexOffset;
   ChartData? tooltipData;
   int? tappedIndex;
+
+  Future<void> _loadUserGoalAndLogs() async {
+    final goal = await SharedPrefsHelper.getUserGoal();
+    if (goal != null) {
+      currentUserGoal = goal.toDouble();
+    }
+    try {
+      final dbHelper = DatabaseHelper();
+      _allLogs = await dbHelper.getHydrationLogs();
+    } catch (e) {
+      Console.log(
+          tag: "ColumnChart", value: "Failed to fetch hydration logs: $e");
+    }
+  }
 
   final List<String> weekLabels = const [
     'Mon',
@@ -71,7 +87,7 @@ class _FlColumnChartWidgetState extends State<FlColumnChartWidget> {
   void initState() {
     super.initState();
     _updateChartData(); // Initialize sync first
-    _loadUserGoal().then((_) {
+    _loadUserGoalAndLogs().then((_) {
       _updateChartData();
       if (mounted) setState(() {});
       WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToToday());
@@ -105,8 +121,7 @@ class _FlColumnChartWidgetState extends State<FlColumnChartWidget> {
     double targetOffset = positionOfBarEnd - viewportWidth + 30.w;
     if (targetOffset < 0) targetOffset = 0;
 
-    final double maxScroll =
-        (chartData.length * barTotalWidth) - viewportWidth;
+    final double maxScroll = (chartData.length * barTotalWidth) - viewportWidth;
     if (targetOffset > maxScroll) targetOffset = maxScroll;
 
     if (_scrollController.hasClients) {
@@ -118,11 +133,29 @@ class _FlColumnChartWidgetState extends State<FlColumnChartWidget> {
     }
   }
 
-  Future<void> _loadUserGoal() async {
-    final goal = await SharedPrefsHelper.getUserGoal();
-    if (goal != null) {
-      currentUserGoal = goal.toDouble();
+  double _getLoggedAmount(List<Map<String, dynamic>> logs, DateTime date,
+      List<String> types, FilterInterval interval) {
+    double total = 0.0;
+    for (var log in logs) {
+      try {
+        final logTime = DateTime.parse(log['timestamp'] as String);
+        bool isMatch = false;
+        if (interval == FilterInterval.yearly) {
+          isMatch = logTime.year == date.year && logTime.month == date.month;
+        } else {
+          isMatch = logTime.year == date.year &&
+              logTime.month == date.month &&
+              logTime.day == date.day;
+        }
+        if (isMatch) {
+          final type = log['type'] as String;
+          if (types.contains(type)) {
+            total += (log['consumed'] as num).toDouble();
+          }
+        }
+      } catch (_) {}
     }
+    return total;
   }
 
   void _updateChartData() {
@@ -132,6 +165,73 @@ class _FlColumnChartWidgetState extends State<FlColumnChartWidget> {
 
     final sorted = [...widget.bottleData]
       ..sort((a, b) => a.date.compareTo(b.date));
+
+    ChartData buildChartDataForDate(String xLabel, DateTime dayDate,
+        double totalTarget, double totalConsumed) {
+      final double target;
+      final now = DateTime.now();
+      final isToday = dayDate.year == now.year &&
+          dayDate.month == now.month &&
+          dayDate.day == now.day;
+
+      if (totalTarget > 0) {
+        target = totalTarget;
+      } else if (isToday && currentUserGoal != null) {
+        target = currentUserGoal!;
+      } else {
+        target = 2500;
+      }
+
+      final double consumed = totalConsumed;
+      double percent = target > 0 ? (consumed / target) * 100 : 0;
+
+      // Logged breakdown:
+      double loggedWater =
+          _getLoggedAmount(_allLogs, dayDate, ['Water'], widget.interval);
+      double loggedMilk =
+          _getLoggedAmount(_allLogs, dayDate, ['Milk'], widget.interval);
+      double loggedCoffee =
+          _getLoggedAmount(_allLogs, dayDate, ['Coffee'], widget.interval);
+      double loggedTea =
+          _getLoggedAmount(_allLogs, dayDate, ['Tea'], widget.interval);
+      double loggedJuice =
+          _getLoggedAmount(_allLogs, dayDate, ['Juice'], widget.interval);
+
+      double loggedWaterAmt = loggedWater * 1.0;
+      double loggedMilkAmt = loggedMilk * 1.5;
+      double loggedCoffeeAmt =
+          loggedCoffee * 0.8 + loggedTea * 0.85 + loggedJuice * 0.9;
+
+      double totalLoggedAmt = loggedWaterAmt + loggedMilkAmt + loggedCoffeeAmt;
+      double bottleAmt = consumed - totalLoggedAmt;
+      if (bottleAmt < 0) bottleAmt = 0.0;
+
+      double loggedPercent = target > 0 ? (loggedWaterAmt / target) * 100 : 0;
+      double milkPercent = target > 0 ? (loggedMilkAmt / target) * 100 : 0;
+      double coffeePercent = target > 0 ? (loggedCoffeeAmt / target) * 100 : 0;
+      double bottlePercent = target > 0 ? (bottleAmt / target) * 100 : 0;
+
+      double totalPercent =
+          loggedPercent + milkPercent + coffeePercent + bottlePercent;
+      if (percent > 0 && totalPercent > 0) {
+        double scale = percent / totalPercent;
+        loggedPercent *= scale;
+        milkPercent *= scale;
+        coffeePercent *= scale;
+        bottlePercent *= scale;
+      }
+
+      return ChartData(
+        xLabel,
+        percent,
+        consumed,
+        dayDate,
+        loggedPercent: loggedPercent,
+        milkPercent: milkPercent,
+        coffeePercent: coffeePercent,
+        bottlePercent: bottlePercent,
+      );
+    }
 
     if (isWeekly) {
       // --- WEEKLY: 7 days Mon–Sun ---
@@ -161,24 +261,8 @@ class _FlColumnChartWidgetState extends State<FlColumnChartWidget> {
           }
         }
 
-        final double target;
-        final now = DateTime.now();
-        final isToday = dayDate.year == now.year &&
-            dayDate.month == now.month &&
-            dayDate.day == now.day;
-
-        if (totalTarget > 0) {
-          target = totalTarget;
-        } else if (isToday && currentUserGoal != null) {
-          target = currentUserGoal!;
-        } else {
-          target = 2500;
-        }
-
-        final double consumed = totalConsumed;
-        double percent = target > 0 ? (consumed / target) * 100 : 0;
-
-        return ChartData(weekLabels[i], percent, consumed, dayDate);
+        return buildChartDataForDate(
+            weekLabels[i], dayDate, totalTarget, totalConsumed);
       });
     } else if (isMonthly) {
       // --- MONTHLY: 1..lastDayOfMonth ---
@@ -211,28 +295,8 @@ class _FlColumnChartWidgetState extends State<FlColumnChartWidget> {
           }
         }
 
-        final double target;
-        final now = DateTime.now();
-        final isToday = dayDate.year == now.year &&
-            dayDate.month == now.month &&
-            dayDate.day == now.day;
-
-        if (totalTarget > 0) {
-          target = totalTarget;
-        } else if (isToday && currentUserGoal != null) {
-          target = currentUserGoal!;
-        } else {
-          target = 2500;
-        }
-
-        final double consumed = totalConsumed;
-        double percent = target > 0 ? (consumed / target) * 100 : 0;
-
-        return ChartData(
-            (i + 1).toString(), // 1,2,3,...
-            percent,
-            consumed,
-            dayDate);
+        return buildChartDataForDate(
+            (i + 1).toString(), dayDate, totalTarget, totalConsumed);
       });
     } else if (isYearly) {
       // --- YEARLY: 12 months Jan..Dec ---
@@ -258,10 +322,11 @@ class _FlColumnChartWidgetState extends State<FlColumnChartWidget> {
           consumed += e.consumed;
         }
 
-        double percent = target > 0 ? (consumed / target) * 100 : 0;
         final dateForPoint =
             list.isNotEmpty ? list.first.date : DateTime(year, monthIndex, 1);
-        return ChartData(monthLabels[i], percent, consumed, dateForPoint);
+
+        return buildChartDataForDate(
+            monthLabels[i], dateForPoint, target, consumed);
       });
     } else {
       chartData = [];
@@ -287,7 +352,7 @@ class _FlColumnChartWidgetState extends State<FlColumnChartWidget> {
         oldWidget.currentDate != widget.currentDate ||
         oldWidget.bottleData != widget.bottleData) {
       _updateChartData(); // Update sync first
-      _loadUserGoal().then((_) {
+      _loadUserGoalAndLogs().then((_) {
         _updateChartData();
         setState(() {});
         WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToToday());
@@ -314,19 +379,20 @@ class _FlColumnChartWidgetState extends State<FlColumnChartWidget> {
       barSpacing = 10.w;
     }
 
-    return Container(
-      color: Colors.transparent,
-      width: double.maxFinite,
-      height: AppDimensions.dim320.h,
-      child: SizedBox(
-        width: double.maxFinite,
-        height: 324.h,
-        child: Stack(
-          children: [
-            Positioned(
-              bottom: 0,
-              child: SizedBox(
-                width: AppDimensions.dim365.w,
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          color: Colors.transparent,
+          width: double.maxFinite,
+          height: 300.h,
+          child: Stack(
+            clipBehavior: Clip.none,
+            children: [
+              Positioned(
+                bottom: 0,
+                left: 0,
+                right: 0,
                 height: AppDimensions.dim272.h,
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.start,
@@ -358,23 +424,71 @@ class _FlColumnChartWidgetState extends State<FlColumnChartWidget> {
                   ],
                 ),
               ),
-            ),
-            if (tappedIndexOffset != null && tooltipData != null)
-              Positioned(
-                left: (tappedIndexOffset?.dx ?? 0) -
-                    (_scrollController.hasClients
-                        ? _scrollController.offset
-                        : 0) +
-                    15,
-                top: (tappedIndexOffset?.dy ?? 0),
-                child: CustomChartToolTip(
-                  percent: int.parse(
-                      tooltipData!.completionPercent.toStringAsFixed(0)),
+              if (tappedIndexOffset != null && tooltipData != null)
+                Positioned(
+                  left: AppDimensions.dim40.w +
+                      (tappedIndexOffset?.dx ?? 0) -
+                      (_scrollController.hasClients
+                          ? _scrollController.offset
+                          : 0) -
+                      (AppDimensions.dim48.w / 2),
+                  top: (() {
+                    const double topOffset = 58.0;
+                    final double drawableHeight = AppDimensions.dim272.h - 40.h;
+                    final double barTopY = (topOffset * 0.4.h) +
+                        drawableHeight -
+                        ((tooltipData!.completionPercent / maxY) *
+                            drawableHeight);
+                    return barTopY - AppDimensions.dim55.h + 4.h;
+                  })(),
+                  child: CustomChartToolTip(
+                    percent: int.parse(
+                        tooltipData!.completionPercent.toStringAsFixed(0)),
+                  ),
                 ),
-              ),
+            ],
+          ),
+        ),
+        SizedBox(height: 16.h),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            _buildLegendItem(const Color(0xFF3B82F6), "BOTTLE"),
+            SizedBox(width: 16.w),
+            _buildLegendItem(const Color(0xFF93C5FD), "LOGGED"),
+            SizedBox(width: 16.w),
+            _buildLegendItem(const Color(0xFFB45309), "COFFEE"),
+            SizedBox(width: 16.w),
+            _buildLegendItem(const Color(0xFFE2E8F0), "MILK"),
           ],
         ),
-      ),
+      ],
+    );
+  }
+
+  Widget _buildLegendItem(Color color, String label) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 8.w,
+          height: 8.w,
+          decoration: BoxDecoration(
+            color: color,
+            shape: BoxShape.circle,
+          ),
+        ),
+        SizedBox(width: 6.w),
+        Text(
+          label,
+          style: TextStyle(
+            color: AppColors.bluegray,
+            fontSize: 11.sp,
+            fontFamily: AppFontStyles.urbanistFontFamily,
+            fontVariations: [AppFontStyles.semiBoldFontVariation],
+          ),
+        ),
+      ],
     );
   }
 
@@ -389,26 +503,71 @@ class _FlColumnChartWidgetState extends State<FlColumnChartWidget> {
         gridData: FlGridData(show: false),
         borderData: FlBorderData(show: false),
         barGroups: List.generate(chartData.length, (index) {
-          final isSelected = tappedIndex == index;
+          final item = chartData[index];
           return BarChartGroupData(
             x: index,
             barRods: [
               BarChartRodData(
-                toY: chartData[index].completionPercent,
-                color: isSelected
-                    ? const Color(0XFF369FFF)
-                    : const Color(0XFF369FFF).withOpacity(0.48),
+                toY: item.completionPercent,
                 width: barWidth,
                 borderRadius: const BorderRadius.only(
                   topLeft: Radius.circular(AppDimensions.radius_100),
                   topRight: Radius.circular(AppDimensions.radius_100),
                 ),
+                rodStackItems: _buildStackItems(item),
               ),
             ],
           );
         }),
       ),
     );
+  }
+
+  List<BarChartRodStackItem> _buildStackItems(ChartData item) {
+    final double segment1 = item.loggedPercent;
+    final double segment2 = item.milkPercent;
+    final double segment3 = item.coffeePercent;
+    final double segment4 = item.bottlePercent;
+
+    final List<BarChartRodStackItem> stackItems = [];
+    double currentY = 0.0;
+
+    if (segment1 > 0) {
+      stackItems.add(BarChartRodStackItem(
+          currentY,
+          (currentY + segment1).clamp(0.0, maxY),
+          const Color(0xFF93C5FD))); // LOGGED (light blue)
+      currentY += segment1;
+    }
+    if (segment2 > 0) {
+      stackItems.add(BarChartRodStackItem(
+          currentY,
+          (currentY + segment2).clamp(0.0, maxY),
+          const Color(0xFFE2E8F0))); // MILK (grey)
+      currentY += segment2;
+    }
+    if (segment3 > 0) {
+      stackItems.add(BarChartRodStackItem(
+          currentY,
+          (currentY + segment3).clamp(0.0, maxY),
+          const Color(0xFFB45309))); // COFFEE (brown)
+      currentY += segment3;
+    }
+    if (segment4 > 0) {
+      stackItems.add(BarChartRodStackItem(
+          currentY,
+          (currentY + segment4).clamp(0.0, maxY),
+          const Color(0xFF3B82F6))); // BOTTLE (dark blue)
+      currentY += segment4;
+    }
+
+    // Fallback if there is total percentage but stack is empty (e.g. legacy data without beverage breakups)
+    if (stackItems.isEmpty && item.completionPercent > 0) {
+      stackItems.add(BarChartRodStackItem(0.0,
+          item.completionPercent.clamp(0.0, maxY), const Color(0xFF3B82F6)));
+    }
+
+    return stackItems;
   }
 
   BarTouchData _buildBarTouchData() {

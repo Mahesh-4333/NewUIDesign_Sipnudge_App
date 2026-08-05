@@ -4,7 +4,6 @@ import 'package:hydrify/helpers/logger.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:flutter_svg/svg.dart';
 import 'package:hydrify/constants/app_colors.dart';
 import 'package:hydrify/constants/app_dimensions.dart';
 import 'package:hydrify/constants/app_font_styles.dart';
@@ -13,7 +12,6 @@ import 'package:hydrify/cubit/bottle/bottle_data_cubit.dart';
 import 'package:hydrify/cubit/filter/filter_cubit.dart';
 import 'package:hydrify/helpers/shared_pref_helper.dart';
 import 'package:hydrify/models/hydration_summary.dart';
-import 'package:hydrify/screens/widgets/chart_widgets/area_chart_widget.dart';
 import 'package:hydrify/screens/widgets/chart_widgets/column_chart_widget.dart';
 import 'package:hydrify/services/api_service.dart';
 import 'package:hydrify/services/sync_bus.dart';
@@ -28,7 +26,6 @@ class CustomChartDataWidget extends StatefulWidget {
 
 class _CustomChartDataWidgetState extends State<CustomChartDataWidget>
     with AutomaticKeepAliveClientMixin {
-  bool _isColumnChartSelected = true;
 
   final ApiService _apiService = ApiService();
 
@@ -280,77 +277,12 @@ class _CustomChartDataWidgetState extends State<CustomChartDataWidget>
           Row(
             children: [
               Text(
-                _isColumnChartSelected
-                    ? AppStrings.drinkCompletion
-                    : "${AppStrings.drinkCompletion} (L)",
+                AppStrings.drinkCompletion,
                 style: TextStyle(
                     color: AppColors.bluegray,
                     fontSize: AppFontStyles.fontSize_20,
                     fontFamily: AppFontStyles.urbanistFontFamily,
                     fontVariations: [AppFontStyles.boldFontVariation]),
-              ),
-              const Spacer(),
-              Container(
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(AppDimensions.radius_5),
-                  boxShadow: [
-                    BoxShadow(
-                      blurRadius: AppDimensions.radius_5,
-                      color: Colors.black.withAlpha((0.4 * 255).round()),
-                      offset: Offset(AppDimensions.dim2, AppDimensions.dim2),
-                    )
-                  ],
-                  color: AppColors.white,
-                ),
-                child: Row(
-                  children: [
-                    GestureDetector(
-                      onTap: () => setState(() => _isColumnChartSelected = true),
-                      child: Container(
-                        padding: EdgeInsets.symmetric(
-                            horizontal: AppDimensions.dim18.w,
-                            vertical: AppDimensions.dim8.h),
-                        decoration: BoxDecoration(
-                          borderRadius:
-                              BorderRadius.circular(AppDimensions.radius_5),
-                          color: _isColumnChartSelected
-                              ? const Color(0XFF369FFF)
-                              : AppColors.white,
-                        ),
-                        child: SvgPicture.asset(
-                          "assets/images/bar_chart_ic.svg",
-                          colorFilter: _isColumnChartSelected
-                              ? null
-                              : ColorFilter.mode(
-                                  AppColors.disabledGreyColor, BlendMode.srcIn),
-                        ),
-                      ),
-                    ),
-                    GestureDetector(
-                      onTap: () =>
-                          setState(() => _isColumnChartSelected = false),
-                      child: Container(
-                        padding: EdgeInsets.symmetric(
-                            horizontal: AppDimensions.dim18.w,
-                            vertical: AppDimensions.dim8.h),
-                        decoration: BoxDecoration(
-                            borderRadius:
-                                BorderRadius.circular(AppDimensions.radius_5),
-                            color: _isColumnChartSelected
-                                ? AppColors.white
-                                : const Color(0XFF369FFF)),
-                        child: SvgPicture.asset(
-                          "assets/images/spline_chart_ic.svg",
-                          colorFilter: _isColumnChartSelected
-                              ? ColorFilter.mode(
-                                  AppColors.disabledGreyColor, BlendMode.srcIn)
-                              : const ColorFilter.mode(
-                                  AppColors.white, BlendMode.srcIn),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
               ),
             ],
           ),
@@ -410,22 +342,12 @@ class _CustomChartDataWidgetState extends State<CustomChartDataWidget>
                       snapshot.data![0] as List<HydrationDaySummary>;
                   final userGoal = snapshot.data![1] as int?;
 
-                  return Visibility(
-                    visible: _isColumnChartSelected,
-                    replacement: FlAreaChartWidget(
-                      key: ValueKey(
-                          'area_${userGoal}_${filterState.currentInterval}'),
-                      interval: filterState.currentInterval,
-                      currentDate: filterState.currentDate,
-                      bottleData: bottleData,
-                    ),
-                    child: FlColumnChartWidget(
-                      key: ValueKey(
-                          'col_${userGoal}_${filterState.currentInterval}'),
-                      interval: filterState.currentInterval,
-                      currentDate: filterState.currentDate,
-                      bottleData: bottleData,
-                    ),
+                  return FlColumnChartWidget(
+                    key: ValueKey(
+                        'col_${userGoal}_${filterState.currentInterval}'),
+                    interval: filterState.currentInterval,
+                    currentDate: filterState.currentDate,
+                    bottleData: bottleData,
                   );
                 },
               );

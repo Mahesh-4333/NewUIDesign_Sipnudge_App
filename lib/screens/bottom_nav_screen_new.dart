@@ -16,6 +16,7 @@ import 'package:hydrify/screens/drink_reminder_page.dart';
 import 'package:hydrify/screens/home_screen.dart';
 import 'package:hydrify/screens/settings_screen.dart';
 import 'package:hydrify/screens/user_personal_info_input_screen..dart';
+import 'package:hydrify/screens/log_tab_screen.dart';
 import 'package:hydrify/helpers/shared_pref_helper.dart';
 import 'package:hydrify/screens/widgets/health_permission_dialog.dart';
 import 'package:hydrify/services/health_service.dart';
@@ -37,6 +38,7 @@ class _BottomNavScreenNewState extends State<BottomNavScreenNew> {
   // One navigator key per tab
   final Map<BottomNavTab, GlobalKey<NavigatorState>> _navigatorKeys = {
     BottomNavTab.home: GlobalKey<NavigatorState>(),
+    BottomNavTab.log: GlobalKey<NavigatorState>(),
     BottomNavTab.analysis: GlobalKey<NavigatorState>(),
     BottomNavTab.reports: GlobalKey<NavigatorState>(),
     BottomNavTab.settings: GlobalKey<NavigatorState>(),
@@ -49,12 +51,12 @@ class _BottomNavScreenNewState extends State<BottomNavScreenNew> {
     super.initState();
     _configSubscription =
         SharedPrefsHelper.configUpdateStream.stream.listen((_) async {
-          await Future.delayed(const Duration(milliseconds: 1000));
+      await Future.delayed(const Duration(milliseconds: 1000));
       if (mounted) {
         try {
           if (ShowCaseWidget.of(context).isShowcaseRunning) {
             return;
-          } 
+          }
         } catch (_) {}
         NewConfigurationDialog.show(context);
       }
@@ -170,33 +172,27 @@ class _BottomNavScreenNewState extends State<BottomNavScreenNew> {
                     ),
                   ),
                 ),
-
                 Positioned(
-                  bottom: 0.h,
+                  bottom: 16.h,
+                  left: 8.w,
+                  right: 8.w,
                   child: SafeArea(
                     top: false,
                     left: false,
                     right: false,
                     bottom: false,
-                    child: Padding(
-                      padding: EdgeInsets.only(
-                        left: AppDimensions.defaultPadding.w,
-                        right: AppDimensions.defaultPadding.w,
-                        bottom: AppDimensions.dim28.h,
-                      ),
-                      child: SizedBox(
-                        height: AppDimensions.dim88.h,
-                        child: CustomShowcase(
-                          showcaseKey: ShowcaseKeys.bottomNavKey,
-                          title: 'Navigation Tabs',
-                          description:
-                              'Switch between Home, Analysis, Goals, and Settings screens.',
-                          buttonText: 'Finish',
-                          child: IgnorePointer(
-                            ignoring: ShowCaseWidget.of(showcaseContext)
-                                .isShowcaseRunning,
-                            child: const AnimatedBottomNavBar(),
-                          ),
+                    child: SizedBox(
+                      height: AppDimensions.dim88.h,
+                      child: CustomShowcase(
+                        showcaseKey: ShowcaseKeys.bottomNavKey,
+                        title: 'Navigation Tabs',
+                        description:
+                            'Switch between Home, Analysis, Goals, and Settings screens.',
+                        buttonText: 'Finish',
+                        child: IgnorePointer(
+                          ignoring: ShowCaseWidget.of(showcaseContext)
+                              .isShowcaseRunning,
+                          child: const AnimatedBottomNavBar(),
                         ),
                       ),
                     ),
@@ -315,6 +311,11 @@ class _BottomNavScreenNewState extends State<BottomNavScreenNew> {
           tab: BottomNavTab.home,
           selectedTab: selectedTab,
           child: HomeScreen(),
+        ),
+        _buildOffstageNavigator(
+          tab: BottomNavTab.log,
+          selectedTab: selectedTab,
+          child: const LogTabScreen(),
         ),
         _buildOffstageNavigator(
           tab: BottomNavTab.analysis,

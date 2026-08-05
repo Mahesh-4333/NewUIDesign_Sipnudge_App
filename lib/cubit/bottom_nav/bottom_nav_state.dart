@@ -2,9 +2,10 @@ part of 'bottom_nav_cubit.dart';
 
 enum BottomNavTab {
   home(0, 'Home'),
-  analysis(1, 'Analysis'),
-  reports(2, 'Reports'),
-  settings(3, 'Settings');
+  log(1, 'Log'),
+  analysis(2, 'Insights'),
+  reports(3, 'Goals'),
+  settings(4, 'Settings');
 
   const BottomNavTab(this.position, this.label);
 

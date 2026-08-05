@@ -409,6 +409,21 @@ class SipnudgeBackgroundBLE: NSObject, CBCentralManagerDelegate, CBPeripheralDel
         let isActive = ProcessInfo.processInfo.isLowPowerModeEnabled
         NSLog("[BG-BLE] Low Power Mode changed → isActive=\(isActive)")
         writeDebug("lpm", isActive ? "ON — uploads may be deferred" : "OFF — uploads resuming")
+        
+        if isActive {
+            let content = UNMutableNotificationContent()
+            content.title = "Low Power Mode Detected"
+            content.body = "Background sync paused. Turn off Low Power Mode to resume background tracking."
+            content.sound = .default
+            let req = UNNotificationRequest(
+                identifier: "lpm_detected",
+                content: content,
+                trigger: UNTimeIntervalNotificationTrigger(timeInterval: 1, repeats: false)
+            )
+            UNUserNotificationCenter.current().add(req, withCompletionHandler: nil)
+            NSLog("[BG-BLE] Low Power Mode local notification triggered")
+        }
+        
         onLowPowerModeChanged?(isActive)
     }
 

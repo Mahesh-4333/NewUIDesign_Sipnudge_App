@@ -5,6 +5,7 @@ import 'package:hydrify/constants/app_dimensions.dart';
 import 'package:hydrify/helpers/logger.dart';
 import 'package:hydrify/helpers/shared_pref_helper.dart';
 import 'package:hydrify/screens/auth/local_auth_screen.dart';
+import 'package:hydrify/screens/language_selection_screen.dart';
 import 'package:hydrify/services/api_service.dart';
 import 'package:hydrify/services/location_service.dart';
 import 'package:hydrify/services/database_sync_service.dart';
@@ -58,10 +59,19 @@ class _SplashScreenState extends State<SplashScreen> {
           }
         }
 
+        final isFirstTime = await SharedPrefsHelper.isFirstTimeLaunch();
+
+        Widget targetScreen;
+        if (isFirstTime) {
+          targetScreen = const LanguageSelectionScreen(isFirstTime: true);
+        } else {
+          targetScreen = const LocalAuthScreen();
+        }
+
         Navigator.of(context).pushReplacement(
           PageRouteBuilder(
             transitionDuration: const Duration(milliseconds: 650), // smoother
-            pageBuilder: (_, animation, __) => const LocalAuthScreen(),
+            pageBuilder: (_, animation, __) => targetScreen,
             transitionsBuilder: (_, animation, __, child) {
               final curved = CurvedAnimation(
                 parent: animation,
