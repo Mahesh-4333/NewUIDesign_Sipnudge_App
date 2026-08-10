@@ -26,9 +26,13 @@ class HealthService {
       final types = [
         HealthDataType.WATER,
         HealthDataType.STEPS,
+        HealthDataType.HEIGHT,
+        HealthDataType.WEIGHT,
       ];
       final permissions = [
         HealthDataAccess.READ_WRITE,
+        HealthDataAccess.READ,
+        HealthDataAccess.READ,
         HealthDataAccess.READ,
       ];
 
@@ -228,7 +232,6 @@ class HealthService {
       bool authorized = await _ensurePermissions(types);
       if (!authorized) return false;
 
-      // NOTE: amount is in Liters as required by the Health package for WATER
       return await _health.writeHealthData(
         value: amount,
         type: HealthDataType.WATER,
@@ -239,5 +242,43 @@ class HealthService {
       Console.log(tag: "addWaterIntake Error", value: e.toString());
       return false;
     }
+  }
+
+  Future<Map<String, dynamic>> fetchUserProfileFromHealth() async {
+    final Map<String, dynamic> bioData = {};
+    try {
+      final bool authorized = await requestAuthorization();
+      if (!authorized) return bioData;
+
+      final types = [
+        HealthDataType.HEIGHT,
+        HealthDataType.WEIGHT,
+      ];
+
+      final now = DateTime.now();
+      final past = now.subtract(const Duration(days: 365 * 10));
+
+      final data = await _health.getHealthDataFromTypes(
+        types: types,
+        startTime: past,
+        endTime: now,
+      );
+
+      for (final dp in data) {
+        if (dp.type == HealthDataType.HEIGHT && dp.value is NumericHealthValue) {
+          double val = (dp.value as NumericHealthValue).numericValue.toDouble();
+          if (val > 0 && val < 3.0) val = val * 100; // Convert meters to cm
+          bioData['height'] = val.roundToDouble();
+        } else if (dp.type == HealthDataType.WEIGHT && dp.value is NumericHealthValue) {
+          double val = (dp.value as NumericHealthValue).numericValue.toDouble();
+          bioData['weight'] = val.roundToDouble();
+        }
+      }
+    } catch (e) {
+      Console.log(
+          tag: "HealthService",
+          value: "Error fetching user bio data from Health: $e");
+    }
+    return bioData;
   }
 }

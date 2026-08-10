@@ -6,9 +6,12 @@ import 'package:hydrify/constants/app_colors.dart';
 import 'package:hydrify/constants/app_dimensions.dart';
 import 'package:hydrify/constants/app_font_styles.dart';
 import 'package:hydrify/constants/app_strings.dart';
+import 'package:hydrify/constants/assets_path.dart';
 import 'package:hydrify/cubit/user_info/user_info_cubit.dart';
+import 'package:hydrify/helpers/page_transitions.dart';
 import 'package:hydrify/helpers/vibration_helper.dart';
 import 'package:hydrify/helpers/water_consumption_data_helper.dart';
+import 'package:hydrify/l10n/app_localizations.dart';
 import 'package:hydrify/screens/user_info_analyzing_screen.dart';
 import 'package:hydrify/screens/widgets/user_info_input_widgets/custom_radio_selection_widget.dart';
 import 'package:hydrify/screens/widgets/user_info_input_widgets/next_button_widget.dart';
@@ -68,7 +71,7 @@ class _FuelFlowInfoScreenState extends State<FuelFlowInfoScreen> {
         backgroundColor: Colors.transparent,
         centerTitle: true,
         title: Text(
-          "Profile Setup",
+          AppLocalizations.of(context)?.profileSetup ?? "Profile Setup",
           style: TextStyle(
               color: AppColors.bluegray,
               fontSize: AppFontStyles.fontSize_AppBar,
@@ -91,7 +94,9 @@ class _FuelFlowInfoScreenState extends State<FuelFlowInfoScreen> {
         ),
         padding: EdgeInsets.only(
             top: AppDimensions.dim120.h,
-            bottom: AppDimensions.bottomBarHeight),
+            bottom: AppDimensions.bottomBarHeight,
+            left: AppDimensions.defaultPadding.w,
+            right: AppDimensions.defaultPadding.w),
         child: ListView(
           controller: _scrollController,
           padding: EdgeInsets.symmetric(
@@ -100,35 +105,47 @@ class _FuelFlowInfoScreenState extends State<FuelFlowInfoScreen> {
           ),
           children: [
             // ── Page Header ───────────────────────────────────────────────
-            Text(
-              "Fuel & Flow 🍴",
-              style: TextStyle(
-                fontFamily: AppFontStyles.urbanistFontFamily,
-                fontSize: AppFontStyles.fontSize_22,
-                color: AppColors.black,
-                fontVariations: [AppFontStyles.boldFontVariation],
-              ),
+            Row(
+              children: [
+                Text(
+                  AppLocalizations.of(context)?.fuelAndFlow ?? "Fuel & Flow",
+                  style: TextStyle(
+                    fontFamily: AppFontStyles.urbanistFontFamily,
+                    fontSize: AppFontStyles.fontSize_22,
+                    color: AppColors.black,
+                    fontVariations: [AppFontStyles.boldFontVariation],
+                  ),
+                ),
+                SizedBox(
+                  width: 4.w,
+                ),
+                Image.asset(
+                  AssetsPath.onboardingLunch,
+                  width: 20.w,
+                  height: 20.w,
+                ),
+              ],
             ),
             SizedBox(height: AppDimensions.dim8.h),
             Text(
-              "Tell us a bit about your diet to calculate your baseline hydration needs.",
+              AppLocalizations.of(context)?.dietSubtitle ?? "Tell us a bit about your diet to calculate your baseline hydration needs.",
               style: TextStyle(
                 fontFamily: AppFontStyles.urbanistFontFamily,
-                fontSize: AppFontStyles.fontSize_13,
-                color: AppColors.greyColorText1,
-                fontVariations: [AppFontStyles.regularFontVariation],
+                fontSize: AppFontStyles.fontSize_15,
+                color: AppColors.bluegray,
+                fontVariations: [AppFontStyles.boldFontVariation],
               ),
             ),
             SizedBox(height: AppDimensions.dim24.h),
 
             // ── Primary Diet Focus ────────────────────────────────────────
             Text(
-              "PRIMARY DIET FOCUS",
+              AppLocalizations.of(context)?.primaryDietFocus ?? "PRIMARY DIET FOCUS",
               style: TextStyle(
                 fontFamily: AppFontStyles.urbanistFontFamily,
                 fontSize: AppFontStyles.fontSize_13,
                 color: AppColors.bluegray,
-                fontVariations: [AppFontStyles.fontWeightVariation600],
+                fontVariations: [AppFontStyles.boldFontVariation],
                 letterSpacing: 0.8,
               ),
             ),
@@ -138,22 +155,11 @@ class _FuelFlowInfoScreenState extends State<FuelFlowInfoScreen> {
             SizedBox(height: AppDimensions.dim24.h),
 
             // ── Average Daily Water ───────────────────────────────────────
-            Text(
-              "AVERAGE DAILY WATER",
-              style: TextStyle(
-                fontFamily: AppFontStyles.urbanistFontFamily,
-                fontSize: AppFontStyles.fontSize_13,
-                color: AppColors.bluegray,
-                fontVariations: [AppFontStyles.fontWeightVariation600],
-                letterSpacing: 0.8,
-              ),
-            ),
-            SizedBox(height: AppDimensions.dim12.h),
+
             const _WaterCounterCard(),
 
             SizedBox(height: AppDimensions.dim24.h),
-
-            SizedBox(height: AppDimensions.dim24.h),
+            SizedBox(height: AppDimensions.dim12.h),
 
             // ── Daily Caffeine Card ─────────────────────────────────────────
             const _CaffeineCounterCard(),
@@ -170,7 +176,9 @@ class _FuelFlowInfoScreenState extends State<FuelFlowInfoScreen> {
           right: AppDimensions.defaultPadding.w,
         ),
         child: CustomNextButton(
-            text: _isAtBottom ? AppStrings.next : "Scroll Down",
+            text: _isAtBottom
+                ? (AppLocalizations.of(context)?.next ?? AppStrings.next)
+                : (AppLocalizations.of(context)?.scrollDown ?? "Scroll Down"),
             onNextPressed: () async {
               if (!_isAtBottom) {
                 _scrollController.animateTo(
@@ -181,7 +189,10 @@ class _FuelFlowInfoScreenState extends State<FuelFlowInfoScreen> {
                 return;
               }
 
-              UiUtilsService.showLoading(context, "Please wait");
+              UiUtilsService.showLoading(
+                context,
+                AppLocalizations.of(context)?.pleaseWait ?? "Please wait",
+              );
 
               try {
                 final cubit = context.read<UserInfoCubit>();
@@ -195,8 +206,8 @@ class _FuelFlowInfoScreenState extends State<FuelFlowInfoScreen> {
 
                 Navigator.push(
                   context,
-                  MaterialPageRoute(
-                    builder: (context) => UserInfoAnalyzingScreen(
+                  SlidePageRoute(
+                    page: UserInfoAnalyzingScreen(
                       goal: waterIntakeGoalInt.toDouble(),
                       isViaSettingsScreen: widget.isViaSettingsScreen,
                     ),
@@ -257,50 +268,34 @@ class _WaterCounterCard extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          "AVERAGE DAILY WATER",
+                          AppLocalizations.of(context)?.averageDailyWater ?? "AVERAGE DAILY WATER",
                           style: TextStyle(
                             fontFamily: AppFontStyles.urbanistFontFamily,
                             fontSize: 13.sp,
                             color: AppColors.bluegray,
-                            fontVariations: [
-                              AppFontStyles.fontWeightVariation600
-                            ],
+                            fontVariations: [AppFontStyles.boldFontVariation],
                             letterSpacing: 0.8,
                           ),
                         ),
                         SizedBox(height: 4.h),
                         Text(
-                          "Rough estimate is fine",
+                          AppLocalizations.of(context)?.roughEstimateFine ?? "Rough estimate is fine",
                           style: TextStyle(
                             fontFamily: AppFontStyles.urbanistFontFamily,
-                            fontSize: 13.sp,
-                            color: AppColors.greyColorText1,
-                            fontVariations: [
-                              AppFontStyles.regularFontVariation
-                            ],
+                            fontSize: 12.sp,
+                            color: AppColors.bluegray,
+                            fontVariations: [AppFontStyles.boldFontVariation],
                           ),
                         ),
                       ],
                     ),
                   ),
                   // Glass Icon in Light Blue Circle with Blue Border
-                  Container(
-                    width: 44.w,
-                    height: 44.w,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFE0F2FE),
-                      shape: BoxShape.circle,
-                      border: Border.all(
-                        color: const Color(0xFF00A3FF),
-                        width: 1.5.w,
-                      ),
-                    ),
-                    child: Icon(
-                      Icons.local_drink_outlined,
-                      color: const Color(0xFF00A3FF),
-                      size: 22.sp,
-                    ),
-                  ),
+                  Image.asset(
+                    AssetsPath.onboardingDailyWater,
+                    width: 38.w,
+                    height: 38.w,
+                  )
                 ],
               ),
 
@@ -384,62 +379,63 @@ class _WaterCounterCard extends StatelessWidget {
               SizedBox(height: 18.h),
 
               // Slider with Hollow White Thumb & Dark Blue-Gray Track
-              SliderTheme(
-                data: SliderTheme.of(context).copyWith(
-                  activeTrackColor: AppColors.bluegray,
-                  inactiveTrackColor: const Color(0xFFE2E8F0),
-                  thumbColor: Colors.white,
-                  overlayColor: AppColors.bluegray.withValues(alpha: 0.1),
-                  thumbShape: _HollowSliderThumbShape(
-                    thumbRadius: 13.r,
-                    borderWidth: 3.w,
-                    borderColor: AppColors.bluegray,
+              SizedBox(
+                height: 24.h,
+                child: SliderTheme(
+                  data: SliderTheme.of(context).copyWith(
+                    activeTrackColor: AppColors.bluegray,
+                    inactiveTrackColor: const Color(0xFFE2E8F0),
+                    thumbColor: Colors.white,
+                    overlayColor: AppColors.bluegray.withValues(alpha: 0.1),
+                    thumbShape: _HollowSliderThumbShape(
+                      thumbRadius: 13.r,
+                      borderWidth: 3.w,
+                      borderColor: AppColors.bluegray,
+                    ),
+                    trackHeight: 6.h,
+                    showValueIndicator: ShowValueIndicator.never,
+                    trackShape: const _CustomSliderTrackShape(),
                   ),
-                  trackHeight: 6.h,
-                  showValueIndicator: ShowValueIndicator.never,
-                ),
-                child: Slider(
-                  value: intake.clamp(_min, _max),
-                  min: _min,
-                  max: _max,
-                  divisions: ((_max - _min) / _step).toInt(),
-                  onChanged: (val) {
-                    final snapped = (val / _step).round() * _step;
-                    context
-                        .read<UserInfoCubit>()
-                        .setTypicalWaterIntake(snapped.clamp(_min, _max));
-                  },
+                  child: Slider(
+                    value: intake.clamp(_min, _max),
+                    min: _min,
+                    max: _max,
+                    divisions: ((_max - _min) / _step).toInt(),
+                    onChanged: (val) {
+                      final snapped = (val / _step).round() * _step;
+                      context
+                          .read<UserInfoCubit>()
+                          .setTypicalWaterIntake(snapped.clamp(_min, _max));
+                    },
+                  ),
                 ),
               ),
 
               SizedBox(height: 4.h),
 
               // Slider labels below ("0L", "4L+")
-              Padding(
-                padding: EdgeInsets.symmetric(horizontal: 4.w),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      "0L",
-                      style: TextStyle(
-                        fontFamily: AppFontStyles.urbanistFontFamily,
-                        fontSize: 13.sp,
-                        color: AppColors.bluegray,
-                        fontVariations: [AppFontStyles.boldFontVariation],
-                      ),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    "0L",
+                    style: TextStyle(
+                      fontFamily: AppFontStyles.urbanistFontFamily,
+                      fontSize: 13.sp,
+                      color: AppColors.bluegray,
+                      fontVariations: [AppFontStyles.boldFontVariation],
                     ),
-                    Text(
-                      "4L+",
-                      style: TextStyle(
-                        fontFamily: AppFontStyles.urbanistFontFamily,
-                        fontSize: 13.sp,
-                        color: AppColors.bluegray,
-                        fontVariations: [AppFontStyles.boldFontVariation],
-                      ),
+                  ),
+                  Text(
+                    "4L+",
+                    style: TextStyle(
+                      fontFamily: AppFontStyles.urbanistFontFamily,
+                      fontSize: 13.sp,
+                      color: AppColors.bluegray,
+                      fontVariations: [AppFontStyles.boldFontVariation],
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ],
           ),
@@ -557,7 +553,7 @@ class _CaffeineCounterCard extends StatelessWidget {
                   ),
                   SizedBox(width: 8.w),
                   Text(
-                    "DAILY CAFFEINE",
+                    AppLocalizations.of(context)?.dailyCaffeine ?? "DAILY CAFFEINE",
                     style: TextStyle(
                       fontFamily: AppFontStyles.urbanistFontFamily,
                       fontSize: 13.sp,
@@ -574,12 +570,12 @@ class _CaffeineCounterCard extends StatelessWidget {
               // Coffee Capsule Row
               _buildCaffeineCapsule(
                 context: context,
-                icon: Icons.local_cafe_rounded,
-                label: "Coffee",
+                icon: AssetsPath.onboardingCoffee,
+                label: AppLocalizations.of(context)?.coffee ?? "Coffee",
                 volume: "200 ml",
                 backgroundColor: const Color(0xFFF7F0E8),
                 borderColor: const Color(0xFFEDE4DA),
-                volumeColor: const Color(0xFFC0A288),
+                volumeColor: AppColors.bluegray,
                 buttonBorderColor: const Color(0xFFC5C0B8),
                 displayLabel: _labelFor(coffee),
                 onDecrement: coffeeIdx > 0
@@ -605,12 +601,12 @@ class _CaffeineCounterCard extends StatelessWidget {
               // Tea Capsule Row
               _buildCaffeineCapsule(
                 context: context,
-                icon: Icons.emoji_food_beverage_rounded,
-                label: "Tea",
+                icon: AssetsPath.onboardingTea,
+                label: AppLocalizations.of(context)?.tea ?? "Tea",
                 volume: "200 ml",
                 backgroundColor: const Color(0xFFF4F9EB),
                 borderColor: const Color(0xFFE5EFD3),
-                volumeColor: const Color(0xFF99A96E),
+                volumeColor: AppColors.bluegray,
                 buttonBorderColor: const Color(0xFFBCCAA0),
                 displayLabel: _labelFor(tea),
                 onDecrement: teaIdx > 0
@@ -639,7 +635,7 @@ class _CaffeineCounterCard extends StatelessWidget {
 
   Widget _buildCaffeineCapsule({
     required BuildContext context,
-    required IconData icon,
+    required String icon,
     required String label,
     required String volume,
     required Color backgroundColor,
@@ -664,25 +660,30 @@ class _CaffeineCounterCard extends StatelessWidget {
           Container(
             width: 40.w,
             height: 40.w,
+            padding: EdgeInsets.all(5.w),
             decoration: const BoxDecoration(
               color: Color(0xFFE8ECEF),
               shape: BoxShape.circle,
             ),
-            child: Icon(
-              icon,
-              color: const Color(0xFF2C3E50),
-              size: 20.sp,
+            child: Center(
+              child: Image.asset(
+                icon,
+                width: 20.w,
+                height: 20.w,
+              ),
             ),
           ),
-          SizedBox(width: 12.w),
+          SizedBox(width: 16.w),
           // Name Text ("Coffee" / "Tea")
-          Text(
-            label,
-            style: TextStyle(
-              fontFamily: AppFontStyles.urbanistFontFamily,
-              fontSize: 16.sp,
-              color: const Color(0xFF2C3E50),
-              fontVariations: [AppFontStyles.boldFontVariation],
+          Expanded(
+            child: Text(
+              label,
+              style: TextStyle(
+                fontFamily: AppFontStyles.urbanistFontFamily,
+                fontSize: 16.sp,
+                color: const Color(0xFF2C3E50),
+                fontVariations: [AppFontStyles.boldFontVariation],
+              ),
             ),
           ),
           SizedBox(width: 16.w),
@@ -693,10 +694,10 @@ class _CaffeineCounterCard extends StatelessWidget {
               fontFamily: AppFontStyles.urbanistFontFamily,
               fontSize: 14.sp,
               color: volumeColor,
-              fontVariations: [AppFontStyles.semiBoldFontVariation],
+              fontVariations: [AppFontStyles.boldFontVariation],
             ),
           ),
-          const Spacer(),
+          SizedBox(width: 16.w),
           // Counter: - count +
           Row(
             children: [
@@ -714,7 +715,7 @@ class _CaffeineCounterCard extends StatelessWidget {
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontFamily: AppFontStyles.urbanistFontFamily,
-                    fontSize: 16.sp,
+                    fontSize: 22.sp,
                     color: const Color(0xFF2C3E50),
                     fontVariations: [AppFontStyles.boldFontVariation],
                   ),
@@ -760,5 +761,26 @@ class _CaffeineCounterCard extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+// Custom Slider Track Shape to remove the default horizontal padding
+class _CustomSliderTrackShape extends RoundedRectSliderTrackShape {
+  const _CustomSliderTrackShape();
+
+  @override
+  Rect getPreferredRect({
+    required RenderBox parentBox,
+    Offset offset = Offset.zero,
+    required SliderThemeData sliderTheme,
+    bool isEnabled = false,
+    bool isDiscrete = false,
+  }) {
+    final double trackHeight = sliderTheme.trackHeight ?? 6.0;
+    final double trackLeft = offset.dx;
+    final double trackTop =
+        offset.dy + (parentBox.size.height - trackHeight) / 2;
+    final double trackWidth = parentBox.size.width;
+    return Rect.fromLTWH(trackLeft, trackTop, trackWidth, trackHeight);
   }
 }

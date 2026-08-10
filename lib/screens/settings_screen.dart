@@ -6,6 +6,8 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:hydrify/constants/app_style.dart';
 import 'package:hydrify/helpers/logger.dart';
 import 'package:hydrify/screens/data_n_analytics/data_n_analytics_screen.dart';
+import 'package:hydrify/screens/onboarding/onboarding_flow_screen.dart';
+import 'package:hydrify/screens/onboarding/onboarding_walkthrough_screen.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
@@ -41,6 +43,8 @@ import 'package:hydrify/screens/active_notifications_screen.dart';
 import 'package:hydrify/screens/data_and_analytics_screen.dart';
 import 'package:hydrify/screens/leaderboard_screen.dart';
 import 'package:hydrify/screens/subscription_page.dart';
+import 'package:hydrify/screens/onboarding/home_screen_widget_instructions_screen.dart';
+import 'package:hydrify/screens/onboarding/hydration_ring_onboarding_screen.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:hydrify/screens/widgets/setting_screen_widget/editableProfileAvatar.dart';
 import 'package:hydrify/screens/widgets/setting_screen_widget/profile_menu_item.dart';
@@ -232,6 +236,20 @@ class _SettingScreenState extends State<SettingScreen> {
 
           break;
 
+        case 'Intro':
+          context.read<BottomNavCubit>().hideBar();
+          navigator
+              .push(
+            MaterialPageRoute(
+              builder: (_) => OnboardingFlowScreen(),
+            ),
+          )
+              .then((value) {
+            context.read<BottomNavCubit>().showBar();
+          });
+
+          break;
+
         case 'contact_support':
           navigator.push(
             MaterialPageRoute(
@@ -297,6 +315,38 @@ class _SettingScreenState extends State<SettingScreen> {
         case "Unlink Device":
           _showUnlinkDeviceDialog(context);
           break;
+
+        case "Hydration Ring Guide":
+        case "Hydration Ring Info":
+          {
+            context.read<BottomNavCubit>().hideBar();
+            navigator
+                .push(
+              MaterialPageRoute(
+                builder: (_) =>
+                    const HydrationRingOnboardingScreen(isFromOnboarding: false),
+              ),
+            )
+                .then((value) {
+              context.read<BottomNavCubit>().showBar();
+            });
+            break;
+          }
+
+        case "Home Screen Widget":
+          {
+            context.read<BottomNavCubit>().hideBar();
+            navigator
+                .push(
+              MaterialPageRoute(
+                builder: (_) => const HomeScreenWidgetInstructionsScreen(),
+              ),
+            )
+                .then((value) {
+              context.read<BottomNavCubit>().showBar();
+            });
+            break;
+          }
 
         case AppStrings.logout:
           _showLogoutConfirmation(context);
@@ -780,6 +830,21 @@ class _SettingScreenState extends State<SettingScreen> {
     );
   }
 
+  String _getLanguageDisplayName(String code) {
+    switch (code.toLowerCase()) {
+      case 'en':
+        return 'English';
+      case 'de':
+        return 'German';
+      case 'hi':
+        return 'Hindi';
+      case 'es':
+        return 'Spanish';
+      default:
+        return 'English';
+    }
+  }
+
   String _getLocalizedTitle(BuildContext context, String title) {
     final l10n = AppLocalizations.of(context);
     if (l10n == null) return title;
@@ -948,7 +1013,7 @@ class _SettingScreenState extends State<SettingScreen> {
                     final item = items[index];
                     final isLast = index == items.length - 1;
 
-                    // Battery badge for Sipnudge Bottle
+                    // Battery badge for Sipnudge Bottle or selected language badge for Language
                     Widget? badge;
                     if (item.title == "Sipnudge Bottle" &&
                         bleState.battery != null &&
@@ -970,6 +1035,19 @@ class _SettingScreenState extends State<SettingScreen> {
                               AppFontStyles.semiBoldFontVariation
                             ],
                           ),
+                        ),
+                      );
+                    } else if (item.title == "Language") {
+                      final currentLangCode =
+                          context.watch<LocaleCubit>().state.languageCode;
+                      final langName = _getLanguageDisplayName(currentLangCode);
+                      badge = Text(
+                        "($langName)",
+                        style: TextStyle(
+                          color: const Color(0xFF64748B),
+                          fontSize: 14.sp,
+                          fontFamily: AppFontStyles.urbanistFontFamily,
+                          fontVariations: [AppFontStyles.boldFontVariation],
                         ),
                       );
                     }

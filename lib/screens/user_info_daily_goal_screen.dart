@@ -2,6 +2,7 @@ import 'dart:ui';
 import 'package:hydrify/constants/assets_path.dart';
 import 'package:hydrify/cubit/hydration/hydration_cubit.dart';
 import 'package:hydrify/helpers/logger.dart';
+import 'package:hydrify/l10n/app_localizations.dart';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -10,7 +11,6 @@ import 'package:hydrify/constants/app_colors.dart';
 import 'package:hydrify/constants/app_dimensions.dart';
 import 'package:hydrify/constants/app_font_styles.dart';
 import 'package:hydrify/constants/app_strings.dart';
-import 'package:hydrify/l10n/app_localizations.dart';
 import 'package:hydrify/cubit/ble/ble_cubit.dart';
 import 'package:hydrify/cubit/bottom_nav/bottom_nav_cubit.dart';
 import 'package:hydrify/cubit/user_info/user_info_cubit.dart';
@@ -19,6 +19,7 @@ import 'package:hydrify/helpers/shared_pref_helper.dart';
 import 'package:hydrify/models/hydration_entry.dart';
 import 'package:hydrify/models/hydration_summary.dart';
 import 'package:hydrify/screens/bottom_nav_screen_new.dart';
+import 'package:hydrify/screens/onboarding/environmental_harmony_location_screen.dart';
 import 'package:hydrify/screens/widgets/auth_button_widget.dart';
 import 'package:hydrify/helpers/hydration_helper.dart';
 import 'package:hydrify/services/database_sync_service.dart';
@@ -52,6 +53,14 @@ class _UserInfoDailyGoalScreenNewState extends State<UserInfoDailyGoalScreen> {
   void initState() {
     super.initState();
     convertedWaterGoal = widget.waterGoal;
+    _loadSavedUnit();
+  }
+
+  void _loadSavedUnit() async {
+    final savedUnit = await SharedPrefsHelper.getSelectedUnit();
+    setState(() {
+      unit = savedUnit;
+    });
   }
 
   @override
@@ -76,7 +85,7 @@ class _UserInfoDailyGoalScreenNewState extends State<UserInfoDailyGoalScreen> {
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             Text(
-              AppLocalizations.of(context)?.dailyGoal ?? "Your Daily goal",
+              AppLocalizations.of(context)?.yourDailyGoal ?? "Your Daily goal",
               style: TextStyle(
                   color: AppColors.bluegray,
                   fontSize: 24.sp,
@@ -87,7 +96,7 @@ class _UserInfoDailyGoalScreenNewState extends State<UserInfoDailyGoalScreen> {
             ),
             SizedBox(height: 10.h),
             Text(
-              "Rotate bezel to adjust volume",
+              AppLocalizations.of(context)?.rotateBezelToAdjustVolume ?? "Rotate bezel to adjust volume",
               style: TextStyle(
                   color: AppColors.bluegray,
                   fontSize: 18.sp,
@@ -96,7 +105,9 @@ class _UserInfoDailyGoalScreenNewState extends State<UserInfoDailyGoalScreen> {
                     AppFontStyles.boldFontVariation,
                   ]),
             ),
-            SizedBox(height: 50.h),
+            SizedBox(height: 20.h),
+            _buildUnitSelectionRow(),
+            SizedBox(height: 25.h),
 
             // The Gauge Section
             Row(
@@ -254,7 +265,7 @@ class _UserInfoDailyGoalScreenNewState extends State<UserInfoDailyGoalScreen> {
                                                             .center,
                                                     children: [
                                                       Text(
-                                                        "NEW GOAL",
+                                                        AppLocalizations.of(context)?.newGoal ?? "NEW GOAL",
                                                         style: TextStyle(
                                                           color: AppColors
                                                               .color_414755,
@@ -270,7 +281,7 @@ class _UserInfoDailyGoalScreenNewState extends State<UserInfoDailyGoalScreen> {
                                                       ),
                                                       SizedBox(height: 5.h),
                                                       Text(
-                                                        "${convertedWaterGoal.toInt()}",
+                                                        HydrationHelper.formatVolume(convertedWaterGoal, unit),
                                                         style: TextStyle(
                                                           color: AppColors
                                                               .raisinblack,
@@ -284,7 +295,7 @@ class _UserInfoDailyGoalScreenNewState extends State<UserInfoDailyGoalScreen> {
                                                         ),
                                                       ),
                                                       Text(
-                                                        "mL / day",
+                                                        AppLocalizations.of(context)?.unitPerDay(unit) ?? "$unit / day",
                                                         style: TextStyle(
                                                           color: AppColors
                                                               .color_414755,
@@ -371,7 +382,7 @@ class _UserInfoDailyGoalScreenNewState extends State<UserInfoDailyGoalScreen> {
             SizedBox(height: 50.h),
 
             Text(
-              "Target Calibration",
+              AppLocalizations.of(context)?.targetCalibration ?? "Target Calibration",
               style: TextStyle(
                 color: AppColors.raisinblack,
                 fontSize: 22.sp,
@@ -381,7 +392,7 @@ class _UserInfoDailyGoalScreenNewState extends State<UserInfoDailyGoalScreen> {
             ),
             SizedBox(height: 10.h),
             Text(
-              "Adjust your daily intake goal based on precision metrics.",
+              AppLocalizations.of(context)?.adjustDailyIntakeGoal ?? "Adjust your daily intake goal based on precision metrics.",
               textAlign: TextAlign.center,
               style: TextStyle(
                   color: AppColors.color_414755,
@@ -410,7 +421,7 @@ class _UserInfoDailyGoalScreenNewState extends State<UserInfoDailyGoalScreen> {
                                 color: AppColors.lightSkyBlue, size: 16.sp),
                             SizedBox(width: 5.w),
                             Text(
-                              "Avg Intake",
+                              AppLocalizations.of(context)?.avgIntake ?? "Avg Intake",
                               style: TextStyle(
                                   color: AppColors.lightSkyBlue,
                                   fontSize: 12.sp,
@@ -423,7 +434,7 @@ class _UserInfoDailyGoalScreenNewState extends State<UserInfoDailyGoalScreen> {
                         ),
                         SizedBox(height: 4.h),
                         Text(
-                          "${widget.waterGoal.toStringAsFixed(0)} mL",
+                          HydrationHelper.formatVolume(widget.waterGoal, unit, showUnit: true),
                           style: TextStyle(
                             color: AppColors.raisinblack,
                             fontSize: 18.sp,
@@ -460,8 +471,8 @@ class _UserInfoDailyGoalScreenNewState extends State<UserInfoDailyGoalScreen> {
                             SizedBox(width: 5.w),
                             Text(
                               (convertedWaterGoal - widget.waterGoal) >= 0
-                                  ? "Increase"
-                                  : "Decrease",
+                                  ? (AppLocalizations.of(context)?.increase ?? "Increase")
+                                  : (AppLocalizations.of(context)?.decrease ?? "Decrease"),
                               style: TextStyle(
                                   color: AppColors.lightSkyBlue,
                                   fontSize: 12.sp,
@@ -474,7 +485,7 @@ class _UserInfoDailyGoalScreenNewState extends State<UserInfoDailyGoalScreen> {
                         ),
                         SizedBox(height: 4.h),
                         Text(
-                          "${(convertedWaterGoal - widget.waterGoal) >= 0 ? "+" : ""}${(convertedWaterGoal - widget.waterGoal).abs().toStringAsFixed(0)} mL",
+                          "${(convertedWaterGoal - widget.waterGoal) >= 0 ? "+" : "-"}${HydrationHelper.formatVolume((convertedWaterGoal - widget.waterGoal).abs(), unit, showUnit: true)}",
                           style: TextStyle(
                             color: AppColors.raisinblack,
                             fontSize: 18.sp,
@@ -499,7 +510,7 @@ class _UserInfoDailyGoalScreenNewState extends State<UserInfoDailyGoalScreen> {
                   width: 1,
                 ),
               ),
-              padding: EdgeInsets.symmetric(horizontal: 15.w, vertical: 5.h),
+              padding: EdgeInsets.symmetric(horizontal: 4.w, vertical: 5.h),
               child: Row(
                 children: [
                   Image.asset(
@@ -514,18 +525,8 @@ class _UserInfoDailyGoalScreenNewState extends State<UserInfoDailyGoalScreen> {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Text(
-                          "Health Tip",
-                          style: TextStyle(
-                            color: AppColors.darkgray,
-                            fontSize: 18.sp,
-                            fontFamily: AppFontStyles.urbanistFontFamily,
-                            fontVariations: [AppFontStyles.boldFontVariation],
-                          ),
-                        ),
-                        SizedBox(height: 2.h),
-                        Text(
-                          "Drinking water before meals can \nboost your metabolism by up to \n30%.",
-                          textAlign: TextAlign.center,
+                          AppLocalizations.of(context)?.hydrationTipMetabolism ?? "Drinking water before meals can boost \nyour metabolism by up to 30%.",
+                          textAlign: TextAlign.start,
                           style: TextStyle(
                             color:
                                 const Color(0xff003D51).withValues(alpha: 0.7),
@@ -568,7 +569,7 @@ class _UserInfoDailyGoalScreenNewState extends State<UserInfoDailyGoalScreen> {
                 final bottomNavCubit = context.read<BottomNavCubit>();
                 final navigator = Navigator.of(context, rootNavigator: true);
 
-                UiUtilsService.showLoading(context, "Please wait");
+                UiUtilsService.showLoading(context, AppLocalizations.of(context)?.pleaseWait ?? "Please wait");
                 await userInfoCubit.saveUser(userInfoCubit.state);
                 await SharedPrefsHelper.setPersonalInfoSubmitted(true);
                 await SharedPrefsHelper.setWaterGoal(
@@ -617,7 +618,7 @@ class _UserInfoDailyGoalScreenNewState extends State<UserInfoDailyGoalScreen> {
                 await SharedPrefsHelper.setLastLevelUpDate("");
 
                 // Initialize notification service before scheduling, to ensure plugin is ready and permissions are requested on first launch
-                await NotificationService().init();
+                // await NotificationService().init();
 
                 if (!context.mounted) return;
                 UiUtilsService.dismissLoading(context);
@@ -649,7 +650,8 @@ class _UserInfoDailyGoalScreenNewState extends State<UserInfoDailyGoalScreen> {
                 await hydrationCubit.refreshAchievementStats(
                     updateUnlock: userInfoCubit.state.hideAchievement);
 
-                final bool hasShownShowcase = await SharedPrefsHelper.hasShownHomeShowcase();
+                final bool hasShownShowcase =
+                    await SharedPrefsHelper.hasShownHomeShowcase();
                 if (hasShownShowcase || widget.isViaSettingsScreen) {
                   await SharedPrefsHelper.updateAndSaveDeviceConfig(
                       waterGoal: convertedWaterGoal.toInt());
@@ -657,11 +659,20 @@ class _UserInfoDailyGoalScreenNewState extends State<UserInfoDailyGoalScreen> {
                 bottomNavCubit.showBar();
 
                 DatabaseSyncService().syncAll();
-                navigator.pushAndRemoveUntil(
-                    MaterialPageRoute(
-                      builder: (context) => BottomNavScreenNew(),
-                    ),
-                    (route) => false);
+                if (widget.isViaSettingsScreen) {
+                  navigator.pushAndRemoveUntil(
+                      MaterialPageRoute(
+                        builder: (context) => const BottomNavScreenNew(),
+                      ),
+                      (route) => false);
+                } else {
+                  navigator.pushAndRemoveUntil(
+                      MaterialPageRoute(
+                        builder: (context) =>
+                            const EnvironmentalHarmonyLocationScreen(),
+                      ),
+                      (route) => false);
+                }
               },
             ),
           ],
@@ -708,7 +719,7 @@ class _UserInfoDailyGoalScreenNewState extends State<UserInfoDailyGoalScreen> {
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(
-                "Action Required",
+                AppLocalizations.of(context)?.actionRequired ?? "Action Required",
                 textAlign: TextAlign.left,
                 style: TextStyle(
                   color: AppColors.black,
@@ -719,7 +730,7 @@ class _UserInfoDailyGoalScreenNewState extends State<UserInfoDailyGoalScreen> {
               ),
               const SizedBox(height: 16),
               Text(
-                "Google Calendar sign-in might be required for smart snooze and calendar sync",
+                AppLocalizations.of(context)?.googleCalendarSignInRequired ?? "Google Calendar sign-in might be required for smart snooze and calendar sync",
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   color: AppColors.blueGradient,
@@ -730,7 +741,7 @@ class _UserInfoDailyGoalScreenNewState extends State<UserInfoDailyGoalScreen> {
               ),
               const SizedBox(height: 24),
               AuthButton(
-                text: "I give my consent",
+                text: AppLocalizations.of(context)?.iGiveMyConsent ?? "I give my consent",
                 color: AppColors.blueGradient,
                 areTwoItems: false,
                 onTap: () => Navigator.of(context).pop(true),
@@ -739,6 +750,50 @@ class _UserInfoDailyGoalScreenNewState extends State<UserInfoDailyGoalScreen> {
           ),
         );
       },
+    );
+  }
+
+  Widget _buildUnitSelectionRow() {
+    final List<String> units = ["mL", "L", "US Oz", "UK Oz"];
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: units.map((u) {
+        final isSelected = unit == u;
+        return GestureDetector(
+          onTap: () {
+            setState(() {
+              unit = u;
+            });
+            SharedPrefsHelper.setSelectedUnit(u);
+            HapticFeedback.selectionClick();
+          },
+          child: Container(
+            margin: EdgeInsets.symmetric(horizontal: 6.w),
+            padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 8.h),
+            decoration: BoxDecoration(
+              color: isSelected ? const Color(0xff1C8DBB) : const Color(0xFFF1F5F9),
+              borderRadius: BorderRadius.circular(30.r),
+              border: Border.all(
+                color: isSelected ? Colors.transparent : const Color(0xFFE2E8F0),
+                width: 1.w,
+              ),
+            ),
+            child: Text(
+              u,
+              style: TextStyle(
+                color: isSelected ? Colors.white : AppColors.bluegray,
+                fontFamily: AppFontStyles.urbanistFontFamily,
+                fontSize: 14.sp,
+                fontVariations: [
+                  isSelected
+                      ? AppFontStyles.boldFontVariation
+                      : AppFontStyles.semiBoldFontVariation
+                ],
+              ),
+            ),
+          ),
+        );
+      }).toList(),
     );
   }
 }

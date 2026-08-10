@@ -51,6 +51,7 @@ import 'package:hydrify/helpers/showcase_keys.dart';
 import 'package:hydrify/screens/widgets/custom_showcase.dart';
 
 class HomeScreen extends StatefulWidget {
+  static bool autoTriggerTimelineDrag = false;
   const HomeScreen({super.key});
 
   @override
@@ -77,6 +78,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   String selectedBottle = 'purple';
   BottleInfo? bottleInfo;
   int? currentWaterGoal = 0;
+  String _selectedUnit = 'mL';
 
   /// Guard so slot-integrity check runs only once per app session.
   bool _slotsChecked = false;
@@ -93,14 +95,27 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     });
   }
 
+  bool _shouldAutoTrigger = false;
+
   @override
   void initState() {
     super.initState();
+    if (HomeScreen.autoTriggerTimelineDrag) {
+      _shouldAutoTrigger = true;
+      HomeScreen.autoTriggerTimelineDrag = false;
+    }
     WidgetsBinding.instance.addObserver(this);
     SharedPrefsHelper.getWaterGoal().then((e) {
       setState(() {
         currentWaterGoal = e;
       });
+    });
+    SharedPrefsHelper.getSelectedUnit().then((unit) {
+      if (mounted) {
+        setState(() {
+          _selectedUnit = unit;
+        });
+      }
     });
     _timezoneTimer = Timer.periodic(const Duration(seconds: 3), (timer) {
       _checkTimezoneChange();
@@ -193,9 +208,13 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
       _configSubscription =
           SharedPrefsHelper.configUpdateStream.stream.listen((_) {
-        if (mounted) {
-          setState(() {});
-        }
+        SharedPrefsHelper.getSelectedUnit().then((unit) {
+          if (mounted) {
+            setState(() {
+              _selectedUnit = unit;
+            });
+          }
+        });
       });
 
       // Listen for internet restored to refresh weather and sync data
@@ -621,7 +640,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   }
 
   Future<void> _loadBottle() async {
-    //final bottle = await SharedPrefsHelper.getBottle();
     final color = await SharedPrefsHelper.getBottleColor();
 
     if (!mounted) return;
@@ -630,7 +648,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     final bottleState = context.read<BottleDataCubit>().state;
 
     setState(() {
-      //selectedBottle = color ?? 'black';
+      selectedBottle = color;
       bottleInfo = BottleInfo.getByColor(
         color,
         currentWater: bottleState.volume,
@@ -731,7 +749,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                         children: [
                           const SizedBox(height: 16),
                           const CircularProgressIndicator(
-                            valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF007AFF)),
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                                Color(0xFF007AFF)),
                             strokeWidth: 4,
                           ),
                           const SizedBox(height: 24),
@@ -973,51 +992,51 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                                 fontFamily: AppFontStyles.urbanistFontFamily,
                               ),
                             ),
-                        const SizedBox(height: 6),
-                        Text(
-                          state.wifiFailedReason ?? "Unknown Error",
-                          style: TextStyle(
-                            color: const Color(0xFF991B1B),
-                            fontSize: 13,
-                            fontWeight: FontWeight.bold,
-                            fontFamily: AppFontStyles.urbanistFontFamily,
+                            const SizedBox(height: 6),
+                            Text(
+                              state.wifiFailedReason ?? "Unknown Error",
+                              style: TextStyle(
+                                color: const Color(0xFF991B1B),
+                                fontSize: 13,
+                                fontWeight: FontWeight.bold,
+                                fontFamily: AppFontStyles.urbanistFontFamily,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFFFF3B30),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                          ),
+                          onPressed: () => Navigator.of(ctx).pop(),
+                          child: Text(
+                            "Close",
+                            style: TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                              fontFamily: AppFontStyles.urbanistFontFamily,
+                            ),
                           ),
                         ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFFFF3B30),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        padding: const EdgeInsets.symmetric(vertical: 14),
                       ),
-                      onPressed: () => Navigator.of(ctx).pop(),
-                      child: Text(
-                        "Close",
-                        style: TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                          fontFamily: AppFontStyles.urbanistFontFamily,
-                        ),
-                      ),
-                    ),
+                    ],
                   ),
-                ],
-              ),
-            ),
-          ).then((_) {
-            _isWifiFailedDialogShown = false;
-          });
-        });
-      }
-    }
+                ),
+              ).then((_) {
+                _isWifiFailedDialogShown = false;
+              });
+            });
+          }
+        }
       },
       child: Scaffold(
         body: Container(
@@ -1055,7 +1074,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                     right: 0,
                     top: MediaQuery.of(context).size.height * 0.5,
                     child: AnimatedSideTimelineButton(
-                        dragProgressNotifier: _timelineDragProgress),
+                      dragProgressNotifier: _timelineDragProgress,
+                      autoTrigger: _shouldAutoTrigger,
+                    ),
                   ),
                 ],
               );
@@ -1178,10 +1199,15 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
             Console.log(
                 tag: "snapshot_ble_cubit", value: snapshot.data.toString());
+            final formattedConsumed =
+                HydrationHelper.formatVolume(consumed, _selectedUnit);
+            final formattedGoal = HydrationHelper.formatVolume(
+                goal.toDouble(), _selectedUnit,
+                showUnit: true);
             return _buildGoalText(
               completionPercent,
               isGuest,
-              value: "${consumed.toInt()}/$goal mL",
+              value: "$formattedConsumed/$formattedGoal",
             );
           },
         );
@@ -1380,7 +1406,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                             style: TextStyle(height: 1.2.h),
                             children: [
                               TextSpan(
-                                text: AppLocalizations.of(context)?.itsA ?? AppStrings.itsA,
+                                text: AppLocalizations.of(context)?.itsA ??
+                                    AppStrings.itsA,
                                 style: TextStyle(
                                   color: AppColors.bluegray,
                                   fontFamily:
@@ -1404,7 +1431,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                                 ),
                               ),
                               TextSpan(
-                                text: AppLocalizations.of(context)?.today ?? AppStrings.today,
+                                text: AppLocalizations.of(context)?.today ??
+                                    AppStrings.today,
                                 style: TextStyle(
                                   color: AppColors.bluegray,
                                   fontFamily:
@@ -1423,7 +1451,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                       SizedBox(
                         width: AppDimensions.dim330.w,
                         child: Text(
-                          AppLocalizations.of(context)?.waterBottleReminder ?? AppStrings.waterBottleReminder,
+                          AppLocalizations.of(context)?.waterBottleReminder ??
+                              AppStrings.waterBottleReminder,
                           style: TextStyle(
                             color: AppColors.bluegray,
                             fontSize: AppFontStyles.fontSize_14,
@@ -1457,7 +1486,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           children: [
             Positioned.fill(
               top: 0,
-              bottom: -(AppDimensions.dim15.h),
+              bottom: -(AppDimensions.dim6.h),
               child: GestureDetector(
                 onTap: () async {
                   // if (kDebugMode) {
@@ -1475,8 +1504,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               ),
             ),
             Positioned(
-              bottom: AppDimensions.dim55.h,
-              left: AppDimensions.dim182.w,
+              bottom: AppDimensions.dim50.h,
+              left: AppDimensions.dim189.w,
               child: SizedBox(
                 child: BlocBuilder<BleCubit, BleState>(
                     buildWhen: (previous, current) {
@@ -1491,7 +1520,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                   }
                   return false;
                 }, builder: (context, state) {
-                  return FutureBuilder<(double, double, double)>(future: () async {
+                  return FutureBuilder<(double, double, double)>(
+                      future: () async {
                     final history = await context
                         .read<BottleDataCubit>()
                         .getCurrentDayHistory();
@@ -1504,51 +1534,65 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                     double expectedPercent = 0.0;
                     try {
                       final dbHelper = DatabaseHelper();
-                      final goalMl = await dbHelper.getDailyWaterGoal(DateTime.now()) ?? 2500;
+                      final goalMl =
+                          await dbHelper.getDailyWaterGoal(DateTime.now()) ??
+                              2500;
                       final slots = await dbHelper.getAllSlots();
                       if (slots.isNotEmpty) {
                         final now = DateTime.now();
                         final nowMin = now.hour * 60 + now.minute;
                         slots.sort((a, b) {
-                          final aMin = a.startTime.hour * 60 + a.startTime.minute;
-                          final bMin = b.startTime.hour * 60 + b.startTime.minute;
+                          final aMin =
+                              a.startTime.hour * 60 + a.startTime.minute;
+                          final bMin =
+                              b.startTime.hour * 60 + b.startTime.minute;
                           return aMin.compareTo(bMin);
                         });
                         double cum = 0.0;
                         for (final s in slots) {
-                          final startMin = s.startTime.hour * 60 + s.startTime.minute;
+                          final startMin =
+                              s.startTime.hour * 60 + s.startTime.minute;
                           final endMin = s.endTime.hour * 60 + s.endTime.minute;
                           if (nowMin >= endMin) {
                             cum += s.amount;
                           } else if (nowMin >= startMin && nowMin < endMin) {
                             final dur = endMin - startMin;
-                            if (dur > 0) cum += s.amount * ((nowMin - startMin) / dur);
+                            if (dur > 0)
+                              cum += s.amount * ((nowMin - startMin) / dur);
                             break;
                           } else {
                             break;
                           }
                         }
-                        expectedPercent = goalMl > 0 ? (cum / goalMl) * 100.0 : 0.0;
+                        expectedPercent =
+                            goalMl > 0 ? (cum / goalMl) * 100.0 : 0.0;
                       }
                     } catch (_) {}
 
-                    return (completionPercent, waterVolumeConsumed, expectedPercent);
+                    return (
+                      completionPercent,
+                      waterVolumeConsumed,
+                      expectedPercent
+                    );
                   }(), builder: (context, snapshot) {
-                    final (completionPercent, waterVolumeConsumed, expectedPercent) =
-                        snapshot.data ?? (0.0, 0.0, 0.0);
+                    final (
+                      completionPercent,
+                      waterVolumeConsumed,
+                      expectedPercent
+                    ) = snapshot.data ?? (0.0, 0.0, 0.0);
 
                     if (snapshot.connectionState == ConnectionState.waiting) {
                       return const Center(child: CircularProgressIndicator());
                     }
-                    return _progressCircleWidget(
-                        completionPercent, waterVolumeConsumed, expectedPercent);
+                    return _progressCircleWidget(completionPercent,
+                        waterVolumeConsumed, expectedPercent);
                   });
                 }),
               ),
             ),
             Positioned(
-              bottom: AppDimensions.dim170.h,
-              left: AppDimensions.dim184.w,
+              bottom: AppDimensions.dim150.h,
+              left: AppDimensions.dim189.w,
               child: BlocBuilder<BottleDataCubit, BottleDataState>(
                 buildWhen: (previous, current) =>
                     previous.volumePercent != current.volumePercent,
@@ -1581,7 +1625,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             ),
             Positioned(
               bottom: AppDimensions.dim238.h,
-              left: AppDimensions.dim184.w,
+              left: AppDimensions.dim191.w,
               child: Container(
                 width: AppDimensions.dim66.w,
                 alignment: Alignment.center,
@@ -1617,7 +1661,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             ),
             Positioned(
               bottom: AppDimensions.dim185.h,
-              left: AppDimensions.dim192.w,
+              left: AppDimensions.dim195.w,
               child: Container(
                 width: AppDimensions.dim50.w,
                 alignment: Alignment.center,
@@ -1634,7 +1678,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                       curve: Curves.fastEaseInToSlowEaseOut,
                       builder: (context, value, child) {
                         return Text(
-                          "${value.toStringAsFixed(0)} ml",
+                          HydrationHelper.formatVolume(value, _selectedUnit,
+                              showUnit: true),
                           textAlign: TextAlign.center,
                           style: TextStyle(
                             color: Color(0xff252525),
@@ -1656,8 +1701,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     );
   }
 
-  Widget _progressCircleWidget(
-      double completionPercent, double waterVolumeConsumed, double expectedPercent) {
+  Widget _progressCircleWidget(double completionPercent,
+      double waterVolumeConsumed, double expectedPercent) {
     return CustomCircularWaterProgressIndicator(
       height: AppDimensions.dim70.h,
       width: AppDimensions.dim70.w,
@@ -1784,7 +1829,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                       crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
                         Text(
-                          AppLocalizations.of(context)?.todaysRefills ?? "Today's Refills",
+                          AppLocalizations.of(context)?.todaysRefills ??
+                              "Today's Refills",
                           overflow: TextOverflow.ellipsis,
                           textAlign: TextAlign.center,
                           maxLines: 1,
@@ -1919,7 +1965,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                       crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
                         Text(
-                          AppLocalizations.of(context)?.completed ?? "Completed",
+                          AppLocalizations.of(context)?.completed ??
+                              "Completed",
                           overflow: TextOverflow.ellipsis,
                           textAlign: TextAlign.center,
                           maxLines: 1,
@@ -1990,8 +2037,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               fontVariations: [AppFontStyles.semiBoldFontVariation]),
           children: [
             TextSpan(
-                text:
-                    AppLocalizations.of(context)?.youHaveReachedGoal(todayConsumptionPercentage.toStringAsFixed(0)) ?? "You have reached  ${todayConsumptionPercentage.toStringAsFixed(0)}% of today's goal"),
+                text: AppLocalizations.of(context)?.youHaveReachedGoal(
+                        todayConsumptionPercentage.toStringAsFixed(0)) ??
+                    "You have reached  ${todayConsumptionPercentage.toStringAsFixed(0)}% of today's goal"),
             TextSpan(
               text: "\n(",
               style: TextStyle(
@@ -2460,7 +2508,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    (AppLocalizations.of(context)?.ambientTemperature ?? "AMBIENT TEMPERATURE").toUpperCase(),
+                    (AppLocalizations.of(context)?.ambientTemperature ??
+                            "AMBIENT TEMPERATURE")
+                        .toUpperCase(),
                     style: TextStyle(
                       fontFamily: AppFontStyles.urbanistFontFamily,
                       color: Color(0xff515F74),
@@ -2474,7 +2524,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                   Row(
                     children: [
                       Text(
-                        AppLocalizations.of(context)?.roomTemperature ?? "Room Temperature: ",
+                        AppLocalizations.of(context)?.roomTemperature ??
+                            "Room Temperature: ",
                         style: TextStyle(
                           fontFamily: AppFontStyles.urbanistFontFamily,
                           color: AppColors.black,
@@ -2574,7 +2625,12 @@ class SlideLeftRoute extends PageRouteBuilder {
 
 class AnimatedSideTimelineButton extends StatefulWidget {
   final ValueNotifier<double>? dragProgressNotifier;
-  const AnimatedSideTimelineButton({super.key, this.dragProgressNotifier});
+  final bool autoTrigger;
+  const AnimatedSideTimelineButton({
+    super.key,
+    this.dragProgressNotifier,
+    this.autoTrigger = false,
+  });
 
   @override
   State<AnimatedSideTimelineButton> createState() =>
@@ -2594,6 +2650,15 @@ class _AnimatedSideTimelineButtonState extends State<AnimatedSideTimelineButton>
   @override
   void initState() {
     super.initState();
+    if (widget.autoTrigger) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        Future.delayed(const Duration(milliseconds: 2000), () {
+          if (mounted) {
+            _animateForwardAndNavigate();
+          }
+        });
+      });
+    }
     _controller = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1200),

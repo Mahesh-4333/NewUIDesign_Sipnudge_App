@@ -9,6 +9,8 @@ import 'package:hydrify/helpers/shared_pref_helper.dart';
 import 'package:hydrify/models/bottle_data.dart';
 import 'package:hydrify/models/hydration_entry.dart';
 import 'package:hydrify/models/hydration_summary.dart';
+import 'package:hydrify/helpers/internet_connection_helper.dart';
+import 'package:hydrify/services/api_service.dart';
 import 'package:sqflite/sqflite.dart';
 
 part 'bottle_data_state.dart';
@@ -198,6 +200,58 @@ class BottleDataCubit extends Cubit<BottleDataState> {
   }
 
   Future<double> getCurrentDayHistory() async {
+    try {
+      final hasInternet =
+          await InternetConnectionHelper().hasInternetConnection();
+      if (hasInternet) {
+        final userId = await SharedPrefsHelper.getUserId();
+        if (userId != null && userId.isNotEmpty) {
+          final now = DateTime.now();
+          final startDate = DateTime.utc(now.year, now.month, now.day);
+          final endDate =
+              DateTime.utc(now.year, now.month, now.day, 23, 59, 59);
+          final summaries =
+              await ApiService().getDailySummaries(userId, startDate, endDate);
+          if (summaries != null && summaries.isNotEmpty) {
+            final summaryMap = summaries.first;
+            final serverConsumed = (summaryMap['consumed'] as num).toDouble();
+            final targetVal =
+                (summaryMap['target'] as num?)?.toDouble() ?? 2500;
+
+            DateTime targetDate = DateTime(now.year, now.month, now.day);
+            final String? serverDateStr = summaryMap['date'] as String?;
+            if (serverDateStr != null) {
+              try {
+                final datePart = serverDateStr.length >= 10
+                    ? serverDateStr.substring(0, 10)
+                    : serverDateStr;
+                targetDate = DateTime.parse(datePart);
+              } catch (_) {}
+            }
+
+            await _dbHelper.bulkUpsert30Days([
+              HydrationDaySummary(
+                date: targetDate,
+                dayIndex: summaryMap['dayIndex'] as int? ?? 0,
+                target: targetVal,
+                consumed: serverConsumed,
+                isPerfect: targetVal > 0 && serverConsumed >= targetVal,
+              )
+            ]);
+
+            Console.log(
+                tag: "getCurrentDayHistory",
+                value: "Fetched from server: $serverConsumed ml");
+            return serverConsumed;
+          }
+        }
+      }
+    } catch (e) {
+      Console.log(
+          tag: "getCurrentDayHistory",
+          value: "Failed fetching from server, falling back to local DB: $e");
+    }
+
     final db = await _dbHelper.database;
 
     final now = DateTime.now();
@@ -208,14 +262,11 @@ class BottleDataCubit extends Cubit<BottleDataState> {
       DatabaseHelper.hydrationSummaryTableName,
     );
 
-    //Console.log(tag: "getCurrentDayHistory", value: maps.toString());
-
     var hyderationData = List.generate(
       maps.length,
       (i) => HydrationDaySummary.fromMap(maps[i]),
     );
 
-    // Normalize input range to start and end of day
     final normalizedStart =
         DateTime(startDate.year, startDate.month, startDate.day);
     final normalizedEnd =

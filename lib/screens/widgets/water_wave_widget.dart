@@ -10,6 +10,9 @@ class WaterWaveWidget extends StatefulWidget {
   final Axis orientation;
   final double amplitude;
   final Duration speed;
+  final BorderRadius? borderRadius;
+  final Color? backgroundColor;
+  final List<BoxShadow>? boxShadow;
 
   const WaterWaveWidget({
     super.key,
@@ -18,6 +21,9 @@ class WaterWaveWidget extends StatefulWidget {
     this.orientation = Axis.horizontal,
     this.amplitude = 10.0,
     this.speed = const Duration(milliseconds: 1000),
+    this.borderRadius,
+    this.backgroundColor,
+    this.boxShadow,
   });
 
   @override
@@ -61,19 +67,21 @@ class _WaterWaveWidgetState extends State<WaterWaveWidget>
 
   @override
   Widget build(BuildContext context) {
+    final effectiveBorderRadius = widget.borderRadius ?? BorderRadius.circular(100.r);
+    final isTransparent = widget.backgroundColor == Colors.transparent;
     return ClipRRect(
-      borderRadius: BorderRadius.circular(100.r),
+      borderRadius: effectiveBorderRadius,
       child: Container(
         decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(100.r),
-          boxShadow: [
+          color: widget.backgroundColor ?? Colors.white,
+          borderRadius: effectiveBorderRadius,
+          boxShadow: isTransparent ? null : (widget.boxShadow ?? [
             BoxShadow(
               color: Colors.black.withOpacity(0.1),
               blurRadius: 8,
               offset: Offset(0, 4),
             )
-          ],
+          ]),
         ),
         child: TweenAnimationBuilder<double>(
           tween: Tween<double>(begin: 0.0, end: widget.fillPercent),

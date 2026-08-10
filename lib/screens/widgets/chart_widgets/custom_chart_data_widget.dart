@@ -15,6 +15,7 @@ import 'package:hydrify/models/hydration_summary.dart';
 import 'package:hydrify/screens/widgets/chart_widgets/column_chart_widget.dart';
 import 'package:hydrify/services/api_service.dart';
 import 'package:hydrify/services/sync_bus.dart';
+import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class CustomChartDataWidget extends StatefulWidget {
@@ -194,12 +195,14 @@ class _CustomChartDataWidgetState extends State<CustomChartDataWidget>
           value: 'Fetching summaries from SERVER for $startDate → $endDate',
         );
 
-        final serverMaps =
-            await _apiService.getDailySummaries(userId, startDate, endDate);
+        final analysisData = await _apiService.getHydrationAnalysis(
+            userId, startDate: startDate, endDate: endDate);
 
-        if (serverMaps != null) {
-          final summaries = serverMaps
-              .map((m) => HydrationDaySummary.fromServerMap(m))
+        if (analysisData != null && analysisData['dailySummaries'] != null) {
+          final List rawSummaries = analysisData['dailySummaries'];
+          final summaries = rawSummaries
+              .map((m) => HydrationDaySummary.fromServerMap(
+                  Map<String, dynamic>.from(m)))
               .toList();
 
           Console.log(
@@ -271,32 +274,35 @@ class _CustomChartDataWidgetState extends State<CustomChartDataWidget>
           borderRadius: BorderRadius.circular(AppDimensions.radius_15.r),
           border: Border.all(color: AppColors.greywith80, width: 1.w),
           color: AppColors.white),
-      child: Column(
-        children: [
-          // ── Chart-type toggle ───────────────────────────────────────────
-          Row(
+      child: BlocBuilder<FilterCubit, FilterState>(
+        builder: (context, filterState) {
+          final String titleText =
+              filterState.currentInterval == FilterInterval.weekly
+                  ? 'Weekly Intake: ${DateFormat('MMM, yyyy').format(filterState.currentDate)}'
+                  : AppStrings.drinkCompletion;
+
+          final future = _buildFuture(filterState, context);
+
+          return Column(
             children: [
-              Text(
-                AppStrings.drinkCompletion,
-                style: TextStyle(
-                    color: AppColors.bluegray,
-                    fontSize: AppFontStyles.fontSize_20,
-                    fontFamily: AppFontStyles.urbanistFontFamily,
-                    fontVariations: [AppFontStyles.boldFontVariation]),
+              // ── Chart-type toggle ───────────────────────────────────────────
+              Row(
+                children: [
+                  Text(
+                    titleText,
+                    style: TextStyle(
+                        color: AppColors.bluegray,
+                        fontSize: AppFontStyles.fontSize_20,
+                        fontFamily: AppFontStyles.urbanistFontFamily,
+                        fontVariations: [AppFontStyles.boldFontVariation]),
+                  ),
+                ],
               ),
-            ],
-          ),
 
-          SizedBox(height: AppDimensions.dim10.h),
+              SizedBox(height: AppDimensions.dim10.h),
 
-          // ── Chart area ──────────────────────────────────────────────────
-          BlocBuilder<FilterCubit, FilterState>(
-            buildWhen: (prev, next) =>
-                _cacheKeyFor(prev) != _cacheKeyFor(next),
-            builder: (context, filterState) {
-              final future = _buildFuture(filterState, context);
-
-              return FutureBuilder<List<dynamic>>(
+              // ── Chart area ──────────────────────────────────────────────────
+              FutureBuilder<List<dynamic>>(
                 future: future,
                 builder: (context, snapshot) {
                   if (snapshot.connectionState == ConnectionState.waiting) {
@@ -350,10 +356,10 @@ class _CustomChartDataWidgetState extends State<CustomChartDataWidget>
                     bottleData: bottleData,
                   );
                 },
-              );
-            },
-          ),
-        ],
+              ),
+            ],
+          );
+        },
       ),
     );
   }

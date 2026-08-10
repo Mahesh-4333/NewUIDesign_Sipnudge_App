@@ -316,9 +316,82 @@ class ApiService {
     }
   }
 
-  Future<List<Map<String, dynamic>>?> getManualLogs(String userId) async {
+  /// Creates a single manual log on the server and returns its MongoDB _id (serverId).
+  /// Returns null on failure.
+  Future<String?> createManualLog(
+      String userId, String type, double consumed, String utcTimestamp) async {
     try {
-      final response = await _dio.get('/api/database/manual-logs/$userId');
+      final response = await _dio.post(
+        '/api/database/create-manual-log',
+        data: {
+          'userId': userId,
+          'type': type,
+          'consumed': consumed,
+          'timestamp': utcTimestamp,
+        },
+      );
+      if (response.data['success'] == true) {
+        return response.data['serverId']?.toString();
+      }
+      return null;
+    } on DioException catch (e) {
+      Console.log(tag: "APP", value: "Exception in createManualLog: $e");
+      return null;
+    }
+  }
+
+  /// Deletes a manual log from the server.
+  /// Prefers [serverId] (MongoDB _id) for reliable matching.
+  /// Falls back to (type, consumed, timestamp) if serverId is not available.
+  Future<bool> deleteManualLog(
+      String userId, String type, double consumed, String timestamp,
+      {String? serverId}) async {
+    try {
+      final response = await _dio.post(
+        '/api/database/delete-manual-log',
+        data: {
+          'userId': userId,
+          if (serverId != null) 'serverId': serverId,
+          'type': type,
+          'consumed': consumed,
+          'timestamp': timestamp,
+        },
+      );
+      return response.data['success'] == true;
+    } on DioException catch (e) {
+      Console.log(tag: "APP", value: "Exception in deleteManualLog: $e");
+      return false;
+    }
+  }
+
+  Future<bool> deleteFoodScan(String userId,
+      {String? scanId, String? dishName, String? timestamp}) async {
+    try {
+      final response = await _dio.post(
+        '/api/database/delete-food-scan',
+        data: {
+          'userId': userId,
+          if (scanId != null) 'scanId': scanId,
+          if (dishName != null) 'dishName': dishName,
+          if (timestamp != null) 'timestamp': timestamp,
+        },
+      );
+      return response.data['success'] == true;
+    } on DioException catch (e) {
+      Console.log(tag: "APP", value: "Exception in deleteFoodScan: $e");
+      return false;
+    }
+  }
+
+  /// Fetches manual logs for a user. Pass [date] as 'YYYY-MM-DD' to filter
+  /// by a specific day. Without [date], all logs are returned.
+  Future<List<Map<String, dynamic>>?> getManualLogs(String userId,
+      {String? date}) async {
+    try {
+      final response = await _dio.get(
+        '/api/database/manual-logs/$userId',
+        queryParameters: date != null ? {'date': date} : null,
+      );
       if (response.statusCode == 200 && response.data['success'] == true) {
         return List<Map<String, dynamic>>.from(response.data['data']);
       }
@@ -392,6 +465,7 @@ class ApiService {
     double? target,
     int? dayIndex,
     int? battery,
+    bool force = false,
   }) async {
     try {
       final response = await _dio.patch(
@@ -404,6 +478,7 @@ class ApiService {
           if (target != null) 'target': target,
           if (dayIndex != null) 'dayIndex': dayIndex,
           if (battery != null) 'battery': battery,
+          if (force) 'force': true,
         },
       );
       return response.statusCode == 204 || (response.data != null && response.data['success'] == true);
@@ -441,12 +516,21 @@ class ApiService {
         '/api/database/upload-image',
         data: {'imageBase64': imageBase64, 'filename': filename},
       );
-      if (response.data != null && response.data['success'] == true) {
-        return response.data['url'] as String?;
+      if (response.data != null &&
+          (response.data['success'] == true ||
+              response.data['url'] != null ||
+              response.data['imageUrl'] != null)) {
+        final data = response.data;
+        final url = data['url'] ?? data['imageUrl'] ?? data['path'] ?? data['data'];
+        return url?.toString();
       }
       return null;
     } on DioException catch (e) {
-      Console.log(tag: "APP", value: "Exception in uploadFoodImage: $e");
+      print("!!! Exception in uploadFoodImage: $e");
+      if (e.response != null) {
+        print("!!! Response Data: ${e.response?.data}");
+        print("!!! Response Status: ${e.response?.statusCode}");
+      }
       return null;
     }
   }
@@ -465,9 +549,21 @@ class ApiService {
     }
   }
 
-  Future<List<Map<String, dynamic>>?> getFoodScans(String userId) async {
+  Future<List<Map<String, dynamic>>?> getFoodScans(String userId,
+      {DateTime? startDate, DateTime? endDate}) async {
     try {
-      final response = await _dio.get('/api/database/food-scans/$userId');
+      final Map<String, dynamic> queryParameters = {};
+      if (startDate != null) {
+        queryParameters['startDate'] = startDate.toUtc().toIso8601String();
+      }
+      if (endDate != null) {
+        queryParameters['endDate'] = endDate.toUtc().toIso8601String();
+      }
+
+      final response = await _dio.get(
+        '/api/database/food-scans/$userId',
+        queryParameters: queryParameters.isNotEmpty ? queryParameters : null,
+      );
       if (response.statusCode == 200 && response.data['success'] == true) {
         return List<Map<String, dynamic>>.from(response.data['data']);
       }
@@ -602,14 +698,18 @@ class ApiService {
   Future<List<Map<String, dynamic>>?> getDailySummaries(
     String userId,
     DateTime startDate,
-    DateTime endDate,
-  ) async {
+    DateTime endDate, {
+    DateTime? currentDate,
+  }) async {
     try {
-      final response = await _dio.get(
-        '/api/database/daily-summaries/$userId',
-        queryParameters: {
+      final now = currentDate ?? DateTime.now();
+      final response = await _dio.post(
+        '/api/database/daily-summaries-v2/$userId',
+        data: {
+          'userId': userId,
           'startDate': startDate.toUtc().toIso8601String(),
           'endDate': endDate.toUtc().toIso8601String(),
+          'currentDate': now.toUtc().toIso8601String(),
         },
       );
       if (response.statusCode == 200 && response.data['success'] == true) {
@@ -618,6 +718,34 @@ class ApiService {
       return null;
     } on DioException catch (e) {
       Console.log(tag: 'APP', value: 'Exception in getDailySummaries: $e');
+      return null;
+    }
+  }
+
+  Future<Map<String, dynamic>?> getHydrationAnalysis(
+    String userId, {
+    DateTime? startDate,
+    DateTime? endDate,
+  }) async {
+    try {
+      final Map<String, dynamic> queryParams = {};
+      if (startDate != null) {
+        queryParams['startDate'] = startDate.toUtc().toIso8601String();
+      }
+      if (endDate != null) {
+        queryParams['endDate'] = endDate.toUtc().toIso8601String();
+      }
+
+      final response = await _dio.get(
+        '/api/database/hydration-analysis/$userId',
+        queryParameters: queryParams,
+      );
+      if (response.statusCode == 200 && response.data['success'] == true) {
+        return Map<String, dynamic>.from(response.data);
+      }
+      return null;
+    } on DioException catch (e) {
+      Console.log(tag: 'APP', value: 'Exception in getHydrationAnalysis: $e');
       return null;
     }
   }

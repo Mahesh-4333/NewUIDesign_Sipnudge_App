@@ -21,6 +21,7 @@ import 'package:hydrify/models/food_scan_data.dart';
 import 'package:hydrify/services/database_sync_service.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:hydrify/cubit/ble/ble_cubit.dart';
+import 'package:hydrify/cubit/bottle/bottle_data_cubit.dart';
 import 'package:hydrify/cubit/hydration/hydration_cubit.dart';
 import 'package:hydrify/models/hydration_entry.dart';
 
@@ -177,7 +178,9 @@ class _FoodScannerWidgetState extends State<FoodScannerWidget> {
     try {
       final XFile? photo = await _picker.pickImage(
         source: ImageSource.camera,
-        imageQuality: 70,
+        maxWidth: 1024,
+        maxHeight: 1024,
+        imageQuality: 50,
       );
 
       if (photo == null) return;
@@ -356,51 +359,19 @@ class _FoodScannerWidgetState extends State<FoodScannerWidget> {
       // Update Hydration Summary
       final double delta = _waterMl - _lastSavedWaterMl;
       if (delta != 0) {
+        await SharedPrefsHelper.addPendingManualDelta(delta.toInt());
         if (mounted) {
           final hydrationCubit = context.read<HydrationCubit>();
           final bleCubit = context.read<BleCubit>();
 
           _lastSavedWaterMl = _waterMl;
 
-          // 1. Update Daily Summary in DB
-          await DatabaseHelper().updateHydrationDaySummary(delta);
+          // Fetch updated consumption from server / cubit
+          await context.read<BottleDataCubit>().getCurrentDayHistory();
 
-          // 2. Identify and update the matching time slot
-          final entries = hydrationCubit.state.entries;
-          final nowTime = TimeOfDay.now();
-          final nowMinutes = nowTime.hour * 60 + nowTime.minute;
-
-          HydrationEntry? targetEntry;
-          for (final entry in entries) {
-            final startMin = entry.startTime.hour * 60 + entry.startTime.minute;
-            final endMin = entry.endTime.hour * 60 + entry.endTime.minute;
-
-            bool isWithin;
-            if (startMin < endMin) {
-              isWithin = nowMinutes >= startMin && nowMinutes < endMin;
-            } else {
-              // Crosses midnight
-              isWithin = nowMinutes >= startMin || nowMinutes < endMin;
-            }
-
-            if (isWithin) {
-              targetEntry = entry;
-              break;
-            }
-          }
-
-          if (targetEntry != null) {
-            final updatedEntry = targetEntry.copyWith(
-              waterDrank: targetEntry.waterDrank + delta,
-            );
-            await hydrationCubit.markCompletedByEntries([updatedEntry]);
-          } else {
-            // No slot matched — still refresh achievement stats.
-            await hydrationCubit.markCompletedByEntries([]);
-          }
-
-          // 3. Refresh Cubits for UI synchronization
+          // Refresh Cubits & sync BLE delta for UI synchronization
           bleCubit.triggerRefresh();
+          bleCubit.syncPendingManualDelta();
           hydrationCubit.refreshAchievementStats();
         }
       }
@@ -629,13 +600,17 @@ class _FoodScannerWidgetState extends State<FoodScannerWidget> {
                                 // Captured Image
                                 if (_imageBytes != null || _image != null)
                                   Positioned.fill(
-                                    child: ClipRRect(
-                                      borderRadius: BorderRadius.circular(20.r),
-                                      child: _imageBytes != null
-                                          ? Image.memory(_imageBytes!,
-                                              fit: BoxFit.cover)
-                                          : Image.file(_image!,
-                                              fit: BoxFit.cover),
+                                    child: Container(
+                                      margin: EdgeInsets.all(12.w),
+                                      child: ClipRRect(
+                                        borderRadius:
+                                            BorderRadius.circular(20.r),
+                                        child: _imageBytes != null
+                                            ? Image.memory(_imageBytes!,
+                                                fit: BoxFit.cover)
+                                            : Image.file(_image!,
+                                                fit: BoxFit.cover),
+                                      ),
                                     ),
                                   ),
                                 // Translucent white background inside brackets
@@ -651,14 +626,6 @@ class _FoodScannerWidgetState extends State<FoodScannerWidget> {
                                       ),
                                     ),
                                   ),
-                                // Scanner Corners (brackets)
-                                Positioned.fill(
-                                  child: CustomPaint(
-                                    painter: ScannerCornersPainter(
-                                      color: Colors.white,
-                                    ),
-                                  ),
-                                ),
                                 // Camera Icon
                                 if (_imageBytes == null &&
                                     _image == null &&
@@ -670,6 +637,14 @@ class _FoodScannerWidgetState extends State<FoodScannerWidget> {
                                     color: const Color(
                                         0xFF7A8E9E), // outline gray color matching mockup
                                   ),
+                                // Scanner Corners (brackets)
+                                Positioned.fill(
+                                  child: CustomPaint(
+                                    painter: ScannerCornersPainter(
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                ),
                                 // Analyzing Loader
                                 if (_isAnalyzing)
                                   const CircularProgressIndicator(

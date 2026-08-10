@@ -5,13 +5,15 @@ import 'package:flutter_svg/svg.dart';
 import 'package:hydrify/constants/app_colors.dart';
 import 'package:hydrify/constants/app_dimensions.dart';
 import 'package:hydrify/constants/app_font_styles.dart';
+import 'package:hydrify/constants/assets_path.dart';
 import 'package:hydrify/cubit/user_info/user_info_cubit.dart';
 import 'package:hydrify/helpers/cupertino_bottom_sheet.dart';
+import 'package:hydrify/helpers/page_transitions.dart';
 import 'package:hydrify/helpers/vibration_helper.dart';
 import 'package:hydrify/screens/fuel_flow_info_screen.dart';
 import 'package:hydrify/screens/widgets/user_info_input_widgets/custom_radio_selection_widget.dart';
+import 'package:hydrify/l10n/app_localizations.dart';
 import 'package:hydrify/screens/widgets/user_info_input_widgets/next_button_widget.dart';
-import 'package:hydrify/services/ui_utils_service.dart';
 
 class UserLifestyleInfoInputScreen extends StatefulWidget {
   const UserLifestyleInfoInputScreen(
@@ -24,7 +26,36 @@ class UserLifestyleInfoInputScreen extends StatefulWidget {
 }
 
 class _UserLifestyleInfoInputScreenState
-    extends State<UserLifestyleInfoInputScreen> {
+    extends State<UserLifestyleInfoInputScreen>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _animController;
+  late Animation<double> _scaleAnimation;
+  late Animation<double> _fadeAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _animController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 800),
+    );
+    _scaleAnimation = CurvedAnimation(
+      parent: _animController,
+      curve: Curves.elasticOut,
+    );
+    _fadeAnimation = CurvedAnimation(
+      parent: _animController,
+      curve: Curves.easeIn,
+    );
+    _animController.forward();
+  }
+
+  @override
+  void dispose() {
+    _animController.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -35,7 +66,7 @@ class _UserLifestyleInfoInputScreenState
         backgroundColor: Colors.transparent,
         centerTitle: true,
         title: Text(
-          "Profile Setup",
+          AppLocalizations.of(context)?.profileSetup ?? "Profile Setup",
           style: TextStyle(
               color: AppColors.bluegray,
               fontSize: AppFontStyles.fontSize_AppBar,
@@ -63,7 +94,11 @@ class _UserLifestyleInfoInputScreenState
           ),
         ),
         padding: EdgeInsets.only(
-            top: AppDimensions.dim120.h, bottom: AppDimensions.bottomBarHeight),
+          top: AppDimensions.dim120.h,
+          bottom: AppDimensions.bottomBarHeight,
+          left: AppDimensions.defaultPadding.w,
+          right: AppDimensions.defaultPadding.w,
+        ),
         child: ListView(
           padding: EdgeInsets.symmetric(
             horizontal: AppDimensions.defaultPadding.w,
@@ -73,52 +108,40 @@ class _UserLifestyleInfoInputScreenState
             // ── Centered Page Header ─────────────────────────────────────
             Column(
               children: [
-                Container(
-                  width: 72.w,
-                  height: 72.w,
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                      color: AppColors.bluegray,
-                      width: 2.w,
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.06),
-                        blurRadius: 12,
-                        offset: const Offset(0, 4),
+                ScaleTransition(
+                  scale: _scaleAnimation,
+                  child: FadeTransition(
+                    opacity: _fadeAnimation,
+                    child: Transform.scale(
+                      scale: 1.5,
+                      child: Image.asset(
+                        AssetsPath.onboardingQuitHour,
+                        width: 70.w,
+                        height: 70.w,
                       ),
-                    ],
-                  ),
-                  child: Center(
-                    child: Icon(
-                      Icons.alarm_on_rounded,
-                      color: AppColors.bluegray,
-                      size: 34.sp,
                     ),
                   ),
                 ),
                 SizedBox(height: 14.h),
                 Text(
-                  "Quiet Hours & Activity",
+                  AppLocalizations.of(context)?.quietHoursAndActivity ?? "Quiet Hours & Activity",
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontFamily: AppFontStyles.urbanistFontFamily,
-                    fontSize: AppFontStyles.fontSize_22,
+                    fontSize: AppFontStyles.fontSize_24,
                     color: AppColors.bluegray,
                     fontVariations: [AppFontStyles.boldFontVariation],
                   ),
                 ),
                 SizedBox(height: 6.h),
                 Text(
-                  "Set your sleep schedule so Sipnudge stays\ncompletely silent overnight.",
+                  AppLocalizations.of(context)?.sleepScheduleSubtitle ?? "Set your sleep schedule so Sipnudge stays\ncompletely silent overnight.",
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontFamily: AppFontStyles.urbanistFontFamily,
-                    fontSize: AppFontStyles.fontSize_13,
-                    color: AppColors.greyColorText1,
-                    fontVariations: [AppFontStyles.regularFontVariation],
+                    fontSize: AppFontStyles.fontSize_15,
+                    color: AppColors.bluegray,
+                    fontVariations: [AppFontStyles.boldFontVariation],
                   ),
                 ),
               ],
@@ -154,7 +177,7 @@ class _UserLifestyleInfoInputScreenState
                       ),
                       SizedBox(width: 8.w),
                       Text(
-                        "Sleep Cycle",
+                        AppLocalizations.of(context)?.sleepCycle ?? "Sleep Cycle",
                         style: TextStyle(
                           fontFamily: AppFontStyles.urbanistFontFamily,
                           fontSize: AppFontStyles.fontSize_16,
@@ -172,8 +195,8 @@ class _UserLifestyleInfoInputScreenState
                     builder: (context, state) {
                       return _buildTimeCapsule(
                         context: context,
-                        label: "Wake Time",
-                        icon: Icons.wb_sunny_outlined,
+                        label: AppLocalizations.of(context)?.wakeTime ?? "Wake Time",
+                        icon: AssetsPath.onboardingWakeUpHour,
                         iconColor: const Color(0xFF38BDF8),
                         hour: state.wakeupHour,
                         minute: state.wakeupMinute,
@@ -198,8 +221,8 @@ class _UserLifestyleInfoInputScreenState
                     builder: (context, state) {
                       return _buildTimeCapsule(
                         context: context,
-                        label: "Bed Time",
-                        icon: Icons.nightlight_round,
+                        label: AppLocalizations.of(context)?.bedTime ?? "Bed Time",
+                        icon: AssetsPath.onboardingSleep,
                         iconColor: const Color(0xFFFACC15),
                         hour: state.bedtimeHour,
                         minute: state.bedtimeMinute,
@@ -216,12 +239,12 @@ class _UserLifestyleInfoInputScreenState
 
             // ── Activity Level Section ───────────────────────────────────
             Text(
-              "ACTIVITY LEVEL",
+              AppLocalizations.of(context)?.activityLevel ?? "ACTIVITY LEVEL",
               style: TextStyle(
                 fontFamily: AppFontStyles.urbanistFontFamily,
                 fontSize: AppFontStyles.fontSize_13,
                 color: AppColors.bluegray,
-                fontVariations: [AppFontStyles.fontWeightVariation600],
+                fontVariations: [AppFontStyles.boldFontVariation],
                 letterSpacing: 0.8,
               ),
             ),
@@ -241,30 +264,23 @@ class _UserLifestyleInfoInputScreenState
         child: CustomNextButton(
             text: "Next",
             onNextPressed: () async {
-              final state = context.read<UserInfoCubit>().state;
+              final cubit = context.read<UserInfoCubit>();
+              var state = cubit.state;
 
               if (state.wakeupHour == null || state.wakeupMinute == null) {
-                UiUtilsService.showToast(
-                  context: context,
-                  text: "Please enter your wakeup time",
-                  textColor: Colors.red,
-                );
-                return;
+                cubit.updateWakeupTime(hour: 7, minute: 0, period: 'AM');
               }
 
               if (state.bedtimeHour == null || state.bedtimeMinute == null) {
-                UiUtilsService.showToast(
-                  context: context,
-                  text: "Please enter your bedtime",
-                  textColor: Colors.red,
-                );
-                return;
+                cubit.updateBedTime(hour: 10, minute: 30, period: 'PM');
               }
+
+              if (!context.mounted) return;
 
               Navigator.push(
                 context,
-                MaterialPageRoute(
-                  builder: (context) => FuelFlowInfoScreen(
+                SlidePageRoute(
+                  page: FuelFlowInfoScreen(
                     isViaSettingsScreen: widget.isViaSettingsScreen,
                   ),
                 ),
@@ -278,15 +294,17 @@ class _UserLifestyleInfoInputScreenState
   Widget _buildTimeCapsule({
     required BuildContext context,
     required String label,
-    required IconData icon,
+    required String icon,
     required Color iconColor,
     required int? hour,
     required int? minute,
     required String period,
     required bool isBedtime,
   }) {
-    final displayHour = (hour ?? (isBedtime ? 10 : 6)).toString().padLeft(2, '0');
-    final displayMinute = (minute ?? (isBedtime ? 30 : 30)).toString().padLeft(2, '0');
+    final displayHour =
+        (hour ?? (isBedtime ? 10 : 6)).toString().padLeft(2, '0');
+    final displayMinute =
+        (minute ?? (isBedtime ? 30 : 30)).toString().padLeft(2, '0');
 
     return GestureDetector(
       onTap: () => _pickTime(
@@ -296,8 +314,7 @@ class _UserLifestyleInfoInputScreenState
         currentMinute: minute,
       ),
       child: Container(
-        height: 54.h,
-        padding: EdgeInsets.only(left: 16.w, right: 3.w),
+        padding: EdgeInsets.only(left: 16.w, right: 0.w, top: 0.h, bottom: 0.h),
         decoration: BoxDecoration(
           color: const Color(0xFFF7FAF9),
           borderRadius: BorderRadius.circular(50.r),
@@ -305,7 +322,12 @@ class _UserLifestyleInfoInputScreenState
         ),
         child: Row(
           children: [
-            Icon(icon, color: iconColor, size: 22.sp),
+            Image.asset(
+              icon,
+              color: iconColor,
+              width: 20.w,
+              height: 20.h,
+            ),
             SizedBox(width: 10.w),
             Text(
               label,
@@ -358,7 +380,9 @@ class _UserLifestyleInfoInputScreenState
 
     final result = await showCupertinoPickerBottomSheet(
       context: context,
-      title: isBedtime ? 'Select Bed Time' : 'Select Wake Time',
+      title: isBedtime
+          ? (AppLocalizations.of(context)?.selectBedTime ?? 'Select Bed Time')
+          : (AppLocalizations.of(context)?.selectWakeTime ?? 'Select Wake Time'),
       initialValue: h,
       minValue: 1,
       maxValue: 12,
@@ -402,7 +426,7 @@ class _AmPmToggle extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     bool isAm = currentPeriod == "AM";
-    final double circleSize = 36.w;
+    final double circleSize = 42.w;
 
     return Container(
       padding: EdgeInsets.all(3.w),
@@ -430,7 +454,9 @@ class _AmPmToggle extends StatelessWidget {
                   style: TextStyle(
                     fontFamily: AppFontStyles.urbanistFontFamily,
                     fontSize: 13.sp,
-                    color: isAm ? const Color(0xFF3B5266) : const Color(0xFFCCCCCC),
+                    color: isAm
+                        ? const Color(0xFF3B5266)
+                        : const Color(0xFFCCCCCC),
                     fontVariations: [
                       isAm
                           ? AppFontStyles.boldFontVariation
@@ -458,7 +484,9 @@ class _AmPmToggle extends StatelessWidget {
                   style: TextStyle(
                     fontFamily: AppFontStyles.urbanistFontFamily,
                     fontSize: 13.sp,
-                    color: !isAm ? const Color(0xFF3B5266) : const Color(0xFFCCCCCC),
+                    color: !isAm
+                        ? const Color(0xFF3B5266)
+                        : const Color(0xFFCCCCCC),
                     fontVariations: [
                       !isAm
                           ? AppFontStyles.boldFontVariation

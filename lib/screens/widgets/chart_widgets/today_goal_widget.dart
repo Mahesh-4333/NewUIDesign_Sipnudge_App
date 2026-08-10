@@ -12,6 +12,7 @@ import 'package:hydrify/cubit/bottle/bottle_data_cubit.dart';
 import 'package:hydrify/cubit/hydration/hydration_cubit.dart';
 import 'package:hydrify/cubit/hydration/hydration_state.dart';
 import 'package:hydrify/helpers/shared_pref_helper.dart';
+import 'package:hydrify/helpers/hydration_helper.dart';
 
 class TodayGoalWidget extends StatefulWidget {
   const TodayGoalWidget({super.key});
@@ -36,6 +37,7 @@ class _TodayGoalWidgetState extends State<TodayGoalWidget>
             future: Future.wait([
               SharedPrefsHelper.getWaterGoal(),
               context.read<BottleDataCubit>().getCurrentDayHistory(),
+              SharedPrefsHelper.getSelectedUnit(),
             ]),
             builder: (context, snapshot) {
               if (!snapshot.hasData) {
@@ -45,6 +47,9 @@ class _TodayGoalWidgetState extends State<TodayGoalWidget>
               final double waterGoalFromPrefs =
                   (snapshot.data![0] ?? 2500).toDouble();
               final double intakeMl = (snapshot.data![1] as num).toDouble();
+              final String selectedUnit = snapshot.data!.length > 2
+                  ? (snapshot.data![2] as String? ?? 'mL')
+                  : 'mL';
               final double goalMl = waterGoalFromPrefs;
               final double progress = (intakeMl / goalMl).clamp(0.0, 1.0);
               final int percentage = (progress * 100).toInt();
@@ -140,7 +145,7 @@ class _TodayGoalWidgetState extends State<TodayGoalWidget>
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
                                 Text(
-                                  "${(intakeMl).toStringAsFixed(0)}mL",
+                                  HydrationHelper.formatVolume(intakeMl, selectedUnit, showUnit: true),
                                   style: TextStyle(
                                     color: AppColors.bluegray,
                                     fontSize: 30.sp,

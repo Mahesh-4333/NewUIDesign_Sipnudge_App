@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_svg/svg.dart';
@@ -9,8 +10,10 @@ import 'package:hydrify/constants/app_dimensions.dart';
 import 'package:hydrify/constants/app_font_styles.dart';
 import 'package:hydrify/constants/app_strings.dart';
 import 'package:hydrify/cubit/user_info/user_info_cubit.dart';
+import 'package:hydrify/helpers/page_transitions.dart';
 import 'package:hydrify/helpers/shared_pref_helper.dart';
 import 'package:hydrify/screens/auth/auth_options_screen.dart';
+import 'package:hydrify/l10n/app_localizations.dart';
 import 'package:hydrify/screens/user_lifestyle_info_input_screen.dart';
 import 'package:hydrify/screens/widgets/user_info_input_widgets/custom_cupertino_input_widget.dart';
 import 'package:hydrify/screens/widgets/user_info_input_widgets/custom_radio_selection_widget.dart';
@@ -18,6 +21,8 @@ import 'package:hydrify/screens/widgets/user_info_input_widgets/next_button_widg
 import 'package:hydrify/services/ui_utils_service.dart';
 import 'package:hydrify/services/api_service.dart';
 import 'package:hydrify/helpers/logger.dart';
+
+import 'package:hydrify/services/health_service.dart';
 
 class UserInfoInputScreen extends StatefulWidget {
   final bool fromSettings;
@@ -67,10 +72,10 @@ class _UserInfoInputScreenState extends State<UserInfoInputScreen> {
       return;
     }
 
-    final regex = RegExp(r'^[a-zA-Z0-9_]{3,15}$');
+    final regex = RegExp(r'^[a-zA-Z0-9]{3,15}$');
     if (!regex.hasMatch(name)) {
       setState(() {
-        _usernameError = "3-15 alphanumeric characters or underscores only.";
+        _usernameError = AppLocalizations.of(context)?.usernameRequirements ?? "3-15 alphanumeric characters only.";
         _isUsernameValid = false;
         _isCheckingUsername = false;
       });
@@ -94,7 +99,7 @@ class _UserInfoInputScreenState extends State<UserInfoInputScreen> {
           _usernameError = null;
         } else {
           _isUsernameValid = false;
-          _usernameError = "Username is already taken.";
+          _usernameError = AppLocalizations.of(context)?.usernameTaken ?? "Username is already taken.";
         }
       });
     });
@@ -235,6 +240,48 @@ class _UserInfoInputScreenState extends State<UserInfoInputScreen> {
       }
     }
 
+    // Autofill height, weight, and gender from Health (Apple HealthKit / Google Health Connect) if missing
+    if (mounted) {
+      final cubit = context.read<UserInfoCubit>();
+      final currentState = cubit.state;
+      if (currentState.height == null || currentState.weight == null) {
+        try {
+          final healthData =
+              await HealthService().fetchUserProfileFromHealth();
+          if (healthData.isNotEmpty && mounted) {
+            final double? newHeight = currentState.height ??
+                (healthData['height'] as num?)?.toDouble();
+            final double? newWeight = currentState.weight ??
+                (healthData['weight'] as num?)?.toDouble();
+            Gender? newGender = currentState.gender;
+            if (healthData['gender'] != null) {
+              if (healthData['gender'] == 'Female') {
+                newGender = Gender.female;
+              } else if (healthData['gender'] == 'Male') {
+                newGender = Gender.male;
+              }
+            }
+
+            final updatedState = currentState.copyWith(
+              height: newHeight,
+              weight: newWeight,
+              gender: newGender,
+            );
+            cubit.emit(updatedState);
+            await cubit.saveUser(updatedState);
+            Console.log(
+                tag: "USER_INFO",
+                value:
+                    "Autofilled height/weight/gender from Health: $healthData");
+          }
+        } catch (e) {
+          Console.log(
+              tag: "USER_INFO",
+              value: "Error fetching profile from Health: $e");
+        }
+      }
+    }
+
     if (mounted) {
       context
           .read<UserInfoCubit>()
@@ -271,7 +318,7 @@ class _UserInfoInputScreenState extends State<UserInfoInputScreen> {
                 child: BlocBuilder<UserInfoCubit, UserInfoState>(
                   builder: (context, state) {
                     return CustomNextButton(
-                        text: AppStrings.next,
+                        text: AppLocalizations.of(context)?.next ?? AppStrings.next,
                         onNextPressed: () async {
                           final height = state.height;
                           final weight = state.weight;
@@ -281,7 +328,7 @@ class _UserInfoInputScreenState extends State<UserInfoInputScreen> {
                             UiUtilsService.showToast(
                               context: context,
                               text:
-                                  "Please fill in height, weight, and age before continuing.",
+                                  AppLocalizations.of(context)?.fillHeightWeightAge ?? "Please fill in height, weight, and age before continuing.",
                               textColor: Colors.red,
                             );
                             return;
@@ -291,7 +338,7 @@ class _UserInfoInputScreenState extends State<UserInfoInputScreen> {
                           if (name.isEmpty) {
                             UiUtilsService.showToast(
                               context: context,
-                              text: "Please enter your username.",
+                              text: AppLocalizations.of(context)?.enterUsername ?? "Please enter your username.",
                               textColor: Colors.red,
                             );
                             return;
@@ -302,7 +349,7 @@ class _UserInfoInputScreenState extends State<UserInfoInputScreen> {
                             UiUtilsService.showToast(
                               context: context,
                               text:
-                                  "Username must be 3-15 alphanumeric characters or underscores.",
+                                  AppLocalizations.of(context)?.usernameMustBeAlphanumeric ?? "Username must be 3-15 alphanumeric characters or underscores.",
                               textColor: Colors.red,
                             );
                             return;
@@ -318,9 +365,8 @@ class _UserInfoInputScreenState extends State<UserInfoInputScreen> {
                           // From onboarding → continue next flow
                           Navigator.push(
                             context,
-                            MaterialPageRoute(
-                              builder: (context) =>
-                                  UserLifestyleInfoInputScreen(
+                            SlidePageRoute(
+                              page: UserLifestyleInfoInputScreen(
                                 isViaSettingsScreen: widget.fromSettings,
                               ),
                             ),
@@ -334,7 +380,7 @@ class _UserInfoInputScreenState extends State<UserInfoInputScreen> {
           backgroundColor: Colors.transparent,
           centerTitle: true,
           title: Text(
-            "Profile Setup",
+            AppLocalizations.of(context)?.profileSetup ?? "Profile Setup",
             style: TextStyle(
                 color: AppColors.bluegray,
                 fontSize: AppFontStyles.fontSize_AppBar,
@@ -386,7 +432,7 @@ class _UserInfoInputScreenState extends State<UserInfoInputScreen> {
             children: [
               // ── Header ──────────────────────────────────────────────────
               Text(
-                "Your State",
+                AppLocalizations.of(context)?.yourState ?? "Your State",
                 style: TextStyle(
                   fontFamily: AppFontStyles.urbanistFontFamily,
                   fontSize: AppFontStyles.fontSize_16,
@@ -396,7 +442,7 @@ class _UserInfoInputScreenState extends State<UserInfoInputScreen> {
               ),
               SizedBox(height: AppDimensions.dim8.h),
               Text(
-                "Let's personalize your hydration profile.",
+                AppLocalizations.of(context)?.personalizeProfile ?? "Let's personalize your hydration profile.",
                 style: TextStyle(
                   fontFamily: AppFontStyles.urbanistFontFamily,
                   fontSize: AppFontStyles.fontSize_14,
@@ -408,12 +454,12 @@ class _UserInfoInputScreenState extends State<UserInfoInputScreen> {
 
               // ── Username ────────────────────────────────────────────────
               Text(
-                "USERNAME",
+                AppLocalizations.of(context)?.username ?? "USERNAME",
                 style: TextStyle(
                   fontFamily: AppFontStyles.urbanistFontFamily,
                   fontSize: AppFontStyles.fontSize_13,
                   color: AppColors.bluegray,
-                  fontVariations: [AppFontStyles.fontWeightVariation600],
+                  fontVariations: [AppFontStyles.boldFontVariation],
                   letterSpacing: 0.8,
                 ),
               ),
@@ -445,8 +491,11 @@ class _UserInfoInputScreenState extends State<UserInfoInputScreen> {
                   onChanged: _onUsernameChanged,
                   readOnly: _isUsernameReadOnly,
                   enableInteractiveSelection: !_isUsernameReadOnly,
-                  keyboardType: TextInputType.name,
-                  textCapitalization: TextCapitalization.words,
+                  inputFormatters: [
+                    FilteringTextInputFormatter.allow(RegExp(r'[a-zA-Z0-9]')),
+                  ],
+                  keyboardType: TextInputType.text,
+                  textCapitalization: TextCapitalization.none,
                   scrollPadding:
                       EdgeInsets.only(bottom: AppDimensions.dim140.h),
                   style: TextStyle(
@@ -474,7 +523,7 @@ class _UserInfoInputScreenState extends State<UserInfoInputScreen> {
               SizedBox(height: AppDimensions.dim8.h),
               if (_isUsernameReadOnly)
                 Text(
-                  "Username cannot be changed once set.",
+                  AppLocalizations.of(context)?.usernameCannotBeChanged ?? "Username cannot be changed once set.",
                   style: TextStyle(
                     color: Colors.grey.shade600,
                     fontSize: AppFontStyles.fontSize_13.sp,
@@ -485,7 +534,7 @@ class _UserInfoInputScreenState extends State<UserInfoInputScreen> {
               else ...[
                 if (_isCheckingUsername)
                   Text(
-                    "Checking availability...",
+                    AppLocalizations.of(context)?.checkingAvailability ?? "Checking availability...",
                     style: TextStyle(
                       color: Colors.grey,
                       fontSize: AppFontStyles.fontSize_13.sp,
@@ -510,7 +559,7 @@ class _UserInfoInputScreenState extends State<UserInfoInputScreen> {
                           color: Colors.green, size: 16.r),
                       SizedBox(width: 4.w),
                       Text(
-                        "Username available",
+                        AppLocalizations.of(context)?.usernameAvailable ?? "Username available",
                         style: TextStyle(
                           color: Colors.green,
                           fontSize: AppFontStyles.fontSize_13.sp,
@@ -522,7 +571,7 @@ class _UserInfoInputScreenState extends State<UserInfoInputScreen> {
                   ),
                 SizedBox(height: AppDimensions.dim4.h),
                 Text(
-                  "Use 3-15 letters, numbers, or underscores.",
+                  AppLocalizations.of(context)?.useLettersNumbersUnderscores ?? "Use 3-15 letters, numbers, or underscores.",
                   style: TextStyle(
                     color: Colors.grey.shade500,
                     fontSize: AppFontStyles.fontSize_11.sp,
@@ -536,12 +585,12 @@ class _UserInfoInputScreenState extends State<UserInfoInputScreen> {
 
               // ── Age ─────────────────────────────────────────────────────
               Text(
-                "AGE",
+                AppLocalizations.of(context)?.age ?? "AGE",
                 style: TextStyle(
                   fontFamily: AppFontStyles.urbanistFontFamily,
                   fontSize: AppFontStyles.fontSize_13,
                   color: AppColors.bluegray,
-                  fontVariations: [AppFontStyles.fontWeightVariation600],
+                  fontVariations: [AppFontStyles.boldFontVariation],
                   letterSpacing: 0.8,
                 ),
               ),
@@ -576,12 +625,12 @@ class _UserInfoInputScreenState extends State<UserInfoInputScreen> {
 
               // ── Gender ──────────────────────────────────────────────────
               Text(
-                "GENDER IDENTITY",
+                AppLocalizations.of(context)?.genderIdentity ?? "GENDER IDENTITY",
                 style: TextStyle(
                   fontFamily: AppFontStyles.urbanistFontFamily,
                   fontSize: AppFontStyles.fontSize_13,
                   color: AppColors.bluegray,
-                  fontVariations: [AppFontStyles.fontWeightVariation600],
+                  fontVariations: [AppFontStyles.boldFontVariation],
                   letterSpacing: 0.8,
                 ),
               ),
@@ -591,12 +640,12 @@ class _UserInfoInputScreenState extends State<UserInfoInputScreen> {
 
               // ── Height ──────────────────────────────────────────────────
               Text(
-                "HEIGHT",
+                AppLocalizations.of(context)?.height ?? "HEIGHT",
                 style: TextStyle(
                   fontFamily: AppFontStyles.urbanistFontFamily,
                   fontSize: AppFontStyles.fontSize_13,
                   color: AppColors.bluegray,
-                  fontVariations: [AppFontStyles.fontWeightVariation600],
+                  fontVariations: [AppFontStyles.boldFontVariation],
                   letterSpacing: 0.8,
                 ),
               ),
@@ -665,12 +714,12 @@ class _UserInfoInputScreenState extends State<UserInfoInputScreen> {
               SizedBox(height: AppDimensions.dim24.h),
               // ── Weight ──────────────────────────────────────────────────
               Text(
-                "WEIGHT",
+                AppLocalizations.of(context)?.weight ?? "WEIGHT",
                 style: TextStyle(
                   fontFamily: AppFontStyles.urbanistFontFamily,
                   fontSize: AppFontStyles.fontSize_13,
                   color: AppColors.bluegray,
-                  fontVariations: [AppFontStyles.fontWeightVariation600],
+                  fontVariations: [AppFontStyles.boldFontVariation],
                   letterSpacing: 0.8,
                 ),
               ),

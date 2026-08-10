@@ -6,8 +6,8 @@ import 'package:hydrify/helpers/shared_pref_helper.dart';
 import 'package:hydrify/providers/authentication_provider.dart';
 import 'package:hydrify/screens/auth/auth_options_screen.dart';
 import 'package:hydrify/screens/bottom_nav_screen_new.dart';
-import 'package:hydrify/screens/qr_scanning.dart';
 import 'package:hydrify/screens/user_personal_info_input_screen..dart';
+import 'package:hydrify/screens/onboarding/environmental_harmony_location_screen.dart';
 import 'package:provider/provider.dart';
 
 class LocalAuthScreen extends StatefulWidget {
@@ -65,6 +65,8 @@ class _LocalAuthScreenState extends State<LocalAuthScreen>
     final hasUserFilledInPersonalInfo =
         await SharedPrefsHelper.isPersonalInfoSubmitted();
     final hasUserSelectedPersonalGoal = await SharedPrefsHelper.getUserGoal();
+    final isOnboardingCompleted =
+        await SharedPrefsHelper.isOnboardingFlowCompleted();
 
     Future.delayed(
       const Duration(milliseconds: 300),
@@ -77,14 +79,17 @@ class _LocalAuthScreenState extends State<LocalAuthScreen>
               if (loggedInUserEmail.isNotEmpty) {
                 if (hasUserFilledInPersonalInfo == true &&
                     hasUserSelectedPersonalGoal != null) {
-                  return const BottomNavScreenNew();
+                  if (isOnboardingCompleted) {
+                    return const BottomNavScreenNew();
+                  } else {
+                    return const EnvironmentalHarmonyLocationScreen();
+                  }
                 } else {
                   return const UserInfoInputScreen();
                 }
               } else {
-                // If logged out, send to QR Scanner or Auth Options
-                return const QrScanner();
-                // return AuthOptionsScreen();
+                // If logged out, send to Auth Options
+                return const AuthOptionsScreen();
               }
             },
             transitionsBuilder:

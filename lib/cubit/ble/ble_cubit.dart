@@ -23,6 +23,8 @@ import 'package:hydrify/services/home_widget_service.dart';
 import 'package:http/http.dart' as http;
 import 'package:permission_handler/permission_handler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:hydrify/helpers/internet_connection_helper.dart';
+import 'package:hydrify/services/api_service.dart';
 import 'package:hydrify/services/sync_bus.dart';
 
 part 'ble_state.dart';
@@ -140,6 +142,7 @@ class BleCubit extends Cubit<BleState>
   final Guid rtcSyncUUID = Guid("6E400004-B5A3-F393-E0A9-E50E24DCCA9E");
   final Guid wifiProvUUID = Guid("6E400009-B5A3-F393-E0A9-E50E24DCCA9E");
   final Guid wifiNotifUUID = Guid("6E40000B-B5A3-F393-E0A9-E50E24DCCA9E");
+  final Guid consumedUpdate = Guid("6E40000A-B5A3-F393-E0A9-E50E24DCCA9E");
 
   BluetoothCharacteristic? _dataChar;
   BluetoothCharacteristic? _ackChar;
@@ -151,6 +154,7 @@ class BleCubit extends Cubit<BleState>
   BluetoothCharacteristic? _rtcSyncChar;
   BluetoothCharacteristic? _wifiProvChar;
   BluetoothCharacteristic? _wifiNotifChar;
+  BluetoothCharacteristic? _consumedUpdateChar;
 
   StreamSubscription<List<ScanResult>>? _scanSub;
   StreamSubscription<BluetoothConnectionState>? _connectionSub;
@@ -173,6 +177,9 @@ class BleCubit extends Cubit<BleState>
 
   /// Guards against concurrent connection attempts.
   bool _isConnecting = false;
+
+  /// Guards against concurrent flush attempts.
+  bool _isFlushing = false;
 
   /// Set to true when a scan is intentionally stopped (device found / connected)
   /// so that the delayed-restart lambda is a no-op.
@@ -453,7 +460,7 @@ class BleCubit extends Cubit<BleState>
     });
   }
 
-  void _scanForLastDevice() {
+  Future<void> _scanForLastDevice() async {
     if (savedDeviceId == null && savedDeviceName == null) return;
 
     // Guard: Do not start a scan if we are already connected/connecting
@@ -483,7 +490,7 @@ class BleCubit extends Cubit<BleState>
     //    (reduces packet drops on Android; iOS still scans all but ranks better).
     // ✅ Longer timeout (30 s) gives more advertising cycles to be caught.
     try {
-      FlutterBluePlus.startScan(
+      await FlutterBluePlus.startScan(
         withServices: [serviceUUID],
         timeout: const Duration(seconds: 30),
       );
@@ -540,7 +547,7 @@ class BleCubit extends Cubit<BleState>
     });
   }
 
-  void _scanForAllDevices() {
+  Future<void> _scanForAllDevices() async {
     // Guard: Do not start a scan if we are already connected/connecting
     if (_isConnecting || state.status == BleStatus.connected) {
       Console.log(
@@ -564,7 +571,7 @@ class BleCubit extends Cubit<BleState>
 
     // ✅ Use withServices filter; 30 s gives more ad cycles
     try {
-      FlutterBluePlus.startScan(
+      await FlutterBluePlus.startScan(
         withServices: [serviceUUID],
         timeout: const Duration(seconds: 30),
       );
@@ -997,6 +1004,12 @@ class BleCubit extends Cubit<BleState>
               Console.log(
                   tag: 'BLE_Cubit', value: "Wifi notif cha: ${_wifiNotifChar}");
             }
+            if (c.uuid == consumedUpdate) {
+              _consumedUpdateChar = c;
+              Console.log(
+                  tag: 'BLE_Cubit',
+                  value: "Consumed update cha: ${_consumedUpdateChar}");
+            }
           }
 
           // Setup notifications and log characteristic status
@@ -1108,10 +1121,43 @@ class BleCubit extends Cubit<BleState>
                   isPerfect: isPerfectDay,
                 );
               }).toList();
-              // Single-pass: merges bottle data with manual log totals atomically.
-              // Replaces: bulkUpsert30Days + Future.delayed(1s) + syncAllSummariesWithLogs.
-              await dbHelper.bulkUpsert30DaysWithLogs(list);
 
+              // Save raw BLE bottle data to SQLite
+              await dbHelper.bulkUpsert30Days(list);
+
+              // Push raw BLE bottle intake to server with force: true so DailySummary.consumed on server is exact bottle volume.
+              // Only send data for today — filter by matching date (year/month/day) to avoid sending previous day's data.
+              final userId = await SharedPrefsHelper.getUserId();
+              if (userId != null && userId.isNotEmpty) {
+                final now = DateTime.now();
+                final todayBleList = list.where((s) =>
+                  s.date.year == now.year &&
+                  s.date.month == now.month &&
+                  s.date.day == now.day
+                ).toList();
+                if (todayBleList.isNotEmpty) {
+                  final todayBle = todayBleList.first;
+                  // Always use the actual device date (not BLE-reported date) to avoid any date mismatch
+                  final dateUtc = '${now.year.toString().padLeft(4, '0')}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}T00:00:00.000Z';
+                  await ApiService().updateTodayConsumed(
+                    userId,
+                    dateUtc,
+                    todayBle.consumed,
+                    todayBle.isPerfect,
+                    target: todayBle.target,
+                    dayIndex: todayBle.dayIndex,
+                    battery: state.battery,
+                    force: true,
+                  );
+                } else {
+                  Console.log(
+                    tag: 'BLE_Cubit',
+                    value: 'Skipping server update: no BLE record matching today (${now.year}-${now.month}-${now.day})',
+                  );
+                }
+              }
+
+              // Fetch unified total (bottle + manual logs + food) from server API
               final history = await getCurrentDayHistory();
               emit(state.copyWith(currentHydrationValue: history));
 
@@ -1135,10 +1181,8 @@ class BleCubit extends Cubit<BleState>
 
               _syncWithLocalConsumption(history, historyPrevious);
 
-              DatabaseSyncService().syncAll(isFromBle: true, battery: state.battery);
-
-              final updatedHistory = await getCurrentDayHistory();
-              emit(state.copyWith(currentHydrationValue: updatedHistory));
+              DatabaseSyncService()
+                  .syncAll(isFromBle: false, battery: state.battery);
 
               try {
                 await HomeWidgetService.updateWidgetData();
@@ -1676,6 +1720,13 @@ class BleCubit extends Cubit<BleState>
   }
 
   Future<void> _flushPendingSlots() async {
+    if (_isFlushing) {
+      Console.log(
+          tag: "BLE_Cubit",
+          value: "[_flushPendingSlots] Already flushing, ignoring duplicate call.");
+      return;
+    }
+    _isFlushing = true;
     final startMs = DateTime.now().millisecondsSinceEpoch;
     print("============> $_ackChar");
     print('============> ${_pendingSlots.isEmpty}');
@@ -1765,6 +1816,32 @@ class BleCubit extends Cubit<BleState>
         //   lastCommandSent: 'hydrationSlots',
         // ));
       }
+
+      // 3.5 Sync Manual Liquid Delta (000A)
+      final freshConsumedChar =
+          await _getFreshCharacteristic(consumedUpdate);
+      if (freshConsumedChar != null) {
+        final pendingDelta = await SharedPrefsHelper.getPendingManualDelta();
+        String payload = pendingDelta.toString();
+        if (pendingDelta > 0) {
+          payload = "+$pendingDelta";
+        }
+        try {
+          Console.log(
+              tag: "BLE_Cubit",
+              value: "Sending pending manual liquid delta (000A): $payload");
+          await freshConsumedChar.write(payload.codeUnits,
+              withoutResponse: true);
+          if (pendingDelta != 0) {
+            await SharedPrefsHelper.clearPendingManualDelta();
+          }
+        } catch (e) {
+          Console.log(
+              tag: "BLE_Cubit",
+              value: "Failed to send pending manual liquid delta: $e");
+        }
+      }
+
       // 4. Sync Pending Wi-Fi Provisioning
       if (_wifiProvCompleter == null || _wifiProvCompleter!.isCompleted) {
         final pendingWifi = await SharedPrefsHelper.getPendingWifiProvData();
@@ -1870,9 +1947,38 @@ class BleCubit extends Cubit<BleState>
       emit(
           state.copyWith(status: BleStatus.error, message: "Flush failed: $e"));
     } finally {
+      _isFlushing = false;
       final endMs = DateTime.now().millisecondsSinceEpoch;
       print(
           "============> Total time taken for _flushPendingSlots: ${endMs - startMs}ms");
+    }
+  }
+
+  /// Sends any accumulated manual liquid delta to characteristic 000A immediately
+  Future<void> syncPendingManualDelta() async {
+    if (state.status != BleStatus.connected) return;
+    try {
+      final freshConsumedChar =
+          await _getFreshCharacteristic(consumedUpdate);
+      if (freshConsumedChar != null) {
+        final pendingDelta = await SharedPrefsHelper.getPendingManualDelta();
+        if (pendingDelta != 0) {
+          String payload = pendingDelta.toString();
+          if (pendingDelta > 0) {
+            payload = "+$pendingDelta";
+          }
+          Console.log(
+              tag: "BLE_Cubit",
+              value: "Writing manual liquid delta (000A): $payload");
+          await freshConsumedChar.write(payload.codeUnits,
+              withoutResponse: true);
+          await SharedPrefsHelper.clearPendingManualDelta();
+        }
+      }
+    } catch (e) {
+      Console.log(
+          tag: "BLE_Cubit",
+          value: "Failed to write manual delta (000A): $e");
     }
   }
 
@@ -2077,6 +2183,7 @@ class BleCubit extends Cubit<BleState>
     _resetChar = null;
     _wifiProvChar = null;
     _wifiNotifChar = null;
+    _consumedUpdateChar = null;
   }
 
   @override
@@ -2084,10 +2191,57 @@ class BleCubit extends Cubit<BleState>
       _hydrationController.stream;
 
   Future<double> getCurrentDayHistory() async {
+    try {
+      final hasInternet = await InternetConnectionHelper().hasInternetConnection();
+      if (hasInternet) {
+        final userId = await SharedPrefsHelper.getUserId();
+        if (userId != null && userId.isNotEmpty) {
+          final now = DateTime.now();
+          final startDate = DateTime.utc(now.year, now.month, now.day);
+          final endDate = DateTime.utc(now.year, now.month, now.day, 23, 59, 59);
+          final summaries = await ApiService().getDailySummaries(userId, startDate, endDate);
+          if (summaries != null && summaries.isNotEmpty) {
+            final summaryMap = summaries.first;
+            final serverConsumed = (summaryMap['consumed'] as num).toDouble();
+            final targetVal = (summaryMap['target'] as num?)?.toDouble() ?? 2500;
+
+            DateTime targetDate = DateTime(now.year, now.month, now.day);
+            final String? serverDateStr = summaryMap['date'] as String?;
+            if (serverDateStr != null) {
+              try {
+                final datePart = serverDateStr.length >= 10 
+                    ? serverDateStr.substring(0, 10) 
+                    : serverDateStr;
+                targetDate = DateTime.parse(datePart);
+              } catch (_) {}
+            }
+
+            await dbHelper.bulkUpsert30Days([
+              HydrationDaySummary(
+                date: targetDate,
+                dayIndex: summaryMap['dayIndex'] as int? ?? 0,
+                target: targetVal,
+                consumed: serverConsumed,
+                isPerfect: targetVal > 0 && serverConsumed >= targetVal,
+              )
+            ]);
+
+            Console.log(
+                tag: "BleCubit_getCurrentDayHistory",
+                value: "Fetched from server: $serverConsumed ml");
+            return serverConsumed;
+          }
+        }
+      }
+    } catch (e) {
+      Console.log(
+          tag: "BleCubit_getCurrentDayHistory",
+          value: "Failed fetching from server, falling back to local DB: $e");
+    }
+
     final db = await dbHelper.database;
 
     final now = DateTime.now();
-    // Normalize "Today" to UTC midnight for matching against stable database entries
     final normalizedStart = DateTime(now.year, now.month, now.day);
     final normalizedEnd =
         DateTime(now.year, now.month, now.day, 23, 59, 59, 999);
@@ -2095,8 +2249,6 @@ class BleCubit extends Cubit<BleState>
     final List<Map<String, dynamic>> maps = await db.query(
       DatabaseHelper.hydrationSummaryTableName,
     );
-
-    //Console.log(tag: "getCurrentDayHistory", value: maps.toString());
 
     var hyderationData = List.generate(
       maps.length,
@@ -2445,6 +2597,9 @@ class BleCubit extends Cubit<BleState>
                   value: "BLE_Cubit");
               _wifiNotifChar = c;
             }
+            if (c.uuid == consumedUpdate) {
+              _consumedUpdateChar = c;
+            }
           }
           if (c.uuid == charUuid) {
             return c;
@@ -2471,6 +2626,7 @@ class BleCubit extends Cubit<BleState>
     if (uuid == resetUUID) return _resetChar;
     if (uuid == wifiProvUUID) return _wifiProvChar;
     if (uuid == wifiNotifUUID) return _wifiNotifChar;
+    if (uuid == consumedUpdate) return _consumedUpdateChar;
     return null;
   }
 }

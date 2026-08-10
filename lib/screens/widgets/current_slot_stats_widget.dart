@@ -11,6 +11,7 @@ import 'package:hydrify/constants/app_font_styles.dart';
 import 'package:hydrify/l10n/app_localizations.dart';
 import 'package:hydrify/cubit/bottle/bottle_data_cubit.dart';
 import 'package:hydrify/helpers/shared_pref_helper.dart';
+import 'package:hydrify/helpers/hydration_helper.dart';
 import 'package:hydrify/helpers/water_consumption_data_helper.dart';
 import 'package:intl/intl.dart';
 
@@ -46,7 +47,7 @@ class _CurrentSlotStatsWidgetState extends State<CurrentSlotStatsWidget> {
       buildWhen: (previous, current) =>
           previous.volumePercent != current.volumePercent,
       builder: (context, state) {
-        return FutureBuilder<(double, double)>(
+        return FutureBuilder<(double, double, String)>(
           future: () async {
             DateTime now = DateTime.now();
             DateTime startDate = DateTime(now.year, now.month, now.day);
@@ -64,20 +65,24 @@ class _CurrentSlotStatsWidgetState extends State<CurrentSlotStatsWidget> {
                 await WaterConsumptionCalculator.calculateCompletionPercentage(
               consumed,
             );
-            return (consumed, percent);
+            final unit = await SharedPrefsHelper.getSelectedUnit();
+            return (consumed, percent, unit);
           }(),
           builder: (context, snapshot) {
             double waterVolumeConsumed = 0;
             double completionPercent = 0;
+            String unit = 'mL';
 
             if (snapshot.hasData) {
               waterVolumeConsumed = snapshot.data!.$1;
               completionPercent = snapshot.data!.$2;
+              unit = snapshot.data!.$3;
             }
 
             return _buildStatsCard(
               todayConsumption: waterVolumeConsumed,
               todayConsumptionPercentage: completionPercent,
+              unit: unit,
               formattedTime: DateFormat.jm().format(DateTime.now()),
               slotName: widget.slotName,
               onTap: widget.onTap,
@@ -91,6 +96,7 @@ class _CurrentSlotStatsWidgetState extends State<CurrentSlotStatsWidget> {
   Widget _buildStatsCard({
     required double todayConsumption,
     required double todayConsumptionPercentage,
+    required String unit,
     required String formattedTime,
     required String slotName,
     VoidCallback? onTap,
@@ -186,12 +192,9 @@ class _CurrentSlotStatsWidgetState extends State<CurrentSlotStatsWidget> {
                   duration: const Duration(milliseconds: 600),
                   curve: Curves.fastEaseInToSlowEaseOut,
                   builder: (context, value, child) {
-                    String displayValue;
-                    if (value < 1000) {
-                      displayValue = "$value ml";
-                    } else {
-                      displayValue = "${(value / 1000).toStringAsFixed(1)} L";
-                    }
+                    final displayValue = HydrationHelper.formatVolume(
+                        value.toDouble(), unit,
+                        showUnit: true);
                     return Text(
                       displayValue,
                       style: TextStyle(

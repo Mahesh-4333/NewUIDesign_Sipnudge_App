@@ -15,6 +15,10 @@ import 'package:hydrify/helpers/logger.dart';
 import 'package:hydrify/helpers/vibration_helper.dart';
 import 'package:hydrify/services/health_service.dart';
 import 'package:hydrify/helpers/shared_pref_helper.dart';
+import 'package:hydrify/helpers/hydration_helper.dart';
+import 'package:hydrify/helpers/database_helper.dart';
+import 'package:hydrify/models/hydration_summary.dart';
+import 'package:hydrify/services/api_service.dart';
 import 'package:hydrify/screens/widgets/common/animated_refresh_icon.dart';
 
 import 'package:hydrify/cubit/user_info/user_info_cubit.dart';
@@ -40,10 +44,29 @@ class _DrinkTypesWidgetState extends State<DrinkTypesWidget>
   @override
   bool get wantKeepAlive => true;
 
+  String _selectedUnit = 'mL';
+  StreamSubscription? _configSubscription;
   @override
   void initState() {
     super.initState();
     _fetchWaterIntake(forcePermission: true);
+    SharedPrefsHelper.getSelectedUnit().then((unit) {
+      if (mounted) {
+        setState(() {
+          _selectedUnit = unit;
+        });
+      }
+    });
+    _configSubscription =
+        SharedPrefsHelper.configUpdateStream.stream.listen((_) {
+      SharedPrefsHelper.getSelectedUnit().then((unit) {
+        if (mounted) {
+          setState(() {
+            _selectedUnit = unit;
+          });
+        }
+      });
+    });
     _permissionSubscription = HealthService.onPermissionUpdate.listen((_) {
       _fetchWaterIntake();
     });
@@ -51,6 +74,7 @@ class _DrinkTypesWidgetState extends State<DrinkTypesWidget>
 
   @override
   void dispose() {
+    _configSubscription?.cancel();
     _permissionSubscription?.cancel();
     super.dispose();
   }
@@ -62,8 +86,24 @@ class _DrinkTypesWidgetState extends State<DrinkTypesWidget>
 
     try {
       final waterGoalParams = await SharedPrefsHelper.getWaterGoal() ?? 2500;
-      final history =
+      double history =
           await context.read<BottleDataCubit>().getCurrentDayHistory();
+
+      if (history == 0) {
+        final userId = await SharedPrefsHelper.getUserId();
+        final userEmail = await SharedPrefsHelper.getUserEmail();
+        if (userId != null && userEmail != "guest_user") {
+          final now = DateTime.now();
+          final start = DateTime.utc(now.year, now.month, now.day);
+          final end = DateTime.utc(now.year, now.month, now.day, 23, 59, 59);
+          final summaries =
+              await ApiService().getDailySummaries(userId, start, end);
+          if (summaries != null && summaries.isNotEmpty) {
+            final summaryMap = summaries.first;
+            history = (summaryMap['consumed'] as num?)?.toDouble() ?? 0.0;
+          }
+        }
+      }
 
       int steps = 0;
 
@@ -257,7 +297,7 @@ class _DrinkTypesWidgetState extends State<DrinkTypesWidget>
                               ],
                             ),
                             Text(
-                              "${(_waterIntake).toStringAsFixed(0)}/${(_waterGoal).toStringAsFixed(0)} ml",
+                              "${HydrationHelper.formatVolume(_waterIntake, _selectedUnit, showUnit: true)}/${HydrationHelper.formatVolume(_waterGoal.toDouble(), _selectedUnit, showUnit: true)}",
                               style: TextStyle(
                                 color: AppColors.switchReminderColor,
                                 fontSize: AppFontStyles.fontSize_16,

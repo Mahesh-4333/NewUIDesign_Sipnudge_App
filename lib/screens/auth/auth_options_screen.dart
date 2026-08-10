@@ -7,17 +7,17 @@ import 'package:hydrify/constants/app_colors.dart';
 import 'package:hydrify/constants/app_dimensions.dart';
 import 'package:hydrify/constants/app_font_styles.dart';
 import 'package:hydrify/constants/app_strings.dart';
+import 'package:hydrify/l10n/app_localizations.dart';
 import 'package:hydrify/helpers/shared_pref_helper.dart';
 import 'package:hydrify/screens/auth/signin_signup_screen.dart';
-import 'package:hydrify/screens/info/privacy_policy_screen.dart';
-import 'package:hydrify/screens/info/terms_of_service.dart';
-import 'package:hydrify/screens/qr_scanning.dart';
 import 'package:hydrify/screens/user_personal_info_input_screen..dart';
 import 'package:hydrify/screens/widgets/auth_button_widget.dart';
 import 'package:hydrify/services/firebase_functions_service.dart';
 import 'package:hydrify/services/google_calendar_manager.dart';
 import 'package:hydrify/services/ui_utils_service.dart';
 import 'package:url_launcher/url_launcher.dart';
+
+enum LinkType { privacy, terms }
 
 class AuthOptionsScreen extends StatefulWidget {
   const AuthOptionsScreen({super.key});
@@ -27,6 +27,8 @@ class AuthOptionsScreen extends StatefulWidget {
 }
 
 class _AuthOptionsScreenState extends State<AuthOptionsScreen> {
+  bool _isTermsAccepted = false;
+
   @override
   void initState() {
     super.initState();
@@ -87,7 +89,7 @@ class _AuthOptionsScreenState extends State<AuthOptionsScreen> {
                 height: AppDimensions.dim25.h,
               ),
               Text(
-                AppStrings.beginYourJourney,
+                AppLocalizations.of(context)?.beginYourJourney ?? AppStrings.beginYourJourney,
                 style: TextStyle(
                   color: AppColors.bluegray,
                   fontSize: AppFontStyles.fontSize_20.sp,
@@ -110,7 +112,7 @@ class _AuthOptionsScreenState extends State<AuthOptionsScreen> {
                 height: AppDimensions.dim12.h,
               ),
               Text(
-                AppStrings.letsDive,
+                AppLocalizations.of(context)?.letsDive ?? AppStrings.letsDive,
                 style: TextStyle(
                   color: AppColors.bluegray,
                   fontSize: AppFontStyles.fontSize_16.sp,
@@ -132,33 +134,42 @@ class _AuthOptionsScreenState extends State<AuthOptionsScreen> {
               SizedBox(
                 height: AppDimensions.dim33.h,
               ),
-              AuthButton(
-                iconPath: "assets/images/google_ic.svg",
-                text: AppStrings.continueWithGoogle,
-                color: AppColors.white,
-                onTap: () async {
-                  UiUtilsService.showLoading(
-                      context, "Signing you in via Google");
-                  var signInWithGoogleRes =
-                      await FirebaseFunctionsService.signInWithGoogle();
-                  UiUtilsService.dismissLoading(context);
-                  if (signInWithGoogleRes != null) {
-                    await SharedPrefsHelper.setUserEmail(
-                        signInWithGoogleRes.user?.email ?? "");
-                    UiUtilsService.showToast(
-                        context: context, text: "Signin Successful");
+              Opacity(
+                opacity: _isTermsAccepted ? 1.0 : 0.6,
+                child: AuthButton(
+                  iconPath: "assets/images/google_ic.svg",
+                  text: AppLocalizations.of(context)?.continueWithGoogle ?? AppStrings.continueWithGoogle,
+                  color: AppColors.white,
+                  onTap: () async {
+                    if (!_isTermsAccepted) {
+                      UiUtilsService.showToast(
+                          context: context,
+                          text: AppLocalizations.of(context)?.pleaseAcceptTerms ?? "Please accept the terms and conditions");
+                      return;
+                    }
+                    UiUtilsService.showLoading(
+                        context, AppLocalizations.of(context)?.signingInGoogle ?? "Signing you in via Google");
+                    var signInWithGoogleRes =
+                        await FirebaseFunctionsService.signInWithGoogle();
+                    UiUtilsService.dismissLoading(context);
+                    if (signInWithGoogleRes != null) {
+                      await SharedPrefsHelper.setUserEmail(
+                          signInWithGoogleRes.user?.email ?? "");
+                      UiUtilsService.showToast(
+                          context: context, text: AppLocalizations.of(context)?.signinSuccessful ?? "Signin Successful");
 
-                    Navigator.pushAndRemoveUntil(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => UserInfoInputScreen(
-                          fromSettings: false,
+                      Navigator.pushAndRemoveUntil(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => UserInfoInputScreen(
+                            fromSettings: false,
+                          ),
                         ),
-                      ),
-                      (route) => false,
-                    );
-                  }
-                },
+                        (route) => false,
+                      );
+                    }
+                  },
+                ),
               ),
 
               SizedBox(
@@ -233,35 +244,44 @@ class _AuthOptionsScreenState extends State<AuthOptionsScreen> {
                 child: Column(
                   children: [
                     SizedBox(height: AppDimensions.dim20.h),
-                    AuthButton(
-                      iconPath: "assets/images/apple_icon.svg",
-                      text: AppStrings.continueWithApple,
-                      color: AppColors.white,
-                      onTap: () async {
-                        UiUtilsService.showLoading(
-                            context, "Signing you in via Apple");
-                        var signInWithAppleRes =
-                            await FirebaseFunctionsService.signInWithApple();
+                    Opacity(
+                      opacity: _isTermsAccepted ? 1.0 : 0.6,
+                      child: AuthButton(
+                        iconPath: "assets/images/apple_icon.svg",
+                        text: AppLocalizations.of(context)?.continueWithApple ?? AppStrings.continueWithApple,
+                        color: AppColors.white,
+                        onTap: () async {
+                          if (!_isTermsAccepted) {
+                            UiUtilsService.showToast(
+                                context: context,
+                                text: AppLocalizations.of(context)?.pleaseAcceptTerms ?? "Please accept the terms and conditions");
+                            return;
+                          }
+                          UiUtilsService.showLoading(
+                              context, AppLocalizations.of(context)?.signingInApple ?? "Signing you in via Apple");
+                          var signInWithAppleRes =
+                              await FirebaseFunctionsService.signInWithApple();
 
-                        UiUtilsService.dismissLoading(context);
-                        if (signInWithAppleRes['success'] == true) {
-                          UiUtilsService.showToast(
-                              context: context, text: "Signin Successful");
+                          UiUtilsService.dismissLoading(context);
+                          if (signInWithAppleRes['success'] == true) {
+                            UiUtilsService.showToast(
+                                context: context, text: AppLocalizations.of(context)?.signinSuccessful ?? "Signin Successful");
 
-                          Navigator.pushAndRemoveUntil(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => UserInfoInputScreen(),
-                            ),
-                            (route) => false,
-                          );
-                        } else {
-                          UiUtilsService.showToast(
-                              context: context,
-                              text: signInWithAppleRes['message'] ??
-                                  'Apple Sign-In failed');
-                        }
-                      },
+                            Navigator.pushAndRemoveUntil(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => UserInfoInputScreen(),
+                              ),
+                              (route) => false,
+                            );
+                          } else {
+                            UiUtilsService.showToast(
+                                context: context,
+                                text: signInWithAppleRes['message'] ??
+                                    'Apple Sign-In failed');
+                          }
+                        },
+                      ),
                     ),
                     SizedBox(height: AppDimensions.dim20.h),
                     // // Continue as Guest button for iOS (after Apple button)
@@ -329,37 +349,145 @@ class _AuthOptionsScreenState extends State<AuthOptionsScreen> {
                 ),
               ),
               SizedBox(height: AppDimensions.dim7.h),
-              AuthButton(
-                text: AppStrings.signUp,
-                color: AppColors.blueGradient,
-                areTwoItems: false,
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => SigninSignupScreen(
-                        isSigninFlow: false,
+              Opacity(
+                opacity: _isTermsAccepted ? 1.0 : 0.6,
+                child: AuthButton(
+                  text: AppLocalizations.of(context)?.signUp ?? AppStrings.signUp,
+                  color: AppColors.blueGradient,
+                  areTwoItems: false,
+                  onTap: () {
+                    if (!_isTermsAccepted) {
+                      UiUtilsService.showToast(
+                          context: context,
+                          text: AppLocalizations.of(context)?.pleaseAcceptTerms ?? "Please accept the terms and conditions");
+                      return;
+                    }
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => SigninSignupScreen(
+                          isSigninFlow: false,
+                        ),
                       ),
-                    ),
-                  );
-                },
+                    );
+                  },
+                ),
               ),
               SizedBox(height: AppDimensions.dim20.h),
-              AuthButton(
-                text: AppStrings.signIn,
-                color: AppColors.blueSecondary,
-                textColor: AppColors.buttonTextPurpleColor,
-                areTwoItems: false,
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => SigninSignupScreen(
-                        isSigninFlow: true,
+              Opacity(
+                opacity: _isTermsAccepted ? 1.0 : 0.6,
+                child: AuthButton(
+                  text: AppLocalizations.of(context)?.signIn ?? AppStrings.signIn,
+                  color: AppColors.blueSecondary,
+                  textColor: AppColors.buttonTextPurpleColor,
+                  areTwoItems: false,
+                  onTap: () {
+                    if (!_isTermsAccepted) {
+                      UiUtilsService.showToast(
+                          context: context,
+                          text: AppLocalizations.of(context)?.pleaseAcceptTerms ?? "Please accept the terms and conditions");
+                      return;
+                    }
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => SigninSignupScreen(
+                          isSigninFlow: true,
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+              SizedBox(height: AppDimensions.dim32.h),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  SizedBox(
+                    width: AppDimensions.dim32.w,
+                    height: AppDimensions.dim32.w,
+                    child: Checkbox(
+                      checkColor: AppColors.white,
+                      activeColor: AppColors.lightBlue400,
+                      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      shape: RoundedRectangleBorder(
+                        borderRadius:
+                            BorderRadius.circular(AppDimensions.radius_5.w),
+                      ),
+                      side: BorderSide(
+                        color: AppColors.lightBlue400,
+                        width: AppDimensions.dim3.w,
+                      ),
+                      value: _isTermsAccepted,
+                      onChanged: (newValue) {
+                        setState(() {
+                          _isTermsAccepted = newValue ?? false;
+                        });
+                      },
+                    ),
+                  ),
+                  SizedBox(width: AppDimensions.dim12.w),
+                  GestureDetector(
+                    onTap: () {
+                      setState(() {
+                        _isTermsAccepted = !_isTermsAccepted;
+                      });
+                    },
+                    child: RichText(
+                      textAlign: TextAlign.start,
+                      text: TextSpan(
+                        text: AppLocalizations.of(context)?.iAgreeToThe ?? "I agree to the ",
+                        style: TextStyle(
+                          color: AppColors.black,
+                          fontSize: AppFontStyles.fontSize_15.sp,
+                          fontFamily: AppFontStyles.urbanistFontFamily,
+                          fontVariations: [
+                            AppFontStyles.semiBoldFontVariation,
+                          ],
+                        ),
+                        children: [
+                          WidgetSpan(
+                            alignment: PlaceholderAlignment.middle,
+                            child: GestureDetector(
+                              onTap: () =>
+                                  _launchURL("https://sipnudge.com/terms"),
+                              child: Text(
+                                AppLocalizations.of(context)?.termsOfService ?? "Terms of Service",
+                                style: TextStyle(
+                                  color: AppColors.blueGradient,
+                                  fontSize: AppFontStyles.fontSize_15.sp,
+                                  fontFamily: AppFontStyles.urbanistFontFamily,
+                                  fontVariations: [
+                                    AppFontStyles.semiBoldFontVariation,
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                          TextSpan(text: " & "),
+                          WidgetSpan(
+                            alignment: PlaceholderAlignment.middle,
+                            child: GestureDetector(
+                              onTap: () =>
+                                  _launchURL("https://sipnudge.com/privacy"),
+                              child: Text(
+                                AppLocalizations.of(context)?.privacyPolicy ?? "Privacy Policy",
+                                style: TextStyle(
+                                  color: AppColors.blueGradient,
+                                  fontSize: AppFontStyles.fontSize_15.sp,
+                                  fontFamily: AppFontStyles.urbanistFontFamily,
+                                  fontVariations: [
+                                    AppFontStyles.semiBoldFontVariation,
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-                  );
-                },
+                  ),
+                ],
               ),
               Spacer(),
 
@@ -384,7 +512,7 @@ class _AuthOptionsScreenState extends State<AuthOptionsScreen> {
                           fontFamily: AppFontStyles.urbanistFontFamily),
                       children: [
                         TextSpan(
-                          text: 'Privacy Policy',
+                          text: AppLocalizations.of(context)?.privacyPolicy ?? 'Privacy Policy',
                           style: TextStyle(
                             color: AppColors.black,
                             fontSize: AppFontStyles.fontSize_13,
@@ -402,7 +530,7 @@ class _AuthOptionsScreenState extends State<AuthOptionsScreen> {
                           style: TextStyle(color: Colors.black),
                         ),
                         TextSpan(
-                          text: 'Terms of Service',
+                          text: AppLocalizations.of(context)?.termsOfService ?? 'Terms of Service',
                           style: TextStyle(
                             color: AppColors.black,
                             fontSize: AppFontStyles.fontSize_13,
@@ -430,16 +558,9 @@ class _AuthOptionsScreenState extends State<AuthOptionsScreen> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             GestureDetector(
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => PrivacyPolicyScreen(),
-                  ),
-                );
-              },
+              onTap: () => _launchURL("https://sipnudge.com/privacy"),
               child: Text(
-                AppStrings.privacyPolicy,
+                AppLocalizations.of(context)?.privacyPolicy ?? AppStrings.privacyPolicy,
                 style: TextStyle(
                     fontFamily: AppFontStyles.urbanistFontFamily,
                     color: AppColors.white,
@@ -453,16 +574,9 @@ class _AuthOptionsScreenState extends State<AuthOptionsScreen> {
               width: AppDimensions.dim20.w,
             ),
             GestureDetector(
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => TermsOfServiceScreen(),
-                  ),
-                );
-              },
+              onTap: () => _launchURL("https://sipnudge.com/terms"),
               child: Text(
-                AppStrings.termsOfService,
+                AppLocalizations.of(context)?.termsOfService ?? AppStrings.termsOfService,
                 style: TextStyle(
                     fontFamily: AppFontStyles.urbanistFontFamily,
                     color: AppColors.white,
@@ -478,16 +592,22 @@ class _AuthOptionsScreenState extends State<AuthOptionsScreen> {
     );
   }
 
-  void _onFooterLinkTap(LinkType type) async {
-    final uri = Uri.parse(type == LinkType.privacy
-        ? "https://sipnudge.com/policies/privacy-policy"
-        : "https://sipnudge.com/policies/terms-of-service");
+  Future<void> _launchURL(String urlString) async {
+    final uri = Uri.parse(urlString);
     try {
       await launchUrl(uri, mode: LaunchMode.externalApplication);
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Could not open the webpage")),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(AppLocalizations.of(context)?.couldNotOpenWebpage ?? "Could not open the webpage")),
+        );
+      }
     }
+  }
+
+  void _onFooterLinkTap(LinkType type) {
+    _launchURL(type == LinkType.privacy
+        ? "https://sipnudge.com/privacy"
+        : "https://sipnudge.com/terms");
   }
 }

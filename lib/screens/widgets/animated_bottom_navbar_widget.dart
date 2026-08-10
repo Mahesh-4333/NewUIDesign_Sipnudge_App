@@ -325,7 +325,7 @@ class _AnimatedBottomNavBarState extends State<AnimatedBottomNavBar>
                                 ),
                                 padding: EdgeInsets.symmetric(
                                   vertical: AppDimensions.dim14.h,
-                                  horizontal: AppDimensions.dim20.w,
+                                  horizontal: AppDimensions.dim25.w,
                                 ),
                                 child: Row(
                                   mainAxisAlignment:
@@ -526,31 +526,22 @@ class _AnimatedBottomNavBarState extends State<AnimatedBottomNavBar>
   }
 
   Widget _buildNavBarItem(int index, bool isSelected) {
-    final labels = _getLabels(context);
+    final isTabActive = index == _currentIndex;
     return SizedBox(
       width: isSelected ? 82.w : 56.w,
       height: AppDimensions.dim60.h,
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          SvgPicture.asset(
-            _icons[index],
-            color: AppColors.darkgray,
-            width: 22.w,
-            height: 22.w,
-          ),
-          SizedBox(height: 3.h),
-          Text(
-            labels[index],
-            style: TextStyle(
-              color: AppColors.darkgray,
-              fontFamily: AppFontStyles.lexendFontFamily,
-              fontSize: 11.5.sp,
-              fontVariations: isSelected
-                  ? [AppFontStyles.regularFontVariation]
-                  : [
-                      AppFontStyles.lightFontWeightVariation,
-                    ],
+          AnimatedScale(
+            scale: isTabActive ? 1.25 : 1.0,
+            duration: const Duration(milliseconds: 200),
+            curve: Curves.easeOutBack,
+            child: SvgPicture.asset(
+              _icons[index],
+              color: isSelected ? const Color(0xFF444444) : const Color(0xFF656565),
+              width: 28.w,
+              height: 28.w,
             ),
           ),
         ],

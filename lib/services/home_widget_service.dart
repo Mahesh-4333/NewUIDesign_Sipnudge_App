@@ -7,6 +7,9 @@ import 'package:hydrify/helpers/logger.dart';
 import 'package:hydrify/helpers/shared_pref_helper.dart';
 import 'package:hydrify/services/api_service.dart';
 
+import 'package:fluttertoast/fluttertoast.dart';
+import 'package:hydrify/services/database_sync_service.dart';
+
 class HomeWidgetService {
   // Constants for widget names and App Group ID
   static const String androidWidgetName = 'HomeWidgetProvider';
@@ -17,6 +20,48 @@ class HomeWidgetService {
   static Future<void> initialize() async {
     // Set the App Group ID for iOS
     await HomeWidget.setAppGroupId(appGroupId);
+
+    // Register widget click listener for deep links (e.g. sipnudge://quick-add?type=coffee)
+    HomeWidget.initiallyLaunchedFromHomeWidget().then(_handleWidgetUri);
+    HomeWidget.widgetClicked.listen(_handleWidgetUri);
+  }
+
+  static void _handleWidgetUri(Uri? uri) {
+    if (uri == null) return;
+    Console.log(tag: "HomeWidget", value: "Received widget deep link: $uri");
+
+    final host = uri.host;
+    final typeParam = uri.queryParameters['type'];
+
+    if (host == 'quick-add' || uri.scheme == 'sipnudge') {
+      if (typeParam != null) {
+        final String drinkType =
+            typeParam.toLowerCase() == 'coffee' ? 'Coffee' : 'Water';
+        quickLogDrink(drinkType, amount: 250);
+      }
+    }
+  }
+
+  static Future<void> quickLogDrink(String drinkType, {double amount = 250}) async {
+    try {
+      final dbHelper = DatabaseHelper();
+      await dbHelper.insertHydrationLog(drinkType, amount, DateTime.now());
+
+      final double coefficient =
+          DatabaseHelper.hydrationCoefficients[drinkType] ?? 1.0;
+      final double effectiveWater = amount * coefficient;
+
+      await dbHelper.updateHydrationDaySummary(effectiveWater);
+
+      DatabaseSyncService().syncAll();
+      await updateWidgetData();
+
+      Fluttertoast.showToast(
+        msg: "Logged ${amount.toInt()}ml $drinkType from Widget! 💧",
+      );
+    } catch (e) {
+      Console.log(tag: "HomeWidget", value: "Error in quickLogDrink: $e");
+    }
   }
 
   static Future<void> updateWidgetData() async {
@@ -53,8 +98,8 @@ class HomeWidgetService {
       if (userId != null) {
         // Save user_id to the App Group so the native widget extension can read it in the background
         await HomeWidget.saveWidgetData<String>('user_id', userId);
-        final rangeStart = DateTime(today.year, today.month, today.day);
-        final rangeEnd = DateTime(today.year, today.month, today.day, 23, 59, 59);
+        final rangeStart = DateTime.utc(today.year, today.month, today.day);
+        final rangeEnd = DateTime.utc(today.year, today.month, today.day, 23, 59, 59);
         final summaries = await ApiService().getDailySummaries(userId, rangeStart, rangeEnd);
         if (summaries != null && summaries.isNotEmpty) {
           // Find today's summary by matching the year, month, and day in local time
@@ -62,7 +107,11 @@ class HomeWidgetService {
           for (final summary in summaries) {
             final dateStr = summary['date'] as String?;
             if (dateStr != null) {
-              final parsedDate = DateTime.tryParse(dateStr)?.toLocal();
+              DateTime? parsedDate;
+              try {
+                final datePart = dateStr.length >= 10 ? dateStr.substring(0, 10) : dateStr;
+                parsedDate = DateTime.parse(datePart);
+              } catch (_) {}
               if (parsedDate != null &&
                   parsedDate.year == today.year &&
                   parsedDate.month == today.month &&
@@ -84,10 +133,18 @@ class HomeWidgetService {
       Console.log(tag: "HomeWidget", value: "Error fetching summaries from API: $e");
     }
 
+    int coffeeIntake = 0;
+    try {
+      final dbHelper = DatabaseHelper();
+      coffeeIntake = await dbHelper.getTodayCoffeeIntake();
+    } catch (e) {
+      Console.log(tag: "HomeWidget", value: "Error fetching coffee intake: $e");
+    }
+
     // Save data to be read by the native widgets
     await HomeWidget.saveWidgetData<int>('current_intake', currentIntake);
     await HomeWidget.saveWidgetData<int>('daily_goal', dailyGoal);
-    await HomeWidget.saveWidgetData<int>('coffee_intake', 200);
+    await HomeWidget.saveWidgetData<int>('coffee_intake', coffeeIntake);
     final todayStr = DateTime.now().toIso8601String().substring(0, 10);
     await HomeWidget.saveWidgetData<String>('last_update_date', todayStr);
 

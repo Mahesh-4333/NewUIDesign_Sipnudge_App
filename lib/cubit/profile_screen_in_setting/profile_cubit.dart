@@ -83,6 +83,21 @@ class ProfileCubit extends Cubit<ProfileState> {
                 title: "Export Log",
                 groupLabel: "OTHER",
               ),
+              ProfileMenuItem(
+                iconPath: "assets/drink_rem.png",
+                title: "Hydration Ring Guide",
+                groupLabel: "OTHER",
+              ),
+              ProfileMenuItem(
+                iconPath: "assets/drink_rem.png",
+                title: "Home Screen Widget",
+                groupLabel: "OTHER",
+              ),
+              ProfileMenuItem(
+                iconPath: "assets/drink_rem.png",
+                title: "Intro",
+                groupLabel: "OTHER",
+              ),
               // ProfileMenuItem(
               //   iconPath: "assets/data_analytics_icon.png",
               //   title: "Leaderboard",

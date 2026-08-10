@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'dart:convert';
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:hydrify/constants/app_colors.dart';
@@ -9,10 +10,13 @@ import 'package:hydrify/constants/assets_path.dart';
 import 'package:hydrify/l10n/app_localizations.dart';
 import 'package:hydrify/helpers/shared_pref_helper.dart';
 import 'package:hydrify/helpers/database_helper.dart';
+import 'package:hydrify/helpers/hydration_helper.dart';
 import 'package:hydrify/services/api_service.dart';
 import 'package:hydrify/models/food_scan_data.dart';
 import 'package:hydrify/screens/widgets/chart_widgets/food_scanner_widget.dart';
 import 'package:hydrify/screens/widgets/chart_widgets/log_hydration_widget.dart';
+import 'package:fluttertoast/fluttertoast.dart';
+import 'package:hydrify/services/database_sync_service.dart';
 import 'package:intl/intl.dart';
 
 class LogTabScreen extends StatefulWidget {
@@ -24,13 +28,47 @@ class LogTabScreen extends StatefulWidget {
 
 class _LogTabScreenState extends State<LogTabScreen> {
   int _selectedSubTab = 0; // 0: Food Intake, 1: Liquid Intake
+  List<FoodScanData> _allFoodLogs = [];
   List<FoodScanData> _foodLogs = [];
   bool _isLoadingLogs = false;
+
+  DateTime _selectedDate = DateUtils.dateOnly(DateTime.now());
+
+  List<DateTime> get _dates {
+    final today = DateUtils.dateOnly(DateTime.now());
+    return List.generate(7, (index) => today.subtract(Duration(days: index)));
+  }
+
+  String _selectedUnit = 'mL';
+  StreamSubscription? _configSubscription;
 
   @override
   void initState() {
     super.initState();
     _loadFoodLogs();
+    SharedPrefsHelper.getSelectedUnit().then((unit) {
+      if (mounted) {
+        setState(() {
+          _selectedUnit = unit;
+        });
+      }
+    });
+    _configSubscription =
+        SharedPrefsHelper.configUpdateStream.stream.listen((_) {
+      SharedPrefsHelper.getSelectedUnit().then((unit) {
+        if (mounted) {
+          setState(() {
+            _selectedUnit = unit;
+          });
+        }
+      });
+    });
+  }
+
+  @override
+  void dispose() {
+    _configSubscription?.cancel();
+    super.dispose();
   }
 
   Future<void> _loadFoodLogs() async {
@@ -43,8 +81,10 @@ class _LogTabScreenState extends State<LogTabScreen> {
       final userId = await SharedPrefsHelper.getUserId();
       List<Map<String, dynamic>> rawScans = [];
       if (userEmail != "guest_user" && userId != null) {
-        // Try to fetch from API
-        final apiScans = await ApiService().getFoodScans(userId);
+        // Fetch logs starting from 7 days ago to cover the 7-day selector scope
+        final startDate = _dates.last;
+        final apiScans =
+            await ApiService().getFoodScans(userId, startDate: startDate);
         if (apiScans != null) {
           rawScans = apiScans;
         } else {
@@ -57,7 +97,8 @@ class _LogTabScreenState extends State<LogTabScreen> {
       }
       if (mounted) {
         setState(() {
-          _foodLogs = rawScans.map((m) => FoodScanData.fromMap(m)).toList();
+          _allFoodLogs = rawScans.map((m) => FoodScanData.fromMap(m)).toList();
+          _filterFoodLogsForSelectedDate();
         });
       }
     } catch (e) {
@@ -71,48 +112,90 @@ class _LogTabScreenState extends State<LogTabScreen> {
     }
   }
 
+  void _filterFoodLogsForSelectedDate() {
+    _foodLogs = _allFoodLogs.where((log) {
+      final logDate = DateUtils.dateOnly(log.timestamp);
+      return DateUtils.isSameDay(logDate, _selectedDate);
+    }).toList();
+  }
+
+  Future<void> _deleteFoodLog(FoodScanData log) async {
+    // 1. Delete locally from SQLite
+    await DatabaseHelper().deleteFoodScanById(
+      log.id,
+      dishName: log.dishName,
+      timestamp: log.timestamp.toIso8601String(),
+    );
+
+    // 2. Delete on backend server
+    final userId = await SharedPrefsHelper.getUserId();
+    final userEmail = await SharedPrefsHelper.getUserEmail();
+    if (userId != null && userEmail != "guest_user") {
+      await ApiService().deleteFoodScan(
+        userId,
+        scanId: log.id?.toString(),
+        dishName: log.dishName,
+        timestamp: log.timestamp.toIso8601String(),
+      );
+    }
+
+    Fluttertoast.showToast(msg: "Food log deleted");
+
+    // 3. Reload list
+    await _loadFoodLogs();
+
+    // 4. Background sync
+    DatabaseSyncService().syncAll();
+  }
+
   Widget _buildFoodIcon(FoodScanData log) {
     Widget? imageWidget;
 
-    if (log.imagePath != null && log.imagePath!.isNotEmpty) {
-      if (log.imagePath!.startsWith('http')) {
-        imageWidget = Image.network(
-          log.imagePath!,
-          fit: BoxFit.cover,
-        );
-      } else if (log.imagePath!.startsWith('/uploads/')) {
-        imageWidget = Image.network(
-          "https://api.sipnudge.com${log.imagePath}",
-          fit: BoxFit.cover,
-        );
-      } else {
-        final file = File(log.imagePath!);
-        if (file.existsSync()) {
-          imageWidget = Image.file(
-            file,
-            fit: BoxFit.cover,
-          );
-        }
-      }
-    }
-
-    if (imageWidget == null && log.imageBase64 != null && log.imageBase64!.isNotEmpty) {
+    // 1. Check base64 first (most reliable for offline & local scans)
+    if (log.imageBase64 != null && log.imageBase64!.isNotEmpty) {
       try {
         final decodedBytes = base64Decode(log.imageBase64!);
         imageWidget = Image.memory(
           decodedBytes,
           fit: BoxFit.cover,
+          errorBuilder: (ctx, err, stack) => _defaultFoodIcon(),
         );
       } catch (e) {
         debugPrint("Error decoding base64 image: $e");
       }
     }
 
-    imageWidget ??= Icon(
-      Icons.restaurant_menu_rounded,
-      color: const Color(0xFF003057),
-      size: 20.sp,
-    );
+    // 2. Fall back to image file/URL path
+    if (imageWidget == null &&
+        log.imagePath != null &&
+        log.imagePath!.isNotEmpty) {
+      if (log.imagePath!.startsWith('http')) {
+        imageWidget = Image.network(
+          log.imagePath!,
+          fit: BoxFit.cover,
+          errorBuilder: (ctx, err, stack) => _defaultFoodIcon(),
+        );
+      } else if (log.imagePath!.startsWith('/uploads/')) {
+        imageWidget = Image.network(
+          "https://api.sipnudge.com${log.imagePath}",
+          fit: BoxFit.cover,
+          errorBuilder: (ctx, err, stack) => _defaultFoodIcon(),
+        );
+      } else {
+        try {
+          final file = File(log.imagePath!);
+          if (file.existsSync()) {
+            imageWidget = Image.file(
+              file,
+              fit: BoxFit.cover,
+              errorBuilder: (ctx, err, stack) => _defaultFoodIcon(),
+            );
+          }
+        } catch (_) {}
+      }
+    }
+
+    imageWidget ??= _defaultFoodIcon();
 
     return Container(
       width: 44.w,
@@ -123,6 +206,14 @@ class _LogTabScreenState extends State<LogTabScreen> {
       ),
       clipBehavior: Clip.antiAlias,
       child: imageWidget,
+    );
+  }
+
+  Widget _defaultFoodIcon() {
+    return Icon(
+      Icons.restaurant_menu_rounded,
+      color: const Color(0xFF003057),
+      size: 20.sp,
     );
   }
 
@@ -311,8 +402,94 @@ class _LogTabScreenState extends State<LogTabScreen> {
       padding: EdgeInsets.only(bottom: 200.h),
       physics: const BouncingScrollPhysics(),
       children: [
-        FoodScannerWidget(onScanCompleted: _loadFoodLogs),
+        FoodScannerWidget(
+          onScanCompleted: () {
+            setState(() {
+              _selectedDate = DateUtils.dateOnly(DateTime.now());
+            });
+            _loadFoodLogs();
+          },
+        ),
         SizedBox(height: AppDimensions.dim20.h),
+        // 7 Days Date Selector
+        Container(
+          height: 48.h,
+          margin: EdgeInsets.only(bottom: 20.h),
+          child: ListView.builder(
+            scrollDirection: Axis.horizontal,
+            physics: const BouncingScrollPhysics(),
+            itemCount: _dates.length,
+            itemBuilder: (context, index) {
+              final date = _dates[index];
+              final isSelected = DateUtils.isSameDay(date, _selectedDate);
+              final now = DateTime.now();
+
+              String label;
+              if (DateUtils.isSameDay(date, now)) {
+                label = "Today";
+              } else if (DateUtils.isSameDay(
+                  date, now.subtract(const Duration(days: 1)))) {
+                label = "Yesterday";
+              } else {
+                label = DateFormat('EEE, MMM d').format(date);
+              }
+
+              return GestureDetector(
+                onTap: () {
+                  if (DateUtils.isSameDay(date, _selectedDate)) return;
+                  setState(() {
+                    _selectedDate = date;
+                    _foodLogs = []; // clear immediately so old data doesn't flash
+                  });
+                  _loadFoodLogs();
+                },
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
+                  margin: EdgeInsets.only(
+                    right: 12.w,
+                    left: index == 0 ? 0.w : 0,
+                  ),
+                  padding: EdgeInsets.symmetric(horizontal: 20.w),
+                  decoration: BoxDecoration(
+                    color:
+                        isSelected ? AppColors.blueWaterIntake : Colors.white,
+                    borderRadius: BorderRadius.circular(24.r),
+                    border: Border.all(
+                      color: isSelected
+                          ? AppColors.blueWaterIntake
+                          : Colors.grey.shade200,
+                      width: 1.5,
+                    ),
+                    boxShadow: isSelected
+                        ? [
+                            BoxShadow(
+                              color: AppColors.blueWaterIntake.withOpacity(0.2),
+                              blurRadius: 10,
+                              offset: const Offset(0, 4),
+                            )
+                          ]
+                        : [],
+                  ),
+                  child: Center(
+                    child: Text(
+                      label,
+                      style: TextStyle(
+                        color: isSelected ? Colors.white : Colors.grey.shade600,
+                        fontSize: 14.sp,
+                        fontFamily: AppFontStyles.urbanistFontFamily,
+                        fontVariations: [
+                          isSelected
+                              ? AppFontStyles.boldFontVariation
+                              : AppFontStyles.regularFontVariation
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
         // Recent Logs Title row
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -371,7 +548,7 @@ class _LogTabScreenState extends State<LogTabScreen> {
             itemCount: _foodLogs.length,
             itemBuilder: (context, index) {
               final log = _foodLogs[index];
-              final formattedTime = DateFormat('hh:mm A').format(log.timestamp);
+              final formattedTime = DateFormat('hh:mm a').format(log.timestamp);
               final isToday = log.timestamp.day == DateTime.now().day &&
                   log.timestamp.month == DateTime.now().month &&
                   log.timestamp.year == DateTime.now().year;
@@ -425,12 +602,24 @@ class _LogTabScreenState extends State<LogTabScreen> {
                     ),
                     SizedBox(width: 8.w),
                     Text(
-                      "${log.waterContentMl.toInt()}ml",
+                      HydrationHelper.formatVolume(log.waterContentMl, _selectedUnit, showUnit: true),
                       style: TextStyle(
                         color: const Color(0xFF00A2FF),
                         fontSize: 16.sp,
                         fontFamily: AppFontStyles.urbanistFontFamily,
                         fontVariations: [AppFontStyles.boldFontVariation],
+                      ),
+                    ),
+                    SizedBox(width: 4.w),
+                    GestureDetector(
+                      onTap: () => _deleteFoodLog(log),
+                      child: Padding(
+                        padding: EdgeInsets.all(4.w),
+                        child: Icon(
+                          Icons.delete_outline_rounded,
+                          color: Colors.grey.shade400,
+                          size: 20.sp,
+                        ),
                       ),
                     ),
                   ],

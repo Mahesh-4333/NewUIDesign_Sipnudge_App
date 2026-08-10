@@ -605,4 +605,574 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get recentLogs => 'Recent Logs';
+
+  @override
+  String get profileSetup => 'Profile Setup';
+
+  @override
+  String get quietHoursAndActivity => 'Quiet Hours & Activity';
+
+  @override
+  String get sleepScheduleSubtitle =>
+      'Set your sleep schedule so Sipnudge stays\ncompletely silent overnight.';
+
+  @override
+  String get sleepCycle => 'Sleep Cycle';
+
+  @override
+  String get wakeTime => 'Wake Time';
+
+  @override
+  String get bedTime => 'Bed Time';
+
+  @override
+  String get activityLevel => 'ACTIVITY LEVEL';
+
+  @override
+  String get enterWakeupTime => 'Please enter your wakeup time';
+
+  @override
+  String get enterBedtime => 'Please enter your bedtime';
+
+  @override
+  String get selectWakeTime => 'Select Wake Time';
+
+  @override
+  String get selectBedTime => 'Select Bed Time';
+
+  @override
+  String get fuelAndFlow => 'Fuel & Flow';
+
+  @override
+  String get dietSubtitle =>
+      'Tell us a bit about your diet to calculate your baseline hydration needs.';
+
+  @override
+  String get primaryDietFocus => 'PRIMARY DIET FOCUS';
+
+  @override
+  String get averageDailyWater => 'AVERAGE DAILY WATER';
+
+  @override
+  String get roughEstimateFine => 'Rough estimate is fine';
+
+  @override
+  String get dailyCaffeine => 'DAILY CAFFEINE';
+
+  @override
+  String get pleaseWait => 'Please wait';
+
+  @override
+  String get scrollDown => 'Scroll Down';
+
+  @override
+  String get next => 'Next';
+
+  @override
+  String get yourState => 'Your State';
+
+  @override
+  String get personalizeProfile => 'Let\'s personalize your hydration profile.';
+
+  @override
+  String get username => 'USERNAME';
+
+  @override
+  String get usernameRequirements =>
+      '3-15 alphanumeric characters or underscores only.';
+
+  @override
+  String get usernameTaken => 'Username is already taken.';
+
+  @override
+  String get usernameCannotBeChanged => 'Username cannot be changed once set.';
+
+  @override
+  String get checkingAvailability => 'Checking availability...';
+
+  @override
+  String get usernameAvailable => 'Username available';
+
+  @override
+  String get useLettersNumbersUnderscores =>
+      'Use 3-15 letters, numbers, or underscores.';
+
+  @override
+  String get age => 'AGE';
+
+  @override
+  String get genderIdentity => 'GENDER IDENTITY';
+
+  @override
+  String get height => 'HEIGHT';
+
+  @override
+  String get weight => 'WEIGHT';
+
+  @override
+  String get fillHeightWeightAge =>
+      'Please fill in height, weight, and age before continuing.';
+
+  @override
+  String get enterUsername => 'Please enter your username.';
+
+  @override
+  String get usernameMustBeAlphanumeric =>
+      'Username must be 3-15 alphanumeric characters or underscores.';
+
+  @override
+  String get yourDailyGoal => 'Your Daily goal';
+
+  @override
+  String get rotateBezelToAdjustVolume => 'Rotate bezel to adjust volume';
+
+  @override
+  String get newGoal => 'NEW GOAL';
+
+  @override
+  String unitPerDay(String unit) {
+    return '$unit / day';
+  }
+
+  @override
+  String get targetCalibration => 'Target Calibration';
+
+  @override
+  String get adjustDailyIntakeGoal =>
+      'Adjust your daily intake goal based on precision metrics.';
+
+  @override
+  String get avgIntake => 'Avg Intake';
+
+  @override
+  String get increase => 'Increase';
+
+  @override
+  String get decrease => 'Decrease';
+
+  @override
+  String get hydrationTipMetabolism =>
+      'Drinking water before meals can boost \nyour metabolism by up to 30%.';
+
+  @override
+  String get actionRequired => 'Action Required';
+
+  @override
+  String get googleCalendarSignInRequired =>
+      'Google Calendar sign-in might be required for smart snooze and calendar sync';
+
+  @override
+  String get iGiveMyConsent => 'I give my consent';
+
+  @override
+  String get chooseYourFinish => 'Choose Your Finish';
+
+  @override
+  String get selectColorDailyRhythm =>
+      'Select the color that matches your\ndaily rhythm.';
+
+  @override
+  String get confirmSelection => 'Confirm Selection';
+
+  @override
+  String get midnightBlack => 'Midnight Black';
+
+  @override
+  String get descMidnightBlack =>
+      '“Minimal, Timeless. Built for every environment”';
+
+  @override
+  String get candyRed => 'Candy Red';
+
+  @override
+  String get descCandyRed => '“Bold, Energetic, and Impossible to ignore”';
+
+  @override
+  String get deepPurple => 'Deep Purple';
+
+  @override
+  String get descDeepPurple => '“Creative, Premium, and uniquely yours”';
+
+  @override
+  String get connect => 'Connect';
+
+  @override
+  String get yourSipnudgeBottle => 'Your Sipnudge Bottle';
+
+  @override
+  String get bluetoothRequiredDescription =>
+      'Bluetooth is required to sync your\nhydration data from your smart bottle\nto the app in real-time.';
+
+  @override
+  String get realTimeTracking => 'Real-time tracking';
+
+  @override
+  String get instantLiquidLevelUpdates => 'Instant liquid level updates.';
+
+  @override
+  String get smartNudges => 'Smart nudges';
+
+  @override
+  String get personalizedHabitBuilding => 'Personalized habit building.';
+
+  @override
+  String get accurateHistory => 'Accurate history';
+
+  @override
+  String get detailedConsumptionLogs => 'Detailed consumption logs.';
+
+  @override
+  String get enableBluetooth => 'Enable Bluetooth';
+
+  @override
+  String get skipNoBottle => 'Skip: I don\'t have a bottle';
+
+  @override
+  String get bottleActivation => 'Bottle Activation';
+
+  @override
+  String get wakeUpSmartBottleDescription =>
+      'Let\'s wake up your smart bottle and get it\nconnected to your wellness profile.';
+
+  @override
+  String get wakeYourBottle => 'Wake Your Bottle';
+
+  @override
+  String get touchCapDescription =>
+      'Gently touch the cap to activate the\nsensor and start advertising.';
+
+  @override
+  String get scanning => 'SCANNING...';
+
+  @override
+  String get discoveredDevices => 'DISCOVERED DEVICES';
+
+  @override
+  String get connecting => 'Connecting...';
+
+  @override
+  String get readyToPair => 'Ready to pair';
+
+  @override
+  String get excellent => 'Excellent';
+
+  @override
+  String get good => 'Good';
+
+  @override
+  String get weak => 'Weak';
+
+  @override
+  String get noDeviceFound => 'No device found';
+
+  @override
+  String get tapOn => 'Tap on ';
+
+  @override
+  String get toEstablishSecureConnection =>
+      ' to establish a secure connection and verify sensor calibration.';
+
+  @override
+  String get environmentalHarmony => 'Environmental\nHarmony';
+
+  @override
+  String get environmentalHarmonyDescription =>
+      'Connect seamlessly with your \nsurroundings. Sipnudge harmonizes \nwith local climate conditions to \ndynamically balance your hydration \nneeds, maintaining optimal wellness \nwherever you are.';
+
+  @override
+  String get temperatureCalibrationDisclaimer =>
+      'Temperature data is primary sourced from your Sipnudge bottle to estimate surrounding conditions. If the bottle is unavailable, the model automatically switches to your city\'s local temperature for calibration.';
+
+  @override
+  String get enableLocation => 'Enable Location';
+
+  @override
+  String get illDoItLater => 'I\'ll do it later';
+
+  @override
+  String get eg => 'e.g.';
+
+  @override
+  String get freshStart => 'Fresh Start';
+
+  @override
+  String get freshStartDescription =>
+      'Fill bottle until the float disc aligns with the maximum\nlevel marker. Do not exceed capacity to maintain\nsensor accuracy.';
+
+  @override
+  String get targetVolume => 'TARGET VOLUME';
+
+  @override
+  String maxVolumeFormat(String volume) {
+    return '/$volume ml';
+  }
+
+  @override
+  String get calibrated => 'Calibrated';
+
+  @override
+  String get calibration => 'Calibration';
+
+  @override
+  String get max => 'MAX';
+
+  @override
+  String get overfillingWarning =>
+      'Overfilling may cause cap displacement \nand interfere with hydration tracking \nsensors.';
+
+  @override
+  String get precision => 'Precision';
+
+  @override
+  String get precisionDescription => 'Ensures accurate \nhydration \ntracking.';
+
+  @override
+  String get seal => 'Seal';
+
+  @override
+  String get sealDescription => 'Prevents leaks \nand pressure \nbuild-up.';
+
+  @override
+  String get calibrating => 'Caliberating..';
+
+  @override
+  String get finalizeCalibration => 'Finalize Calibration';
+
+  @override
+  String get startCalibration => 'Start Calibration';
+
+  @override
+  String get walkthroughTitle1 =>
+      'Sipnudge - Your Ultimate\nHydration Co-pilot!';
+
+  @override
+  String get walkthroughSubtitle1 =>
+      'Stay healthy, & conquer your hydration goals!\nTrack your water intake, set reminders, and\nunlock achievements for a healthier you.';
+
+  @override
+  String get walkthroughTitle2 =>
+      'Track Your Hydration &\nVisualize Your Progress';
+
+  @override
+  String get walkthroughSubtitle2 =>
+      'Set reminders to stay consistent, review your\ndaily hydration history, and visualize your\nprogress over time.';
+
+  @override
+  String get walkthroughTitle3 =>
+      'Achieve Your Hydration\nGoals with Sipnudge Now';
+
+  @override
+  String get walkthroughSubtitle3 =>
+      'Level up your hydration game with Sipnudge\nachievements. Unlock premium features, and\nmake hydration a lifelong habit.';
+
+  @override
+  String get walkthroughTitle4 => 'Uncover the Hidden\nHydration in Your Meals';
+
+  @override
+  String get walkthroughSubtitle4 =>
+      'Scan your food to instantly calculate its water\ncontent and auto-correct your daily drinking\ngoals for effortless, total hydration.';
+
+  @override
+  String get letsGetStarted => 'Lets get started';
+
+  @override
+  String get beginYourJourney => 'Begin your journey';
+
+  @override
+  String get letsDive => 'Let\'s dive in into your account';
+
+  @override
+  String get continueWithGoogle => 'Continue with Google';
+
+  @override
+  String get continueWithApple => 'Continue with Apple';
+
+  @override
+  String get signUp => 'Sign up';
+
+  @override
+  String get signIn => 'Sign in';
+
+  @override
+  String get pleaseAcceptTerms => 'Please accept the terms and conditions';
+
+  @override
+  String get signingInGoogle => 'Signing you in via Google';
+
+  @override
+  String get signingInApple => 'Signing you in via Apple';
+
+  @override
+  String get signinSuccessful => 'Signin Successful';
+
+  @override
+  String get couldNotOpenWebpage => 'Could not open the webpage';
+
+  @override
+  String get iAgreeToThe => 'I agree to the ';
+
+  @override
+  String get gladToSeeYou => 'Glad to see you again! 👋';
+
+  @override
+  String get getStartedWithSipnudge => 'Get started with SipNudge ✨';
+
+  @override
+  String get signinToYourAccount =>
+      'Sign in to your account to continue your journey towards a healthier you.';
+
+  @override
+  String get createAnAccount =>
+      'Create an account to track your water intake, set reminders, and unlock achievements.';
+
+  @override
+  String get email => 'Email';
+
+  @override
+  String get password => 'Password';
+
+  @override
+  String get rememberMe => 'Remember me';
+
+  @override
+  String get iAgree => 'I agree to Sipnudge ';
+
+  @override
+  String get forgotPassword => 'Forgot Password?';
+
+  @override
+  String get alreadyHaveAnAccount => 'Already have an account? ';
+
+  @override
+  String get or => 'or';
+
+  @override
+  String get pleaseEnterEmailAndPassword => 'Please enter email and password';
+
+  @override
+  String get pleaseEnterEmail => 'Please enter email';
+
+  @override
+  String get pleaseEnterPassword => 'Please enter password';
+
+  @override
+  String get pleaseEnterValidEmail => 'Please enter a valid email';
+
+  @override
+  String get sendingOtp => 'Sending OTP';
+
+  @override
+  String get unexpectedError => 'Unexpected error occurred';
+
+  @override
+  String get analyingYourData =>
+      'Analyzing your data to create a personalized hydration plan...';
+
+  @override
+  String get almostThere =>
+      'Almost there! Your personalized hydration plan is coming right up.';
+
+  @override
+  String get bluetoothPermissionRequired => 'Bluetooth Permission Required';
+
+  @override
+  String get openSettings => 'Open Settings';
+
+  @override
+  String get stayConnectedAndOnTrack => 'Stay Connected\n& On Track';
+
+  @override
+  String get understandingHydrationRingSubtitle =>
+      'Understanding your hydration ring helps you crush your goals.';
+
+  @override
+  String get letsHitTodaysGoal => 'Let’s hit today’s goal';
+
+  @override
+  String get keepSippingText => 'Keep Sipping';
+
+  @override
+  String get youreOnTrack => 'You’re on track';
+
+  @override
+  String get seeYourDayAtAGlance => 'See Your Day at a Glance';
+
+  @override
+  String get ringShowsDailyHydrationGoal =>
+      'Your ring shows how close you are to your daily hydration goal.';
+
+  @override
+  String get stayOnYourNextGoal => 'Stay on Your Next Goal';
+
+  @override
+  String get yellowRingHighlightsMicroGoal =>
+      'Your yellow ring highlights the micro-goal to focus on right now.';
+
+  @override
+  String get watchYourProgressBuild => 'Watch Your Progress Build';
+
+  @override
+  String get everySipAddsToBlueRing =>
+      'Every sip adds to your blue ring and moves you closer to your goal.';
+
+  @override
+  String get sipSmartStaySharp => 'Sip Smart, Stay Sharp';
+
+  @override
+  String get keepYellowSegmentSmall =>
+      'Keep the yellow segment as small as possible or gone entirely to stay ahead of schedule.';
+
+  @override
+  String get theProGoal => 'THE PRO GOAL';
+
+  @override
+  String get currentGoalLabel => 'Current Goal';
+
+  @override
+  String get nextGoalLabel => 'Next Goal';
+
+  @override
+  String get wakeupLabel => 'Wakeup';
+
+  @override
+  String get breakfastLabel => 'Breakfast';
+
+  @override
+  String get midMorningLabel => 'Mid-Morning';
+
+  @override
+  String get lunchLabel => 'Lunch';
+
+  @override
+  String get midAfternoonLabel => 'Mid-Afternoon';
+
+  @override
+  String get eveningLabel => 'Evening';
+
+  @override
+  String get dinnerLabel => 'Dinner';
+
+  @override
+  String get continueBtn => 'Continue';
+
+  @override
+  String get addTheWidgetToHomeScreenInstruction =>
+      'Add the widget to your Home Screen and\nsee your goal and progress at a glance';
+
+  @override
+  String get touchAndHoldHomeScreen => 'Touch and hold your Home Screen';
+
+  @override
+  String get tapEditThenAddWidget => 'Tap Edit, then Add Widget';
+
+  @override
+  String get chooseMyWaterAndTapAddWidget =>
+      'Choose My Water and tap Add Widget';
+
+  @override
+  String get smartReminders => 'Smart Reminders';
+
+  @override
+  String get smartRemindersDescription =>
+      'Receive timely nudges based on your activity and environment.';
 }

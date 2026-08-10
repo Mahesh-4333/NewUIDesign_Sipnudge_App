@@ -17,7 +17,6 @@ import 'package:hydrify/helpers/shared_pref_helper.dart';
 import 'package:hydrify/models/hydration_entry.dart';
 import 'package:hydrify/models/hydration_summary.dart';
 import 'package:hydrify/screens/bottom_nav_screen_new.dart';
-import 'package:hydrify/screens/qr_scanning.dart';
 import 'package:hydrify/screens/widgets/auth_button_widget.dart';
 import 'package:hydrify/screens/widgets/user_info_input_widgets/custom_gradient_slider_widget.dart';
 import 'package:hydrify/screens/widgets/water_wave_widget.dart';

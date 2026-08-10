@@ -54,4 +54,28 @@ class HydrationHelper {
 
     return slots;
   }
+
+  static String formatVolume(double ml, String unit, {bool showUnit = false}) {
+    if (unit == "L") {
+      final value = ml / 1000.0;
+      final formatted =
+          value.toStringAsFixed(2).replaceAll(RegExp(r'\.?0+$'), '');
+      return showUnit ? "$formatted L" : formatted;
+    } else if (unit == "US Oz") {
+      final value = ml / 29.5735;
+      final formatted = value.round().toString();
+      return showUnit ? "$formatted US Oz" : formatted;
+    } else if (unit == "UK Oz") {
+      final value = ml / 28.4131;
+      final formatted = value.round().toString();
+      return showUnit ? "$formatted UK Oz" : formatted;
+    } else {
+      // mL
+      final formatted = ml.round().toString().replaceAllMapped(
+            RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
+            (Match m) => "${m[1]},",
+          );
+      return showUnit ? "$formatted mL" : formatted;
+    }
+  }
 }

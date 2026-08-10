@@ -216,7 +216,10 @@ class BackgroundSessionManager: NSObject, URLSessionDelegate, URLSessionTaskDele
             bleChannel.setMethodCallHandler { [weak self] (call, result) in
                 if call.method == "triggerNativeConnect" {
                     NSLog("[AppDelegate] triggerNativeConnect received from Dart")
-                    self?.bleManager?.connectToSavedDevice()
+                    if let self = self {
+                        self.setupBleManager(controller: controller)
+                        self.bleManager?.connectToSavedDevice()
+                    }
                     result(nil)
                 } else {
                     result(FlutterMethodNotImplemented)
@@ -231,35 +234,23 @@ class BackgroundSessionManager: NSObject, URLSessionDelegate, URLSessionTaskDele
         // BEFORE iOS might deliver any pending background events on this launch.
         _ = BackgroundSessionManager.shared
 
-        // Start the native BLE manager (connects immediately, stays connected)
-        bleManager = SipnudgeBackgroundBLE()
-
-        // Wire native-connected callback → MethodChannel event to Dart.
-        // When the native CBCentralManager connects after a BT toggle (or any
-        // scenario where flutter_blue_plus's scan has timed out), this call
-        // triggers the Dart side to issue its own connect via FBP so the UI
-        // stays in sync with the actual BLE state.
+        // Start the native BLE manager only if onboarding is completed and a device exists
+        let onboardingCompleted = UserDefaults.standard.bool(forKey: "flutter.onboarding_flow_completed")
+        let hasDevice = UserDefaults.standard.string(forKey: "flutter.last_device_id") != nil
+        
         if let controller = window?.rootViewController as? FlutterViewController {
             let nativeBleChannel = FlutterMethodChannel(
                 name: "com.sipnudge.sipnudge/native_ble",
                 binaryMessenger: controller.binaryMessenger
             )
-            bleManager?.onNativeConnected = { uuid in
-                DispatchQueue.main.async {
-                    NSLog("[AppDelegate] onNativeConnected → notifying Dart uuid=\(uuid)")
-                    nativeBleChannel.invokeMethod("onNativeConnected", arguments: uuid)
-                }
+            
+            if onboardingCompleted && hasDevice {
+                NSLog("[AppDelegate] Onboarding completed and device paired. Initializing SipnudgeBackgroundBLE on launch.")
+                setupBleManager(controller: controller)
+            } else {
+                NSLog("[AppDelegate] Skipping native BLE manager initialization on launch (onboarding not completed or no device paired)")
             }
-
-            // Wire Low Power Mode callback → MethodChannel event to Dart.
-            // Fires whenever LPM is toggled so Flutter can show/hide the banner.
-            bleManager?.onLowPowerModeChanged = { isActive in
-                DispatchQueue.main.async {
-                    NSLog("[AppDelegate] onLowPowerModeChanged → notifying Dart isActive=\(isActive)")
-                    nativeBleChannel.invokeMethod("onLowPowerModeChanged", arguments: isActive)
-                }
-            }
-
+            
             // Emit the initial LPM state immediately so Flutter has the correct
             // value on first launch without waiting for a toggle event.
             let initialLPM = ProcessInfo.processInfo.isLowPowerModeEnabled
@@ -270,6 +261,32 @@ class BackgroundSessionManager: NSObject, URLSessionDelegate, URLSessionTaskDele
         }
 
         return super.application(application, didFinishLaunchingWithOptions: launchOptions)
+    }
+
+    private func setupBleManager(controller: FlutterViewController) {
+        if bleManager == nil {
+            NSLog("[AppDelegate] Instantiating SipnudgeBackgroundBLE")
+            bleManager = SipnudgeBackgroundBLE()
+            
+            let nativeBleChannel = FlutterMethodChannel(
+                name: "com.sipnudge.sipnudge/native_ble",
+                binaryMessenger: controller.binaryMessenger
+            )
+            
+            bleManager?.onNativeConnected = { uuid in
+                DispatchQueue.main.async {
+                    NSLog("[AppDelegate] onNativeConnected → notifying Dart uuid=\(uuid)")
+                    nativeBleChannel.invokeMethod("onNativeConnected", arguments: uuid)
+                }
+            }
+            
+            bleManager?.onLowPowerModeChanged = { isActive in
+                DispatchQueue.main.async {
+                    NSLog("[AppDelegate] onLowPowerModeChanged → notifying Dart isActive=\(isActive)")
+                    nativeBleChannel.invokeMethod("onLowPowerModeChanged", arguments: isActive)
+                }
+            }
+        }
     }
 
     /// Called by iOS when background URL session events are ready to be delivered.

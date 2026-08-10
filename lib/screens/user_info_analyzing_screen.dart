@@ -6,6 +6,8 @@ import 'package:hydrify/constants/app_colors.dart';
 import 'package:hydrify/constants/app_dimensions.dart';
 import 'package:hydrify/constants/app_font_styles.dart';
 import 'package:hydrify/constants/app_strings.dart';
+import 'package:hydrify/l10n/app_localizations.dart';
+import 'package:hydrify/helpers/page_transitions.dart';
 import 'package:hydrify/helpers/vibration_helper.dart';
 import 'package:hydrify/screens/user_info_daily_goal_screen.dart';
 import 'package:hydrify/screens/widgets/custom_circular_loader/segmented_progress_indicator.dart';
@@ -54,8 +56,8 @@ class _UserInfoAnalyzingScreenState extends State<UserInfoAnalyzingScreen>
         Future.delayed(const Duration(milliseconds: 500), () {
           Navigator.pushReplacement(
             context,
-            MaterialPageRoute(
-              builder: (_) => UserInfoDailyGoalScreen(
+            SlidePageRoute(
+              page: UserInfoDailyGoalScreen(
                   waterGoal: widget.goal,
                   isViaSettingsScreen: widget.isViaSettingsScreen),
             ),
@@ -93,7 +95,7 @@ class _UserInfoAnalyzingScreenState extends State<UserInfoAnalyzingScreen>
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             Text(
-              AppStrings.analyingYourData,
+              AppLocalizations.of(context)?.analyingYourData ?? AppStrings.analyingYourData,
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontFamily: AppFontStyles.museoModernoFontFamily,
@@ -108,7 +110,7 @@ class _UserInfoAnalyzingScreenState extends State<UserInfoAnalyzingScreen>
             ),
             SizedBox(height: AppDimensions.dim8.h),
             Text(
-              AppStrings.pleaseWait,
+              AppLocalizations.of(context)?.pleaseWait ?? AppStrings.pleaseWait,
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontFamily: AppFontStyles.urbanistFontFamily,
@@ -154,7 +156,7 @@ class _UserInfoAnalyzingScreenState extends State<UserInfoAnalyzingScreen>
             ),
             SizedBox(height: AppDimensions.dim148.h),
             Text(
-              AppStrings.almostThere,
+              AppLocalizations.of(context)?.almostThere ?? AppStrings.almostThere,
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontFamily: AppFontStyles.museoModernoFontFamily,

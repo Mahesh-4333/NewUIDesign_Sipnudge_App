@@ -60,13 +60,15 @@ class _CustomBeatingBleStatusIndicatorState
   Widget build(BuildContext context) {
     return BlocBuilder<BleCubit, BleState>(
       builder: (context, state) {
-        final bool isConnected = state.status == BleStatus.connected ||
-            state.status == BleStatus.readingData ||
-            state.status == BleStatus.sendingAck;
+        final bool isConnected =
+            (state.status == BleStatus.connected) &&
+            (state.isServiceDiscoveryDone == true);
 
         final bool isTransitional = state.status == BleStatus.connecting ||
             state.status == BleStatus.scanning ||
-            state.status == BleStatus.initializing;
+            state.status == BleStatus.initializing ||
+            (state.status == BleStatus.connected &&
+                state.isServiceDiscoveryDone != true);
 
         final Color connectionColor = isConnected
             ? AppColors.batteryIndicator

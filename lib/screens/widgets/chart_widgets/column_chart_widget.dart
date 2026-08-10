@@ -12,6 +12,8 @@ import 'package:hydrify/models/hydration_summary.dart';
 import 'package:hydrify/helpers/shared_pref_helper.dart';
 import 'package:hydrify/helpers/database_helper.dart';
 import 'package:hydrify/screens/widgets/chart_widgets/tool_tip_widget.dart';
+import 'package:hydrify/services/api_service.dart';
+import 'package:hydrify/services/sync_bus.dart';
 
 class FlColumnChartWidget extends StatefulWidget {
   final FilterInterval interval;
@@ -50,6 +52,17 @@ class _FlColumnChartWidgetState extends State<FlColumnChartWidget> {
       currentUserGoal = goal.toDouble();
     }
     try {
+      final userId = await SharedPrefsHelper.getUserId();
+      final userEmail = await SharedPrefsHelper.getUserEmail();
+      if (userId != null && userEmail != "guest_user") {
+        final analysisData = await ApiService().getHydrationAnalysis(userId);
+        if (analysisData != null && analysisData['manualLogs'] != null) {
+          _allLogs =
+              List<Map<String, dynamic>>.from(analysisData['manualLogs']);
+          return;
+        }
+      }
+      // Fallback to local SQLite if offline or server fails
       final dbHelper = DatabaseHelper();
       _allLogs = await dbHelper.getHydrationLogs();
     } catch (e) {
@@ -86,6 +99,7 @@ class _FlColumnChartWidgetState extends State<FlColumnChartWidget> {
   @override
   void initState() {
     super.initState();
+    SyncBus.instance.addListener(_onSyncComplete);
     _updateChartData(); // Initialize sync first
     _loadUserGoalAndLogs().then((_) {
       _updateChartData();
@@ -93,6 +107,21 @@ class _FlColumnChartWidgetState extends State<FlColumnChartWidget> {
       WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToToday());
     });
     WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToToday());
+  }
+
+  @override
+  void dispose() {
+    SyncBus.instance.removeListener(_onSyncComplete);
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _onSyncComplete() {
+    if (!mounted) return;
+    _loadUserGoalAndLogs().then((_) {
+      _updateChartData();
+      if (mounted) setState(() {});
+    });
   }
 
   void _scrollToToday() {
@@ -138,7 +167,7 @@ class _FlColumnChartWidgetState extends State<FlColumnChartWidget> {
     double total = 0.0;
     for (var log in logs) {
       try {
-        final logTime = DateTime.parse(log['timestamp'] as String);
+        final logTime = DateTime.parse(log['timestamp'] as String).toLocal();
         bool isMatch = false;
         if (interval == FilterInterval.yearly) {
           isMatch = logTime.year == date.year && logTime.month == date.month;

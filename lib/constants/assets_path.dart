@@ -192,8 +192,84 @@ class AssetsPath {
   static const String onboardingRed = "assets/onboarding/red.png";
   static const String onboardingPurple = "assets/onboarding/purple.png";
   static const String onboardingBluetooth = "assets/onboarding/bluetooth.png";
-  static const String onboardingBottleTouch = "assets/onboarding/bottle_touch.webp";
-  static const String onboardingScanningBottle = "assets/onboarding/scanning_bottle.webp";
-  static const String onboardingHalfBottle = "assets/onboarding/half_bottle.webp";
+  static const String onboardingBottleTouch =
+      "assets/onboarding/bottle_touch.webp";
+  static const String onboardingScanningBottle =
+      "assets/onboarding/half_bottle.webp";
   static const String onboardingOverlay = "assets/onboarding/Overlay (2).png";
+  static const String onboardingQuitHour = "assets/onboarding/quite_hour.png";
+  static const String onboardingWakeUpHour = "assets/onboarding/wake_up.png";
+  static const String onboardingSleep = "assets/onboarding/sleep.png";
+  static const String onboardingDailyWater =
+      "assets/onboarding/daily_water.png";
+  static const String onboardingLunch = "assets/onboarding/lunch.png";
+  static const String onboardingCoffee = "assets/onboarding/coffee.png";
+  static const String onboardingTea = "assets/onboarding/tea.png";
+  static const String onboardingAnalytics = "assets/analytics.png";
+  static const String onboardingWeatherIcon =
+      "assets/onboarding/marique_weather_icon.webp";
+  static const String onboardingSunnyWeather =
+      "assets/onboarding/sunny_weather.png";
+  static const String onboardingHalfBottleBlack =
+      "assets/onboarding/half_black_bottle.png";
+  static const String onboardingHalfBottlePurple =
+      "assets/onboarding/half_purple_bottle.png";
+  static const String onboardingHalfBottleRed =
+      "assets/onboarding/half_red_bottle.png";
+
+  static const String onboardingHalfRealTimeTracking =
+      "assets/onboarding/real_time_tracking.png";
+
+  static const String onboardingSmartNudge =
+      "assets/onboarding/smart_nudge.png";
+
+  static const String onboardingAccurateHistory =
+      "assets/onboarding/accurate_history.png";
+
+  static const String onboardingPurpleTouch =
+      "assets/onboarding/purper_touch.png";
+
+  static const String onboardingRedTouch = "assets/onboarding/red_touch.png";
+
+  static const String onboardingBlackTouch =
+      "assets/onboarding/black_touch.png";
+
+  static const String onboardingHindi = "assets/onboarding/india.png";
+
+  static const String onboardingSpanish = "assets/onboarding/spanish.png";
+
+  static const String onboardingGerman = "assets/onboarding/german.png";
+
+  static const String onboardingEnglish = "assets/onboarding/english.png";
+  static const String onboardingFreshStart =
+      "assets/onboarding/fresh_start.webp";
+
+  static const String onboardingGoalWithSipnudge =
+      "assets/onboarding/goal_with_sipnudge.webp";
+
+  static const String onboardingHydration =
+      "assets/onboarding/ultimate_hydration.webp";
+
+  static const String onboardingVisualizeProgress =
+      "assets/onboarding/visualize_progress.webp";
+
+  static const String onboardingHydrationInMeal =
+      "assets/onboarding/hydration_in_meal.webp";
+
+  static const String onboardingSteelMaterial =
+      "assets/onboarding/still_material.png";
+
+  static const String onboardingEmptyBottleCuttPurple =
+      "assets/onboarding/empty_bottle_cutt_purple.png";
+
+  static const String onboardingEmptyBottleCuttBlack =
+      "assets/onboarding/empty_bottle_cutt_black.png";
+
+  static const String onboardingEmptyBottleCuttRed =
+      "assets/onboarding/empty_bottle_cutt_red.png";
+
+  static const String onboardingLogoAnim = "assets/onboarding/logo_anim.mp4";
+
+  static const String onboardingIntakeTutorial =
+      "assets/onboarding/intake_tutorial.mp4";
 }

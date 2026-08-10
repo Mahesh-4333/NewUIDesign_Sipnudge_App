@@ -37,6 +37,7 @@ import 'package:hydrify/cubit/user_info/user_info_cubit.dart';
 import 'package:hydrify/firebase_options.dart';
 import 'package:hydrify/helpers/database_helper.dart';
 import 'package:hydrify/helpers/internet_connection_helper.dart';
+import 'package:hydrify/helpers/shared_pref_helper.dart';
 import 'package:hydrify/providers/authentication_provider.dart';
 import 'package:hydrify/providers/user_info_provider.dart';
 import 'package:hydrify/providers/weather_provider.dart';
@@ -98,8 +99,11 @@ Future<void> main() async {
 
   InternetConnectionHelper().initialize();
 
-  // Initialize Firebase Messaging asynchronously in background without blocking runApp
-  FirebaseMessagingService().init();
+  // Initialize Firebase Messaging asynchronously in background if onboarding is completed
+  final onboardingCompleted = await SharedPrefsHelper.isOnboardingFlowCompleted();
+  if (onboardingCompleted) {
+    FirebaseMessagingService().init();
+  }
 
   FlutterError.onError = (FlutterErrorDetails details) {
     FirebaseCrashlytics.instance.recordFlutterError(details);

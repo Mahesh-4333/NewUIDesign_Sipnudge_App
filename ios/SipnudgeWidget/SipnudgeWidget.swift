@@ -12,13 +12,13 @@ struct SlotItem: Codable {
 
 struct Provider: TimelineProvider {
     func placeholder(in context: Context) -> SimpleEntry {
-        SimpleEntry(date: Date(), intake: 0, goal: 2000, coffeeIntake: 200, upcomingSlotName: "Wakeup Time", upcomingSlotTarget: 500, upcomingSlotTime: "07:00 AM", streak: 7,
+        SimpleEntry(date: Date(), intake: 0, goal: 2000, coffeeIntake: 200, waterIntake: 0, latestDrinkType: "Coffee", latestDrinkAmount: 200, upcomingSlotName: "Wakeup Time", upcomingSlotTarget: 500, upcomingSlotTime: "07:00 AM", streak: 7,
                     battery: 72, expectedPercent: 30.0,
                     dbgUUID: "-", dbgConnected: "-", dbgSubscribed: "-", dbgBleRx: "-")
     }
 
     func getSnapshot(in context: Context, completion: @escaping (SimpleEntry) -> ()) {
-        let entry = SimpleEntry(date: Date(), intake: 750, goal: 2500, coffeeIntake: 200, upcomingSlotName: "Lunch Time", upcomingSlotTarget: 300, upcomingSlotTime: "01:00 PM", streak: 7,
+        let entry = SimpleEntry(date: Date(), intake: 750, goal: 2500, coffeeIntake: 200, waterIntake: 0, latestDrinkType: "Coffee", latestDrinkAmount: 200, upcomingSlotName: "Lunch Time", upcomingSlotTarget: 300, upcomingSlotTime: "01:00 PM", streak: 7,
                                 battery: 72, expectedPercent: 40.0,
                                 dbgUUID: "-", dbgConnected: "-", dbgSubscribed: "-", dbgBleRx: "-")
         completion(entry)
@@ -33,15 +33,20 @@ struct Provider: TimelineProvider {
         let todayStr = formatter.string(from: date)
         
         var intake = userDefaults?.integer(forKey: "current_intake") ?? 0
+        var coffeeIntake = userDefaults?.integer(forKey: "coffee_intake") ?? 0
+        var waterIntake = userDefaults?.integer(forKey: "water_intake") ?? 0
+        var latestDrinkType = userDefaults?.string(forKey: "latest_drink_type") ?? ""
+        var latestDrinkAmount = userDefaults?.integer(forKey: "latest_drink_amount") ?? 0
+
         if lastUpdateDateStr != todayStr {
             intake = 0
+            coffeeIntake = 0
+            waterIntake = 0
+            latestDrinkType = ""
+            latestDrinkAmount = 0
         }
         
         let goal = userDefaults?.integer(forKey: "daily_goal") ?? 2000
-        var coffeeIntake = userDefaults?.integer(forKey: "coffee_intake") ?? 0
-        if coffeeIntake == 0 {
-            coffeeIntake = 200
-        }
         let streak = userDefaults?.integer(forKey: "streak") ?? 0
         
         var upcomingSlotName = userDefaults?.string(forKey: "upcoming_slot_name") ?? "Next Slot"
@@ -116,7 +121,7 @@ struct Provider: TimelineProvider {
             expectedPercent = userDefaults?.double(forKey: "expected_percent") ?? 0.0
         }
         
-        return SimpleEntry(date: date, intake: intake, goal: goal, coffeeIntake: coffeeIntake, upcomingSlotName: upcomingSlotName, upcomingSlotTarget: upcomingSlotTarget, upcomingSlotTime: upcomingSlotTime, streak: streak,
+        return SimpleEntry(date: date, intake: intake, goal: goal, coffeeIntake: coffeeIntake, waterIntake: waterIntake, latestDrinkType: latestDrinkType, latestDrinkAmount: latestDrinkAmount, upcomingSlotName: upcomingSlotName, upcomingSlotTarget: upcomingSlotTarget, upcomingSlotTime: upcomingSlotTime, streak: streak,
                            battery: battery, expectedPercent: expectedPercent,
                            dbgUUID: userDefaults?.string(forKey: "dbg_uuid") ?? "nil",
                            dbgConnected: userDefaults?.string(forKey: "dbg_connected") ?? "nil",
@@ -168,9 +173,17 @@ struct Provider: TimelineProvider {
                 
                 let consumed = summary["consumed"] as? Double ?? Double(summary["consumed"] as? Int ?? 0)
                 let target = summary["target"] as? Double ?? Double(summary["target"] as? Int ?? 2500)
+                let coffeeIntake = summary["coffeeIntake"] as? Int ?? 0
+                let waterIntake = summary["waterIntake"] as? Int ?? 0
+                let latestDrinkType = summary["latestDrinkType"] as? String ?? ""
+                let latestDrinkAmount = summary["latestDrinkAmount"] as? Int ?? 0
                 
                 userDefaults?.set(Int(consumed), forKey: "current_intake")
                 userDefaults?.set(Int(target), forKey: "daily_goal")
+                userDefaults?.set(coffeeIntake, forKey: "coffee_intake")
+                userDefaults?.set(waterIntake, forKey: "water_intake")
+                userDefaults?.set(latestDrinkType, forKey: "latest_drink_type")
+                userDefaults?.set(latestDrinkAmount, forKey: "latest_drink_amount")
                 
                 // Battery comes from HydrationLog (latest bottle sync) — not DailySummary
                 if let batteryFromServer = summary["battery"] as? Int {
@@ -194,6 +207,9 @@ struct SimpleEntry: TimelineEntry {
     let intake: Int
     let goal: Int
     let coffeeIntake: Int
+    let waterIntake: Int
+    let latestDrinkType: String
+    let latestDrinkAmount: Int
     let upcomingSlotName: String
     let upcomingSlotTarget: Int
     let upcomingSlotTime: String
@@ -364,14 +380,25 @@ struct SipnudgeWidgetEntryView : View {
                                 .font(.system(size: 24, weight: .bold, design: .rounded))
                                 .foregroundColor(Color(red: 0.09, green: 0.15, blue: 0.27))
                             
-                            Text("+")
-                                .font(.system(size: 11, weight: .semibold, design: .rounded))
-                                .foregroundColor(Color(red: 0.76, green: 0.61, blue: 0.49))
-                                .padding(.vertical, -3)
-                            
-                            Text("\(entry.coffeeIntake) ml")
-                                .font(.system(size: 12, weight: .bold, design: .rounded))
-                                .foregroundColor(Color(red: 0.76, green: 0.61, blue: 0.49))
+                            if entry.latestDrinkType.lowercased() == "water" || (entry.waterIntake > 0 && entry.latestDrinkType.lowercased() != "coffee") {
+                                Text("+")
+                                    .font(.system(size: 11, weight: .semibold, design: .rounded))
+                                    .foregroundColor(Color(red: 0/255.0, green: 163/255.0, blue: 255/255.0))
+                                    .padding(.vertical, -3)
+                                
+                                Text("\(entry.waterIntake > 0 ? entry.waterIntake : entry.latestDrinkAmount) ml")
+                                    .font(.system(size: 12, weight: .bold, design: .rounded))
+                                    .foregroundColor(Color(red: 0/255.0, green: 163/255.0, blue: 255/255.0))
+                            } else if entry.coffeeIntake > 0 || entry.latestDrinkType.lowercased() == "coffee" {
+                                Text("+")
+                                    .font(.system(size: 11, weight: .semibold, design: .rounded))
+                                    .foregroundColor(Color(red: 0.76, green: 0.61, blue: 0.49))
+                                    .padding(.vertical, -3)
+                                
+                                Text("\(entry.coffeeIntake > 0 ? entry.coffeeIntake : entry.latestDrinkAmount) ml")
+                                    .font(.system(size: 12, weight: .bold, design: .rounded))
+                                    .foregroundColor(Color(red: 0.76, green: 0.61, blue: 0.49))
+                            }
                         }
                     }
                     .frame(width: 90, height: 90)
@@ -449,59 +476,65 @@ struct SipnudgeWidgetEntryView : View {
                     .padding(.vertical, 2)
                     
                     // Coffee & Water Action Buttons Row
-                    HStack(spacing: 8) {
+                    HStack(spacing: 5) {
                         // Coffee Button
                         Link(destination: URL(string: "sipnudge://quick-add?type=coffee")!) {
-                            HStack(spacing: 4) {
+                            HStack(spacing: 2) {
                                 Text("Coffee")
-                                    .font(.system(size: 13, weight: .semibold, design: .rounded))
+                                    .font(.system(size: 11, weight: .semibold, design: .rounded))
                                     .foregroundColor(Color(red: 0.09, green: 0.15, blue: 0.27))
+                                    .lineLimit(1)
+                                    .minimumScaleFactor(0.7)
                                 
-                                Spacer(minLength: 2)
+                                Spacer(minLength: 1)
                                 
                                 ZStack {
                                     Circle()
                                         .fill(Color(red: 120/255.0, green: 72/255.0, blue: 30/255.0))
-                                        .frame(width: 20, height: 20)
+                                        .frame(width: 18, height: 18)
                                     Text("+")
-                                        .font(.system(size: 12, weight: .bold, design: .rounded))
+                                        .font(.system(size: 11, weight: .bold, design: .rounded))
                                         .foregroundColor(.white)
                                 }
                             }
-                            .padding(.leading, 10)
-                            .padding(.trailing, 5)
-                            .padding(.vertical, 6)
+                            .padding(.leading, 7)
+                            .padding(.trailing, 4)
+                            .padding(.vertical, 5)
                             .background(
                                 Capsule()
                                     .fill(Color(red: 243/255.0, green: 220/255.0, blue: 195/255.0))
                             )
+                            .contentShape(Rectangle())
                         }
 
                         // Water Button
                         Link(destination: URL(string: "sipnudge://quick-add?type=water")!) {
-                            HStack(spacing: 4) {
+                            HStack(spacing: 2) {
                                 Text("Water")
-                                    .font(.system(size: 13, weight: .semibold, design: .rounded))
+                                    .font(.system(size: 11, weight: .semibold, design: .rounded))
                                     .foregroundColor(Color(red: 0.09, green: 0.15, blue: 0.27))
+                                    .lineLimit(1)
+                                    .minimumScaleFactor(0.7)
                                 
-                                Spacer(minLength: 2)
+                                Spacer(minLength: 1)
                                 
                                 ZStack {
                                     Circle()
                                         .fill(Color(red: 0/255.0, green: 163/255.0, blue: 255/255.0))
-                                        .frame(width: 20, height: 20)
+                                        .frame(width: 18, height: 18)
                                     Text("+")
-                                        .font(.system(size: 12, weight: .bold, design: .rounded))
+                                        .font(.system(size: 11, weight: .bold, design: .rounded))
                                         .foregroundColor(.white)
                                 }
                             }
-                            .padding(.leading, 10)
-                            .padding(.trailing, 5)
-                            .padding(.vertical, 6)
+                            .padding(.leading, 7)
+                            .padding(.trailing, 4)
+                            .padding(.vertical, 5)
                             .background(
                                 Capsule()
                                     .fill(Color(red: 224/255.0, green: 242/255.0, blue: 254/255.0))
                             )
+                            .contentShape(Rectangle())
                         }
                     }
                     .padding(.top, 2)

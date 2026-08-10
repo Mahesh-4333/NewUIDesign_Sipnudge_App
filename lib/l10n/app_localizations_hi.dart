@@ -79,7 +79,7 @@ class AppLocalizationsHi extends AppLocalizations {
   String get errorClearingLocalData => 'डेटा साफ़ करने में त्रुटि: ';
 
   @override
-  String get language => 'भाषा (Language)';
+  String get language => 'भाषा';
 
   @override
   String get selectLanguage => 'भाषा चुनें';
@@ -310,7 +310,7 @@ class AppLocalizationsHi extends AppLocalizations {
   String get tea => 'चाय';
 
   @override
-  String get coffee => 'कॉफी';
+  String get coffee => 'कॉफ़ी';
 
   @override
   String get juice => 'जूस';
@@ -607,4 +607,577 @@ class AppLocalizationsHi extends AppLocalizations {
 
   @override
   String get recentLogs => 'हालिया लॉग';
+
+  @override
+  String get profileSetup => 'प्रोफ़ाइल सेटअप';
+
+  @override
+  String get quietHoursAndActivity => 'शांत घंटे और गतिविधि';
+
+  @override
+  String get sleepScheduleSubtitle =>
+      'अपना सोने का समय निर्धारित करें ताकि सिपनज\nरात भर पूरी तरह से शांत रहे।';
+
+  @override
+  String get sleepCycle => 'नींद चक्र';
+
+  @override
+  String get wakeTime => 'जागने का समय';
+
+  @override
+  String get bedTime => 'सोने का समय';
+
+  @override
+  String get activityLevel => 'गतिविधि का स्तर';
+
+  @override
+  String get enterWakeupTime => 'कृपया अपने जागने का समय दर्ज करें';
+
+  @override
+  String get enterBedtime => 'कृपया अपने सोने का समय दर्ज करें';
+
+  @override
+  String get selectWakeTime => 'जागने का समय चुनें';
+
+  @override
+  String get selectBedTime => 'सोने का समय चुनें';
+
+  @override
+  String get fuelAndFlow => 'ईंधन और प्रवाह';
+
+  @override
+  String get dietSubtitle =>
+      'अपनी बुनियादी जलयोजन आवश्यकताओं की गणना करने के लिए हमें अपने आहार के बारे में थोड़ा बताएं।';
+
+  @override
+  String get primaryDietFocus => 'प्राथमिक आहार फोकस';
+
+  @override
+  String get averageDailyWater => 'औसत दैनिक पानी';
+
+  @override
+  String get roughEstimateFine => 'मोटा अनुमान भी ठीक है';
+
+  @override
+  String get dailyCaffeine => 'दैनिक कैफीन';
+
+  @override
+  String get pleaseWait => 'कृपया प्रतीक्षा करें';
+
+  @override
+  String get scrollDown => 'नीचे स्क्रॉल करें';
+
+  @override
+  String get next => 'आगे';
+
+  @override
+  String get yourState => 'आपकी स्थिति';
+
+  @override
+  String get personalizeProfile =>
+      'आइए आपके जलयोजन प्रोफ़ाइल को वैयक्तिकृत करें।';
+
+  @override
+  String get username => 'उपयोगकर्ता नाम';
+
+  @override
+  String get usernameRequirements =>
+      'केवल 3-15 अल्फ़ान्यूमेरिक वर्ण या अंडरस्कोर।';
+
+  @override
+  String get usernameTaken => 'यह उपयोगकर्ता नाम पहले से लिया जा चुका है।';
+
+  @override
+  String get usernameCannotBeChanged =>
+      'उपयोगकर्ता नाम एक बार सेट होने के बाद बदला नहीं जा सकता।';
+
+  @override
+  String get checkingAvailability => 'उपलब्धता की जाँच की जा रही है...';
+
+  @override
+  String get usernameAvailable => 'उपयोगकर्ता नाम उपलब्ध है';
+
+  @override
+  String get useLettersNumbersUnderscores =>
+      '3-15 अक्षरों, संख्याओं या अंडरस्कोर का उपयोग करें।';
+
+  @override
+  String get age => 'आयु';
+
+  @override
+  String get genderIdentity => 'लिंग पहचान';
+
+  @override
+  String get height => 'ऊंचाई';
+
+  @override
+  String get weight => 'वजन';
+
+  @override
+  String get fillHeightWeightAge =>
+      'कृपया जारी रखने से पहले ऊंचाई, वजन और आयु भरें।';
+
+  @override
+  String get enterUsername => 'कृपया अपना उपयोगकर्ता नाम दर्ज करें।';
+
+  @override
+  String get usernameMustBeAlphanumeric =>
+      'उपयोगकर्ता नाम 3-15 अल्फान्यूमेरिक वर्ण या अंडरस्कोर होना चाहिए।';
+
+  @override
+  String get yourDailyGoal => 'आपका दैनिक लक्ष्य';
+
+  @override
+  String get rotateBezelToAdjustVolume =>
+      'मात्रा अनुकूलित करने के लिए बेज़ल घुमाएं';
+
+  @override
+  String get newGoal => 'नया लक्ष्य';
+
+  @override
+  String unitPerDay(String unit) {
+    return '$unit / दिन';
+  }
+
+  @override
+  String get targetCalibration => 'लक्ष्य सूक्ष्मन';
+
+  @override
+  String get adjustDailyIntakeGoal =>
+      'सटीक मेत्रिक्स के आधार पर अपना दैनिक सेवन लक्ष्य समायोजित करें।';
+
+  @override
+  String get avgIntake => 'औसत सेवन';
+
+  @override
+  String get increase => 'बढ़ाएं';
+
+  @override
+  String get decrease => 'घटाएं';
+
+  @override
+  String get hydrationTipMetabolism =>
+      'भोजन से पहले पानी पीने से आपका मेटाबॉलिज्म\n30% तक बढ़ सकता है।';
+
+  @override
+  String get actionRequired => 'कार्रवाई आवश्यक';
+
+  @override
+  String get googleCalendarSignInRequired =>
+      'स्मार्ट स्नूज़ और कैलेंडर सिंक के लिए Google कैलेंडर साइन-इन आवश्यक हो सकता है';
+
+  @override
+  String get iGiveMyConsent => 'मैं अपनी सहमति देता/देती हूँ';
+
+  @override
+  String get chooseYourFinish => 'अपनी पसंद का रंग चुनें';
+
+  @override
+  String get selectColorDailyRhythm =>
+      'वह रंग चुनें जो आपकी दैनिक दिनचर्या से मेल खाता हो।';
+
+  @override
+  String get confirmSelection => 'पसंद की पुष्टि करें';
+
+  @override
+  String get midnightBlack => 'मिडनाइट ब्लैक (Midnight Black)';
+
+  @override
+  String get descMidnightBlack => '“सरल, शाश्वत। हर परिवेश के लिए निर्मित”';
+
+  @override
+  String get candyRed => 'कैंडी रेड (Candy Red)';
+
+  @override
+  String get descCandyRed => '“साहसी, ऊर्जावान, और अनदेखा करना असंभव”';
+
+  @override
+  String get deepPurple => 'डीप पर्पल (Deep Purple)';
+
+  @override
+  String get descDeepPurple => '“रचनात्मक, प्रीमियम, और विशिष्ट रूप से आपका”';
+
+  @override
+  String get connect => 'कनेक्ट करें';
+
+  @override
+  String get yourSipnudgeBottle => 'आपकी सिपनज बोतल';
+
+  @override
+  String get bluetoothRequiredDescription =>
+      'आपकी स्मार्ट बोतल से आपके हाइड्रेशन डेटा को रीयल-टाइम में ऐप में सिंक करने के लिए ब्लूटूथ आवश्यक है।';
+
+  @override
+  String get realTimeTracking => 'रीयल-टाइम ट्रैकिंग';
+
+  @override
+  String get instantLiquidLevelUpdates => 'त्वरित तरल स्तर अपडेट।';
+
+  @override
+  String get smartNudges => 'स्मार्ट अलर्ट';
+
+  @override
+  String get personalizedHabitBuilding => 'व्यक्तिगत आदत निर्माण।';
+
+  @override
+  String get accurateHistory => 'सटीक इतिहास';
+
+  @override
+  String get detailedConsumptionLogs => 'विस्तृत उपभोग रिकॉर्ड।';
+
+  @override
+  String get enableBluetooth => 'ब्लूटूथ चालू करें';
+
+  @override
+  String get skipNoBottle => 'छोड़ें: मेरे पास बोतल नहीं है';
+
+  @override
+  String get bottleActivation => 'बोतल सक्रियण';
+
+  @override
+  String get wakeUpSmartBottleDescription =>
+      'आइए आपकी स्मार्ट बोतल को सक्रिय करें और इसे आपकी वेलनेस प्रोफ़ाइल से कनेक्ट करें।';
+
+  @override
+  String get wakeYourBottle => 'बोतल सक्रिय करें';
+
+  @override
+  String get touchCapDescription =>
+      'सेंसर को सक्रिय करने के लिए कैप को धीरे से स्पर्श करें।';
+
+  @override
+  String get scanning => 'स्कैन किया जा रहा है...';
+
+  @override
+  String get discoveredDevices => 'खोजे गए उपकरण';
+
+  @override
+  String get connecting => 'कनेक्ट हो रहा है...';
+
+  @override
+  String get readyToPair => 'पेयर करने के लिए तैयार';
+
+  @override
+  String get excellent => 'उत्कृष्ट';
+
+  @override
+  String get good => 'अच्छा';
+
+  @override
+  String get weak => 'कमजोर';
+
+  @override
+  String get noDeviceFound => 'कोई उपकरण नहीं मिला';
+
+  @override
+  String get tapOn => 'इस पर टैप करें: ';
+
+  @override
+  String get toEstablishSecureConnection =>
+      ' सुरक्षित कनेक्शन स्थापित करने और सेंसर अंशांकन को सत्यापित करने के लिए।';
+
+  @override
+  String get environmentalHarmony => 'पर्यावरणीय सामंजस्य';
+
+  @override
+  String get environmentalHarmonyDescription =>
+      'अपने आस-पास के वातावरण के साथ सहजता से जुड़ें। सिपनज आपके जलयोजन की जरूरतों को गतिशील रूप से संतुलित करने के लिए स्थानीय जलवायु परिस्थितियों के साथ तालमेल बिठाता है।';
+
+  @override
+  String get temperatureCalibrationDisclaimer =>
+      'तापमान डेटा मुख्य रूप से आसपास की स्थितियों का अनुमान लगाने के लिए आपकी सिपनज बोतल से लिया जाता है। यदि बोतल उपलब्ध नहीं है, तो अंशांकन के लिए मॉडल स्वचालित रूप से आपके शहर के स्थानीय तापमान पर स्विच हो जाता है।';
+
+  @override
+  String get enableLocation => 'स्थान सेवा सक्रिय करें';
+
+  @override
+  String get illDoItLater => 'मैं इसे बाद में करूँगा/करूँगी';
+
+  @override
+  String get eg => 'जैसे:';
+
+  @override
+  String get freshStart => 'फ्रेश स्टार्ट';
+
+  @override
+  String get freshStartDescription =>
+      'बोतल को तब तक भरें जब तक कि फ्लोट डिस्क अधिकतम स्तर के निशान के साथ संरेखित न हो जाए। सेंसर की सटीकता बनाए रखने के लिए क्षमता से अधिक न भरें।';
+
+  @override
+  String get targetVolume => 'लक्ष्य मात्रा';
+
+  @override
+  String maxVolumeFormat(String volume) {
+    return '/$volume मिलीलीटर';
+  }
+
+  @override
+  String get calibrated => 'अंशांकित';
+
+  @override
+  String get calibration => 'अंशांकन';
+
+  @override
+  String get max => 'अधिकतम';
+
+  @override
+  String get overfillingWarning =>
+      'अधिक भरने से कैप खिसक सकती है और हाइड्रेशन ट्रैकिंग सेंसर में बाधा आ सकती है।';
+
+  @override
+  String get precision => 'परिशुद्धता';
+
+  @override
+  String get precisionDescription =>
+      'सटीक हाइड्रेशन ट्रैकिंग सुनिश्चित करता है।';
+
+  @override
+  String get seal => 'सील';
+
+  @override
+  String get sealDescription => 'लीक और दबाव निर्माण को रोकता है।';
+
+  @override
+  String get calibrating => 'अंशांकन किया जा रहा है..';
+
+  @override
+  String get finalizeCalibration => 'अंशांकन अंतिम रूप दें';
+
+  @override
+  String get startCalibration => 'अंशांकन प्रारंभ करें';
+
+  @override
+  String get walkthroughTitle1 => 'सिपनज - आपका परम\nजलयोजन सह-चालक!';
+
+  @override
+  String get walkthroughSubtitle1 =>
+      'स्वस्थ रहें, और अपने हाइड्रेशन लक्ष्यों को प्राप्त करें! अपने पानी के सेवन को ट्रैक करें, रिमाइंडर सेट करें और उपलब्धियों को अनलॉक करें।';
+
+  @override
+  String get walkthroughTitle2 =>
+      'अपने हाइड्रेशन को ट्रैक करें और\nअपनी प्रगति की कल्पना करें';
+
+  @override
+  String get walkthroughSubtitle2 =>
+      'निरंतर बने रहने के लिए रिमाइंडर सेट करें, अपने दैनिक इतिहास की समीक्षा करें और प्रगति की कल्पना करें।';
+
+  @override
+  String get walkthroughTitle3 =>
+      'सिपनज के साथ अपने हाइड्रेशन लक्ष्यों\nको अभी प्राप्त करें';
+
+  @override
+  String get walkthroughSubtitle3 =>
+      'उपलब्धियों के साथ अपने जलयोजन खेल को उन्नत करें। प्रीमियम सुविधाओं को अनलॉक करें और जलयोजन को जीवन भर की आदत बनाएं।';
+
+  @override
+  String get walkthroughTitle4 => 'अपने भोजन में छिपे\nजलयोजन को उजागर करें';
+
+  @override
+  String get walkthroughSubtitle4 =>
+      'भोजन के पानी की मात्रा की गणना करने और अपने दैनिक पीने के लक्ष्यों को स्वचालित रूप से सही करने के लिए भोजन स्कैन करें।';
+
+  @override
+  String get letsGetStarted => 'आइए शुरू करें';
+
+  @override
+  String get beginYourJourney => 'अपनी यात्रा शुरू करें';
+
+  @override
+  String get letsDive => 'आइए अपने खाते में प्रवेश करें';
+
+  @override
+  String get continueWithGoogle => 'गूगल के साथ जारी रखें';
+
+  @override
+  String get continueWithApple => 'एप्पल के साथ जारी रखें';
+
+  @override
+  String get signUp => 'साइन अप करें';
+
+  @override
+  String get signIn => 'साइन इन करें';
+
+  @override
+  String get pleaseAcceptTerms => 'कृपया नियम और शर्तें स्वीकार करें';
+
+  @override
+  String get signingInGoogle => 'गूगल के माध्यम से साइन इन किया जा रहा है';
+
+  @override
+  String get signingInApple => 'एप्पल के माध्यम से साइन इन किया जा रहा है';
+
+  @override
+  String get signinSuccessful => 'साइन इन सफल रहा';
+
+  @override
+  String get couldNotOpenWebpage => 'वेबपेज नहीं खोला जा सका';
+
+  @override
+  String get iAgreeToThe => 'मैं सहमत हूँ ';
+
+  @override
+  String get gladToSeeYou => 'आपको दोबारा देखकर खुशी हुई! 👋';
+
+  @override
+  String get getStartedWithSipnudge => 'SipNudge के साथ शुरुआत करें ✨';
+
+  @override
+  String get signinToYourAccount =>
+      'एक स्वस्थ जीवन की ओर अपनी यात्रा जारी रखने के लिए अपने खाते में साइन इन करें।';
+
+  @override
+  String get createAnAccount =>
+      'अपने पानी के सेवन को ट्रैक करने, रिमाइंडर सेट करने और उपलब्धियों को अनलॉक करने के लिए एक खाता बनाएं।';
+
+  @override
+  String get email => 'ईमेल';
+
+  @override
+  String get password => 'पासवर्ड';
+
+  @override
+  String get rememberMe => 'मुझे याद रखें';
+
+  @override
+  String get iAgree => 'मैं सहमत हूँ Sipnudge ';
+
+  @override
+  String get forgotPassword => 'पासवर्ड भूल गए?';
+
+  @override
+  String get alreadyHaveAnAccount => 'क्या आपके पास पहले से ही खाता है? ';
+
+  @override
+  String get or => 'या';
+
+  @override
+  String get pleaseEnterEmailAndPassword => 'कृपया ईमेल और पासवर्ड दर्ज करें';
+
+  @override
+  String get pleaseEnterEmail => 'कृपया ईमेल दर्ज करें';
+
+  @override
+  String get pleaseEnterPassword => 'कृपया पासवर्ड दर्ज करें';
+
+  @override
+  String get pleaseEnterValidEmail => 'कृपया एक मान्य ईमेल दर्ज करें';
+
+  @override
+  String get sendingOtp => 'ओटीपी भेजा जा रहा है';
+
+  @override
+  String get unexpectedError => 'अप्रत्याशित त्रुटि हुई';
+
+  @override
+  String get analyingYourData =>
+      'एक व्यक्तिगत जलयोजन योजना बनाने के लिए आपके डेटा का विश्लेषण किया जा रहा है...';
+
+  @override
+  String get almostThere =>
+      'बस थोड़ा सा और! आपकी व्यक्तिगत जलयोजन योजना जल्द ही तैयार होने वाली है।';
+
+  @override
+  String get bluetoothPermissionRequired => 'ब्लूटूथ अनुमति आवश्यक है';
+
+  @override
+  String get openSettings => 'सेटिंग्स खोलें';
+
+  @override
+  String get stayConnectedAndOnTrack => 'कनेक्टेड और ऑन-ट्रैक रहें';
+
+  @override
+  String get understandingHydrationRingSubtitle =>
+      'अपनी हाइड्रेशन रिंग को समझना आपको अपने लक्ष्यों को हासिल करने में मदद करता है।';
+
+  @override
+  String get letsHitTodaysGoal => 'आइए आज के लक्ष्य को हासिल करें';
+
+  @override
+  String get keepSippingText => 'पानी पीते रहें';
+
+  @override
+  String get youreOnTrack => 'आप सही ट्रैक पर हैं';
+
+  @override
+  String get seeYourDayAtAGlance => 'अपने दिन को एक नज़र में देखें';
+
+  @override
+  String get ringShowsDailyHydrationGoal =>
+      'आपकी रिंग दिखाती है कि आप अपने दैनिक हाइड्रेशन लक्ष्य के कितने करीब हैं।';
+
+  @override
+  String get stayOnYourNextGoal => 'अपने अगले लक्ष्य पर ध्यान केंद्रित रखें';
+
+  @override
+  String get yellowRingHighlightsMicroGoal =>
+      'आपकी पीली रिंग उस माइक्रो-लक्ष्य को उजागर करती है जिस पर अभी ध्यान देना है।';
+
+  @override
+  String get watchYourProgressBuild => 'अपनी प्रगति को बढ़ते हुए देखें';
+
+  @override
+  String get everySipAddsToBlueRing =>
+      'हर घूंट आपकी नीली रिंग में जुड़ता है और आपको लक्ष्य के करीब लाता है।';
+
+  @override
+  String get sipSmartStaySharp => 'समझदारी से पानी पीएं, चुस्त रहें';
+
+  @override
+  String get keepYellowSegmentSmall =>
+      'शेड्यूल से आगे रहने के लिए पीले हिस्से को जितना संभव हो छोटा रखें या पूरी तरह से हटा दें।';
+
+  @override
+  String get theProGoal => 'प्रो गोल';
+
+  @override
+  String get currentGoalLabel => 'वर्तमान लक्ष्य';
+
+  @override
+  String get nextGoalLabel => 'अगला लक्ष्य';
+
+  @override
+  String get wakeupLabel => 'वेकअप';
+
+  @override
+  String get breakfastLabel => 'ब्रेकफास्ट';
+
+  @override
+  String get midMorningLabel => 'मिड-मॉर्निंग';
+
+  @override
+  String get lunchLabel => 'लंच';
+
+  @override
+  String get midAfternoonLabel => 'मिड-आफ्टरनून';
+
+  @override
+  String get eveningLabel => 'इवनिंग';
+
+  @override
+  String get dinnerLabel => 'डिनर';
+
+  @override
+  String get continueBtn => 'जारी रखें';
+
+  @override
+  String get addTheWidgetToHomeScreenInstruction =>
+      'अपने होम स्क्रीन पर विजेट जोड़ें और\nएक नज़र में अपना लक्ष्य और प्रगति देखें';
+
+  @override
+  String get touchAndHoldHomeScreen => 'अपनी होम स्क्रीन को दबाकर रखें';
+
+  @override
+  String get tapEditThenAddWidget =>
+      'संपादित करें पर टैप करें, फिर विजेट जोड़ें';
+
+  @override
+  String get chooseMyWaterAndTapAddWidget =>
+      'माई वॉटर चुनें और विजेट जोड़ें पर टैप करें';
+
+  @override
+  String get smartReminders => 'स्मार्ट रिमाइंडर';
+
+  @override
+  String get smartRemindersDescription =>
+      'अपनी गतिविधि और वातावरण के आधार पर समय पर रिमाइंडर प्राप्त करें।';
 }

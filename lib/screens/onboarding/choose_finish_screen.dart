@@ -1,14 +1,20 @@
+import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:hydrify/constants/app_colors.dart';
 import 'package:hydrify/constants/app_font_styles.dart';
 import 'package:hydrify/constants/assets_path.dart';
+import 'package:hydrify/helpers/shared_pref_helper.dart';
+import 'package:hydrify/l10n/app_localizations.dart';
 
 class ChooseFinishScreen extends StatefulWidget {
-  final VoidCallback onConfirm;
+  final ValueChanged<int> onConfirm;
+  final VoidCallback? onBack;
 
   const ChooseFinishScreen({
     super.key,
     required this.onConfirm,
+    this.onBack,
   });
 
   @override
@@ -16,28 +22,34 @@ class ChooseFinishScreen extends StatefulWidget {
 }
 
 class _ChooseFinishScreenState extends State<ChooseFinishScreen> {
-  int _selectedIndex = 1; // Default: Candy Red (Index 1)
-
-  final List<Map<String, dynamic>> _bottleOptions = [
-    {
-      'name': 'Obsidian Black',
-      'color': const Color(0xFF2B2E33),
-      'asset': AssetsPath.onboardingBlack,
-    },
-    {
-      'name': 'Candy Red',
-      'color': const Color(0xFF9E1F27),
-      'asset': AssetsPath.onboardingRed,
-    },
-    {
-      'name': 'Deep Purple',
-      'color': const Color(0xFF56396F),
-      'asset': AssetsPath.onboardingPurple,
-    },
-  ];
+  int _selectedIndex = 0; // Default: Candy Red (Index 0)
 
   @override
   Widget build(BuildContext context) {
+    final List<Map<String, dynamic>> bottleOptions = [
+      {
+        'key': 'red',
+        'name': AppLocalizations.of(context)?.candyRed ?? 'Candy Red',
+        'color': const Color(0xFF9E1F27),
+        'asset': AssetsPath.onboardingRed,
+        'description': AppLocalizations.of(context)?.descCandyRed ?? '“Bold, Energetic, and Impossible to ignore”',
+      },
+      {
+        'key': 'black',
+        'name': AppLocalizations.of(context)?.midnightBlack ?? 'Midnight Black',
+        'color': const Color(0xFF2B2E33),
+        'asset': AssetsPath.onboardingBlack,
+        'description': AppLocalizations.of(context)?.descMidnightBlack ?? '“Minimal, Timeless. Built for every environment”',
+      },
+      {
+        'key': 'purple',
+        'name': AppLocalizations.of(context)?.deepPurple ?? 'Deep Purple',
+        'color': const Color(0xFF56396F),
+        'asset': AssetsPath.onboardingPurple,
+        'description': AppLocalizations.of(context)?.descDeepPurple ?? '“Creative, Premium, and uniquely yours”',
+      },
+    ];
+
     return Scaffold(
       backgroundColor: const Color(0xFFF9FAFC),
       body: SafeArea(
@@ -45,27 +57,53 @@ class _ChooseFinishScreenState extends State<ChooseFinishScreen> {
           padding: EdgeInsets.symmetric(horizontal: 24.w),
           child: Column(
             children: [
-              SizedBox(height: 20.h),
+              SizedBox(height: 8.h),
+
+              // Top Bar with Back Arrow
+              Align(
+                alignment: Alignment.centerLeft,
+                child: InkWell(
+                  onTap: () {
+                    if (widget.onBack != null) {
+                      widget.onBack!();
+                    } else if (Navigator.canPop(context)) {
+                      Navigator.pop(context);
+                    }
+                  },
+                  borderRadius: BorderRadius.circular(20.r),
+                  child: Padding(
+                    padding: EdgeInsets.all(8.w),
+                    child: const Icon(
+                      Icons.arrow_back_rounded,
+                      color: Color(0xFF1E293B),
+                      size: 24,
+                    ),
+                  ),
+                ),
+              ),
+
+              SizedBox(height: 8.h),
 
               // Title Header
               Text(
-                "Choose Your Finish",
+                AppLocalizations.of(context)?.chooseYourFinish ?? "Choose Your Finish",
                 textAlign: TextAlign.center,
                 style: TextStyle(
-                  color: const Color(0xFF3B5B66),
-                  fontSize: 26.sp,
+                  color: AppColors.bluegray,
+                  fontSize: 32.sp,
                   fontFamily: AppFontStyles.urbanistFontFamily,
                   fontVariations: [AppFontStyles.boldFontVariation],
                 ),
               ),
               SizedBox(height: 8.h),
               Text(
-                "Select the color that matches your\ndaily rhythm.",
+                AppLocalizations.of(context)?.selectColorDailyRhythm ?? "Select the color that matches your\ndaily rhythm.",
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   color: const Color(0xFF7A8E9E),
-                  fontSize: 14.sp,
+                  fontSize: 17.sp,
                   fontFamily: AppFontStyles.urbanistFontFamily,
+                  fontVariations: [AppFontStyles.semiBoldFontVariation],
                   height: 1.3,
                 ),
               ),
@@ -78,7 +116,7 @@ class _ChooseFinishScreenState extends State<ChooseFinishScreen> {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   crossAxisAlignment: CrossAxisAlignment.center,
-                  children: List.generate(_bottleOptions.length, (index) {
+                  children: List.generate(bottleOptions.length, (index) {
                     final isSelected = index == _selectedIndex;
                     return GestureDetector(
                       onTap: () {
@@ -89,11 +127,27 @@ class _ChooseFinishScreenState extends State<ChooseFinishScreen> {
                       child: AnimatedContainer(
                         duration: const Duration(milliseconds: 250),
                         curve: Curves.easeInOut,
-                        height: isSelected ? 300.h : 260.h,
+                        height: isSelected ? 330.h : 260.h,
                         width: 95.w,
-                        child: Image.asset(
-                          _bottleOptions[index]['asset'],
-                          fit: BoxFit.contain,
+                        child: AnimatedOpacity(
+                          duration: const Duration(milliseconds: 250),
+                          opacity: isSelected ? 1.0 : 0.7,
+                          child: isSelected
+                              ? Image.asset(
+                                  bottleOptions[index]['asset'],
+                                  fit: BoxFit.contain,
+                                )
+                              : ImageFiltered(
+                                  imageFilter: ui.ImageFilter.blur(
+                                    sigmaX: 1.3,
+                                    sigmaY: 1.3,
+                                    tileMode: ui.TileMode.decal,
+                                  ),
+                                  child: Image.asset(
+                                    bottleOptions[index]['asset'],
+                                    fit: BoxFit.contain,
+                                  ),
+                                ),
                         ),
                       ),
                     );
@@ -102,13 +156,30 @@ class _ChooseFinishScreenState extends State<ChooseFinishScreen> {
               ),
 
               SizedBox(height: 24.h),
+              const Spacer(),
+//Color Description
+              Padding(
+                padding: EdgeInsets.symmetric(horizontal: 24.w),
+                child: Text(
+                  bottleOptions[_selectedIndex]['description'],
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: const Color(0xFF7A8E9E),
+                    fontSize: 17.sp,
+                    fontStyle: FontStyle.italic,
+                    fontFamily: AppFontStyles.urbanistFontFamily,
+                    fontVariations: [AppFontStyles.boldFontVariation],
+                  ),
+                ),
+              ),
 
+              SizedBox(height: 20.h),
               // Color Selection Dots & Label
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
-                children: List.generate(_bottleOptions.length, (index) {
+                children: List.generate(bottleOptions.length, (index) {
                   final isSelected = index == _selectedIndex;
-                  final color = _bottleOptions[index]['color'] as Color;
+                  final color = bottleOptions[index]['color'] as Color;
 
                   return GestureDetector(
                     onTap: () {
@@ -139,18 +210,20 @@ class _ChooseFinishScreenState extends State<ChooseFinishScreen> {
                 }),
               ),
 
+// Selected
               SizedBox(height: 10.h),
 
               // Selected Color Label Text
               Text(
-                _bottleOptions[_selectedIndex]['name'],
+                bottleOptions[_selectedIndex]['name'],
                 style: TextStyle(
                   color: const Color(0xFF2C434C),
-                  fontSize: 15.sp,
+                  fontSize: 18.sp,
                   fontFamily: AppFontStyles.urbanistFontFamily,
-                  fontVariations: [AppFontStyles.semiBoldFontVariation],
+                  fontVariations: [AppFontStyles.boldFontVariation],
                 ),
               ),
+              SizedBox(height: 6.h),
 
               const Spacer(),
 
@@ -159,7 +232,11 @@ class _ChooseFinishScreenState extends State<ChooseFinishScreen> {
                 width: double.infinity,
                 height: 52.h,
                 child: ElevatedButton(
-                  onPressed: widget.onConfirm,
+                  onPressed: () async {
+                    final colorKeys = ['red', 'black', 'purple'];
+                    await SharedPrefsHelper.setBottleColor(colorKeys[_selectedIndex]);
+                    widget.onConfirm(_selectedIndex);
+                  },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF00A3FF),
                     foregroundColor: Colors.white,
@@ -172,7 +249,7 @@ class _ChooseFinishScreenState extends State<ChooseFinishScreen> {
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Text(
-                        "Confirm Selection",
+                        AppLocalizations.of(context)?.confirmSelection ?? "Confirm Selection",
                         style: TextStyle(
                           fontSize: 16.sp,
                           fontFamily: AppFontStyles.urbanistFontFamily,

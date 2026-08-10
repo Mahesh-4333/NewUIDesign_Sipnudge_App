@@ -41,6 +41,8 @@ class SharedPrefsHelper {
   static const String _keyActiveWifiPassword = 'active_wifi_password';
   static const String _keyActiveWifiIp = 'active_wifi_ip';
   static const String _keyActiveWifiPriority = 'active_wifi_priority';
+  static const String _keyPendingConsumedUpdate = 'pending_consumed_update';
+  static const String _keyPendingManualDelta = 'pending_manual_liquid_delta';
 
   static const String _keyReminderMode = "reminder_mode";
   static const String _keyAlarmRepeatIndex = "alarm_repeat_index";
@@ -63,12 +65,25 @@ class SharedPrefsHelper {
   static const String _keyUserName = 'user_name';
   static const String _keyLastSummarySyncDate = 'last_summary_sync_date';
   static const String _keyHasShownHomeShowcase = 'has_shown_home_showcase';
-  static const String _keyHasShownLocationPrivacy = 'has_shown_location_privacy';
+  static const String _keyHasShownLocationPrivacy =
+      'has_shown_location_privacy';
   static const String _keyGhostMode = 'location_ghost_mode';
   static const String _keyFuzzyLocation = 'location_fuzzy';
   static const String _keyUserLatitude = 'user_latitude';
   static const String _keyUserLongitude = 'user_longitude';
   static const String _keyUserType = 'user_type';
+  static const String _keySelectedUnit = 'selected_unit';
+
+  static Future<void> setSelectedUnit(String unit) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_keySelectedUnit, unit);
+    configUpdateStream.add(null);
+  }
+
+  static Future<String> getSelectedUnit() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_keySelectedUnit) ?? 'mL';
+  }
 
   static Future<void> setUserType(String type) async {
     final prefs = await SharedPreferences.getInstance();
@@ -180,7 +195,7 @@ class SharedPrefsHelper {
     final prefs = await SharedPreferences.getInstance();
     final now = DateTime.now();
     final today = "${now.year}-${now.month}-${now.day}";
-    
+
     // Clear if it's a new day
     final savedDate = prefs.getString(_keyUnsnoozedDate);
     List<String> list = [];
@@ -189,7 +204,7 @@ class SharedPrefsHelper {
     } else {
       await prefs.setString(_keyUnsnoozedDate, today);
     }
-    
+
     if (!list.contains(slotIndex.toString())) {
       list.add(slotIndex.toString());
       await prefs.setStringList(_keyUnsnoozedSlots, list);
@@ -209,13 +224,13 @@ class SharedPrefsHelper {
     final prefs = await SharedPreferences.getInstance();
     final now = DateTime.now();
     final today = "${now.year}-${now.month}-${now.day}";
-    
+
     final savedDate = prefs.getString(_keyUnsnoozedDate);
     if (savedDate != today) {
       await prefs.remove(_keyUnsnoozedSlots);
       return {};
     }
-    
+
     final list = prefs.getStringList(_keyUnsnoozedSlots) ?? [];
     return list.map((e) => int.parse(e)).toSet();
   }
@@ -250,8 +265,8 @@ class SharedPrefsHelper {
 
   static Future<bool> getAiHydrationGoalShown() async {
     final prefs = await SharedPreferences.getInstance();
-    var goalHydration =  prefs.getBool(_keyAiHydrationGoalShownDate);
-    if(goalHydration == null){
+    var goalHydration = prefs.getBool(_keyAiHydrationGoalShownDate);
+    if (goalHydration == null) {
       return true;
     }
     return goalHydration;
@@ -414,6 +429,18 @@ class SharedPrefsHelper {
   static Future<void> clearAll() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.clear();
+  }
+
+  static const String _keyHasPulledManualLogs = 'has_pulled_manual_logs';
+
+  static Future<bool> hasPulledManualLogs() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool(_keyHasPulledManualLogs) ?? false;
+  }
+
+  static Future<void> setHasPulledManualLogs(bool value) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_keyHasPulledManualLogs, value);
   }
 
   static Future<void> clearLastConnectedDeviceData() async {
@@ -600,13 +627,24 @@ class SharedPrefsHelper {
     bool triggerStream = true,
   }) async {
     // 1. Update preferences if new values are provided
-    if (waterGoal != null) await setWaterGoal(waterGoal);
-    if (ledIntensity != null) await setLedIntensity(ledIntensity);
-    if (vibrationStrength != null)
+    if (waterGoal != null) {
+      await setWaterGoal(waterGoal);
+    }
+    if (ledIntensity != null) {
+      await setLedIntensity(ledIntensity);
+    }
+    if (vibrationStrength != null) {
       await setVibrationStrength(vibrationStrength);
-    if (stopWhenFull != null) await setStopWhenFull(stopWhenFull);
-    if (alarmRepeatIndex != null) await setAlarmRepeatIndex(alarmRepeatIndex);
-    if (ringtoneFeedback != null) await setRingtoneFeedBack(ringtoneFeedback);
+    }
+    if (stopWhenFull != null) {
+      await setStopWhenFull(stopWhenFull);
+    }
+    if (alarmRepeatIndex != null) {
+      await setAlarmRepeatIndex(alarmRepeatIndex);
+    }
+    if (ringtoneFeedback != null) {
+      await setRingtoneFeedBack(ringtoneFeedback);
+    }
 
     // 2. Fetch all values (defaults handle fallbacks)
     final targetWater = await getWaterGoal() ?? 2500;
@@ -749,7 +787,8 @@ class SharedPrefsHelper {
     return prefs.getInt(_keyActiveWifiPriority);
   }
 
-  static Future<void> setWifiCredentialsForPriority(int priority, String ssid, String password) async {
+  static Future<void> setWifiCredentialsForPriority(
+      int priority, String ssid, String password) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('wifi_ssid_$priority', ssid);
     await prefs.setString('wifi_password_$priority', password);
@@ -795,5 +834,76 @@ class SharedPrefsHelper {
   static Future<String?> getSelectedLanguage() async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getString(_keySelectedLanguage);
+  }
+
+  static Future<void> setPendingConsumedUpdate(int consumed) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt(_keyPendingConsumedUpdate, consumed);
+  }
+
+  static Future<int?> getPendingConsumedUpdate() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getInt(_keyPendingConsumedUpdate);
+  }
+
+  static Future<void> clearPendingConsumedUpdate() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_keyPendingConsumedUpdate);
+  }
+
+  /// Add positive (drink added) or negative (drink deleted) delta to accumulator
+  static Future<void> addPendingManualDelta(int delta) async {
+    final prefs = await SharedPreferences.getInstance();
+    final current = prefs.getInt(_keyPendingManualDelta) ?? 0;
+    final updated = current + delta;
+    await prefs.setInt(_keyPendingManualDelta, updated);
+    Console.log(tag: "BLE_DELTA", value: "Accumulated delta: $current + $delta = $updated");
+  }
+
+  /// Get currently accumulated manual liquid delta
+  static Future<int> getPendingManualDelta() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getInt(_keyPendingManualDelta) ?? 0;
+  }
+
+  /// Reset accumulated delta back to 0 once sent to bottle
+  static Future<void> clearPendingManualDelta() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt(_keyPendingManualDelta, 0);
+  }
+
+  static const String _keySmartWidgets = 'smart_widgets_enabled';
+  static const String _keySmartReminders = 'smart_reminders_enabled';
+
+  static Future<void> setSmartWidgetsEnabled(bool value) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_keySmartWidgets, value);
+  }
+
+  static Future<bool> isSmartWidgetsEnabled() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool(_keySmartWidgets) ?? true;
+  }
+
+  static Future<void> setSmartRemindersEnabled(bool value) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_keySmartReminders, value);
+  }
+
+  static Future<bool> isSmartRemindersEnabled() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool(_keySmartReminders) ?? false;
+  }
+
+  static const String _keyOnboardingFlowCompleted = 'onboarding_flow_completed';
+
+  static Future<bool> isOnboardingFlowCompleted() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool(_keyOnboardingFlowCompleted) ?? false;
+  }
+
+  static Future<void> setOnboardingFlowCompleted(bool value) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_keyOnboardingFlowCompleted, value);
   }
 }

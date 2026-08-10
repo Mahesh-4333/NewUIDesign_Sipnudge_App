@@ -7,6 +7,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:hydrify/constants/app_colors.dart';
 import 'package:hydrify/constants/app_dimensions.dart';
 import 'package:hydrify/constants/app_font_styles.dart';
+import 'package:hydrify/constants/assets_path.dart';
 import 'package:hydrify/l10n/app_localizations.dart';
 import 'package:hydrify/helpers/shared_pref_helper.dart';
 import 'package:hydrify/cubit/data_analytics/data_analytics_cubit.dart';
@@ -146,7 +147,8 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
                 ),
               ),
               child: Text(
-                AppLocalizations.of(context)?.trackingRestarted ?? "Connect to Sipnudge bottle to access analysis",
+                AppLocalizations.of(context)?.trackingRestarted ??
+                    "Connect to Sipnudge bottle to access analysis",
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   color: AppColors.bluegray,
@@ -219,7 +221,8 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
                 : 'Improving';
 
         return Container(
-          margin: EdgeInsets.symmetric(horizontal: AppDimensions.defaultPadding.w),
+          margin:
+              EdgeInsets.symmetric(horizontal: AppDimensions.defaultPadding.w),
           decoration: BoxDecoration(
             color: AppColors.white,
             borderRadius: BorderRadius.circular(AppDimensions.dim12.r),
@@ -424,12 +427,10 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
                     ),
                   ),
                   alignment: Alignment.center,
-                  child: CustomPaint(
-                    size: Size(22.w, 22.w),
-                    painter: _PulseIconPainter(
-                      color: const Color(0xFF1E88E5),
-                      strokeWidth: 2.5,
-                    ),
+                  child: Image.asset(
+                    AssetsPath.onboardingAnalytics,
+                    width: 30.w,
+                    height: 30.w,
                   ),
                 ),
                 Expanded(
@@ -441,7 +442,7 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
                         "Analytics",
                         textAlign: TextAlign.center,
                         style: TextStyle(
-                          color: AppColors.bluegray,
+                          color: AppColors.black,
                           fontSize: 18.sp,
                           fontFamily: AppFontStyles.urbanistFontFamily,
                           fontVariations: [AppFontStyles.boldFontVariation],
@@ -452,10 +453,10 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
                         "Hydration Data",
                         textAlign: TextAlign.center,
                         style: TextStyle(
-                          color: AppColors.greyColorText1,
+                          color: Color(0xff64748B),
                           fontSize: 13.sp,
                           fontFamily: AppFontStyles.urbanistFontFamily,
-                          fontVariations: [AppFontStyles.regularFontVariation],
+                          fontVariations: [AppFontStyles.boldFontVariation],
                         ),
                       ),
                     ],
@@ -507,4 +508,3 @@ class _PulseIconPainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
-

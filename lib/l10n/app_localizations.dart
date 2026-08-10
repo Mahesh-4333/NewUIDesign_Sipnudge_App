@@ -1271,6 +1271,1062 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Recent Logs'**
   String get recentLogs;
+
+  /// No description provided for @profileSetup.
+  ///
+  /// In en, this message translates to:
+  /// **'Profile Setup'**
+  String get profileSetup;
+
+  /// No description provided for @quietHoursAndActivity.
+  ///
+  /// In en, this message translates to:
+  /// **'Quiet Hours & Activity'**
+  String get quietHoursAndActivity;
+
+  /// No description provided for @sleepScheduleSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Set your sleep schedule so Sipnudge stays\ncompletely silent overnight.'**
+  String get sleepScheduleSubtitle;
+
+  /// No description provided for @sleepCycle.
+  ///
+  /// In en, this message translates to:
+  /// **'Sleep Cycle'**
+  String get sleepCycle;
+
+  /// No description provided for @wakeTime.
+  ///
+  /// In en, this message translates to:
+  /// **'Wake Time'**
+  String get wakeTime;
+
+  /// No description provided for @bedTime.
+  ///
+  /// In en, this message translates to:
+  /// **'Bed Time'**
+  String get bedTime;
+
+  /// No description provided for @activityLevel.
+  ///
+  /// In en, this message translates to:
+  /// **'ACTIVITY LEVEL'**
+  String get activityLevel;
+
+  /// No description provided for @enterWakeupTime.
+  ///
+  /// In en, this message translates to:
+  /// **'Please enter your wakeup time'**
+  String get enterWakeupTime;
+
+  /// No description provided for @enterBedtime.
+  ///
+  /// In en, this message translates to:
+  /// **'Please enter your bedtime'**
+  String get enterBedtime;
+
+  /// No description provided for @selectWakeTime.
+  ///
+  /// In en, this message translates to:
+  /// **'Select Wake Time'**
+  String get selectWakeTime;
+
+  /// No description provided for @selectBedTime.
+  ///
+  /// In en, this message translates to:
+  /// **'Select Bed Time'**
+  String get selectBedTime;
+
+  /// No description provided for @fuelAndFlow.
+  ///
+  /// In en, this message translates to:
+  /// **'Fuel & Flow'**
+  String get fuelAndFlow;
+
+  /// No description provided for @dietSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Tell us a bit about your diet to calculate your baseline hydration needs.'**
+  String get dietSubtitle;
+
+  /// No description provided for @primaryDietFocus.
+  ///
+  /// In en, this message translates to:
+  /// **'PRIMARY DIET FOCUS'**
+  String get primaryDietFocus;
+
+  /// No description provided for @averageDailyWater.
+  ///
+  /// In en, this message translates to:
+  /// **'AVERAGE DAILY WATER'**
+  String get averageDailyWater;
+
+  /// No description provided for @roughEstimateFine.
+  ///
+  /// In en, this message translates to:
+  /// **'Rough estimate is fine'**
+  String get roughEstimateFine;
+
+  /// No description provided for @dailyCaffeine.
+  ///
+  /// In en, this message translates to:
+  /// **'DAILY CAFFEINE'**
+  String get dailyCaffeine;
+
+  /// No description provided for @pleaseWait.
+  ///
+  /// In en, this message translates to:
+  /// **'Please wait'**
+  String get pleaseWait;
+
+  /// No description provided for @scrollDown.
+  ///
+  /// In en, this message translates to:
+  /// **'Scroll Down'**
+  String get scrollDown;
+
+  /// No description provided for @next.
+  ///
+  /// In en, this message translates to:
+  /// **'Next'**
+  String get next;
+
+  /// No description provided for @yourState.
+  ///
+  /// In en, this message translates to:
+  /// **'Your State'**
+  String get yourState;
+
+  /// No description provided for @personalizeProfile.
+  ///
+  /// In en, this message translates to:
+  /// **'Let\'s personalize your hydration profile.'**
+  String get personalizeProfile;
+
+  /// No description provided for @username.
+  ///
+  /// In en, this message translates to:
+  /// **'USERNAME'**
+  String get username;
+
+  /// No description provided for @usernameRequirements.
+  ///
+  /// In en, this message translates to:
+  /// **'3-15 alphanumeric characters or underscores only.'**
+  String get usernameRequirements;
+
+  /// No description provided for @usernameTaken.
+  ///
+  /// In en, this message translates to:
+  /// **'Username is already taken.'**
+  String get usernameTaken;
+
+  /// No description provided for @usernameCannotBeChanged.
+  ///
+  /// In en, this message translates to:
+  /// **'Username cannot be changed once set.'**
+  String get usernameCannotBeChanged;
+
+  /// No description provided for @checkingAvailability.
+  ///
+  /// In en, this message translates to:
+  /// **'Checking availability...'**
+  String get checkingAvailability;
+
+  /// No description provided for @usernameAvailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Username available'**
+  String get usernameAvailable;
+
+  /// No description provided for @useLettersNumbersUnderscores.
+  ///
+  /// In en, this message translates to:
+  /// **'Use 3-15 letters, numbers, or underscores.'**
+  String get useLettersNumbersUnderscores;
+
+  /// No description provided for @age.
+  ///
+  /// In en, this message translates to:
+  /// **'AGE'**
+  String get age;
+
+  /// No description provided for @genderIdentity.
+  ///
+  /// In en, this message translates to:
+  /// **'GENDER IDENTITY'**
+  String get genderIdentity;
+
+  /// No description provided for @height.
+  ///
+  /// In en, this message translates to:
+  /// **'HEIGHT'**
+  String get height;
+
+  /// No description provided for @weight.
+  ///
+  /// In en, this message translates to:
+  /// **'WEIGHT'**
+  String get weight;
+
+  /// No description provided for @fillHeightWeightAge.
+  ///
+  /// In en, this message translates to:
+  /// **'Please fill in height, weight, and age before continuing.'**
+  String get fillHeightWeightAge;
+
+  /// No description provided for @enterUsername.
+  ///
+  /// In en, this message translates to:
+  /// **'Please enter your username.'**
+  String get enterUsername;
+
+  /// No description provided for @usernameMustBeAlphanumeric.
+  ///
+  /// In en, this message translates to:
+  /// **'Username must be 3-15 alphanumeric characters or underscores.'**
+  String get usernameMustBeAlphanumeric;
+
+  /// No description provided for @yourDailyGoal.
+  ///
+  /// In en, this message translates to:
+  /// **'Your Daily goal'**
+  String get yourDailyGoal;
+
+  /// No description provided for @rotateBezelToAdjustVolume.
+  ///
+  /// In en, this message translates to:
+  /// **'Rotate bezel to adjust volume'**
+  String get rotateBezelToAdjustVolume;
+
+  /// No description provided for @newGoal.
+  ///
+  /// In en, this message translates to:
+  /// **'NEW GOAL'**
+  String get newGoal;
+
+  /// No description provided for @unitPerDay.
+  ///
+  /// In en, this message translates to:
+  /// **'{unit} / day'**
+  String unitPerDay(String unit);
+
+  /// No description provided for @targetCalibration.
+  ///
+  /// In en, this message translates to:
+  /// **'Target Calibration'**
+  String get targetCalibration;
+
+  /// No description provided for @adjustDailyIntakeGoal.
+  ///
+  /// In en, this message translates to:
+  /// **'Adjust your daily intake goal based on precision metrics.'**
+  String get adjustDailyIntakeGoal;
+
+  /// No description provided for @avgIntake.
+  ///
+  /// In en, this message translates to:
+  /// **'Avg Intake'**
+  String get avgIntake;
+
+  /// No description provided for @increase.
+  ///
+  /// In en, this message translates to:
+  /// **'Increase'**
+  String get increase;
+
+  /// No description provided for @decrease.
+  ///
+  /// In en, this message translates to:
+  /// **'Decrease'**
+  String get decrease;
+
+  /// No description provided for @hydrationTipMetabolism.
+  ///
+  /// In en, this message translates to:
+  /// **'Drinking water before meals can boost \nyour metabolism by up to 30%.'**
+  String get hydrationTipMetabolism;
+
+  /// No description provided for @actionRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Action Required'**
+  String get actionRequired;
+
+  /// No description provided for @googleCalendarSignInRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Google Calendar sign-in might be required for smart snooze and calendar sync'**
+  String get googleCalendarSignInRequired;
+
+  /// No description provided for @iGiveMyConsent.
+  ///
+  /// In en, this message translates to:
+  /// **'I give my consent'**
+  String get iGiveMyConsent;
+
+  /// No description provided for @chooseYourFinish.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose Your Finish'**
+  String get chooseYourFinish;
+
+  /// No description provided for @selectColorDailyRhythm.
+  ///
+  /// In en, this message translates to:
+  /// **'Select the color that matches your\ndaily rhythm.'**
+  String get selectColorDailyRhythm;
+
+  /// No description provided for @confirmSelection.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm Selection'**
+  String get confirmSelection;
+
+  /// No description provided for @midnightBlack.
+  ///
+  /// In en, this message translates to:
+  /// **'Midnight Black'**
+  String get midnightBlack;
+
+  /// No description provided for @descMidnightBlack.
+  ///
+  /// In en, this message translates to:
+  /// **'“Minimal, Timeless. Built for every environment”'**
+  String get descMidnightBlack;
+
+  /// No description provided for @candyRed.
+  ///
+  /// In en, this message translates to:
+  /// **'Candy Red'**
+  String get candyRed;
+
+  /// No description provided for @descCandyRed.
+  ///
+  /// In en, this message translates to:
+  /// **'“Bold, Energetic, and Impossible to ignore”'**
+  String get descCandyRed;
+
+  /// No description provided for @deepPurple.
+  ///
+  /// In en, this message translates to:
+  /// **'Deep Purple'**
+  String get deepPurple;
+
+  /// No description provided for @descDeepPurple.
+  ///
+  /// In en, this message translates to:
+  /// **'“Creative, Premium, and uniquely yours”'**
+  String get descDeepPurple;
+
+  /// No description provided for @connect.
+  ///
+  /// In en, this message translates to:
+  /// **'Connect'**
+  String get connect;
+
+  /// No description provided for @yourSipnudgeBottle.
+  ///
+  /// In en, this message translates to:
+  /// **'Your Sipnudge Bottle'**
+  String get yourSipnudgeBottle;
+
+  /// No description provided for @bluetoothRequiredDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Bluetooth is required to sync your\nhydration data from your smart bottle\nto the app in real-time.'**
+  String get bluetoothRequiredDescription;
+
+  /// No description provided for @realTimeTracking.
+  ///
+  /// In en, this message translates to:
+  /// **'Real-time tracking'**
+  String get realTimeTracking;
+
+  /// No description provided for @instantLiquidLevelUpdates.
+  ///
+  /// In en, this message translates to:
+  /// **'Instant liquid level updates.'**
+  String get instantLiquidLevelUpdates;
+
+  /// No description provided for @smartNudges.
+  ///
+  /// In en, this message translates to:
+  /// **'Smart nudges'**
+  String get smartNudges;
+
+  /// No description provided for @personalizedHabitBuilding.
+  ///
+  /// In en, this message translates to:
+  /// **'Personalized habit building.'**
+  String get personalizedHabitBuilding;
+
+  /// No description provided for @accurateHistory.
+  ///
+  /// In en, this message translates to:
+  /// **'Accurate history'**
+  String get accurateHistory;
+
+  /// No description provided for @detailedConsumptionLogs.
+  ///
+  /// In en, this message translates to:
+  /// **'Detailed consumption logs.'**
+  String get detailedConsumptionLogs;
+
+  /// No description provided for @enableBluetooth.
+  ///
+  /// In en, this message translates to:
+  /// **'Enable Bluetooth'**
+  String get enableBluetooth;
+
+  /// No description provided for @skipNoBottle.
+  ///
+  /// In en, this message translates to:
+  /// **'Skip: I don\'t have a bottle'**
+  String get skipNoBottle;
+
+  /// No description provided for @bottleActivation.
+  ///
+  /// In en, this message translates to:
+  /// **'Bottle Activation'**
+  String get bottleActivation;
+
+  /// No description provided for @wakeUpSmartBottleDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Let\'s wake up your smart bottle and get it\nconnected to your wellness profile.'**
+  String get wakeUpSmartBottleDescription;
+
+  /// No description provided for @wakeYourBottle.
+  ///
+  /// In en, this message translates to:
+  /// **'Wake Your Bottle'**
+  String get wakeYourBottle;
+
+  /// No description provided for @touchCapDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Gently touch the cap to activate the\nsensor and start advertising.'**
+  String get touchCapDescription;
+
+  /// No description provided for @scanning.
+  ///
+  /// In en, this message translates to:
+  /// **'SCANNING...'**
+  String get scanning;
+
+  /// No description provided for @discoveredDevices.
+  ///
+  /// In en, this message translates to:
+  /// **'DISCOVERED DEVICES'**
+  String get discoveredDevices;
+
+  /// No description provided for @connecting.
+  ///
+  /// In en, this message translates to:
+  /// **'Connecting...'**
+  String get connecting;
+
+  /// No description provided for @readyToPair.
+  ///
+  /// In en, this message translates to:
+  /// **'Ready to pair'**
+  String get readyToPair;
+
+  /// No description provided for @excellent.
+  ///
+  /// In en, this message translates to:
+  /// **'Excellent'**
+  String get excellent;
+
+  /// No description provided for @good.
+  ///
+  /// In en, this message translates to:
+  /// **'Good'**
+  String get good;
+
+  /// No description provided for @weak.
+  ///
+  /// In en, this message translates to:
+  /// **'Weak'**
+  String get weak;
+
+  /// No description provided for @noDeviceFound.
+  ///
+  /// In en, this message translates to:
+  /// **'No device found'**
+  String get noDeviceFound;
+
+  /// No description provided for @tapOn.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap on '**
+  String get tapOn;
+
+  /// No description provided for @toEstablishSecureConnection.
+  ///
+  /// In en, this message translates to:
+  /// **' to establish a secure connection and verify sensor calibration.'**
+  String get toEstablishSecureConnection;
+
+  /// No description provided for @environmentalHarmony.
+  ///
+  /// In en, this message translates to:
+  /// **'Environmental\nHarmony'**
+  String get environmentalHarmony;
+
+  /// No description provided for @environmentalHarmonyDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Connect seamlessly with your \nsurroundings. Sipnudge harmonizes \nwith local climate conditions to \ndynamically balance your hydration \nneeds, maintaining optimal wellness \nwherever you are.'**
+  String get environmentalHarmonyDescription;
+
+  /// No description provided for @temperatureCalibrationDisclaimer.
+  ///
+  /// In en, this message translates to:
+  /// **'Temperature data is primary sourced from your Sipnudge bottle to estimate surrounding conditions. If the bottle is unavailable, the model automatically switches to your city\'s local temperature for calibration.'**
+  String get temperatureCalibrationDisclaimer;
+
+  /// No description provided for @enableLocation.
+  ///
+  /// In en, this message translates to:
+  /// **'Enable Location'**
+  String get enableLocation;
+
+  /// No description provided for @illDoItLater.
+  ///
+  /// In en, this message translates to:
+  /// **'I\'ll do it later'**
+  String get illDoItLater;
+
+  /// No description provided for @eg.
+  ///
+  /// In en, this message translates to:
+  /// **'e.g.'**
+  String get eg;
+
+  /// No description provided for @freshStart.
+  ///
+  /// In en, this message translates to:
+  /// **'Fresh Start'**
+  String get freshStart;
+
+  /// No description provided for @freshStartDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Fill bottle until the float disc aligns with the maximum\nlevel marker. Do not exceed capacity to maintain\nsensor accuracy.'**
+  String get freshStartDescription;
+
+  /// No description provided for @targetVolume.
+  ///
+  /// In en, this message translates to:
+  /// **'TARGET VOLUME'**
+  String get targetVolume;
+
+  /// No description provided for @maxVolumeFormat.
+  ///
+  /// In en, this message translates to:
+  /// **'/{volume} ml'**
+  String maxVolumeFormat(String volume);
+
+  /// No description provided for @calibrated.
+  ///
+  /// In en, this message translates to:
+  /// **'Calibrated'**
+  String get calibrated;
+
+  /// No description provided for @calibration.
+  ///
+  /// In en, this message translates to:
+  /// **'Calibration'**
+  String get calibration;
+
+  /// No description provided for @max.
+  ///
+  /// In en, this message translates to:
+  /// **'MAX'**
+  String get max;
+
+  /// No description provided for @overfillingWarning.
+  ///
+  /// In en, this message translates to:
+  /// **'Overfilling may cause cap displacement \nand interfere with hydration tracking \nsensors.'**
+  String get overfillingWarning;
+
+  /// No description provided for @precision.
+  ///
+  /// In en, this message translates to:
+  /// **'Precision'**
+  String get precision;
+
+  /// No description provided for @precisionDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Ensures accurate \nhydration \ntracking.'**
+  String get precisionDescription;
+
+  /// No description provided for @seal.
+  ///
+  /// In en, this message translates to:
+  /// **'Seal'**
+  String get seal;
+
+  /// No description provided for @sealDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Prevents leaks \nand pressure \nbuild-up.'**
+  String get sealDescription;
+
+  /// No description provided for @calibrating.
+  ///
+  /// In en, this message translates to:
+  /// **'Caliberating..'**
+  String get calibrating;
+
+  /// No description provided for @finalizeCalibration.
+  ///
+  /// In en, this message translates to:
+  /// **'Finalize Calibration'**
+  String get finalizeCalibration;
+
+  /// No description provided for @startCalibration.
+  ///
+  /// In en, this message translates to:
+  /// **'Start Calibration'**
+  String get startCalibration;
+
+  /// No description provided for @walkthroughTitle1.
+  ///
+  /// In en, this message translates to:
+  /// **'Sipnudge - Your Ultimate\nHydration Co-pilot!'**
+  String get walkthroughTitle1;
+
+  /// No description provided for @walkthroughSubtitle1.
+  ///
+  /// In en, this message translates to:
+  /// **'Stay healthy, & conquer your hydration goals!\nTrack your water intake, set reminders, and\nunlock achievements for a healthier you.'**
+  String get walkthroughSubtitle1;
+
+  /// No description provided for @walkthroughTitle2.
+  ///
+  /// In en, this message translates to:
+  /// **'Track Your Hydration &\nVisualize Your Progress'**
+  String get walkthroughTitle2;
+
+  /// No description provided for @walkthroughSubtitle2.
+  ///
+  /// In en, this message translates to:
+  /// **'Set reminders to stay consistent, review your\ndaily hydration history, and visualize your\nprogress over time.'**
+  String get walkthroughSubtitle2;
+
+  /// No description provided for @walkthroughTitle3.
+  ///
+  /// In en, this message translates to:
+  /// **'Achieve Your Hydration\nGoals with Sipnudge Now'**
+  String get walkthroughTitle3;
+
+  /// No description provided for @walkthroughSubtitle3.
+  ///
+  /// In en, this message translates to:
+  /// **'Level up your hydration game with Sipnudge\nachievements. Unlock premium features, and\nmake hydration a lifelong habit.'**
+  String get walkthroughSubtitle3;
+
+  /// No description provided for @walkthroughTitle4.
+  ///
+  /// In en, this message translates to:
+  /// **'Uncover the Hidden\nHydration in Your Meals'**
+  String get walkthroughTitle4;
+
+  /// No description provided for @walkthroughSubtitle4.
+  ///
+  /// In en, this message translates to:
+  /// **'Scan your food to instantly calculate its water\ncontent and auto-correct your daily drinking\ngoals for effortless, total hydration.'**
+  String get walkthroughSubtitle4;
+
+  /// No description provided for @letsGetStarted.
+  ///
+  /// In en, this message translates to:
+  /// **'Lets get started'**
+  String get letsGetStarted;
+
+  /// No description provided for @beginYourJourney.
+  ///
+  /// In en, this message translates to:
+  /// **'Begin your journey'**
+  String get beginYourJourney;
+
+  /// No description provided for @letsDive.
+  ///
+  /// In en, this message translates to:
+  /// **'Let\'s dive in into your account'**
+  String get letsDive;
+
+  /// No description provided for @continueWithGoogle.
+  ///
+  /// In en, this message translates to:
+  /// **'Continue with Google'**
+  String get continueWithGoogle;
+
+  /// No description provided for @continueWithApple.
+  ///
+  /// In en, this message translates to:
+  /// **'Continue with Apple'**
+  String get continueWithApple;
+
+  /// No description provided for @signUp.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign up'**
+  String get signUp;
+
+  /// No description provided for @signIn.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign in'**
+  String get signIn;
+
+  /// No description provided for @pleaseAcceptTerms.
+  ///
+  /// In en, this message translates to:
+  /// **'Please accept the terms and conditions'**
+  String get pleaseAcceptTerms;
+
+  /// No description provided for @signingInGoogle.
+  ///
+  /// In en, this message translates to:
+  /// **'Signing you in via Google'**
+  String get signingInGoogle;
+
+  /// No description provided for @signingInApple.
+  ///
+  /// In en, this message translates to:
+  /// **'Signing you in via Apple'**
+  String get signingInApple;
+
+  /// No description provided for @signinSuccessful.
+  ///
+  /// In en, this message translates to:
+  /// **'Signin Successful'**
+  String get signinSuccessful;
+
+  /// No description provided for @couldNotOpenWebpage.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not open the webpage'**
+  String get couldNotOpenWebpage;
+
+  /// No description provided for @iAgreeToThe.
+  ///
+  /// In en, this message translates to:
+  /// **'I agree to the '**
+  String get iAgreeToThe;
+
+  /// No description provided for @gladToSeeYou.
+  ///
+  /// In en, this message translates to:
+  /// **'Glad to see you again! 👋'**
+  String get gladToSeeYou;
+
+  /// No description provided for @getStartedWithSipnudge.
+  ///
+  /// In en, this message translates to:
+  /// **'Get started with SipNudge ✨'**
+  String get getStartedWithSipnudge;
+
+  /// No description provided for @signinToYourAccount.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign in to your account to continue your journey towards a healthier you.'**
+  String get signinToYourAccount;
+
+  /// No description provided for @createAnAccount.
+  ///
+  /// In en, this message translates to:
+  /// **'Create an account to track your water intake, set reminders, and unlock achievements.'**
+  String get createAnAccount;
+
+  /// No description provided for @email.
+  ///
+  /// In en, this message translates to:
+  /// **'Email'**
+  String get email;
+
+  /// No description provided for @password.
+  ///
+  /// In en, this message translates to:
+  /// **'Password'**
+  String get password;
+
+  /// No description provided for @rememberMe.
+  ///
+  /// In en, this message translates to:
+  /// **'Remember me'**
+  String get rememberMe;
+
+  /// No description provided for @iAgree.
+  ///
+  /// In en, this message translates to:
+  /// **'I agree to Sipnudge '**
+  String get iAgree;
+
+  /// No description provided for @forgotPassword.
+  ///
+  /// In en, this message translates to:
+  /// **'Forgot Password?'**
+  String get forgotPassword;
+
+  /// No description provided for @alreadyHaveAnAccount.
+  ///
+  /// In en, this message translates to:
+  /// **'Already have an account? '**
+  String get alreadyHaveAnAccount;
+
+  /// No description provided for @or.
+  ///
+  /// In en, this message translates to:
+  /// **'or'**
+  String get or;
+
+  /// No description provided for @pleaseEnterEmailAndPassword.
+  ///
+  /// In en, this message translates to:
+  /// **'Please enter email and password'**
+  String get pleaseEnterEmailAndPassword;
+
+  /// No description provided for @pleaseEnterEmail.
+  ///
+  /// In en, this message translates to:
+  /// **'Please enter email'**
+  String get pleaseEnterEmail;
+
+  /// No description provided for @pleaseEnterPassword.
+  ///
+  /// In en, this message translates to:
+  /// **'Please enter password'**
+  String get pleaseEnterPassword;
+
+  /// No description provided for @pleaseEnterValidEmail.
+  ///
+  /// In en, this message translates to:
+  /// **'Please enter a valid email'**
+  String get pleaseEnterValidEmail;
+
+  /// No description provided for @sendingOtp.
+  ///
+  /// In en, this message translates to:
+  /// **'Sending OTP'**
+  String get sendingOtp;
+
+  /// No description provided for @unexpectedError.
+  ///
+  /// In en, this message translates to:
+  /// **'Unexpected error occurred'**
+  String get unexpectedError;
+
+  /// No description provided for @analyingYourData.
+  ///
+  /// In en, this message translates to:
+  /// **'Analyzing your data to create a personalized hydration plan...'**
+  String get analyingYourData;
+
+  /// No description provided for @almostThere.
+  ///
+  /// In en, this message translates to:
+  /// **'Almost there! Your personalized hydration plan is coming right up.'**
+  String get almostThere;
+
+  /// No description provided for @bluetoothPermissionRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Bluetooth Permission Required'**
+  String get bluetoothPermissionRequired;
+
+  /// No description provided for @openSettings.
+  ///
+  /// In en, this message translates to:
+  /// **'Open Settings'**
+  String get openSettings;
+
+  /// No description provided for @stayConnectedAndOnTrack.
+  ///
+  /// In en, this message translates to:
+  /// **'Stay Connected\n& On Track'**
+  String get stayConnectedAndOnTrack;
+
+  /// No description provided for @understandingHydrationRingSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Understanding your hydration ring helps you crush your goals.'**
+  String get understandingHydrationRingSubtitle;
+
+  /// No description provided for @letsHitTodaysGoal.
+  ///
+  /// In en, this message translates to:
+  /// **'Let’s hit today’s goal'**
+  String get letsHitTodaysGoal;
+
+  /// No description provided for @keepSippingText.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep Sipping'**
+  String get keepSippingText;
+
+  /// No description provided for @youreOnTrack.
+  ///
+  /// In en, this message translates to:
+  /// **'You’re on track'**
+  String get youreOnTrack;
+
+  /// No description provided for @seeYourDayAtAGlance.
+  ///
+  /// In en, this message translates to:
+  /// **'See Your Day at a Glance'**
+  String get seeYourDayAtAGlance;
+
+  /// No description provided for @ringShowsDailyHydrationGoal.
+  ///
+  /// In en, this message translates to:
+  /// **'Your ring shows how close you are to your daily hydration goal.'**
+  String get ringShowsDailyHydrationGoal;
+
+  /// No description provided for @stayOnYourNextGoal.
+  ///
+  /// In en, this message translates to:
+  /// **'Stay on Your Next Goal'**
+  String get stayOnYourNextGoal;
+
+  /// No description provided for @yellowRingHighlightsMicroGoal.
+  ///
+  /// In en, this message translates to:
+  /// **'Your yellow ring highlights the micro-goal to focus on right now.'**
+  String get yellowRingHighlightsMicroGoal;
+
+  /// No description provided for @watchYourProgressBuild.
+  ///
+  /// In en, this message translates to:
+  /// **'Watch Your Progress Build'**
+  String get watchYourProgressBuild;
+
+  /// No description provided for @everySipAddsToBlueRing.
+  ///
+  /// In en, this message translates to:
+  /// **'Every sip adds to your blue ring and moves you closer to your goal.'**
+  String get everySipAddsToBlueRing;
+
+  /// No description provided for @sipSmartStaySharp.
+  ///
+  /// In en, this message translates to:
+  /// **'Sip Smart, Stay Sharp'**
+  String get sipSmartStaySharp;
+
+  /// No description provided for @keepYellowSegmentSmall.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep the yellow segment as small as possible or gone entirely to stay ahead of schedule.'**
+  String get keepYellowSegmentSmall;
+
+  /// No description provided for @theProGoal.
+  ///
+  /// In en, this message translates to:
+  /// **'THE PRO GOAL'**
+  String get theProGoal;
+
+  /// No description provided for @currentGoalLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Current Goal'**
+  String get currentGoalLabel;
+
+  /// No description provided for @nextGoalLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Next Goal'**
+  String get nextGoalLabel;
+
+  /// No description provided for @wakeupLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Wakeup'**
+  String get wakeupLabel;
+
+  /// No description provided for @breakfastLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Breakfast'**
+  String get breakfastLabel;
+
+  /// No description provided for @midMorningLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Mid-Morning'**
+  String get midMorningLabel;
+
+  /// No description provided for @lunchLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Lunch'**
+  String get lunchLabel;
+
+  /// No description provided for @midAfternoonLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Mid-Afternoon'**
+  String get midAfternoonLabel;
+
+  /// No description provided for @eveningLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Evening'**
+  String get eveningLabel;
+
+  /// No description provided for @dinnerLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Dinner'**
+  String get dinnerLabel;
+
+  /// No description provided for @continueBtn.
+  ///
+  /// In en, this message translates to:
+  /// **'Continue'**
+  String get continueBtn;
+
+  /// No description provided for @addTheWidgetToHomeScreenInstruction.
+  ///
+  /// In en, this message translates to:
+  /// **'Add the widget to your Home Screen and\nsee your goal and progress at a glance'**
+  String get addTheWidgetToHomeScreenInstruction;
+
+  /// No description provided for @touchAndHoldHomeScreen.
+  ///
+  /// In en, this message translates to:
+  /// **'Touch and hold your Home Screen'**
+  String get touchAndHoldHomeScreen;
+
+  /// No description provided for @tapEditThenAddWidget.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap Edit, then Add Widget'**
+  String get tapEditThenAddWidget;
+
+  /// No description provided for @chooseMyWaterAndTapAddWidget.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose My Water and tap Add Widget'**
+  String get chooseMyWaterAndTapAddWidget;
+
+  /// No description provided for @smartReminders.
+  ///
+  /// In en, this message translates to:
+  /// **'Smart Reminders'**
+  String get smartReminders;
+
+  /// No description provided for @smartRemindersDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Receive timely nudges based on your activity and environment.'**
+  String get smartRemindersDescription;
 }
 
 class _AppLocalizationsDelegate
