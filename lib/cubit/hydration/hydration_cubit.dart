@@ -10,6 +10,7 @@ import 'package:hydrify/cubit/hydration/hydration_sync.dart';
 import 'package:hydrify/helpers/database_helper.dart';
 import 'package:hydrify/helpers/logger.dart';
 import 'package:hydrify/helpers/shared_pref_helper.dart';
+import 'package:hydrify/helpers/water_consumption_data_helper.dart';
 import 'package:hydrify/models/hydration_entry.dart';
 import 'package:hydrify/services/notification/notification_service.dart';
 import 'package:intl/intl.dart';
@@ -103,10 +104,17 @@ class HydrationCubit extends Cubit<HydrationState> {
       }
     }
 
+    final double expected = WaterConsumptionCalculator.calculateExpectedPercentage(
+      state.entries,
+      state.goal.toDouble(),
+      nowTime: now,
+    );
+
     emit(state.copyWith(
       currentSlotEntry: activeEntry,
       currentSlotConsumption: consumption,
       currentSlotPercentage: percentage,
+      expectedSlotPercentage: expected,
     ));
   }
 
@@ -123,6 +131,7 @@ class HydrationCubit extends Cubit<HydrationState> {
             .fold(0.0, (sum, e) => sum + e.amount);
 
         emit(state.copyWith(entries: slotsFromDb, totalDrank: total.round()));
+        _calculateCurrentSlotStatus();
       }
     } catch (e) {
       log("[Cubit] Failed to load slots from DB: $e");

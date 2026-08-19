@@ -126,7 +126,7 @@ class _IntakeTimelineIntroScreenState extends State<IntakeTimelineIntroScreen>
 
                       // Title
                       Text(
-                        "Let's Schedule\nyour timeline",
+                        "Water Intake Timeline",
                         textAlign: TextAlign.center,
                         style: TextStyle(
                           fontSize: 26.sp,
@@ -137,72 +137,53 @@ class _IntakeTimelineIntroScreenState extends State<IntakeTimelineIntroScreen>
                         ),
                       ),
 
-                      SizedBox(height: 10.h),
+                      // SizedBox(height: 10.h),
 
-                      // Subtitle
-                      Text(
-                        "Set your schedule to complete the 7 micro goals.\nSipnudge will keep you on track with reminders\nand smart snoozes.",
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontSize: 13.sp,
-                          color: AppColors.bluegray.withValues(alpha: 0.7),
-                          fontFamily: AppFontStyles.urbanistFontFamily,
-                          fontVariations: [AppFontStyles.semiBoldFontVariation],
-                          height: 1.5,
-                        ),
-                      ),
-
-                      SizedBox(height: 24.h),
+                      SizedBox(height: 30.h),
 
                       // ── Video / Placeholder box ──────────────────────
                       _buildVideoBox(),
 
-                      SizedBox(height: 32.h),
+                      SizedBox(height: 20.h),
                     ],
                   ),
                 ),
               ),
+              SizedBox(
+                height: 10.h,
+              ),
+              // Title
+              Text(
+                "Let's Schedule your timeline",
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 26.sp,
+                  color: AppColors.bluegray,
+                  fontFamily: AppFontStyles.urbanistFontFamily,
+                  fontVariations: [AppFontStyles.boldFontVariation],
+                  height: 1.25,
+                ),
+              ),
 
+              // // Subtitle
+              Text(
+                "Set your schedule to complete the 7 micro goals.Sipnudge \nwill keep you on track with reminders and smart snoozes.",
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 12.sp,
+                  color: AppColors.bluegray,
+                  fontFamily: AppFontStyles.urbanistFontFamily,
+                  fontVariations: [AppFontStyles.boldFontVariation],
+                  height: 1.5,
+                ),
+              ),
+              SizedBox(
+                height: 20.h,
+              ),
               // ── Bottom buttons ───────────────────────────────────────────
               _buildBottomButtons(),
             ],
           ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildHeader() {
-    return Container(
-      width: double.infinity,
-      padding: EdgeInsets.only(
-        top: 20.h,
-        bottom: 28.h,
-        left: 24.w,
-        right: 24.w,
-      ),
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            Color(0xFF5BC8F5),
-            Color(0xFF2196F3),
-          ],
-        ),
-        borderRadius: BorderRadius.vertical(
-          bottom: Radius.circular(28),
-        ),
-      ),
-      child: Text(
-        "Water Intake Timeline",
-        textAlign: TextAlign.center,
-        style: TextStyle(
-          fontSize: 24.sp,
-          color: Colors.white,
-          fontFamily: AppFontStyles.urbanistFontFamily,
-          fontVariations: [AppFontStyles.boldFontVariation],
-          height: 1.3,
         ),
       ),
     );
@@ -216,9 +197,9 @@ class _IntakeTimelineIntroScreenState extends State<IntakeTimelineIntroScreen>
           width: MediaQuery.of(context).size.width * 0.6,
           decoration: BoxDecoration(
             color: Colors.white,
-            borderRadius: BorderRadius.circular(10.r),
+            borderRadius: BorderRadius.circular(40.r),
             border: Border.all(
-              color: AppColors.bluegray,
+              color: const Color(0xff369FFF).withValues(alpha: 0.6),
               width: 1.5,
             ),
             boxShadow: [
@@ -229,8 +210,12 @@ class _IntakeTimelineIntroScreenState extends State<IntakeTimelineIntroScreen>
               ),
             ],
           ),
-          clipBehavior: Clip.hardEdge,
-          child: _buildVideoContent(),
+          clipBehavior: Clip.antiAlias,
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(38.5.r),
+            clipBehavior: Clip.antiAlias,
+            child: _buildVideoContent(),
+          ),
         ),
       ),
     );
@@ -272,39 +257,36 @@ class _IntakeTimelineIntroScreenState extends State<IntakeTimelineIntroScreen>
       );
     }
 
-    // Initialized — show video fitted inside the box
-    return Padding(
-      padding: const EdgeInsets.all(8.0),
-      child: Stack(
-        fit: StackFit.expand,
-        children: [
-          FittedBox(
-            fit: BoxFit.cover,
-            child: SizedBox(
-              width: _videoController.value.size.width,
-              height: _videoController.value.size.height,
-              child: VideoPlayer(_videoController),
-            ),
+    // Initialized — show video filling the container completely
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        FittedBox(
+          fit: BoxFit.fill,
+          child: SizedBox(
+            width: _videoController.value.size.width,
+            height: _videoController.value.size.height,
+            child: VideoPlayer(_videoController),
           ),
-          // Subtle mute icon at bottom-right
-          Positioned(
-            bottom: 10.h,
-            right: 10.w,
-            child: Container(
-              padding: EdgeInsets.all(6.r),
-              decoration: BoxDecoration(
-                color: Colors.black.withValues(alpha: 0.35),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(
-                Icons.volume_off_rounded,
-                size: 14.sp,
-                color: Colors.white,
-              ),
-            ),
-          ),
-        ],
-      ),
+        ),
+        // Subtle mute icon at bottom-right
+        // Positioned(
+        //   bottom: 12.h,
+        //   right: 12.w,
+        //   child: Container(
+        //     padding: EdgeInsets.all(6.r),
+        //     decoration: BoxDecoration(
+        //       color: Colors.black.withValues(alpha: 0.35),
+        //       shape: BoxShape.circle,
+        //     ),
+        //     child: Icon(
+        //       Icons.volume_off_rounded,
+        //       size: 14.sp,
+        //       color: Colors.white,
+        //     ),
+        //   ),
+        // ),
+      ],
     );
   }
 

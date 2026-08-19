@@ -409,5 +409,9 @@
   "tapEditThenAddWidget": "Tap Edit, then Add Widget",
   "chooseMyWaterAndTapAddWidget": "Choose My Water and tap Add Widget",
   "smartReminders": "Smart Reminders",
-  "smartRemindersDescription": "Receive timely nudges based on your activity and environment."
+  "smartRemindersDescription": "Receive timely nudges based on your activity and environment.",
+  "chooseTheLanguage": "Choose the language",
+  "selectYourPreferredLanguageBelow": "Select your preferred language below",
+  "youSelected": "You Selected",
+  "allLanguages": "All Languages"
 }

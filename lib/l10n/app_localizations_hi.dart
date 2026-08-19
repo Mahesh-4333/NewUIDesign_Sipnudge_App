@@ -1180,4 +1180,16 @@ class AppLocalizationsHi extends AppLocalizations {
   @override
   String get smartRemindersDescription =>
       'अपनी गतिविधि और वातावरण के आधार पर समय पर रिमाइंडर प्राप्त करें।';
+
+  @override
+  String get chooseTheLanguage => 'भाषा चुनें';
+
+  @override
+  String get selectYourPreferredLanguageBelow => 'नीचे अपनी पसंदीदा भाषा चुनें';
+
+  @override
+  String get youSelected => 'आपने चुना है';
+
+  @override
+  String get allLanguages => 'सभी भाषाएं';
 }

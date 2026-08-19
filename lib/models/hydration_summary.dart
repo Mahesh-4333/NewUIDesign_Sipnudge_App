@@ -67,10 +67,11 @@ class HydrationDaySummary {
     if (rawDate is int) {
       parsedDate = DateTime.fromMillisecondsSinceEpoch(rawDate).toLocal();
     } else if (rawDate is String) {
-      final datePart = rawDate.length >= 10 ? rawDate.substring(0, 10) : rawDate;
-      parsedDate = DateTime.tryParse(datePart) ?? 
-                   DateTime.tryParse(rawDate)?.toLocal() ??
-                   DateTime.fromMillisecondsSinceEpoch(0).toLocal();
+      final datePart =
+          rawDate.length >= 10 ? rawDate.substring(0, 10) : rawDate;
+      parsedDate = DateTime.tryParse(datePart) ??
+          DateTime.tryParse(rawDate)?.toLocal() ??
+          DateTime.fromMillisecondsSinceEpoch(0).toLocal();
     } else {
       parsedDate = DateTime.fromMillisecondsSinceEpoch(0).toLocal();
     }
@@ -98,7 +99,8 @@ class HydrationDaySummary {
     DateTime parsedDate;
     final rawDate = m['date'];
     if (rawDate is String) {
-      final datePart = rawDate.length >= 10 ? rawDate.substring(0, 10) : rawDate;
+      final datePart =
+          rawDate.length >= 10 ? rawDate.substring(0, 10) : rawDate;
       parsedDate = DateTime.tryParse(datePart) ??
           DateTime.tryParse(rawDate)?.toLocal() ??
           DateTime.fromMillisecondsSinceEpoch(0).toLocal();
@@ -127,4 +129,3 @@ class HydrationDaySummary {
     );
   }
 }
-

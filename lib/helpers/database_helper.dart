@@ -770,20 +770,21 @@ CREATE TABLE IF NOT EXISTS $appMetadataTableName (
       String type, double consumed, DateTime timestamp,
       {String? serverId}) async {
     final db = await database;
-    final utcTimestamp = timestamp.toUtc().toIso8601String();
+    // Store as local time — all DB queries use local boundaries.
+    final localTimestamp = timestamp.toLocal().toIso8601String();
     final id = await db.insert(
       logHydrationTableName,
       {
         'type': type,
         'consumed': consumed,
-        'timestamp': utcTimestamp,
+        'timestamp': localTimestamp,
         if (serverId != null) 'server_id': serverId,
       },
     );
     Console.log(
         tag: "APP",
         value:
-            "[DB] Inserted hydration log id=$id: $consumed mL of $type at $utcTimestamp");
+            "[DB] Inserted hydration log id=$id: $consumed mL of $type at $localTimestamp (local)");
     return id;
   }
 
@@ -801,6 +802,7 @@ CREATE TABLE IF NOT EXISTS $appMetadataTableName (
   Future<List<Map<String, dynamic>>> getHydrationLogs({DateTime? date}) async {
     final db = await database;
     if (date != null) {
+      // Timestamps are stored as local time strings in the DB.
       final startOfDay =
           DateTime(date.year, date.month, date.day).toIso8601String();
       final endOfDay =
@@ -828,6 +830,7 @@ CREATE TABLE IF NOT EXISTS $appMetadataTableName (
   Future<double> getTodayLoggedHydration() async {
     final db = await database;
     final now = DateTime.now();
+    // Timestamps are stored as local time — use local boundary.
     final startOfDay = DateTime(now.year, now.month, now.day).toIso8601String();
 
     final result = await db.rawQuery(
@@ -984,7 +987,8 @@ CREATE TABLE IF NOT EXISTS $appMetadataTableName (
         )
       ''');
     } catch (e) {
-      Console.log(tag: "DB_CLEANUP", value: "Failed to clean up duplicates: $e");
+      Console.log(
+          tag: "DB_CLEANUP", value: "Failed to clean up duplicates: $e");
     }
   }
 
@@ -1002,7 +1006,7 @@ CREATE TABLE IF NOT EXISTS $appMetadataTableName (
       Console.log(
           tag: "inserting30Day",
           value: "${s.dayIndex} : ${s.date.toIso8601String()} : ${s.consumed}");
-      
+
       batch.delete(
         hydrationSummaryTableName,
         where: 'date = ?',
@@ -1240,86 +1244,6 @@ CREATE TABLE IF NOT EXISTS $appMetadataTableName (
     }
   }
 
-  Future<void> syncAllSummariesWithLogs() async {
-    final db = await database;
-
-    // 1. Get all logs from log_hydration
-    final logs = await db.query(logHydrationTableName);
-    if (logs.isEmpty) return;
-
-    // 2. Aggregate logs by date (midnight) with coefficients
-    Map<int, double> dateTotals = {};
-    for (var log in logs) {
-      try {
-        final type = log['type'] as String;
-        final timestampStr = log['timestamp'] as String;
-        final timestamp = DateTime.parse(timestampStr);
-        final midnight =
-            DateTime(timestamp.year, timestamp.month, timestamp.day)
-                .millisecondsSinceEpoch;
-        final consumed = (log['consumed'] as num).toDouble();
-        final coefficient = hydrationCoefficients[type] ?? 1.0;
-
-        dateTotals[midnight] =
-            (dateTotals[midnight] ?? 0.0) + (consumed * coefficient);
-      } catch (e) {
-        Console.log(tag: "SYNC_LOGS", value: "Error parsing log: $e");
-      }
-    }
-
-    // 3. Update each summary entry
-    for (var entry in dateTotals.entries) {
-      final midnight = entry.key;
-      final logTotal = entry.value;
-
-      final result = await db.query(
-        hydrationSummaryTableName,
-        where: 'date = ?',
-        whereArgs: [midnight],
-        limit: 1,
-      );
-
-      if (result.isNotEmpty) {
-        final currentConsumed = (result.first['consumed'] as num).toDouble();
-        final target = (result.first['target'] as num).toDouble();
-        // Since this is called after bulkUpsert30Days, currentConsumed is the bottle total.
-        // We add the log total to it.
-        final newTotal = currentConsumed + logTotal;
-        final isPerfect = newTotal >= target ? 1 : 0;
-
-        await db.update(
-          hydrationSummaryTableName,
-          {
-            'consumed': newTotal,
-            'is_perfect': isPerfect,
-            'updated_at': DateTime.now().millisecondsSinceEpoch
-          },
-          where: 'date = ?',
-          whereArgs: [midnight],
-        );
-        Console.log(
-            tag: "SYNC_LOGS",
-            value: "Updated summary for $midnight with logs: $newTotal");
-      } else {
-        // Create a new summary if it doesn't exist (manual logs only day)
-        final waterGoal = await SharedPrefsHelper.getWaterGoal() ?? 2500;
-        final isPerfect = logTotal >= waterGoal ? 1 : 0;
-        final newSummary = HydrationDaySummary(
-          date: DateTime.fromMillisecondsSinceEpoch(midnight),
-          dayIndex: 0,
-          target: waterGoal.toDouble(),
-          consumed: logTotal,
-          isPerfect: isPerfect == 1,
-          createdAt: DateTime.now(),
-        );
-        await db.insert(hydrationSummaryTableName, newSummary.toMap());
-        Console.log(
-            tag: "SYNC_LOGS",
-            value: "Created new summary for $midnight with logs: $logTotal");
-      }
-    }
-  }
-
   Future<void> clearHydrationDaySummaries() async {
     final db = await database;
 
@@ -1404,7 +1328,8 @@ CREATE TABLE IF NOT EXISTS $appMetadataTableName (
         tag: "APP", value: "[DB] Cleared all data in $foodScannerTableName");
   }
 
-  Future<void> deleteFoodScanById(int? id, {String? dishName, String? timestamp}) async {
+  Future<void> deleteFoodScanById(int? id,
+      {String? dishName, String? timestamp}) async {
     final db = await database;
     if (id != null && id > 0) {
       await db.delete(

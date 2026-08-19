@@ -18,12 +18,12 @@ import 'package:hydrify/l10n/app_localizations.dart';
 import 'package:hydrify/constants/app_api_constants.dart';
 import 'package:hydrify/helpers/database_helper.dart';
 import 'package:hydrify/models/food_scan_data.dart';
-import 'package:hydrify/services/database_sync_service.dart';
 import 'package:fl_chart/fl_chart.dart';
+import 'package:hydrify/services/database_sync_service.dart';
 import 'package:hydrify/cubit/ble/ble_cubit.dart';
 import 'package:hydrify/cubit/bottle/bottle_data_cubit.dart';
 import 'package:hydrify/cubit/hydration/hydration_cubit.dart';
-import 'package:hydrify/models/hydration_entry.dart';
+import 'package:hydrify/services/sync_bus.dart';
 
 class FoodScannerWidget extends StatefulWidget {
   final VoidCallback? onScanCompleted;
@@ -175,6 +175,22 @@ class _FoodScannerWidgetState extends State<FoodScannerWidget> {
   }
 
   Future<void> _captureAndAnalyze() async {
+    if (_dishName != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            "You can only scan one food item per day.",
+            style: TextStyle(
+              fontFamily: AppFontStyles.urbanistFontFamily,
+              fontVariations: [AppFontStyles.boldFontVariation],
+            ),
+          ),
+          backgroundColor: const Color(0xFFE05252),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
     try {
       final XFile? photo = await _picker.pickImage(
         source: ImageSource.camera,
@@ -347,11 +363,11 @@ class _FoodScannerWidgetState extends State<FoodScannerWidget> {
       setState(() {
         _currentScanId = id;
       });
-      widget.onScanCompleted?.call();
 
       // Sync to backend
       await DatabaseSyncService().syncFoodScan(scan.toMap());
 
+      widget.onScanCompleted?.call();
       await SharedPrefsHelper.setAiHydrationGoalShown(true);
       Console.log(
           tag: 'FoodScanner', value: '[DB] Food scan saved: ${scan.dishName}');
@@ -359,7 +375,7 @@ class _FoodScannerWidgetState extends State<FoodScannerWidget> {
       // Update Hydration Summary
       final double delta = _waterMl - _lastSavedWaterMl;
       if (delta != 0) {
-        await SharedPrefsHelper.addPendingManualDelta(delta.toInt());
+        await DatabaseHelper().updateHydrationDaySummary(delta);
         if (mounted) {
           final hydrationCubit = context.read<HydrationCubit>();
           final bleCubit = context.read<BleCubit>();
@@ -373,6 +389,7 @@ class _FoodScannerWidgetState extends State<FoodScannerWidget> {
           bleCubit.triggerRefresh();
           bleCubit.syncPendingManualDelta();
           hydrationCubit.refreshAchievementStats();
+          SyncBus.instance.notifySyncComplete();
         }
       }
     } catch (e, st) {
@@ -415,9 +432,11 @@ class _FoodScannerWidgetState extends State<FoodScannerWidget> {
                     ),
                   ),
                   TextButton(
-                    onPressed: () {
-                      _saveToDb();
-                      Navigator.pop(context);
+                    onPressed: () async {
+                      await _saveToDb();
+                      if (context.mounted) {
+                        Navigator.pop(context);
+                      }
                     },
                     child: Text(
                       "Done",

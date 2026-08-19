@@ -1188,4 +1188,17 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String get smartRemindersDescription =>
       'Erhalten Sie rechtzeitige Hinweise basierend auf Ihrer Aktivität und Umgebung.';
+
+  @override
+  String get chooseTheLanguage => 'Wähle die Sprache';
+
+  @override
+  String get selectYourPreferredLanguageBelow =>
+      'Wähle unten deine bevorzugte Sprache aus';
+
+  @override
+  String get youSelected => 'Du hast ausgewählt';
+
+  @override
+  String get allLanguages => 'Alle Sprachen';
 }

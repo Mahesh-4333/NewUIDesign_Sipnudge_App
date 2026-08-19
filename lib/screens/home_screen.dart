@@ -64,6 +64,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   bool _isTimezoneDialogOpen = false;
   bool _isAiEngineRunning = false;
   StreamSubscription? _configSubscription;
+  StreamSubscription? _bottleColorSubscription;
   StreamSubscription<bool>? _internetSubscription;
   StreamSubscription<void>? _locationPermDeniedSubscription;
   bool _isLocationPermDialogShown = false;
@@ -177,7 +178,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           }
         }
       } else {
-        await _showStartJourneyDialog(context);
+        // await _showStartJourneyDialog(context);
         if (mounted) {
           context.read<BleCubit>().start();
         }
@@ -217,6 +218,11 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         });
       });
 
+      _bottleColorSubscription =
+          SharedPrefsHelper.bottleColorUpdateStream.stream.listen((_) {
+        _loadBottle();
+      });
+
       // Listen for internet restored to refresh weather and sync data
       _internetSubscription = InternetConnectionHelper()
           .onInternetStatusChanged
@@ -253,6 +259,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     _statsToggleTimer?.cancel();
     _aiHydrationEngineTimer?.cancel();
     _configSubscription?.cancel();
+    _bottleColorSubscription?.cancel();
     _internetSubscription?.cancel();
     _locationPermDeniedSubscription?.cancel();
     super.dispose();
@@ -1179,8 +1186,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       builder: (context, state) {
         return FutureBuilder<(double, double, int)>(
           future: () async {
-            var history =
-                await context.read<BottleDataCubit>().getCurrentDayHistory();
+            var history = await context
+                .read<BottleDataCubit>()
+                .getCurrentDayHistory(localOnly: true);
 
             Console.log(tag: "home_screen_history", value: history.toString());
             double consumed = history;
@@ -1486,7 +1494,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           children: [
             Positioned.fill(
               top: 0,
-              bottom: -(AppDimensions.dim6.h),
+              bottom: -(AppDimensions.dim1.h),
               child: GestureDetector(
                 onTap: () async {
                   // if (kDebugMode) {
@@ -1505,7 +1513,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             ),
             Positioned(
               bottom: AppDimensions.dim50.h,
-              left: AppDimensions.dim189.w,
+              left: AppDimensions.dim187.w,
               child: SizedBox(
                 child: BlocBuilder<BleCubit, BleState>(
                     buildWhen: (previous, current) {
@@ -1524,7 +1532,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                       future: () async {
                     final history = await context
                         .read<BottleDataCubit>()
-                        .getCurrentDayHistory();
+                        .getCurrentDayHistory(localOnly: true);
 
                     double waterVolumeConsumed = history;
                     double completionPercent = await WaterConsumptionCalculator
@@ -1539,33 +1547,11 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                               2500;
                       final slots = await dbHelper.getAllSlots();
                       if (slots.isNotEmpty) {
-                        final now = DateTime.now();
-                        final nowMin = now.hour * 60 + now.minute;
-                        slots.sort((a, b) {
-                          final aMin =
-                              a.startTime.hour * 60 + a.startTime.minute;
-                          final bMin =
-                              b.startTime.hour * 60 + b.startTime.minute;
-                          return aMin.compareTo(bMin);
-                        });
-                        double cum = 0.0;
-                        for (final s in slots) {
-                          final startMin =
-                              s.startTime.hour * 60 + s.startTime.minute;
-                          final endMin = s.endTime.hour * 60 + s.endTime.minute;
-                          if (nowMin >= endMin) {
-                            cum += s.amount;
-                          } else if (nowMin >= startMin && nowMin < endMin) {
-                            final dur = endMin - startMin;
-                            if (dur > 0)
-                              cum += s.amount * ((nowMin - startMin) / dur);
-                            break;
-                          } else {
-                            break;
-                          }
-                        }
-                        expectedPercent =
-                            goalMl > 0 ? (cum / goalMl) * 100.0 : 0.0;
+                        expectedPercent = WaterConsumptionCalculator
+                            .calculateExpectedPercentage(
+                          slots,
+                          goalMl.toDouble(),
+                        );
                       }
                     } catch (_) {}
 
@@ -1592,7 +1578,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             ),
             Positioned(
               bottom: AppDimensions.dim150.h,
-              left: AppDimensions.dim189.w,
+              left: AppDimensions.dim188.w,
               child: BlocBuilder<BottleDataCubit, BottleDataState>(
                 buildWhen: (previous, current) =>
                     previous.volumePercent != current.volumePercent,
@@ -1624,8 +1610,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               ),
             ),
             Positioned(
-              bottom: AppDimensions.dim238.h,
-              left: AppDimensions.dim191.w,
+              bottom: AppDimensions.dim215.h,
+              left: AppDimensions.dim187.w,
               child: Container(
                 width: AppDimensions.dim66.w,
                 alignment: Alignment.center,
@@ -1660,7 +1646,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               ),
             ),
             Positioned(
-              bottom: AppDimensions.dim185.h,
+              bottom: AppDimensions.dim160.h,
               left: AppDimensions.dim195.w,
               child: Container(
                 width: AppDimensions.dim50.w,

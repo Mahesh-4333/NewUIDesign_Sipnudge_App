@@ -1427,8 +1427,6 @@ class ProgressCircle extends StatelessWidget {
         return FutureBuilder<Map<String, Object?>>(
           future: () async {
             // 🔹 Fetch daily history data
-            DateTime now = DateTime.now();
-
             final history =
                 await context.read<BottleDataCubit>().getCurrentDayHistory();
 
@@ -1441,27 +1439,11 @@ class ProgressCircle extends StatelessWidget {
               final dbHelper = DatabaseHelper();
               final slots = await dbHelper.getAllSlots();
               if (slots.isNotEmpty) {
-                final nowMinutes = now.hour * 60 + now.minute;
-                slots.sort((a, b) {
-                  final aMin = a.startTime.hour * 60 + a.startTime.minute;
-                  final bMin = b.startTime.hour * 60 + b.startTime.minute;
-                  return aMin.compareTo(bMin);
-                });
-                double cum = 0.0;
-                for (final s in slots) {
-                  final startMin = s.startTime.hour * 60 + s.startTime.minute;
-                  final endMin = s.endTime.hour * 60 + s.endTime.minute;
-                  if (nowMinutes >= endMin) {
-                    cum += s.amount;
-                  } else if (nowMinutes >= startMin && nowMinutes < endMin) {
-                    final dur = endMin - startMin;
-                    if (dur > 0) cum += s.amount * ((nowMinutes - startMin) / dur);
-                    break;
-                  } else {
-                    break;
-                  }
-                }
-                expectedPercent = userGoalMl > 0 ? ((cum / userGoalMl) * 100.0).clamp(0.0, 100.0) : 0.0;
+                expectedPercent =
+                    WaterConsumptionCalculator.calculateExpectedPercentage(
+                  slots,
+                  userGoalMl.toDouble(),
+                );
               }
             } catch (_) {}
 

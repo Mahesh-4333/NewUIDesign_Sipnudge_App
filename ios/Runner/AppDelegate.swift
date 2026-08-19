@@ -227,6 +227,11 @@ class BackgroundSessionManager: NSObject, URLSessionDelegate, URLSessionTaskDele
             }
         }
 
+        // Set UNUserNotificationCenter delegate to self for sound & alert handling on iOS
+        if #available(iOS 10.0, *) {
+            UNUserNotificationCenter.current().delegate = self
+        }
+
         // Register flutter plugins first
         GeneratedPluginRegistrant.register(with: self)
 
@@ -336,6 +341,18 @@ class BackgroundSessionManager: NSObject, URLSessionDelegate, URLSessionTaskDele
         )
         UNUserNotificationCenter.current().add(req, withCompletionHandler: nil)
     }
+
+    override func userNotificationCenter(
+        _ center: UNUserNotificationCenter,
+        willPresent notification: UNNotification,
+        withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void
+    ) {
+        if #available(iOS 14.0, *) {
+            completionHandler([.banner, .list, .sound, .badge])
+        } else {
+            completionHandler([.alert, .sound, .badge])
+        }
+    }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -348,9 +365,7 @@ class SipnudgeBackgroundBLE: NSObject, CBCentralManagerDelegate, CBPeripheralDel
 
     // BLE UUIDs — must match the Dart BLE cubit exactly
     private let kServiceUUID       = CBUUID(string: "6E400001-B5A3-F393-E0A9-E50E24DCCA9E")
-    private let kChar30DaysUUID    = CBUUID(string: "6E400006-B5A3-F393-E0A9-E50E24DCCA9E")
-    private let kCharAckUUID       = CBUUID(string: "6E400002-B5A3-F393-E0A9-E50E24DCCA9E")
-    /// DATA characteristic — sends real-time sip data including battery %
+    /// DATA characteristic — sends real-time sip data including battery % and daily_total_ml
     private let kCharDataUUID      = CBUUID(string: "6E400003-B5A3-F393-E0A9-E50E24DCCA9E")
     private let kRestoreIdentifier = "com.sipnudge.background-ble"
     private let kAppGroupId        = "group.com.sipnudge.sipnudge"
@@ -358,8 +373,6 @@ class SipnudgeBackgroundBLE: NSObject, CBCentralManagerDelegate, CBPeripheralDel
 
     private var central: CBCentralManager!
     private var peripheral: CBPeripheral?
-    private var char30Days: CBCharacteristic?
-    private var charAck: CBCharacteristic?
     private var charData: CBCharacteristic?
 
     /// Most-recently received battery percentage from the DATA characteristic.
@@ -368,6 +381,10 @@ class SipnudgeBackgroundBLE: NSObject, CBCentralManagerDelegate, CBPeripheralDel
 
     /// True while the app is in the background — only process data then.
     private var inBackground = false
+
+    /// Debounce tracker to prevent duplicate background uploads when BLE fires multiple packets
+    private var lastUploadedConsumed: Int?
+    private var lastUploadTime: Date?
 
     /// Called whenever the native CBCentralManager successfully connects to the
     /// bottle. AppDelegate wires this to a MethodChannel event so the Dart/FBP
@@ -482,8 +499,6 @@ class SipnudgeBackgroundBLE: NSObject, CBCentralManagerDelegate, CBPeripheralDel
             // connect from didDisconnectPeripheral is also cancelled by the OS.
             // centralManagerDidUpdateState(.poweredOn) will call connectToSavedDevice()
             // when BT is re-enabled.
-            char30Days = nil
-            charAck = nil
             charData = nil
             log("[BG-BLE] BT powered off — cleared char refs, will reconnect when BT returns")
         default:
@@ -505,27 +520,18 @@ class SipnudgeBackgroundBLE: NSObject, CBCentralManagerDelegate, CBPeripheralDel
                 // Re-subscribe to characteristics that were already discovered
                 for service in p.services ?? [] {
                     if service.uuid == kServiceUUID {
-                        var char30DaysFound = false
-                        var charAckFound = false
+                        var charDataFound = false
                         for char in service.characteristics ?? [] {
-                            if char.uuid == kChar30DaysUUID {
-                                char30Days = char
-                                char30DaysFound = true
-                                p.setNotifyValue(true, for: char)
-                                log("[BG-BLE] willRestoreState: setNotifyValue(true) for 30-day char")
-                            } else if char.uuid == kCharAckUUID {
-                                charAck = char
-                                charAckFound = true
-                                log("[BG-BLE] willRestoreState: restored charAck")
-                            } else if char.uuid == kCharDataUUID {
+                            if char.uuid == kCharDataUUID {
                                 charData = char
+                                charDataFound = true
                                 p.setNotifyValue(true, for: char)
                                 log("[BG-BLE] willRestoreState: setNotifyValue(true) for data char")
                             }
                         }
-                        if !char30DaysFound || !charAckFound {
-                            log("[BG-BLE] willRestoreState: service found but chars missing — discovering characteristics")
-                            p.discoverCharacteristics([kChar30DaysUUID, kCharAckUUID, kCharDataUUID], for: service)
+                        if !charDataFound {
+                            log("[BG-BLE] willRestoreState: service found but data char missing — discovering characteristics")
+                            p.discoverCharacteristics([kCharDataUUID], for: service)
                         }
                     }
                 }
@@ -572,7 +578,6 @@ class SipnudgeBackgroundBLE: NSObject, CBCentralManagerDelegate, CBPeripheralDel
     func centralManager(_ central: CBCentralManager,
                          didDisconnectPeripheral peripheral: CBPeripheral, error: Error?) {
         log("[BG-BLE] Disconnected from \(peripheral.identifier)")
-        self.char30Days = nil
         self.charData = nil
         // Always queue a reconnect immediately.
         // CoreBluetooth queues connection requests even when state is .poweredOff,
@@ -599,7 +604,7 @@ class SipnudgeBackgroundBLE: NSObject, CBCentralManagerDelegate, CBPeripheralDel
         }
         for service in peripheral.services ?? [] {
             if service.uuid == kServiceUUID {
-                peripheral.discoverCharacteristics([kChar30DaysUUID, kCharAckUUID, kCharDataUUID], for: service)
+                peripheral.discoverCharacteristics([kCharDataUUID], for: service)
             }
         }
     }
@@ -611,22 +616,11 @@ class SipnudgeBackgroundBLE: NSObject, CBCentralManagerDelegate, CBPeripheralDel
             return
         }
         for char in service.characteristics ?? [] {
-            if char.uuid == kChar30DaysUUID {
-                char30Days = char
-                // Always call setNotifyValue(true) — even if isNotifying appears true.
-                // If flutter_blue_plus already set the CCCD, iOS reports isNotifying=true
-                // on our proxy too, causing us to skip subscription. Forcing it ensures
-                // our CBCentralManager session is registered as a subscriber independently.
-                peripheral.setNotifyValue(true, for: char)
-                NSLog("[BG-BLE] setNotifyValue(true) called for 30-day char (isNotifying=\(char.isNotifying))")
-            } else if char.uuid == kCharAckUUID {
-                charAck = char
-                NSLog("[BG-BLE] Found ACK characteristic")
-            } else if char.uuid == kCharDataUUID {
+            if char.uuid == kCharDataUUID {
                 charData = char
-                // Subscribe so we get real-time battery updates in the background.
+                // Subscribe so we get real-time battery and daily_total_ml updates in the background.
                 peripheral.setNotifyValue(true, for: char)
-                NSLog("[BG-BLE] setNotifyValue(true) called for data char (battery source)")
+                NSLog("[BG-BLE] setNotifyValue(true) called for data char")
             }
         }
     }
@@ -669,196 +663,99 @@ class SipnudgeBackgroundBLE: NSObject, CBCentralManagerDelegate, CBPeripheralDel
             bgTaskId = .invalid
         }
 
-        // ── Handle DATA characteristic (battery percentage) ───────────────────
+        // ── Handle DATA characteristic (battery % & daily_total_ml) ───────────
         if characteristic.uuid == kCharDataUUID,
            let data = characteristic.value,
            let payload = String(data: data, encoding: .utf8) {
-            // Parse semicolon-delimited key=value pairs: "battery=75;volume=450;..."
+            
+            var batteryPct: Int?
+            var dailyTotalMl: Int?
+
+            // Parse semicolon-delimited key=value pairs: "battery=90;daily_total_ml=577;..."
             for pair in payload.components(separatedBy: ";") {
                 let kv = pair.trimmingCharacters(in: .whitespacesAndNewlines).components(separatedBy: "=")
-                if kv.count == 2, kv[0].trimmingCharacters(in: .whitespaces) == "battery",
-                   let pct = Int(kv[1].trimmingCharacters(in: .whitespaces)) {
-                    latestBatteryPercent = pct
-                    NSLog("[BG-BLE] Updated latestBatteryPercent = \(pct)%")
-                    break
+                if kv.count == 2 {
+                    let key = kv[0].trimmingCharacters(in: .whitespaces)
+                    let val = kv[1].trimmingCharacters(in: .whitespaces)
+                    if key == "battery", let pct = Int(val) {
+                        batteryPct = pct
+                        latestBatteryPercent = pct
+                    } else if key == "daily_total_ml", let total = Int(val) {
+                        dailyTotalMl = total
+                    }
                 }
             }
-            UIApplication.shared.endBackgroundTask(bgTaskId)
-            bgTaskId = .invalid
-            return
-        }
 
-        // ── Validate 30-day data ──────────────────────────────────────────────
-        guard error == nil,
-              characteristic.uuid == kChar30DaysUUID,
-              let data = characteristic.value,
-              let payload = String(data: data, encoding: .utf8) else {
-            if let e = error { writeDebug("ble_rx", "ERROR: \(e.localizedDescription)") }
-            UIApplication.shared.endBackgroundTask(bgTaskId)
-            bgTaskId = .invalid
-            return
-        }
+            if let consumed = dailyTotalMl {
+                NSLog("[BG-BLE] DATA_CHAR reported daily_total_ml=\(consumed)ml (battery=\(batteryPct ?? -1)%)")
 
-        writeDebug("ble_rx", "got data len=\(data.count) bg=\(inBackground)")
-        NSLog("[BG-BLE] Received 30-day payload (inBackground=\(inBackground)): \(payload.prefix(80))…")
+                // Update shared App Group UserDefaults for WidgetKit
+                let todayDate = Calendar.current.startOfDay(for: Date())
+                let formatter = DateFormatter()
+                formatter.dateFormat = "yyyy-MM-dd"
+                formatter.timeZone = .current
+                let todayStr = formatter.string(from: Date())
 
-        // ── Debug notification: visible on lock screen without Xcode ──────────
-        // This fires IMMEDIATELY when BLE data arrives in background, proving
-        // the OS wake-up is working. Remove once background sync is confirmed.
-        // if inBackground {
-        //     let dbgContent = UNMutableNotificationContent()
-        //     dbgContent.title = "📶 BG BLE Data Received"
-        //     dbgContent.body = "Native background sync triggered. Uploading \(data.count) bytes..."
-        //     dbgContent.sound = .default
-        //     let dbgReq = UNNotificationRequest(
-        //         identifier: "bg_ble_rx_\(Int(Date().timeIntervalSince1970))",
-        //         content: dbgContent,
-        //         trigger: UNTimeIntervalNotificationTrigger(timeInterval: 1, repeats: false)
-        //     )
-        //     UNUserNotificationCenter.current().add(dbgReq, withCompletionHandler: nil)
-        //     NSLog("[BG-BLE] Debug notification scheduled")
-        // }
+                if let appDefaults = UserDefaults(suiteName: kAppGroupId) {
+                    let storedGoal = UserDefaults.standard.object(forKey: "flutter.water_goal") as? Int
+                        ?? appDefaults.object(forKey: "daily_goal") as? Int
+                        ?? 2500
+                    let goal = storedGoal > 0 ? storedGoal : 2500
 
-        // ── B: Parse today's consumed value ───────────────────────────────────
-        var todayConsumed = 0
-        var todayDate = Calendar.current.startOfDay(for: Date())
-        var todayDayIndex = 0
+                    if consumed > 0 {
+                        let lastUpdateDateStr = appDefaults.string(forKey: "last_update_date") ?? ""
+                        var existingIntake = appDefaults.integer(forKey: "current_intake")
+                        if lastUpdateDateStr != todayStr {
+                            existingIntake = 0
+                        }
+                        if consumed > existingIntake {
+                            appDefaults.set(consumed, forKey: "current_intake")
+                            NSLog("[BG-BLE] Updated App Group current_intake to \(consumed)ml")
+                        }
+                    }
+                    appDefaults.set(goal, forKey: "daily_goal")
+                    appDefaults.set(todayStr, forKey: "last_update_date")
+                    appDefaults.synchronize()
 
-        // Strip ALL invisible characters (\r, \n, null bytes, etc.) from the full payload
-        // before splitting. BLE payloads from some firmware revisions include \r\n line
-        // endings that survive a simple .whitespaces trim on individual segments and cause
-        // Double()/Int() to return nil — leaving todayConsumed at 0 and firing a "0ml" notification.
-        let cleanPayload = payload
-            .components(separatedBy: .controlCharacters)
-            .joined()
-            .trimmingCharacters(in: .whitespacesAndNewlines)
-
-        let parts = cleanPayload.components(separatedBy: "|")
-
-        if parts.count >= 2,
-           let epochStr = parts.first?.trimmingCharacters(in: .whitespacesAndNewlines),
-           !epochStr.isEmpty,
-           let epochNum = Int(epochStr) {
-
-            let epochMs = epochStr.count == 13 ? epochNum : epochNum * 1000
-            let startDate = Date(timeIntervalSince1970: Double(epochMs) / 1000.0)
-            let calendar = Calendar.current
-            let today = calendar.startOfDay(for: Date())
-
-            var latestDayIndex = -1
-            var latestConsumed = 0
-
-            for seg in parts.dropFirst() {
-                // Aggressively strip any remaining control/whitespace characters from each segment
-                let s = seg
-                    .components(separatedBy: .controlCharacters)
-                    .joined()
-                    .trimmingCharacters(in: .whitespacesAndNewlines)
-                guard !s.isEmpty, s.lowercased() != "na" else { continue }
-
-                let segParts = s.components(separatedBy: "/")
-                guard segParts.count >= 3 else { continue }
-
-                let rawDay = segParts[0]
-                    .components(separatedBy: .controlCharacters).joined()
-                    .trimmingCharacters(in: .whitespacesAndNewlines)
-                let rawConsumed = segParts[2]
-                    .components(separatedBy: .controlCharacters).joined()
-                    .trimmingCharacters(in: .whitespacesAndNewlines)
-
-                guard let dayIndex = Int(rawDay),
-                      let consumed = Double(rawConsumed) else {
-                    NSLog("[BG-BLE] ⚠️ Skipping malformed segment: '\(s)' (rawDay='\(rawDay)' rawConsumed='\(rawConsumed)')")
-                    continue
-                }
-
-                if dayIndex > latestDayIndex {
-                    latestDayIndex = dayIndex
-                    // Only count days that have actual consumption — day 29 (and most
-                    // future slots) will have consumed=0, making the fallback useless
-                    // if we naively track the last dayIndex regardless of its value.
-                    if Int(consumed) > 0 {
-                        latestConsumed = Int(consumed)
+                    DispatchQueue.main.async {
+                        if #available(iOS 14.0, *) {
+                            WidgetCenter.shared.reloadAllTimelines()
+                        }
                     }
                 }
 
-                let segDate = calendar.startOfDay(for: startDate.addingTimeInterval(Double(dayIndex) * 86400))
-                if segDate == today {
-                    todayConsumed = Int(consumed)
-                    todayDate = segDate
-                    todayDayIndex = dayIndex
-                    NSLog("[BG-BLE] ✅ Today's segment matched: dayIndex=\(dayIndex) consumed=\(consumed)ml")
-                    break
+                // If app is in background, schedule upload to backend (debounced to avoid duplicate notifications)
+                if inBackground {
+                    let now = Date()
+                    let isDuplicate = lastUploadedConsumed == consumed &&
+                        lastUploadTime != nil &&
+                        now.timeIntervalSince(lastUploadTime!) < 15.0
+
+                    if !isDuplicate {
+                        lastUploadedConsumed = consumed
+                        lastUploadTime = now
+                        uploadTodayDataViaBackgroundSession(
+                            consumed: Double(consumed),
+                            date: todayDate,
+                            dayIndex: 0,
+                            deviceId: peripheral.identifier.uuidString,
+                            sendNotification: consumed > 0,
+                            battery: batteryPct
+                        )
+                    } else {
+                        NSLog("[BG-BLE] ℹ️ Skipping duplicate background upload for \(consumed)ml (uploaded \(Int(now.timeIntervalSince(lastUploadTime!)))s ago)")
+                    }
                 }
             }
 
-            if todayConsumed == 0 && latestConsumed > 0 {
-                NSLog("[BG-BLE] ⚠️ No exact today match — falling back to latest segment: dayIndex=\(latestDayIndex) consumed=\(latestConsumed)ml")
-                todayConsumed = latestConsumed
-                todayDate = calendar.startOfDay(for: startDate.addingTimeInterval(Double(latestDayIndex) * 86400))
-                todayDayIndex = latestDayIndex
-            }
+            UIApplication.shared.endBackgroundTask(bgTaskId)
+            bgTaskId = .invalid
+            return
         }
 
-        // ── Update shared App Group UserDefaults → WidgetKit refreshes instantly ──
-        if let appDefaults = UserDefaults(suiteName: kAppGroupId) {
-            let storedGoal = UserDefaults.standard.object(forKey: "flutter.water_goal") as? Int
-                ?? appDefaults.object(forKey: "daily_goal") as? Int
-                ?? 2500
-            let goal = storedGoal > 0 ? storedGoal : 2500
-
-            let formatter = DateFormatter()
-            formatter.dateFormat = "yyyy-MM-dd"
-            formatter.timeZone = .current
-            let todayStr = formatter.string(from: Date())
-
-            if todayConsumed > 0 {
-                let lastUpdateDateStr = appDefaults.string(forKey: "last_update_date") ?? ""
-                var existingIntake = appDefaults.integer(forKey: "current_intake")
-                if lastUpdateDateStr != todayStr {
-                    existingIntake = 0
-                }
-                if todayConsumed > existingIntake {
-                    appDefaults.set(todayConsumed, forKey: "current_intake")
-                    NSLog("[BG-BLE] Natively updated App Group current_intake to \(todayConsumed)")
-                }
-            }
-            appDefaults.set(goal, forKey: "daily_goal")
-            appDefaults.set(todayStr, forKey: "last_update_date")
-            appDefaults.synchronize()
-
-            DispatchQueue.main.async {
-                if #available(iOS 14.0, *) {
-                    WidgetCenter.shared.reloadAllTimelines()
-                    NSLog("[BG-BLE] Triggered reloadAllTimelines() for native widget")
-                }
-            }
-        }
-
-        // ── C: Schedule background upload — Fire & Forget ─────────────────────
-        // Hand the network task to the iOS background daemon (nsurlsessiond).
-        // It will complete the upload independently, even on a 0.15 Mbps connection,
-        // even if the app is fully suspended after step D below.
-        //
-        // IMPORTANT: Only send a push notification when consumed > 0.
-        // The bottle fires BLE notifications on every lid-open, including early
-        // morning before the user has had their first sip, resulting in a
-        // misleading "You have consumed 0ml so far today." notification.
-        uploadTodayDataViaBackgroundSession(
-            consumed: Double(todayConsumed),
-            date: todayDate,
-            dayIndex: todayDayIndex,
-            deviceId: peripheral.identifier.uuidString,
-            sendNotification: todayConsumed > 0,
-            battery: latestBatteryPercent
-        )
-
-        // ── D: End background task IMMEDIATELY ────────────────────────────────
-        // The upload is now owned by nsurlsessiond. Signal iOS we are done so the
-        // app goes back to sleep — well under the 10-second watchdog limit.
+        // Clean up task if unhandled characteristic
         UIApplication.shared.endBackgroundTask(bgTaskId)
         bgTaskId = .invalid
-        NSLog("[BG-BLE] ✅ Background task ended — app returning to sleep")
     }
 
     // ── Private helpers ───────────────────────────────────────────────────────
@@ -932,7 +829,7 @@ class SipnudgeBackgroundBLE: NSObject, CBCentralManagerDelegate, CBPeripheralDel
 
     /// Internal (not private) so AppDelegate can trigger it via MethodChannel.
     func connectToSavedDevice() {
-        if let p = peripheral, p.state == .connected, char30Days != nil {
+        if let p = peripheral, p.state == .connected, charData != nil {
             log("[BG-BLE] Already connected and subscribed — skipping redundant connect")
             return
         }

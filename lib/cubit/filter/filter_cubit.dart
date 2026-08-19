@@ -7,7 +7,7 @@ class FilterCubit extends Cubit<FilterState> {
   FilterCubit()
       : super(
           FilterState(
-            currentInterval: FilterInterval.weekly,
+            currentInterval: FilterInterval.monthly,
             currentDate: DateTime.now(),
             selectedDate: DateTime.now(),
             lastSelectedDates: {

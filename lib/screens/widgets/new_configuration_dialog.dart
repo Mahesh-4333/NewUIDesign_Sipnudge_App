@@ -118,7 +118,7 @@ class NewConfigurationDialog extends StatelessWidget {
                         ],
                       ),
                     ),
-                    const NewConfigurationDialogContent(),
+                     NewConfigurationDialogContent(bottleInfo: bottleInfo),
                   ],
                 ),
               ),
@@ -151,7 +151,20 @@ class NewConfigurationDialog extends StatelessWidget {
 }
 
 class NewConfigurationDialogContent extends StatelessWidget {
-  const NewConfigurationDialogContent({super.key});
+  final BottleInfo bottleInfo;
+  const NewConfigurationDialogContent({super.key, required this.bottleInfo});
+
+  String _getTouchAsset() {
+    switch (bottleInfo.color.toLowerCase()) {
+      case 'red':
+        return AssetsPath.onboardingRedTouch;
+      case 'black':
+        return AssetsPath.onboardingBlackTouch;
+      case 'purple':
+      default:
+        return AssetsPath.onboardingPurpleTouch;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -197,7 +210,7 @@ class NewConfigurationDialogContent extends StatelessWidget {
             child: Row(
               children: [
                 Image.asset(
-                  AssetsPath.touchBottle,
+                  _getTouchAsset(),
                   width: 40.w,
                   height: 40.w,
                 ),

@@ -42,7 +42,7 @@ class _AnimatedBottomNavBarState extends State<AnimatedBottomNavBar>
 
   static const List<dynamic> _icons = [
     "assets/images/home_ic.svg",
-    "assets/images/water_drop_ic.svg",
+    "assets/images/water_drop_new.svg",
     "assets/images/analysis_ic.svg",
     "assets/images/trophy_ic.svg",
     "assets/images/settings_ic.svg"
@@ -455,6 +455,34 @@ class _AnimatedBottomNavBarState extends State<AnimatedBottomNavBar>
                                 ),
                               ),
                             ),
+                            if (_isDragging ||
+                                (slideProgress > 0.0 &&
+                                    slideProgress < 1.0))
+                              Positioned(
+                                left: currentLeft +
+                                    AppDimensions.dim20.w +
+                                    ((56.w - (82.w * dragScale)) / 2),
+                                top: AppDimensions.dim14.h +
+                                    ((AppDimensions.dim60.h -
+                                            (AppDimensions.dim60.h *
+                                                dragScale)) /
+                                        2),
+                                width: 82.w * dragScale,
+                                height: AppDimensions.dim60.h * dragScale,
+                                child: IgnorePointer(
+                                  child: Container(
+                                    decoration: BoxDecoration(
+                                      borderRadius: BorderRadius.circular(
+                                          AppDimensions.dim48.r),
+                                      border: Border.all(
+                                        color: const Color(0xff8f8f8f)
+                                            .withValues(alpha: 0.6),
+                                        width: 1.9.w,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
                           ],
                         ),
                       ),
@@ -539,7 +567,9 @@ class _AnimatedBottomNavBarState extends State<AnimatedBottomNavBar>
             curve: Curves.easeOutBack,
             child: SvgPicture.asset(
               _icons[index],
-              color: isSelected ? const Color(0xFF444444) : const Color(0xFF656565),
+              color: isSelected
+                  ? const Color(0xff4D758B)
+                  : const Color.fromARGB(255, 143, 143, 143),
               width: 28.w,
               height: 28.w,
             ),

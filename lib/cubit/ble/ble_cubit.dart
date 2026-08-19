@@ -1098,20 +1098,20 @@ class BleCubit extends Cubit<BleState>
         _hydration30DaysSub =
             _hydration30DaysChar!.onValueReceived.listen((value) async {
           try {
-            final historyPrevious = await getCurrentDayHistory();
-            await dbHelper.clearHydrationDaySummaries();
             final data = String.fromCharCodes(value);
             Console.log(
                 tag: "⬇️ [30_DAYS] Raw Data: $data", value: 'BLE_Cubit');
             final parsed = await _parse30DaysHydration(data);
+            List<HydrationDaySummary> list = [];
             if (parsed.isNotEmpty) {
-              final List<HydrationDaySummary> list = parsed.map((m) {
+              list = parsed.map((m) {
                 final DateTime rawDate = m['date'] as DateTime;
                 final date = DateTime(rawDate.year, rawDate.month,
                     rawDate.day + _investorDayIncrement);
                 final targetVal = (m['target'] as num).toDouble();
                 final consumedVal = (m['consumed'] as num).toDouble();
                 final isPerfectDay = targetVal > 0 && consumedVal >= targetVal;
+
                 return HydrationDaySummary(
                   date: date,
                   dayIndex: m['dayIndex'] as int,
@@ -1121,82 +1121,17 @@ class BleCubit extends Cubit<BleState>
                   isPerfect: isPerfectDay,
                 );
               }).toList();
-
-              // Save raw BLE bottle data to SQLite
-              await dbHelper.bulkUpsert30Days(list);
-
-              // Push raw BLE bottle intake to server with force: true so DailySummary.consumed on server is exact bottle volume.
-              // Only send data for today — filter by matching date (year/month/day) to avoid sending previous day's data.
-              final userId = await SharedPrefsHelper.getUserId();
-              if (userId != null && userId.isNotEmpty) {
-                final now = DateTime.now();
-                final todayBleList = list.where((s) =>
-                  s.date.year == now.year &&
-                  s.date.month == now.month &&
-                  s.date.day == now.day
-                ).toList();
-                if (todayBleList.isNotEmpty) {
-                  final todayBle = todayBleList.first;
-                  // Always use the actual device date (not BLE-reported date) to avoid any date mismatch
-                  final dateUtc = '${now.year.toString().padLeft(4, '0')}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}T00:00:00.000Z';
-                  await ApiService().updateTodayConsumed(
-                    userId,
-                    dateUtc,
-                    todayBle.consumed,
-                    todayBle.isPerfect,
-                    target: todayBle.target,
-                    dayIndex: todayBle.dayIndex,
-                    battery: state.battery,
-                    force: true,
-                  );
-                } else {
-                  Console.log(
-                    tag: 'BLE_Cubit',
-                    value: 'Skipping server update: no BLE record matching today (${now.year}-${now.month}-${now.day})',
-                  );
-                }
-              }
-
-              // Fetch unified total (bottle + manual logs + food) from server API
-              final history = await getCurrentDayHistory();
-              emit(state.copyWith(currentHydrationValue: history));
-
-              // Stop all notification when 100% reach.
-              final stopWhenFull = await SharedPrefsHelper.getStopWhenFull();
-              if (stopWhenFull) {
-                final completionPercent = await WaterConsumptionCalculator
-                    .calculateCompletionPercentage(history);
-                if (completionPercent >= 100) {
-                  final notificationService = NotificationService();
-                  for (final slot in HydrationSlot.values) {
-                    await notificationService.cancelSlotReminders(slot, 0);
-                  }
-                }
-              }
-
-              emit(state.copyWith(
-                  isHydration30DaysDataSync: true, historyData: data));
-
-              _hydrationController.add([]);
-
-              _syncWithLocalConsumption(history, historyPrevious);
-
-              DatabaseSyncService()
-                  .syncAll(isFromBle: false, battery: state.battery);
-
-              try {
-                await HomeWidgetService.updateWidgetData();
-              } catch (e) {
-                Console.log(
-                    tag: "[HomeWidget]", value: "Error updating widget: $e");
-              }
-            } else {
-              final history = await getCurrentDayHistory();
-              emit(state.copyWith(currentHydrationValue: history));
             }
+
+            emit(state.copyWith(
+                isHydration30DaysDataSync: true,
+                historyData: data,
+                parsed30DaysList: list));
             _sendAck(device);
           } catch (e) {
-            print("========> error ${e.toString()}");
+            Console.log(
+                tag: "BLE_Cubit",
+                value: "Error in 30-day BLE notification handler: $e");
           }
         });
       }
@@ -1412,15 +1347,64 @@ class BleCubit extends Cubit<BleState>
         ts: ts,
         bottleData: data));
 
-    // Update the home widget with today's total from DATA_CHAR.
-    // Debounce: at most once per 60 seconds so we don't exhaust WidgetKit budget.
-    if (dailyTotalMl != null && dailyTotalMl > 0) {
+    // When DATA_CHAR reports daily_total_ml, sync today's intake directly
+    if (dailyTotalMl != null && dailyTotalMl >= 0) {
+      _syncDailyTotalFromDataChar(dailyTotalMl, battery: battery);
+    }
+  }
+
+  /// Saves today's intake to local SQLite and updates server with force: true
+  /// whenever DATA_CHAR sends daily_total_ml.
+  Future<void> _syncDailyTotalFromDataChar(int dailyTotalMl, {int? battery}) async {
+    try {
       final now = DateTime.now();
-      final lastUpdate = _lastWidgetUpdateFromDataChar;
-      if (lastUpdate == null || now.difference(lastUpdate).inSeconds >= 60) {
-        _lastWidgetUpdateFromDataChar = now;
-        _updateWidgetFromDailyTotal(dailyTotalMl);
+      final target = await SharedPrefsHelper.getWaterGoal() ?? 2500;
+      final consumed = dailyTotalMl.toDouble();
+      final isPerfect = target > 0 && consumed >= target;
+
+      // 1. Save today's record to SQLite
+      final todaySummary = HydrationDaySummary(
+        date: DateTime(now.year, now.month, now.day),
+        dayIndex: 0,
+        target: target.toDouble(),
+        consumed: consumed,
+        isPerfect: isPerfect,
+      );
+      await dbHelper.bulkUpsert30Days([todaySummary]);
+
+      // 2. Push today's record to server with force: true
+      final userId = await SharedPrefsHelper.getUserId();
+      if (userId != null && userId.isNotEmpty) {
+        final dateUtc =
+            '${now.year.toString().padLeft(4, '0')}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}T00:00:00.000Z';
+
+        await ApiService().updateTodayConsumed(
+          userId,
+          dateUtc,
+          consumed,
+          isPerfect,
+          target: target.toDouble(),
+          battery: battery ?? state.battery,
+          force: true,
+        );
       }
+
+      // 3. Update BleCubit state so Home Screen UI refreshes instantly
+      emit(state.copyWith(currentHydrationValue: consumed));
+
+      // 4. Notify SyncBus for UI listeners (BottleDataCubit, charts, timeline)
+      SyncBus.instance.notifySyncComplete();
+
+      // 5. Debounced home widget update (at most once per 30 seconds)
+      final lastUpdate = _lastWidgetUpdateFromDataChar;
+      if (lastUpdate == null || now.difference(lastUpdate).inSeconds >= 30) {
+        _lastWidgetUpdateFromDataChar = now;
+        await HomeWidgetService.updateWidgetData();
+      }
+    } catch (e) {
+      Console.log(
+          tag: "[BLE_Cubit]",
+          value: "Error syncing daily_total_ml from DATA_CHAR: $e");
     }
   }
 
@@ -1573,18 +1557,16 @@ class BleCubit extends Cubit<BleState>
       final epochMillis =
           (epochNum.toString().length == 13) ? epochNum : epochNum * 1000;
 
-      // Interpret the epoch in LOCAL time (not UTC) so that day-index arithmetic
-      // maps correctly to the user's local calendar. Using isUtc:true shifts
-      // dates by the UTC offset — e.g. on IST (UTC+5:30) dayIndex 0 would land
-      // on 2026-07-24 instead of the correct 2026-07-25, causing a persistent
-      // off-by-one in the history table and in today-matching logic.
+      // The device tracks days in UTC (manual delta writes go to the UTC-day
+      // slot on the device). Parse the epoch as UTC so dayIndex arithmetic
+      // matches the device's internal calendar. Previously isUtc:false caused
+      // a +1 day shift on IST: dayIndex 2 (Aug 11 UTC) displayed as Aug 12 IST.
       DateTime startDate =
-          DateTime.fromMillisecondsSinceEpoch(epochMillis, isUtc: false);
+          DateTime.fromMillisecondsSinceEpoch(epochMillis, isUtc: true);
 
-      // Normalize to midnight local time so that adding Duration(days: N)
-      // always hits the correct calendar day regardless of the exact time-of-day
-      // the firmware recorded the epoch.
-      startDate = DateTime(startDate.year, startDate.month, startDate.day);
+      // Normalize to UTC midnight so adding Duration(days: N) always hits the
+      // correct UTC calendar day regardless of the epoch's time-of-day.
+      startDate = DateTime.utc(startDate.year, startDate.month, startDate.day);
 
       Console.log(
           tag:
@@ -1723,7 +1705,8 @@ class BleCubit extends Cubit<BleState>
     if (_isFlushing) {
       Console.log(
           tag: "BLE_Cubit",
-          value: "[_flushPendingSlots] Already flushing, ignoring duplicate call.");
+          value:
+              "[_flushPendingSlots] Already flushing, ignoring duplicate call.");
       return;
     }
     _isFlushing = true;
@@ -1818,8 +1801,7 @@ class BleCubit extends Cubit<BleState>
       }
 
       // 3.5 Sync Manual Liquid Delta (000A)
-      final freshConsumedChar =
-          await _getFreshCharacteristic(consumedUpdate);
+      final freshConsumedChar = await _getFreshCharacteristic(consumedUpdate);
       if (freshConsumedChar != null) {
         final pendingDelta = await SharedPrefsHelper.getPendingManualDelta();
         String payload = pendingDelta.toString();
@@ -1958,8 +1940,7 @@ class BleCubit extends Cubit<BleState>
   Future<void> syncPendingManualDelta() async {
     if (state.status != BleStatus.connected) return;
     try {
-      final freshConsumedChar =
-          await _getFreshCharacteristic(consumedUpdate);
+      final freshConsumedChar = await _getFreshCharacteristic(consumedUpdate);
       if (freshConsumedChar != null) {
         final pendingDelta = await SharedPrefsHelper.getPendingManualDelta();
         if (pendingDelta != 0) {
@@ -1977,8 +1958,7 @@ class BleCubit extends Cubit<BleState>
       }
     } catch (e) {
       Console.log(
-          tag: "BLE_Cubit",
-          value: "Failed to write manual delta (000A): $e");
+          tag: "BLE_Cubit", value: "Failed to write manual delta (000A): $e");
     }
   }
 
@@ -2191,30 +2171,36 @@ class BleCubit extends Cubit<BleState>
       _hydrationController.stream;
 
   Future<double> getCurrentDayHistory() async {
+    final now = DateTime.now();
+    final localSummary = await dbHelper.getSummaryForDate(now);
+    if (localSummary != null) {
+      Console.log(
+          tag: "BleCubit_getCurrentDayHistory",
+          value: "Loaded from local DB: ${localSummary.consumed} ml");
+      return localSummary.consumed;
+    }
+
     try {
-      final hasInternet = await InternetConnectionHelper().hasInternetConnection();
+      final hasInternet =
+          await InternetConnectionHelper().hasInternetConnection();
       if (hasInternet) {
         final userId = await SharedPrefsHelper.getUserId();
         if (userId != null && userId.isNotEmpty) {
-          final now = DateTime.now();
+          // Server stores logs in UTC — query with UTC day boundaries.
           final startDate = DateTime.utc(now.year, now.month, now.day);
-          final endDate = DateTime.utc(now.year, now.month, now.day, 23, 59, 59);
-          final summaries = await ApiService().getDailySummaries(userId, startDate, endDate);
+          final endDate =
+              DateTime.utc(now.year, now.month, now.day, 23, 59, 59);
+          final summaries =
+              await ApiService().getDailySummaries(userId, startDate, endDate);
           if (summaries != null && summaries.isNotEmpty) {
             final summaryMap = summaries.first;
             final serverConsumed = (summaryMap['consumed'] as num).toDouble();
-            final targetVal = (summaryMap['target'] as num?)?.toDouble() ?? 2500;
+            final targetVal =
+                (summaryMap['target'] as num?)?.toDouble() ?? 2500;
 
-            DateTime targetDate = DateTime(now.year, now.month, now.day);
-            final String? serverDateStr = summaryMap['date'] as String?;
-            if (serverDateStr != null) {
-              try {
-                final datePart = serverDateStr.length >= 10 
-                    ? serverDateStr.substring(0, 10) 
-                    : serverDateStr;
-                targetDate = DateTime.parse(datePart);
-              } catch (_) {}
-            }
+            // Always use today's local date — server date string may be UTC
+            // and would shift to the next local day for IST users.
+            final DateTime targetDate = DateTime(now.year, now.month, now.day);
 
             await dbHelper.bulkUpsert30Days([
               HydrationDaySummary(
@@ -2241,7 +2227,6 @@ class BleCubit extends Cubit<BleState>
 
     final db = await dbHelper.database;
 
-    final now = DateTime.now();
     final normalizedStart = DateTime(now.year, now.month, now.day);
     final normalizedEnd =
         DateTime(now.year, now.month, now.day, 23, 59, 59, 999);
@@ -2326,7 +2311,7 @@ class BleCubit extends Cubit<BleState>
               "[LocalSync] Sync log: Bottle=$currentTotal ml, AppState=$previousTotal ml, Diff=$diff ml",
           value: "BLE_Cubit");
 
-      // Sync if more than 1ml
+      // Sync if more than 40ml
       if (diff >= 40.0) {
         Console.log(
             tag: "[LocalSync] Syncing $diffL L to Health and Database",
@@ -2336,7 +2321,20 @@ class BleCubit extends Cubit<BleState>
             percentage: state.battery?.toDouble(),
             remaining: state.volume,
             totalAtTime: currentTotal);
-        await _healthService.addWaterIntake(diff / 1000, now);
+
+        // Only sync to HealthKit/Health Connect if the user has already been
+        // asked for health permission. If onboarding is still in progress,
+        // skip silently to avoid triggering the iOS HealthKit dialog.
+        final healthPermissionRequested =
+            await SharedPrefsHelper.getHasRequestedHealthPermission();
+        if (healthPermissionRequested) {
+          await _healthService.addWaterIntake(diff / 1000, now);
+        } else {
+          Console.log(
+              tag:
+                  "[LocalSync] Skipping Health sync — permission not yet requested",
+              value: "BLE_Cubit");
+        }
       }
     } catch (e) {
       Console.log(

@@ -11,6 +11,7 @@ class ProfileMenuItemWidget extends StatelessWidget {
   final bool isRed;
   final String iconPathArrow;
   final VoidCallback onTap;
+
   /// Optional badge widget shown between title and arrow (e.g. "85%" battery label)
   final Widget? badge;
 
@@ -42,8 +43,8 @@ class ProfileMenuItemWidget extends StatelessWidget {
               iconPath,
               width: AppDimensions.dim24.w,
               height: isSipnudgeBottle
-                  ? AppDimensions.dim31.h
-                  : AppDimensions.dim24.h,
+                  ? AppDimensions.dim28.h
+                  : AppDimensions.dim22.h,
               fit: BoxFit.contain,
               color: isRed ? AppColors.redAccent : AppColors.bluegray,
               errorBuilder: (_, __, ___) => Icon(
@@ -62,7 +63,8 @@ class ProfileMenuItemWidget extends StatelessWidget {
                 color: isRed ? AppColors.redAccent : AppColors.bluegray,
                 fontFamily: AppFontStyles.urbanistFontFamily,
                 fontVariations: [
-                  FontVariation('wght', AppFontStyles.boldFontVariation.value),
+                  FontVariation(
+                      'wght', AppFontStyles.semiBoldFontVariation.value),
                 ],
                 fontSize: AppFontStyles.fontSize_18.sp,
               ),

@@ -37,7 +37,7 @@ class ProfileCubit extends Cubit<ProfileState> {
                 groupLabel: "PREFERENCES",
               ),
               ProfileMenuItem(
-                iconPath: "assets/personalinfo.png",
+                iconPath: "assets/images/language.png",
                 title: "Language",
                 groupLabel: "PREFERENCES",
               ),
@@ -66,38 +66,43 @@ class ProfileCubit extends Cubit<ProfileState> {
                 title: "Calendar",
                 groupLabel: "DATA & SUPPORT",
               ),
-              ProfileMenuItem(
-                iconPath: "assets/data_analytics_icon.png",
-                title: "Data & Analytics",
-                groupLabel: "DATA & SUPPORT",
-              ),
+              // ProfileMenuItem(
+              //   iconPath: "assets/data_analytics_icon.png",
+              //   title: "Data & Analytics",
+              //   groupLabel: "DATA & SUPPORT",
+              // ),
               ProfileMenuItem(
                 iconPath: "assets/help_support.png",
                 title: "Help & Support",
                 groupLabel: "DATA & SUPPORT",
               ),
+              ProfileMenuItem(
+                iconPath: "assets/drink_rem.png",
+                title: "Timeline Intro",
+                groupLabel: "DATA & SUPPORT",
+              ),
 
-              // OTHER group
-              ProfileMenuItem(
-                iconPath: "assets/data_analytics_icon.png",
-                title: "Export Log",
-                groupLabel: "OTHER",
-              ),
-              ProfileMenuItem(
-                iconPath: "assets/drink_rem.png",
-                title: "Hydration Ring Guide",
-                groupLabel: "OTHER",
-              ),
-              ProfileMenuItem(
-                iconPath: "assets/drink_rem.png",
-                title: "Home Screen Widget",
-                groupLabel: "OTHER",
-              ),
-              ProfileMenuItem(
-                iconPath: "assets/drink_rem.png",
-                title: "Intro",
-                groupLabel: "OTHER",
-              ),
+              // OTHER group (hidden)
+              // ProfileMenuItem(
+              //   iconPath: "assets/data_analytics_icon.png",
+              //   title: "Export Log",
+              //   groupLabel: "OTHER",
+              // ),
+              // ProfileMenuItem(
+              //   iconPath: "assets/drink_rem.png",
+              //   title: "Hydration Ring Guide",
+              //   groupLabel: "OTHER",
+              // ),
+              // ProfileMenuItem(
+              //   iconPath: "assets/drink_rem.png",
+              //   title: "Home Screen Widget",
+              //   groupLabel: "OTHER",
+              // ),
+              // ProfileMenuItem(
+              //   iconPath: "assets/drink_rem.png",
+              //   title: "Intro",
+              //   groupLabel: "OTHER",
+              // ),
               // ProfileMenuItem(
               //   iconPath: "assets/data_analytics_icon.png",
               //   title: "Leaderboard",

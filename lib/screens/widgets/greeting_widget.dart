@@ -27,7 +27,8 @@ class GreetingWidget extends StatefulWidget {
   State<GreetingWidget> createState() => _GreetingWidgetState();
 }
 
-class _GreetingWidgetState extends State<GreetingWidget> with WidgetsBindingObserver {
+class _GreetingWidgetState extends State<GreetingWidget>
+    with WidgetsBindingObserver {
   String _userName = '';
   int _unreadCount = 0;
   final ApiService _apiService = ApiService();
@@ -152,43 +153,43 @@ class _GreetingWidgetState extends State<GreetingWidget> with WidgetsBindingObse
               ),
             ),
             SizedBox(width: 8.w),
-            CustomShowcase(
-              showcaseKey: ShowcaseKeys.messageNotificationKey,
-              title: 'Message Notifications',
-              description: 'Access your system messages and notifications here.',
-              targetShapeBorder: const CircleBorder(),
-              child: GestureDetector(
-                onTap: () {
-                  Navigator.of(context).push(
-                    MaterialPageRoute(builder: (_) => const MessageScreen()),
-                  );
-                },
-                child: Stack(
-                  clipBehavior: Clip.none,
-                  children: [
-                    Image.asset(
-                      AssetsPath.message,
-                      width: 24.w,
-                      height: 24.h,
-                    ),
-                    if (_unreadCount > 0)
-                      Positioned(
-                        right: -2.w,
-                        top: -2.h,
-                        child: Container(
-                          width: 10.w,
-                          height: 10.w,
-                          decoration: BoxDecoration(
-                            color: Colors.greenAccent.shade400,
-                            shape: BoxShape.circle,
-                            border: Border.all(color: Colors.white, width: 2),
-                          ),
-                        ),
-                      ),
-                  ],
-                ),
-              ),
-            ),
+            // CustomShowcase(
+            //   showcaseKey: ShowcaseKeys.messageNotificationKey,
+            //   title: 'Message Notifications',
+            //   description: 'Access your system messages and notifications here.',
+            //   targetShapeBorder: const CircleBorder(),
+            //   child: GestureDetector(
+            //     onTap: () {
+            //       Navigator.of(context).push(
+            //         MaterialPageRoute(builder: (_) => const MessageScreen()),
+            //       );
+            //     },
+            //     child: Stack(
+            //       clipBehavior: Clip.none,
+            //       children: [
+            //         Image.asset(
+            //           AssetsPath.message,
+            //           width: 24.w,
+            //           height: 24.h,
+            //         ),
+            //         if (_unreadCount > 0)
+            //           Positioned(
+            //             right: -2.w,
+            //             top: -2.h,
+            //             child: Container(
+            //               width: 10.w,
+            //               height: 10.w,
+            //               decoration: BoxDecoration(
+            //                 color: Colors.greenAccent.shade400,
+            //                 shape: BoxShape.circle,
+            //                 border: Border.all(color: Colors.white, width: 2),
+            //               ),
+            //             ),
+            //           ),
+            //       ],
+            //     ),
+            //   ),
+            // ),
           ],
         ),
       ],

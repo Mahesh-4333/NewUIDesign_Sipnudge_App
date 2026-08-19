@@ -1,3 +1,4 @@
+import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -7,7 +8,9 @@ import 'package:hydrify/constants/app_style.dart';
 import 'package:hydrify/constants/assets_path.dart';
 import 'package:hydrify/cubit/ble/ble_cubit.dart';
 import 'package:hydrify/cubit/bottle/bottle_data_cubit.dart';
+import 'package:hydrify/helpers/shared_pref_helper.dart';
 import 'package:hydrify/helpers/water_consumption_data_helper.dart';
+import 'package:hydrify/l10n/app_localizations.dart';
 import 'package:hydrify/models/bottle_info.dart';
 import 'package:hydrify/providers/weather_provider.dart';
 import 'package:provider/provider.dart';
@@ -27,10 +30,37 @@ class BottleInfoScreen extends StatefulWidget {
 class _BottleInfoScreenState extends State<BottleInfoScreen> {
   bool _isGeneralExpanded = true;
   bool _isHardwareExpanded = true;
+  int _selectedIndex = 1; // Default: Midnight Black (index 1)
 
   @override
   void initState() {
     super.initState();
+    _loadSavedBottleColor();
+  }
+
+  Future<void> _loadSavedBottleColor() async {
+    final savedColor = await SharedPrefsHelper.getBottleColor();
+    int index = 1;
+    if (savedColor == 'red') {
+      index = 0;
+    } else if (savedColor == 'black') {
+      index = 1;
+    } else if (savedColor == 'purple') {
+      index = 2;
+    }
+    if (mounted) {
+      setState(() {
+        _selectedIndex = index;
+      });
+    }
+  }
+
+  Future<void> _onSelectBottle(int index) async {
+    setState(() {
+      _selectedIndex = index;
+    });
+    final colorKeys = ['red', 'black', 'purple'];
+    await SharedPrefsHelper.setBottleColor(colorKeys[index]);
   }
 
   @override
@@ -67,8 +97,8 @@ class _BottleInfoScreenState extends State<BottleInfoScreen> {
                   child: Column(
                     children: [
                       SizedBox(height: 10.h),
-                      // Bottle Image Card
-                      _bottleWidget(),
+                      // Interactive Bottle Selection Widget
+                      _bottleSelectionWidget(),
 
                       SizedBox(height: 20.h),
 
@@ -478,30 +508,142 @@ class _BottleInfoScreenState extends State<BottleInfoScreen> {
     );
   }
 
-  Container _bottleWidget() {
-    return Container(
-      width: 280.w,
-      height: 280.w,
-      margin: EdgeInsets.symmetric(horizontal: 30.w),
-      decoration: BoxDecoration(
-        color: Color(0xFFF1F5F9).withOpacity(0.5),
-        borderRadius: BorderRadius.circular(40.r),
-        border: Border.all(color: Colors.white, width: 2),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 15,
-            offset: Offset(0, 10),
+  Widget _bottleSelectionWidget() {
+    final List<Map<String, dynamic>> bottleOptions = [
+      {
+        'key': 'red',
+        'name': AppLocalizations.of(context)?.candyRed ?? 'Candy Red',
+        'color': const Color(0xFF9E1F27),
+        'asset': AssetsPath.onboardingRed,
+        'description': AppLocalizations.of(context)?.descCandyRed ??
+            '“Bold, Energetic, and Impossible to ignore”',
+      },
+      {
+        'key': 'black',
+        'name': AppLocalizations.of(context)?.midnightBlack ?? 'Midnight Black',
+        'color': const Color(0xFF2B2E33),
+        'asset': AssetsPath.onboardingBlack,
+        'description': AppLocalizations.of(context)?.descMidnightBlack ??
+            '“Minimal, Timeless. Built for every environment”',
+      },
+      {
+        'key': 'purple',
+        'name': AppLocalizations.of(context)?.deepPurple ?? 'Deep Purple',
+        'color': const Color(0xFF56396F),
+        'asset': AssetsPath.onboardingPurple,
+        'description': AppLocalizations.of(context)?.descDeepPurple ??
+            '“Creative, Premium, and uniquely yours”',
+      },
+    ];
+
+    return Column(
+      children: [
+        // 3 Bottles Display Side-by-Side
+        SizedBox(
+          height: 310.h,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: List.generate(bottleOptions.length, (index) {
+              final isSelected = index == _selectedIndex;
+              return GestureDetector(
+                onTap: () => _onSelectBottle(index),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 250),
+                  curve: Curves.easeInOut,
+                  height: isSelected ? 300.h : 240.h,
+                  width: 95.w,
+                  child: AnimatedOpacity(
+                    duration: const Duration(milliseconds: 250),
+                    opacity: isSelected ? 1.0 : 0.7,
+                    child: isSelected
+                        ? Image.asset(
+                            bottleOptions[index]['asset'],
+                            fit: BoxFit.contain,
+                          )
+                        : ImageFiltered(
+                            imageFilter: ui.ImageFilter.blur(
+                              sigmaX: 1.3,
+                              sigmaY: 1.3,
+                              tileMode: ui.TileMode.decal,
+                            ),
+                            child: Image.asset(
+                              bottleOptions[index]['asset'],
+                              fit: BoxFit.contain,
+                            ),
+                          ),
+                  ),
+                ),
+              );
+            }),
           ),
-        ],
-      ),
-      child: Center(
-        child: Image.asset(
-          widget.bottleInfo.imagePath,
-          height: 220.h,
-          fit: BoxFit.contain,
         ),
-      ),
+
+        SizedBox(height: 16.h),
+
+        // Color Description Quote Text
+        Padding(
+          padding: EdgeInsets.symmetric(horizontal: 24.w),
+          child: Text(
+            bottleOptions[_selectedIndex]['description'],
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: const Color(0xFF5D7B91),
+              fontSize: 15.sp,
+              fontStyle: FontStyle.italic,
+              fontFamily: AppFontStyles.urbanistFontFamily,
+              fontVariations: [AppFontStyles.boldFontVariation],
+            ),
+          ),
+        ),
+
+        SizedBox(height: 20.h),
+
+        // Color Selection Dots
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: List.generate(bottleOptions.length, (index) {
+            final isSelected = index == _selectedIndex;
+            final color = bottleOptions[index]['color'] as Color;
+
+            return GestureDetector(
+              onTap: () => _onSelectBottle(index),
+              child: Container(
+                margin: EdgeInsets.symmetric(horizontal: 10.w),
+                padding: EdgeInsets.all(3.r),
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: isSelected ? color : Colors.transparent,
+                    width: 2.w,
+                  ),
+                ),
+                child: Container(
+                  width: 36.w,
+                  height: 36.w,
+                  decoration: BoxDecoration(
+                    color: color,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+              ),
+            );
+          }),
+        ),
+
+        SizedBox(height: 10.h),
+
+        // Selected Color Name Label Text
+        Text(
+          bottleOptions[_selectedIndex]['name'],
+          style: TextStyle(
+            color: const Color(0xFF2C434C),
+            fontSize: 16.sp,
+            fontFamily: AppFontStyles.urbanistFontFamily,
+            fontVariations: [AppFontStyles.boldFontVariation],
+          ),
+        ),
+      ],
     );
   }
 

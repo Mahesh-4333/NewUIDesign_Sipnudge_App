@@ -112,7 +112,8 @@ class ApiService {
     }
   }
 
-  Future<Map<String, dynamic>> requestSignupOTP(String email, String password) async {
+  Future<Map<String, dynamic>> requestSignupOTP(
+      String email, String password) async {
     try {
       final response = await _dio.post(
         '/api/user/otp/send',
@@ -125,7 +126,8 @@ class ApiService {
       return Map<String, dynamic>.from(response.data);
     } on DioException catch (e) {
       Console.log(
-          tag: "APP", value: "Exception occurred : requestSignupOTP || ${e.toString()} ");
+          tag: "APP",
+          value: "Exception occurred : requestSignupOTP || ${e.toString()} ");
       throw _handleError(e);
     }
   }
@@ -143,7 +145,8 @@ class ApiService {
       return Map<String, dynamic>.from(response.data);
     } on DioException catch (e) {
       Console.log(
-          tag: "APP", value: "Exception occurred : verifySignupOTP || ${e.toString()} ");
+          tag: "APP",
+          value: "Exception occurred : verifySignupOTP || ${e.toString()} ");
       throw _handleError(e);
     }
   }
@@ -160,7 +163,8 @@ class ApiService {
       return Map<String, dynamic>.from(response.data);
     } on DioException catch (e) {
       Console.log(
-          tag: "APP", value: "Exception occurred : resendSignupOTP || ${e.toString()} ");
+          tag: "APP",
+          value: "Exception occurred : resendSignupOTP || ${e.toString()} ");
       throw _handleError(e);
     }
   }
@@ -319,15 +323,17 @@ class ApiService {
   /// Creates a single manual log on the server and returns its MongoDB _id (serverId).
   /// Returns null on failure.
   Future<String?> createManualLog(
-      String userId, String type, double consumed, String utcTimestamp) async {
+      String userId, String type, double consumed, String utcTimestamp,
+      {String? localDate}) async {
     try {
       final response = await _dio.post(
-        '/api/database/create-manual-log',
+        '/api/database/create-manual-log-v2',
         data: {
           'userId': userId,
           'type': type,
           'consumed': consumed,
           'timestamp': utcTimestamp,
+          if (localDate != null) 'localDate': localDate,
         },
       );
       if (response.data['success'] == true) {
@@ -345,16 +351,17 @@ class ApiService {
   /// Falls back to (type, consumed, timestamp) if serverId is not available.
   Future<bool> deleteManualLog(
       String userId, String type, double consumed, String timestamp,
-      {String? serverId}) async {
+      {String? serverId, String? localDate}) async {
     try {
       final response = await _dio.post(
-        '/api/database/delete-manual-log',
+        '/api/database/delete-manual-log-v2',
         data: {
           'userId': userId,
           if (serverId != null) 'serverId': serverId,
           'type': type,
           'consumed': consumed,
           'timestamp': timestamp,
+          if (localDate != null) 'localDate': localDate,
         },
       );
       return response.data['success'] == true;
@@ -417,7 +424,8 @@ class ApiService {
 
   Future<List<Map<String, dynamic>>?> getSupportTickets(String userId) async {
     try {
-      final response = await _dio.get('/api/database/support-tickets', queryParameters: {'userId': userId});
+      final response = await _dio.get('/api/database/support-tickets',
+          queryParameters: {'userId': userId});
       if (response.statusCode == 200 && response.data['success'] == true) {
         return List<Map<String, dynamic>>.from(response.data['data']);
       }
@@ -481,7 +489,13 @@ class ApiService {
           if (force) 'force': true,
         },
       );
-      return response.statusCode == 204 || (response.data != null && response.data['success'] == true);
+
+      Console.log(
+          tag: "update-today-consumed",
+          value:
+              "$consumed - $date - $isPerfect - $target - $dayIndex - $battery - $force");
+      return response.statusCode == 204 ||
+          (response.data != null && response.data['success'] == true);
     } on DioException catch (e) {
       Console.log(tag: "APP", value: "Exception in updateTodayConsumed: $e");
       return false;
@@ -504,13 +518,13 @@ class ApiService {
       );
       return response.data != null && response.data['success'] == true;
     } on DioException catch (e) {
-      Console.log(tag: "APP", value: "Exception in sendBgConsumedNotification: $e");
+      Console.log(
+          tag: "APP", value: "Exception in sendBgConsumedNotification: $e");
       return false;
     }
   }
 
-  Future<String?> uploadFoodImage(
-      String imageBase64, String filename) async {
+  Future<String?> uploadFoodImage(String imageBase64, String filename) async {
     try {
       final response = await _dio.post(
         '/api/database/upload-image',
@@ -521,7 +535,8 @@ class ApiService {
               response.data['url'] != null ||
               response.data['imageUrl'] != null)) {
         final data = response.data;
-        final url = data['url'] ?? data['imageUrl'] ?? data['path'] ?? data['data'];
+        final url =
+            data['url'] ?? data['imageUrl'] ?? data['path'] ?? data['data'];
         return url?.toString();
       }
       return null;
@@ -535,17 +550,27 @@ class ApiService {
     }
   }
 
-  Future<bool> syncFoodScans(
-      String userId, List<Map<String, dynamic>> scans) async {
+  Future<Map<String, dynamic>?> syncFoodScans(
+      String userId, List<Map<String, dynamic>> scans,
+      {DateTime? startDate, DateTime? endDate}) async {
     try {
       final response = await _dio.post(
         '/api/database/sync-food-scans',
-        data: {'userId': userId, 'scans': scans},
+        data: {
+          'userId': userId,
+          'scans': scans,
+          if (startDate != null)
+            'startDate': startDate.toUtc().toIso8601String(),
+          if (endDate != null) 'endDate': endDate.toUtc().toIso8601String(),
+        },
       );
-      return response.data['success'] == true;
+      if (response.data['success'] == true) {
+        return response.data;
+      }
+      return null;
     } on DioException catch (e) {
       Console.log(tag: "APP", value: "Exception in syncFoodScans: $e");
-      return false;
+      return null;
     }
   }
 
@@ -681,16 +706,13 @@ class ApiService {
         '/api/database/achievements/$userId/acknowledge',
         data: {'level': level},
       );
-      return response.statusCode == 200 &&
-          response.data['success'] == true;
+      return response.statusCode == 200 && response.data['success'] == true;
     } on DioException catch (e) {
       Console.log(
           tag: 'APP', value: 'Exception in acknowledgeAchievementLevel: $e');
       return false;
     }
   }
-
-
 
   /// Fetches HydrationDaySummary records from the server for [userId] in the
   /// given [startDate]..[endDate] window.  Returns the list of raw maps on
@@ -740,6 +762,10 @@ class ApiService {
         '/api/database/hydration-analysis/$userId',
         queryParameters: queryParams,
       );
+
+      Console.log(
+          tag: "getHydrationAnalysis_api",
+          value: "${queryParams['startDate']} ${queryParams['endDate']}");
       if (response.statusCode == 200 && response.data['success'] == true) {
         return Map<String, dynamic>.from(response.data);
       }
@@ -750,11 +776,12 @@ class ApiService {
     }
   }
 
-  Future<Map<String, dynamic>?> getAnalytics(String userId, int year, {int? month}) async {
+  Future<Map<String, dynamic>?> getAnalytics(String userId, int year,
+      {int? month}) async {
     try {
       final queryParams = {'year': year.toString()};
       if (month != null) queryParams['month'] = month.toString();
-      
+
       final response = await _dio.get(
         '/api/database/analytics/$userId',
         queryParameters: queryParams,
@@ -891,7 +918,8 @@ class ApiService {
   // Fetch active subscription plans from the backend
   Future<List<dynamic>?> getSubscriptionPlans() async {
     try {
-      final response = await _dio.get('/api/products', queryParameters: {'type': 'subscription', 'active': 'true'});
+      final response = await _dio.get('/api/products',
+          queryParameters: {'type': 'subscription', 'active': 'true'});
       if (response.statusCode == 200) {
         return response.data['data'] as List<dynamic>?;
       }
@@ -899,7 +927,8 @@ class ApiService {
     } on DioException catch (e) {
       Console.log(
           tag: "APP",
-          value: "Exception occurred : getSubscriptionPlans || ${e.toString()} ");
+          value:
+              "Exception occurred : getSubscriptionPlans || ${e.toString()} ");
       return null;
     }
   }
@@ -936,9 +965,11 @@ class ApiService {
   }
 
   // Cancel an active subscription
-  Future<Map<String, dynamic>?> cancelSubscription(String subscriptionId) async {
+  Future<Map<String, dynamic>?> cancelSubscription(
+      String subscriptionId) async {
     try {
-      final response = await _dio.post('/api/subscriptions/$subscriptionId/cancel');
+      final response =
+          await _dio.post('/api/subscriptions/$subscriptionId/cancel');
       if (response.statusCode == 200) {
         return response.data as Map<String, dynamic>?;
       }
@@ -962,9 +993,9 @@ class ApiService {
     } on DioException catch (e) {
       Console.log(
           tag: "APP",
-          value: "Exception occurred : getUserSubscriptions || ${e.toString()} ");
+          value:
+              "Exception occurred : getUserSubscriptions || ${e.toString()} ");
       return null;
     }
   }
 }
-

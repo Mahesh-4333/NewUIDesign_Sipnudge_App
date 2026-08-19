@@ -27,10 +27,12 @@ class UserLifestyleInfoInputScreen extends StatefulWidget {
 
 class _UserLifestyleInfoInputScreenState
     extends State<UserLifestyleInfoInputScreen>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
   late AnimationController _animController;
+  late AnimationController _bellController;
   late Animation<double> _scaleAnimation;
   late Animation<double> _fadeAnimation;
+  late Animation<double> _bellRotationAnimation;
 
   @override
   void initState() {
@@ -38,6 +40,10 @@ class _UserLifestyleInfoInputScreenState
     _animController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 800),
+    );
+    _bellController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 2000),
     );
     _scaleAnimation = CurvedAnimation(
       parent: _animController,
@@ -47,12 +53,50 @@ class _UserLifestyleInfoInputScreenState
       parent: _animController,
       curve: Curves.easeIn,
     );
-    _animController.forward();
+
+    _bellRotationAnimation = TweenSequence<double>([
+      TweenSequenceItem(
+        tween: Tween<double>(begin: 0.0, end: -0.06)
+            .chain(CurveTween(curve: Curves.easeOut)),
+        weight: 10,
+      ),
+      TweenSequenceItem(
+        tween: Tween<double>(begin: -0.06, end: 0.05)
+            .chain(CurveTween(curve: Curves.easeInOut)),
+        weight: 20,
+      ),
+      TweenSequenceItem(
+        tween: Tween<double>(begin: 0.05, end: -0.04)
+            .chain(CurveTween(curve: Curves.easeInOut)),
+        weight: 20,
+      ),
+      TweenSequenceItem(
+        tween: Tween<double>(begin: -0.04, end: 0.03)
+            .chain(CurveTween(curve: Curves.easeInOut)),
+        weight: 20,
+      ),
+      TweenSequenceItem(
+        tween: Tween<double>(begin: 0.03, end: -0.015)
+            .chain(CurveTween(curve: Curves.easeInOut)),
+        weight: 15,
+      ),
+      TweenSequenceItem(
+        tween: Tween<double>(begin: -0.015, end: 0.0)
+            .chain(CurveTween(curve: Curves.easeIn)),
+        weight: 15,
+      ),
+    ]).animate(_bellController);
+
+    _animController.forward().then((_) {
+      // Loop the bell wiggle animation
+      _bellController.repeat();
+    });
   }
 
   @override
   void dispose() {
     _animController.dispose();
+    _bellController.dispose();
     super.dispose();
   }
 
@@ -84,7 +128,7 @@ class _UserLifestyleInfoInputScreenState
             "assets/images/back_ic.svg",
           ),
         ),
-      ),
+        ),
       body: Container(
         width: double.maxFinite,
         decoration: BoxDecoration(
@@ -112,12 +156,16 @@ class _UserLifestyleInfoInputScreenState
                   scale: _scaleAnimation,
                   child: FadeTransition(
                     opacity: _fadeAnimation,
-                    child: Transform.scale(
-                      scale: 1.5,
-                      child: Image.asset(
-                        AssetsPath.onboardingQuitHour,
-                        width: 70.w,
-                        height: 70.w,
+                    child: RotationTransition(
+                      turns: _bellRotationAnimation,
+                      alignment: Alignment.topCenter,
+                      child: Transform.scale(
+                        scale: 1.5,
+                        child: Image.asset(
+                          AssetsPath.onboardingQuitHour,
+                          width: 70.w,
+                          height: 70.w,
+                        ),
                       ),
                     ),
                   ),

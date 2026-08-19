@@ -10,6 +10,7 @@ import 'package:hydrify/constants/app_font_styles.dart';
 import 'package:hydrify/constants/app_strings.dart';
 import 'package:hydrify/cubit/bottle/bottle_data_cubit.dart';
 import 'package:hydrify/cubit/filter/filter_cubit.dart';
+import 'package:hydrify/helpers/database_helper.dart';
 import 'package:hydrify/helpers/shared_pref_helper.dart';
 import 'package:hydrify/models/hydration_summary.dart';
 import 'package:hydrify/screens/widgets/chart_widgets/column_chart_widget.dart';
@@ -17,6 +18,12 @@ import 'package:hydrify/services/api_service.dart';
 import 'package:hydrify/services/sync_bus.dart';
 import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+class ChartAnalysisResult {
+  final List<HydrationDaySummary> summaries;
+  final List<Map<String, dynamic>> manualLogs;
+  ChartAnalysisResult({required this.summaries, required this.manualLogs});
+}
 
 class CustomChartDataWidget extends StatefulWidget {
   const CustomChartDataWidget({super.key});
@@ -52,12 +59,13 @@ class _CustomChartDataWidgetState extends State<CustomChartDataWidget>
     super.dispose();
   }
 
-  /// Called whenever syncAll() succeeds. Clears the cache key so the next
-  /// build triggers a fresh server fetch instead of reusing the old future.
+  /// Called whenever a sync or manual log completes. Clears the cache key
+  /// and cached future so the chart triggers a fresh rebuild immediately.
   void _onSyncComplete() {
     if (!mounted) return;
     setState(() {
-      _lastCacheKey = ''; // invalidate — forces new future on next build
+      _lastCacheKey = '';
+      _cachedFuture = null;
     });
   }
 
@@ -106,10 +114,10 @@ class _CustomChartDataWidgetState extends State<CustomChartDataWidget>
 
   /// Persist a successful server result so it can be shown when offline.
   Future<void> _saveToCache(
-      String key, List<HydrationDaySummary> summaries) async {
+      String key, ChartAnalysisResult result) async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final jsonList = summaries
+      final summariesJson = result.summaries
           .map((s) => {
                 'date': s.date.toIso8601String(),
                 'dayIndex': s.dayIndex,
@@ -121,31 +129,44 @@ class _CustomChartDataWidgetState extends State<CustomChartDataWidget>
                 'updatedAt': s.updatedAt?.toIso8601String(),
               })
           .toList();
-      await prefs.setString('$_cachePrefix$key', jsonEncode(jsonList));
+      final data = {
+        'summaries': summariesJson,
+        'manualLogs': result.manualLogs,
+      };
+      await prefs.setString('$_cachePrefix$key', jsonEncode(data));
       Console.log(
           tag: 'ChartWidget',
-          value: 'Cache SAVED for key=$key (${summaries.length} items)');
+          value: 'Cache SAVED for key=$key (${result.summaries.length} items)');
     } catch (e) {
       Console.log(tag: 'ChartWidget', value: 'Cache save failed: $e');
     }
   }
 
   /// Read a previously persisted result. Returns null when nothing is cached.
-  Future<List<HydrationDaySummary>?> _loadFromCache(String key) async {
+  Future<ChartAnalysisResult?> _loadFromCache(String key) async {
     try {
       final prefs = await SharedPreferences.getInstance();
       final raw = prefs.getString('$_cachePrefix$key');
       if (raw == null) return null;
 
-      final list = (jsonDecode(raw) as List<dynamic>)
-          .cast<Map<String, dynamic>>()
-          .map(HydrationDaySummary.fromServerMap)
-          .toList();
-
-      Console.log(
-          tag: 'ChartWidget',
-          value: 'Cache HIT for key=$key (${list.length} items)');
-      return list;
+      final decoded = jsonDecode(raw);
+      if (decoded is Map<String, dynamic>) {
+        final list = (decoded['summaries'] as List<dynamic>)
+            .cast<Map<String, dynamic>>()
+            .map(HydrationDaySummary.fromServerMap)
+            .toList();
+        final manualLogs = (decoded['manualLogs'] as List<dynamic>?)
+                ?.cast<Map<String, dynamic>>() ??
+            [];
+        return ChartAnalysisResult(summaries: list, manualLogs: manualLogs);
+      } else if (decoded is List<dynamic>) {
+        final list = decoded
+            .cast<Map<String, dynamic>>()
+            .map(HydrationDaySummary.fromServerMap)
+            .toList();
+        return ChartAnalysisResult(summaries: list, manualLogs: []);
+      }
+      return null;
     } catch (e) {
       Console.log(tag: 'ChartWidget', value: 'Cache read failed: $e');
       return null;
@@ -179,7 +200,7 @@ class _CustomChartDataWidgetState extends State<CustomChartDataWidget>
   ///   1. Server API  →  save to persistent cache
   ///   2. Persistent cache (offline / server error)
   ///   3. Local SQLite DB (last resort)
-  Future<List<HydrationDaySummary>> _fetchSummaries(
+  Future<ChartAnalysisResult> _fetchSummaries(
     String cacheKey,
     DateTime startDate,
     DateTime endDate,
@@ -188,8 +209,9 @@ class _CustomChartDataWidgetState extends State<CustomChartDataWidget>
     // ── 1. Try server ──────────────────────────────────────────────────────
     try {
       final userId = await SharedPrefsHelper.getUserId();
+      final userEmail = await SharedPrefsHelper.getUserEmail();
 
-      if (userId != null && userId.isNotEmpty) {
+      if (userId != null && userId.isNotEmpty && userEmail != "guest_user") {
         Console.log(
           tag: 'ChartWidget',
           value: 'Fetching summaries from SERVER for $startDate → $endDate',
@@ -204,26 +226,23 @@ class _CustomChartDataWidgetState extends State<CustomChartDataWidget>
               .map((m) => HydrationDaySummary.fromServerMap(
                   Map<String, dynamic>.from(m)))
               .toList();
+          final List<Map<String, dynamic>> manualLogs =
+              analysisData['manualLogs'] != null
+                  ? List<Map<String, dynamic>>.from(analysisData['manualLogs'])
+                  : [];
 
-          Console.log(
-            tag: 'ChartWidget',
-            value: 'SERVER returned ${summaries.length} summaries — caching',
-          );
+          final result = ChartAnalysisResult(
+              summaries: summaries, manualLogs: manualLogs);
 
           // Persist for offline use (fire-and-forget)
-          _saveToCache(cacheKey, summaries);
+          _saveToCache(cacheKey, result);
 
-          return summaries;
+          return result;
         }
 
         Console.log(
           tag: 'ChartWidget',
           value: 'SERVER returned null — trying persistent cache',
-        );
-      } else {
-        Console.log(
-          tag: 'ChartWidget',
-          value: 'No userId — trying persistent cache',
         );
       }
     } catch (e) {
@@ -245,9 +264,12 @@ class _CustomChartDataWidgetState extends State<CustomChartDataWidget>
     Console.log(
         tag: 'ChartWidget', value: 'No cache found — falling back to local DB');
     // ignore: use_build_context_synchronously
-    return ctx
+    final localSummaries = await ctx
         .read<BottleDataCubit>()
         .getHydrationSummariesForRange(startDate, endDate);
+    final localLogs = await DatabaseHelper().getHydrationLogs();
+    return ChartAnalysisResult(
+        summaries: localSummaries, manualLogs: localLogs);
   }
 
   // ── Build ─────────────────────────────────────────────────────────────────
@@ -279,7 +301,11 @@ class _CustomChartDataWidgetState extends State<CustomChartDataWidget>
           final String titleText =
               filterState.currentInterval == FilterInterval.weekly
                   ? 'Weekly Intake: ${DateFormat('MMM, yyyy').format(filterState.currentDate)}'
-                  : AppStrings.drinkCompletion;
+                  : filterState.currentInterval == FilterInterval.monthly
+                      ? 'Monthly Intake: ${DateFormat('yyyy').format(filterState.currentDate)}'
+                      : filterState.currentInterval == FilterInterval.yearly
+                          ? 'Yearly Intake: ${DateFormat('yyyy').format(filterState.currentDate)}'
+                          : AppStrings.drinkCompletion;
 
           final future = _buildFuture(filterState, context);
 
@@ -329,7 +355,9 @@ class _CustomChartDataWidgetState extends State<CustomChartDataWidget>
                   }
 
                   if (!snapshot.hasData ||
-                      (snapshot.data![0] as List<HydrationDaySummary>)
+                      snapshot.data![0] == null ||
+                      (snapshot.data![0] as ChartAnalysisResult)
+                          .summaries
                           .isEmpty) {
                     return Center(
                       child: Text(
@@ -344,8 +372,8 @@ class _CustomChartDataWidgetState extends State<CustomChartDataWidget>
                     );
                   }
 
-                  final bottleData =
-                      snapshot.data![0] as List<HydrationDaySummary>;
+                  final chartResult =
+                      snapshot.data![0] as ChartAnalysisResult;
                   final userGoal = snapshot.data![1] as int?;
 
                   return FlColumnChartWidget(
@@ -353,7 +381,8 @@ class _CustomChartDataWidgetState extends State<CustomChartDataWidget>
                         'col_${userGoal}_${filterState.currentInterval}'),
                     interval: filterState.currentInterval,
                     currentDate: filterState.currentDate,
-                    bottleData: bottleData,
+                    bottleData: chartResult.summaries,
+                    manualLogs: chartResult.manualLogs,
                   );
                 },
               ),

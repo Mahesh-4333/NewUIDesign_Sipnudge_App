@@ -6,6 +6,8 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:hydrify/constants/app_style.dart';
 import 'package:hydrify/helpers/logger.dart';
 import 'package:hydrify/screens/data_n_analytics/data_n_analytics_screen.dart';
+import 'package:hydrify/screens/language_selection_settings_screen.dart';
+import 'package:hydrify/screens/onboarding/intake_timeline_intro_screen.dart';
 import 'package:hydrify/screens/onboarding/onboarding_flow_screen.dart';
 import 'package:hydrify/screens/onboarding/onboarding_walkthrough_screen.dart';
 import 'package:path/path.dart' as p;
@@ -187,7 +189,8 @@ class _SettingScreenState extends State<SettingScreen> {
         case "Language":
           navigator.push(
             MaterialPageRoute(
-              builder: (_) => const LanguageSelectionScreen(isFirstTime: false),
+              builder: (_) =>
+                  const LanguageSelectionSettingsScreen(isFirstTime: false),
             ),
           );
           break;
@@ -242,6 +245,24 @@ class _SettingScreenState extends State<SettingScreen> {
               .push(
             MaterialPageRoute(
               builder: (_) => OnboardingFlowScreen(),
+            ),
+          )
+              .then((value) {
+            context.read<BottomNavCubit>().showBar();
+          });
+
+          break;
+
+        case 'Timeline Intro':
+        case 'Intake Timeline Intro':
+        case 'Water Intake Timeline Intro':
+          context.read<BottomNavCubit>().hideBar();
+          navigator
+              .push(
+            MaterialPageRoute(
+              builder: (_) => IntakeTimelineIntroScreen(
+                onDone: () => Navigator.of(context).pop(),
+              ),
             ),
           )
               .then((value) {
@@ -323,8 +344,8 @@ class _SettingScreenState extends State<SettingScreen> {
             navigator
                 .push(
               MaterialPageRoute(
-                builder: (_) =>
-                    const HydrationRingOnboardingScreen(isFromOnboarding: false),
+                builder: (_) => const HydrationRingOnboardingScreen(
+                    isFromOnboarding: false),
               ),
             )
                 .then((value) {
@@ -893,8 +914,10 @@ class _SettingScreenState extends State<SettingScreen> {
       BuildContext context, List<ProfileMenuItem> items) {
     final List<Widget> sections = [];
 
-    // Separate logout (no group) from grouped items
-    final groupedItems = items.where((i) => i.groupLabel != null).toList();
+    // Separate logout (no group) from grouped items (excluding 'OTHER' group)
+    final groupedItems = items
+        .where((i) => i.groupLabel != null && i.groupLabel != 'OTHER')
+        .toList();
     final logoutItem = items.where((i) => i.groupLabel == null).toList();
 
     // Collect unique group labels (preserving insertion order)
@@ -975,7 +998,7 @@ class _SettingScreenState extends State<SettingScreen> {
           color: AppColors.white,
           border: Border.all(color: const Color(0xCCC6C6C6)),
           borderRadius: BorderRadius.circular(AppDimensions.radius_16.r),
-          boxShadow: AppStyle.boxShadowVariation3,
+          boxShadow: AppStyle.boxShadowVariation5,
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -1064,7 +1087,7 @@ class _SettingScreenState extends State<SettingScreen> {
                         ),
                         if (!isLast)
                           Divider(
-                            height: 1,
+                            height: 5,
                             thickness: 1,
                             color: const Color(0xCCC6C6C6),
                             indent: AppDimensions.dim16.w,

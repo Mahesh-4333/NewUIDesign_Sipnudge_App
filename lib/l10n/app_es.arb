@@ -388,5 +388,9 @@
   "tapEditThenAddWidget": "Toca Editar, luego Agregar widget",
   "chooseMyWaterAndTapAddWidget": "Elige Mi agua y toca Agregar widget",
   "smartReminders": "Recordatorios inteligentes",
-  "smartRemindersDescription": "Recibe avisos oportunos según tu actividad y entorno."
+  "smartRemindersDescription": "Recibe avisos oportunos según tu actividad y entorno.",
+  "chooseTheLanguage": "Elige el idioma",
+  "selectYourPreferredLanguageBelow": "Selecciona tu idioma preferido a continuación",
+  "youSelected": "Has seleccionado",
+  "allLanguages": "Todos los idiomas"
 }

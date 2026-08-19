@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:hydrify/helpers/logger.dart';
 
 import 'package:hydrify/cubit/filter/filter_cubit.dart';
@@ -5,10 +6,57 @@ import 'package:hydrify/cubit/user_info/user_info_cubit.dart';
 import 'package:hydrify/helpers/shared_pref_helper.dart';
 import 'package:hydrify/models/bottle_data.dart';
 import 'package:hydrify/models/chart_data.dart';
+import 'package:hydrify/models/hydration_entry.dart';
 import 'package:hydrify/models/water_consumption_data.dart';
 import 'package:intl/intl.dart';
 
 class WaterConsumptionCalculator {
+  /// Calculate cumulative expected slot target percentage at current time.
+  /// When a slot's end time finishes, that slot's yellow progress contribution is 100% complete,
+  /// and progress smoothly fills towards the next slot's end time.
+  static double calculateExpectedPercentage(
+    List<HydrationEntry> slots,
+    double dailyGoalMl, {
+    TimeOfDay? nowTime,
+  }) {
+    if (dailyGoalMl <= 0 || slots.isEmpty) return 0.0;
+
+    final now = nowTime ?? TimeOfDay.now();
+    final nowMinutes = now.hour * 60 + now.minute;
+
+    final sortedSlots = List<HydrationEntry>.from(slots)..sort((a, b) {
+      final aMin = a.startTime.hour * 60 + a.startTime.minute;
+      final bMin = b.startTime.hour * 60 + b.startTime.minute;
+      return aMin.compareTo(bMin);
+    });
+
+    double expectedCumulative = 0.0;
+
+    for (int i = 0; i < sortedSlots.length; i++) {
+      final slot = sortedSlots[i];
+      final prevEndMin = i == 0
+          ? 0
+          : sortedSlots[i - 1].endTime.hour * 60 +
+              sortedSlots[i - 1].endTime.minute;
+      final endMin = slot.endTime.hour * 60 + slot.endTime.minute;
+
+      if (nowMinutes >= endMin) {
+        expectedCumulative += slot.amount;
+      } else if (nowMinutes >= prevEndMin && nowMinutes < endMin) {
+        final duration = endMin - prevEndMin;
+        if (duration > 0) {
+          final elapsed = nowMinutes - prevEndMin;
+          expectedCumulative += slot.amount * (elapsed / duration);
+        }
+        break;
+      } else {
+        break;
+      }
+    }
+
+    return ((expectedCumulative / dailyGoalMl) * 100.0).clamp(0.0, 100.0);
+  }
+
   // Calculate consumption for a single day from bottle readings
   static double calculateDailyConsumption(List<BottleData> dayReadings) {
     if (dayReadings.isEmpty) return 0;

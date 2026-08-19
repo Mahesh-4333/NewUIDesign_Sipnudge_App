@@ -49,7 +49,10 @@ class _DrinkTypesWidgetState extends State<DrinkTypesWidget>
   @override
   void initState() {
     super.initState();
-    _fetchWaterIntake(forcePermission: true);
+    // Do NOT pass forcePermission: true here — this initState fires even when
+    // the Analysis tab is offstage (Offstage widget still builds all children).
+    // forcePermission should only be used on an explicit user refresh action.
+    _fetchWaterIntake();
     SharedPrefsHelper.getSelectedUnit().then((unit) {
       if (mounted) {
         setState(() {
@@ -297,7 +300,7 @@ class _DrinkTypesWidgetState extends State<DrinkTypesWidget>
                               ],
                             ),
                             Text(
-                              "${HydrationHelper.formatVolume(_waterIntake, _selectedUnit, showUnit: true)}/${HydrationHelper.formatVolume(_waterGoal.toDouble(), _selectedUnit, showUnit: true)}",
+                              "${HydrationHelper.formatVolume(_waterIntake, _selectedUnit, showUnit: false)}/${HydrationHelper.formatVolume(_waterGoal.toDouble(), _selectedUnit, showUnit: true)}",
                               style: TextStyle(
                                 color: AppColors.switchReminderColor,
                                 fontSize: AppFontStyles.fontSize_16,

@@ -199,95 +199,44 @@ class BottleDataCubit extends Cubit<BottleDataState> {
     );
   }
 
-  Future<double> getCurrentDayHistory() async {
-    try {
-      final hasInternet =
-          await InternetConnectionHelper().hasInternetConnection();
-      if (hasInternet) {
-        final userId = await SharedPrefsHelper.getUserId();
-        if (userId != null && userId.isNotEmpty) {
-          final now = DateTime.now();
-          final startDate = DateTime.utc(now.year, now.month, now.day);
-          final endDate =
-              DateTime.utc(now.year, now.month, now.day, 23, 59, 59);
-          final summaries =
-              await ApiService().getDailySummaries(userId, startDate, endDate);
-          if (summaries != null && summaries.isNotEmpty) {
-            final summaryMap = summaries.first;
-            final serverConsumed = (summaryMap['consumed'] as num).toDouble();
-            final targetVal =
-                (summaryMap['target'] as num?)?.toDouble() ?? 2500;
+  Future<double> getCurrentDayHistory({bool localOnly = false}) async {
+    final now = DateTime.now();
 
-            DateTime targetDate = DateTime(now.year, now.month, now.day);
-            final String? serverDateStr = summaryMap['date'] as String?;
-            if (serverDateStr != null) {
-              try {
-                final datePart = serverDateStr.length >= 10
-                    ? serverDateStr.substring(0, 10)
-                    : serverDateStr;
-                targetDate = DateTime.parse(datePart);
-              } catch (_) {}
+    if (!localOnly) {
+      try {
+        final hasInternet =
+            await InternetConnectionHelper().hasInternetConnection();
+        if (hasInternet) {
+          final userId = await SharedPrefsHelper.getUserId();
+          if (userId != null && userId.isNotEmpty) {
+            // Server stores logs in UTC — query with UTC day boundaries.
+            final startDate = DateTime.utc(now.year, now.month, now.day);
+            final endDate =
+                DateTime.utc(now.year, now.month, now.day, 23, 59, 59);
+            final summaries =
+                await ApiService().getDailySummaries(userId, startDate, endDate);
+            if (summaries != null && summaries.isNotEmpty) {
+              final summaryMap = summaries.first;
+              final serverConsumed = (summaryMap['consumed'] as num).toDouble();
+              return serverConsumed;
             }
-
-            await _dbHelper.bulkUpsert30Days([
-              HydrationDaySummary(
-                date: targetDate,
-                dayIndex: summaryMap['dayIndex'] as int? ?? 0,
-                target: targetVal,
-                consumed: serverConsumed,
-                isPerfect: targetVal > 0 && serverConsumed >= targetVal,
-              )
-            ]);
-
-            Console.log(
-                tag: "getCurrentDayHistory",
-                value: "Fetched from server: $serverConsumed ml");
-            return serverConsumed;
           }
         }
+      } catch (e) {
+        Console.log(
+            tag: "getCurrentDayHistory",
+            value: "Failed fetching from server, falling back to local DB: $e");
       }
-    } catch (e) {
+    }
+
+    final localSummary = await _dbHelper.getSummaryForDate(now);
+    if (localSummary != null) {
       Console.log(
-          tag: "getCurrentDayHistory",
-          value: "Failed fetching from server, falling back to local DB: $e");
+          tag: "consumedThings", value: "${localSummary.toMap()}");
+      return localSummary.consumed;
     }
 
-    final db = await _dbHelper.database;
-
-    final now = DateTime.now();
-    final startDate = DateTime(now.year, now.month, now.day, 00, 00, 00);
-    final endDate = DateTime(now.year, now.month, now.day, 23, 59, 59);
-
-    final List<Map<String, dynamic>> maps = await db.query(
-      DatabaseHelper.hydrationSummaryTableName,
-    );
-
-    var hyderationData = List.generate(
-      maps.length,
-      (i) => HydrationDaySummary.fromMap(maps[i]),
-    );
-
-    final normalizedStart =
-        DateTime(startDate.year, startDate.month, startDate.day);
-    final normalizedEnd =
-        DateTime(endDate.year, endDate.month, endDate.day, 23, 59, 59, 999);
-
-    var hydrationDataTemp = hyderationData.where((s) {
-      if (s.date.isBefore(normalizedStart)) {
-        return false;
-      }
-      if (s.date.isAfter(normalizedEnd)) {
-        return false;
-      }
-      return true;
-    }).toList();
-    if (hydrationDataTemp.isEmpty) {
-      return 0;
-    }
-
-    Console.log(
-        tag: "consumedThings", value: "${hydrationDataTemp.first.toMap()}");
-    return hydrationDataTemp.first.consumed;
+    return 0.0;
   }
 
   Future<void> clearOldRecords(int daysToKeep) async {

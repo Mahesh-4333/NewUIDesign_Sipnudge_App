@@ -2327,6 +2327,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Receive timely nudges based on your activity and environment.'**
   String get smartRemindersDescription;
+
+  /// No description provided for @chooseTheLanguage.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose the language'**
+  String get chooseTheLanguage;
+
+  /// No description provided for @selectYourPreferredLanguageBelow.
+  ///
+  /// In en, this message translates to:
+  /// **'Select your preferred language below'**
+  String get selectYourPreferredLanguageBelow;
+
+  /// No description provided for @youSelected.
+  ///
+  /// In en, this message translates to:
+  /// **'You Selected'**
+  String get youSelected;
+
+  /// No description provided for @allLanguages.
+  ///
+  /// In en, this message translates to:
+  /// **'All Languages'**
+  String get allLanguages;
 }
 
 class _AppLocalizationsDelegate

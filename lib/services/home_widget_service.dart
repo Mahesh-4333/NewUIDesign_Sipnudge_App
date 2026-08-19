@@ -7,6 +7,7 @@ import 'package:hydrify/helpers/logger.dart';
 import 'package:hydrify/helpers/shared_pref_helper.dart';
 import 'package:hydrify/services/api_service.dart';
 
+import 'package:hydrify/helpers/water_consumption_data_helper.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:hydrify/services/database_sync_service.dart';
 
@@ -193,35 +194,14 @@ class HomeWidgetService {
         final now = DateTime.now();
         final nowMinutes = now.hour * 60 + now.minute;
 
-        // Sort by start time
-        slots.sort((a, b) {
-          final aMin = a.startTime.hour * 60 + a.startTime.minute;
-          final bMin = b.startTime.hour * 60 + b.startTime.minute;
-          return aMin.compareTo(bMin);
-        });
-
-        // 2. Compute expected cumulative target at current time (linear)
-        double expectedCumulative = 0.0;
-        for (int i = 0; i < slots.length; i++) {
-          final entry = slots[i];
-          final startMin = entry.startTime.hour * 60 + entry.startTime.minute;
-          final endMin = entry.endTime.hour * 60 + entry.endTime.minute;
-
-          if (nowMinutes >= endMin) {
-            expectedCumulative += entry.amount;
-          } else if (nowMinutes >= startMin && nowMinutes < endMin) {
-            final slotDuration = endMin - startMin;
-            if (slotDuration > 0) {
-              final elapsed = nowMinutes - startMin;
-              final fraction = elapsed / slotDuration;
-              expectedCumulative += entry.amount * fraction;
-            }
-            break;
-          } else {
-            break;
-          }
-        }
-        final double expectedPercent = (expectedCumulative / dailyGoal.toDouble()) * 100.0;
+        // 2. Compute expected cumulative target at current time
+        final double expectedPercent =
+            WaterConsumptionCalculator.calculateExpectedPercentage(
+          slots,
+          dailyGoal.toDouble(),
+        );
+        final double expectedCumulative =
+            (expectedPercent / 100.0) * dailyGoal.toDouble();
         await HomeWidget.saveWidgetData<int>('expected_cumulative_target', expectedCumulative.round());
         await HomeWidget.saveWidgetData<double>('expected_percent', expectedPercent);
 

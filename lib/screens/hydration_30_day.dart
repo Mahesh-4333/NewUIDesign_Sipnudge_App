@@ -75,9 +75,19 @@ class _Hydration30DayPageState extends State<Hydration30DayPage> {
 
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<BleCubit, BleState>(
-      builder: (context, state) {
-        return Scaffold(
+    return BlocListener<BleCubit, BleState>(
+      listener: (context, state) {
+        if (state.parsed30DaysList.isEmpty) {
+          _loadLast30Days();
+        }
+      },
+      child: BlocBuilder<BleCubit, BleState>(
+        builder: (context, state) {
+          final displayRows = state.parsed30DaysList.isNotEmpty
+              ? state.parsed30DaysList
+              : _rows;
+
+          return Scaffold(
           backgroundColor: Colors.white,
           appBar: AppBar(
             title: const Text('30-Day Hydration History'),
@@ -89,7 +99,7 @@ class _Hydration30DayPageState extends State<Hydration30DayPage> {
               ),
             ],
           ),
-          body: _loading
+          body: (_loading && state.parsed30DaysList.isEmpty)
               ? const Center(child: CircularProgressIndicator())
               : RefreshIndicator(
                   onRefresh: _onRefresh,
@@ -175,7 +185,7 @@ class _Hydration30DayPageState extends State<Hydration30DayPage> {
                                   ],
                                 ),
                                 // data rows
-                                ..._rows.map((r) {
+                                ...displayRows.map((r) {
                                   final pct = waterGoal > 0
                                       ? ((r.consumed / waterGoal) * 100)
                                           .clamp(0, 999)
@@ -217,8 +227,9 @@ class _Hydration30DayPageState extends State<Hydration30DayPage> {
                 ),
         );
       },
-    );
-  }
+    ),
+  );
+}
 
   Future<void> _exportCsv() async {
     // Simple CSV exporter — you can replace with share/save logic

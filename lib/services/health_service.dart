@@ -247,13 +247,13 @@ class HealthService {
   Future<Map<String, dynamic>> fetchUserProfileFromHealth() async {
     final Map<String, dynamic> bioData = {};
     try {
-      final bool authorized = await requestAuthorization();
+      // Use _ensurePermissions instead of requestAuthorization directly.
+      // This respects the alreadyRequested SharedPrefs flag and will NOT show
+      // the iOS HealthKit permission dialog during onboarding. The dialog is
+      // only triggered when the user opens the Analysis tab for the first time.
+      final types = [HealthDataType.HEIGHT, HealthDataType.WEIGHT];
+      final bool authorized = await _ensurePermissions(types);
       if (!authorized) return bioData;
-
-      final types = [
-        HealthDataType.HEIGHT,
-        HealthDataType.WEIGHT,
-      ];
 
       final now = DateTime.now();
       final past = now.subtract(const Duration(days: 365 * 10));

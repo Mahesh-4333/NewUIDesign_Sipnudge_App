@@ -388,5 +388,9 @@
   "tapEditThenAddWidget": "संपादित करें पर टैप करें, फिर विजेट जोड़ें",
   "chooseMyWaterAndTapAddWidget": "माई वॉटर चुनें और विजेट जोड़ें पर टैप करें",
   "smartReminders": "स्मार्ट रिमाइंडर",
-  "smartRemindersDescription": "अपनी गतिविधि और वातावरण के आधार पर समय पर रिमाइंडर प्राप्त करें।"
+  "smartRemindersDescription": "अपनी गतिविधि और वातावरण के आधार पर समय पर रिमाइंडर प्राप्त करें।",
+  "chooseTheLanguage": "भाषा चुनें",
+  "selectYourPreferredLanguageBelow": "नीचे अपनी पसंदीदा भाषा चुनें",
+  "youSelected": "आपने चुना है",
+  "allLanguages": "सभी भाषाएं"
 }

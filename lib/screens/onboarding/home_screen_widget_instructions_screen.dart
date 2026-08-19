@@ -10,6 +10,7 @@ import 'package:hydrify/screens/bottom_nav_screen_new.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:hydrify/services/firebase_messaging_service.dart';
 import 'package:hydrify/screens/onboarding/hydration_ring_onboarding_screen.dart';
+import 'package:hydrify/screens/widgets/custom_anim_toggle.dart';
 
 class HomeScreenWidgetInstructionsScreen extends StatefulWidget {
   final bool isFromOnboarding;
@@ -227,195 +228,200 @@ class _HomeScreenWidgetInstructionsScreenState
                   ),
                 ),
 
-              Expanded(
-                child: SingleChildScrollView(
-                  physics: const BouncingScrollPhysics(),
-                  padding: EdgeInsets.symmetric(horizontal: 40.w),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      SizedBox(height: 8.h),
-                      // Title
-                      Text(
-                        loc?.stayConnectedAndOnTrack ??
-                            "Stay Connected\n& On Track",
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          color: AppColors.bluegray,
-                          fontSize: 26.sp,
-                          fontFamily: AppFontStyles.urbanistFontFamily,
-                          fontVariations: [AppFontStyles.boldFontVariation],
-                          height: 1.2,
-                        ),
-                      ),
-                      SizedBox(height: 8.h),
-                      // Subtitle
-                      Padding(
-                        padding: EdgeInsets.symmetric(horizontal: 20.w),
-                        child: Text(
-                          loc?.understandingHydrationRingSubtitle ??
-                              "Understanding your hydration ring helps you crush your goals.",
+                Expanded(
+                  child: SingleChildScrollView(
+                    physics: const BouncingScrollPhysics(),
+                    padding: EdgeInsets.symmetric(horizontal: 40.w),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        SizedBox(height: 8.h),
+                        // Title
+                        Text(
+                          loc?.stayConnectedAndOnTrack ??
+                              "Stay Connected\n& On Track",
                           textAlign: TextAlign.center,
                           style: TextStyle(
                             color: AppColors.bluegray,
-                            fontSize: 14.sp,
+                            fontSize: 26.sp,
                             fontFamily: AppFontStyles.urbanistFontFamily,
                             fontVariations: [AppFontStyles.boldFontVariation],
-                            height: 1.4,
+                            height: 1.2,
                           ),
                         ),
-                      ),
-                      SizedBox(height: 20.h),
-
-                      // Card 1: Widget Mockup
-                      _buildWidgetMockup(),
-                      SizedBox(height: 20.h),
-
-                      // Instruction Steps Header
-                      Padding(
-                        padding: EdgeInsets.symmetric(horizontal: 8.w),
-                        child: Text(
-                          loc?.addTheWidgetToHomeScreenInstruction ??
-                              "Add the widget to your Home Screen and\nsee your goal and progress at a glance",
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            color: AppColors.bluegray,
-                            fontSize: 15.sp,
-                            fontFamily: AppFontStyles.urbanistFontFamily,
-                            fontVariations: [AppFontStyles.boldFontVariation],
-                            height: 1.3,
+                        SizedBox(height: 8.h),
+                        // Subtitle
+                        Padding(
+                          padding: EdgeInsets.symmetric(horizontal: 20.w),
+                          child: Text(
+                            loc?.understandingHydrationRingSubtitle ??
+                                "Understanding your hydration ring helps you crush your goals.",
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              color: AppColors.bluegray,
+                              fontSize: 14.sp,
+                              fontFamily: AppFontStyles.urbanistFontFamily,
+                              fontVariations: [AppFontStyles.boldFontVariation],
+                              height: 1.4,
+                            ),
                           ),
                         ),
-                      ),
-                      SizedBox(height: 40.h),
 
-                      // Instruction Steps
-                      _buildInstructionStep(
-                        number: "1",
-                        text: loc?.touchAndHoldHomeScreen ??
-                            "Touch and hold your Home Screen",
-                      ),
-                      SizedBox(height: 14.h),
-                      _buildInstructionStep(
-                        number: "2",
-                        text: loc?.tapEditThenAddWidget ??
-                            "Tap Edit, then Add Widget",
-                      ),
-                      SizedBox(height: 14.h),
-                      _buildInstructionStep(
-                        number: "3",
-                        text: loc?.chooseMyWaterAndTapAddWidget ??
-                            "Choose My Water and tap Add Widget",
-                      ),
-                      SizedBox(height: 40.h),
+                        // Card 1: Widget Mockup
+                        Padding(
+                          padding: EdgeInsets.symmetric(vertical: 40.h),
+                          child: Image.asset(
+                            "assets/onboarding/widget_redesign.png",
+                            width: 350.w,
+                          ),
+                        ),
 
-                      // Card 2: Smart Reminders Settings
-                      if (!_isLoading) _buildSmartSettingsCard(),
-                      SizedBox(height: 20.h),
-                    ],
+                        // Instruction Steps Header
+                        Padding(
+                          padding: EdgeInsets.symmetric(horizontal: 8.w),
+                          child: Text(
+                            loc?.addTheWidgetToHomeScreenInstruction ??
+                                "Add the widget to your Home Screen and\nsee your goal and progress at a glance",
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              color: AppColors.bluegray,
+                              fontSize: 15.sp,
+                              fontFamily: AppFontStyles.urbanistFontFamily,
+                              fontVariations: [AppFontStyles.boldFontVariation],
+                              height: 1.3,
+                            ),
+                          ),
+                        ),
+                        SizedBox(height: 40.h),
+
+                        // Instruction Steps
+                        _buildInstructionStep(
+                          number: "1",
+                          text: loc?.touchAndHoldHomeScreen ??
+                              "Touch and hold your Home Screen",
+                        ),
+                        SizedBox(height: 14.h),
+                        _buildInstructionStep(
+                          number: "2",
+                          text: loc?.tapEditThenAddWidget ??
+                              "Tap Edit, then Add Widget",
+                        ),
+                        SizedBox(height: 14.h),
+                        _buildInstructionStep(
+                          number: "3",
+                          text: loc?.chooseMyWaterAndTapAddWidget ??
+                              "Choose My Water and tap Add Widget",
+                        ),
+                        SizedBox(height: 40.h),
+
+                        // Card 2: Smart Reminders Settings
+                        if (!_isLoading) _buildSmartSettingsCard(),
+                        SizedBox(height: 20.h),
+                      ],
+                    ),
                   ),
                 ),
-              ),
 
-              // Bottom Continue Button
-              Padding(
-                padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 16.h),
-                child: SizedBox(
-                  width: double.infinity,
-                  height: 52.h,
-                  child: ElevatedButton(
-                    onPressed: () {
-                      // Block navigation if smart reminders are not enabled
-                      if (!_smartRemindersEnabled) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text(
-                              'Please enable Smart Reminders to continue.',
-                              style: TextStyle(
-                                fontFamily: AppFontStyles.urbanistFontFamily,
-                                fontSize: 14.sp,
+                // Bottom Continue Button
+                Padding(
+                  padding:
+                      EdgeInsets.symmetric(horizontal: 24.w, vertical: 16.h),
+                  child: SizedBox(
+                    width: double.infinity,
+                    height: 52.h,
+                    child: ElevatedButton(
+                      onPressed: () {
+                        // Block navigation if smart reminders are not enabled
+                        if (!_smartRemindersEnabled) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                'Please enable Smart Reminders to continue.',
+                                style: TextStyle(
+                                  fontFamily: AppFontStyles.urbanistFontFamily,
+                                  fontSize: 14.sp,
+                                ),
+                              ),
+                              backgroundColor: const Color(0xFF0F172A),
+                              behavior: SnackBarBehavior.floating,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12.r),
+                              ),
+                              margin: EdgeInsets.symmetric(
+                                  horizontal: 24.w, vertical: 12.h),
+                              duration: const Duration(seconds: 3),
+                            ),
+                          );
+                          return;
+                        }
+                        if (widget.isFromOnboarding) {
+                          Navigator.pushReplacement(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => OnboardingFlowScreen(
+                                onFlowCompleted: () async {
+                                  await SharedPrefsHelper
+                                      .setOnboardingFlowCompleted(true);
+                                  FirebaseMessagingService().init();
+                                  if (!context.mounted) return;
+                                  Navigator.pushAndRemoveUntil(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) =>
+                                          const BottomNavScreenNew(),
+                                    ),
+                                    (route) => false,
+                                  );
+                                },
+                                onFlowSkipped: () async {
+                                  await SharedPrefsHelper
+                                      .setOnboardingFlowCompleted(true);
+                                  FirebaseMessagingService().init();
+                                  if (!context.mounted) return;
+                                  Navigator.pushAndRemoveUntil(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) =>
+                                          const BottomNavScreenNew(),
+                                    ),
+                                    (route) => false,
+                                  );
+                                },
                               ),
                             ),
-                            backgroundColor: const Color(0xFF0F172A),
-                            behavior: SnackBarBehavior.floating,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12.r),
-                            ),
-                            margin: EdgeInsets.symmetric(
-                                horizontal: 24.w, vertical: 12.h),
-                            duration: const Duration(seconds: 3),
-                          ),
-                        );
-                        return;
-                      }
-                      if (widget.isFromOnboarding) {
-                        Navigator.pushReplacement(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => OnboardingFlowScreen(
-                              onFlowCompleted: () async {
-                                await SharedPrefsHelper
-                                    .setOnboardingFlowCompleted(true);
-                                FirebaseMessagingService().init();
-                                if (!context.mounted) return;
-                                Navigator.pushAndRemoveUntil(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) =>
-                                        const BottomNavScreenNew(),
-                                  ),
-                                  (route) => false,
-                                );
-                              },
-                              onFlowSkipped: () async {
-                                await SharedPrefsHelper
-                                    .setOnboardingFlowCompleted(true);
-                                FirebaseMessagingService().init();
-                                if (!context.mounted) return;
-                                Navigator.pushAndRemoveUntil(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) =>
-                                        const BottomNavScreenNew(),
-                                  ),
-                                  (route) => false,
-                                );
-                              },
-                            ),
-                          ),
-                        );
-                      } else {
-                        Navigator.pop(context);
-                      }
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: _smartRemindersEnabled
-                          ? const Color(0xFF00A2FF)
-                          : const Color(0xFFCBD5E1),
-                      elevation: 0,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(30.r),
+                          );
+                        } else {
+                          Navigator.pop(context);
+                        }
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: _smartRemindersEnabled
+                            ? const Color(0xFF00A2FF)
+                            : const Color(0xFFCBD5E1),
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(30.r),
+                        ),
                       ),
-                    ),
-                    child: Text(
-                      loc?.continueBtn ?? "Continue",
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 16.sp,
-                        fontFamily: AppFontStyles.urbanistFontFamily,
-                        fontVariations: [AppFontStyles.boldFontVariation],
+                      child: Text(
+                        loc?.continueBtn ?? "Continue",
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 16.sp,
+                          fontFamily: AppFontStyles.urbanistFontFamily,
+                          fontVariations: [AppFontStyles.boldFontVariation],
+                        ),
                       ),
                     ),
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
-    ),
-  );
-}
+    );
+  }
 
   Widget _buildWidgetMockup() {
     return Container(
@@ -807,10 +813,12 @@ class _HomeScreenWidgetInstructionsScreenState
               color: const Color(0xFFE0F2FE),
               borderRadius: BorderRadius.circular(14.r),
             ),
-            child: Icon(
-              Icons.notifications_rounded,
-              size: 20.sp,
-              color: const Color(0xFF0284C7),
+            child: Center(
+              child: Image.asset(
+                "assets/onboarding/bell_reminder.png",
+                width: 18.w,
+                height: 18.w,
+              ),
             ),
           ),
           SizedBox(width: 14.w),
@@ -842,10 +850,9 @@ class _HomeScreenWidgetInstructionsScreenState
             ),
           ),
           SizedBox(width: 8.w),
-          Switch.adaptive(
+          AnimatedToggle(
             value: _smartRemindersEnabled,
             onChanged: _toggleSmartReminders,
-            activeTrackColor: const Color(0xFF00A2FF),
           ),
         ],
       ),

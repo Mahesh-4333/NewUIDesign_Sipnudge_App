@@ -12,7 +12,6 @@ import 'package:hydrify/models/hydration_summary.dart';
 import 'package:hydrify/helpers/shared_pref_helper.dart';
 import 'package:hydrify/helpers/database_helper.dart';
 import 'package:hydrify/screens/widgets/chart_widgets/tool_tip_widget.dart';
-import 'package:hydrify/services/api_service.dart';
 import 'package:hydrify/services/sync_bus.dart';
 
 class FlColumnChartWidget extends StatefulWidget {
@@ -20,12 +19,14 @@ class FlColumnChartWidget extends StatefulWidget {
   final DateTime currentDate;
   // NOTE: this is now HydrationDaySummary
   final List<HydrationDaySummary> bottleData;
+  final List<Map<String, dynamic>>? manualLogs;
 
   const FlColumnChartWidget({
     super.key,
     required this.interval,
     required this.currentDate,
     required this.bottleData,
+    this.manualLogs,
   });
 
   @override
@@ -45,31 +46,6 @@ class _FlColumnChartWidgetState extends State<FlColumnChartWidget> {
   Offset? tappedIndexOffset;
   ChartData? tooltipData;
   int? tappedIndex;
-
-  Future<void> _loadUserGoalAndLogs() async {
-    final goal = await SharedPrefsHelper.getUserGoal();
-    if (goal != null) {
-      currentUserGoal = goal.toDouble();
-    }
-    try {
-      final userId = await SharedPrefsHelper.getUserId();
-      final userEmail = await SharedPrefsHelper.getUserEmail();
-      if (userId != null && userEmail != "guest_user") {
-        final analysisData = await ApiService().getHydrationAnalysis(userId);
-        if (analysisData != null && analysisData['manualLogs'] != null) {
-          _allLogs =
-              List<Map<String, dynamic>>.from(analysisData['manualLogs']);
-          return;
-        }
-      }
-      // Fallback to local SQLite if offline or server fails
-      final dbHelper = DatabaseHelper();
-      _allLogs = await dbHelper.getHydrationLogs();
-    } catch (e) {
-      Console.log(
-          tag: "ColumnChart", value: "Failed to fetch hydration logs: $e");
-    }
-  }
 
   final List<String> weekLabels = const [
     'Mon',
@@ -100,13 +76,30 @@ class _FlColumnChartWidgetState extends State<FlColumnChartWidget> {
   void initState() {
     super.initState();
     SyncBus.instance.addListener(_onSyncComplete);
-    _updateChartData(); // Initialize sync first
-    _loadUserGoalAndLogs().then((_) {
-      _updateChartData();
-      if (mounted) setState(() {});
+    _initLogsAndGoal().then((_) {
       WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToToday());
     });
-    WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToToday());
+  }
+
+  Future<void> _initLogsAndGoal() async {
+    final goal = await SharedPrefsHelper.getUserGoal();
+    if (goal != null) {
+      currentUserGoal = goal.toDouble();
+    }
+    if (widget.manualLogs != null && widget.manualLogs!.isNotEmpty) {
+      _allLogs = widget.manualLogs!;
+    } else {
+      // Fast local SQLite query
+      try {
+        final dbHelper = DatabaseHelper();
+        _allLogs = await dbHelper.getHydrationLogs();
+      } catch (e) {
+        Console.log(
+            tag: "ColumnChart", value: "Failed to fetch local hydration logs: $e");
+      }
+    }
+    _updateChartData();
+    if (mounted) setState(() {});
   }
 
   @override
@@ -118,10 +111,7 @@ class _FlColumnChartWidgetState extends State<FlColumnChartWidget> {
 
   void _onSyncComplete() {
     if (!mounted) return;
-    _loadUserGoalAndLogs().then((_) {
-      _updateChartData();
-      if (mounted) setState(() {});
-    });
+    _initLogsAndGoal();
   }
 
   void _scrollToToday() {
@@ -165,17 +155,53 @@ class _FlColumnChartWidgetState extends State<FlColumnChartWidget> {
   double _getLoggedAmount(List<Map<String, dynamic>> logs, DateTime date,
       List<String> types, FilterInterval interval) {
     double total = 0.0;
+    final dateStr =
+        '${date.year.toString().padLeft(4, '0')}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+
     for (var log in logs) {
       try {
-        final logTime = DateTime.parse(log['timestamp'] as String).toLocal();
+        final String? localDate = log['localDate'] as String?;
+        final String? rawTs = log['timestamp'] as String?;
+
         bool isMatch = false;
-        if (interval == FilterInterval.yearly) {
-          isMatch = logTime.year == date.year && logTime.month == date.month;
-        } else {
-          isMatch = logTime.year == date.year &&
-              logTime.month == date.month &&
-              logTime.day == date.day;
+
+        if (localDate != null && localDate.length >= 10) {
+          final cleanLocalDate = localDate.substring(0, 10);
+          if (interval == FilterInterval.yearly) {
+            final parts = cleanLocalDate.split('-');
+            if (parts.length >= 2) {
+              isMatch = int.parse(parts[0]) == date.year &&
+                  int.parse(parts[1]) == date.month;
+            }
+          } else {
+            isMatch = cleanLocalDate == dateStr;
+          }
+        } else if (rawTs != null &&
+            !rawTs.endsWith('Z') &&
+            rawTs.length >= 10) {
+          // SQLite local time string (e.g. "2026-08-11T08:57:00.000000")
+          final cleanLocalDate = rawTs.substring(0, 10);
+          if (interval == FilterInterval.yearly) {
+            final parts = cleanLocalDate.split('-');
+            if (parts.length >= 2) {
+              isMatch = int.parse(parts[0]) == date.year &&
+                  int.parse(parts[1]) == date.month;
+            }
+          } else {
+            isMatch = cleanLocalDate == dateStr;
+          }
+        } else if (rawTs != null) {
+          // Fallback for old logs with UTC/Z timestamps and no localDate
+          final logTime = DateTime.parse(rawTs).toLocal();
+          if (interval == FilterInterval.yearly) {
+            isMatch = logTime.year == date.year && logTime.month == date.month;
+          } else {
+            isMatch = logTime.year == date.year &&
+                logTime.month == date.month &&
+                logTime.day == date.day;
+          }
         }
+
         if (isMatch) {
           final type = log['type'] as String;
           if (types.contains(type)) {
@@ -379,13 +405,16 @@ class _FlColumnChartWidgetState extends State<FlColumnChartWidget> {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.interval != widget.interval ||
         oldWidget.currentDate != widget.currentDate ||
-        oldWidget.bottleData != widget.bottleData) {
-      _updateChartData(); // Update sync first
-      _loadUserGoalAndLogs().then((_) {
-        _updateChartData();
+        oldWidget.bottleData != widget.bottleData ||
+        oldWidget.manualLogs != widget.manualLogs) {
+      if (widget.manualLogs != null && widget.manualLogs!.isNotEmpty) {
+        _allLogs = widget.manualLogs!;
+      }
+      _updateChartData();
+      if (mounted) {
         setState(() {});
         WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToToday());
-      });
+      }
     }
   }
 

@@ -75,7 +75,8 @@ class _UserInfoInputScreenState extends State<UserInfoInputScreen> {
     final regex = RegExp(r'^[a-zA-Z0-9]{3,15}$');
     if (!regex.hasMatch(name)) {
       setState(() {
-        _usernameError = AppLocalizations.of(context)?.usernameRequirements ?? "3-15 alphanumeric characters only.";
+        _usernameError = AppLocalizations.of(context)?.usernameRequirements ??
+            "3-15 alphanumeric characters only.";
         _isUsernameValid = false;
         _isCheckingUsername = false;
       });
@@ -99,7 +100,8 @@ class _UserInfoInputScreenState extends State<UserInfoInputScreen> {
           _usernameError = null;
         } else {
           _isUsernameValid = false;
-          _usernameError = AppLocalizations.of(context)?.usernameTaken ?? "Username is already taken.";
+          _usernameError = AppLocalizations.of(context)?.usernameTaken ??
+              "Username is already taken.";
         }
       });
     });
@@ -246,8 +248,7 @@ class _UserInfoInputScreenState extends State<UserInfoInputScreen> {
       final currentState = cubit.state;
       if (currentState.height == null || currentState.weight == null) {
         try {
-          final healthData =
-              await HealthService().fetchUserProfileFromHealth();
+          final healthData = await HealthService().fetchUserProfileFromHealth();
           if (healthData.isNotEmpty && mounted) {
             final double? newHeight = currentState.height ??
                 (healthData['height'] as num?)?.toDouble();
@@ -318,7 +319,8 @@ class _UserInfoInputScreenState extends State<UserInfoInputScreen> {
                 child: BlocBuilder<UserInfoCubit, UserInfoState>(
                   builder: (context, state) {
                     return CustomNextButton(
-                        text: AppLocalizations.of(context)?.next ?? AppStrings.next,
+                        text: AppLocalizations.of(context)?.next ??
+                            AppStrings.next,
                         onNextPressed: () async {
                           final height = state.height;
                           final weight = state.weight;
@@ -327,8 +329,9 @@ class _UserInfoInputScreenState extends State<UserInfoInputScreen> {
                           if (height == null || weight == null || age == null) {
                             UiUtilsService.showToast(
                               context: context,
-                              text:
-                                  AppLocalizations.of(context)?.fillHeightWeightAge ?? "Please fill in height, weight, and age before continuing.",
+                              text: AppLocalizations.of(context)
+                                      ?.fillHeightWeightAge ??
+                                  "Please fill in height, weight, and age before continuing.",
                               textColor: Colors.red,
                             );
                             return;
@@ -338,7 +341,9 @@ class _UserInfoInputScreenState extends State<UserInfoInputScreen> {
                           if (name.isEmpty) {
                             UiUtilsService.showToast(
                               context: context,
-                              text: AppLocalizations.of(context)?.enterUsername ?? "Please enter your username.",
+                              text:
+                                  AppLocalizations.of(context)?.enterUsername ??
+                                      "Please enter your username.",
                               textColor: Colors.red,
                             );
                             return;
@@ -348,8 +353,9 @@ class _UserInfoInputScreenState extends State<UserInfoInputScreen> {
                           if (!regex.hasMatch(name)) {
                             UiUtilsService.showToast(
                               context: context,
-                              text:
-                                  AppLocalizations.of(context)?.usernameMustBeAlphanumeric ?? "Username must be 3-15 alphanumeric characters or underscores.",
+                              text: AppLocalizations.of(context)
+                                      ?.usernameMustBeAlphanumeric ??
+                                  "Username must be 3-15 alphanumeric characters or underscores.",
                               textColor: Colors.red,
                             );
                             return;
@@ -442,7 +448,8 @@ class _UserInfoInputScreenState extends State<UserInfoInputScreen> {
               ),
               SizedBox(height: AppDimensions.dim8.h),
               Text(
-                AppLocalizations.of(context)?.personalizeProfile ?? "Let's personalize your hydration profile.",
+                AppLocalizations.of(context)?.personalizeProfile ??
+                    "Let's personalize your hydration profile.",
                 style: TextStyle(
                   fontFamily: AppFontStyles.urbanistFontFamily,
                   fontSize: AppFontStyles.fontSize_14,
@@ -523,7 +530,8 @@ class _UserInfoInputScreenState extends State<UserInfoInputScreen> {
               SizedBox(height: AppDimensions.dim8.h),
               if (_isUsernameReadOnly)
                 Text(
-                  AppLocalizations.of(context)?.usernameCannotBeChanged ?? "Username cannot be changed once set.",
+                  AppLocalizations.of(context)?.usernameCannotBeChanged ??
+                      "Username cannot be changed once set.",
                   style: TextStyle(
                     color: Colors.grey.shade600,
                     fontSize: AppFontStyles.fontSize_13.sp,
@@ -534,7 +542,8 @@ class _UserInfoInputScreenState extends State<UserInfoInputScreen> {
               else ...[
                 if (_isCheckingUsername)
                   Text(
-                    AppLocalizations.of(context)?.checkingAvailability ?? "Checking availability...",
+                    AppLocalizations.of(context)?.checkingAvailability ??
+                        "Checking availability...",
                     style: TextStyle(
                       color: Colors.grey,
                       fontSize: AppFontStyles.fontSize_13.sp,
@@ -559,7 +568,8 @@ class _UserInfoInputScreenState extends State<UserInfoInputScreen> {
                           color: Colors.green, size: 16.r),
                       SizedBox(width: 4.w),
                       Text(
-                        AppLocalizations.of(context)?.usernameAvailable ?? "Username available",
+                        AppLocalizations.of(context)?.usernameAvailable ??
+                            "Username available",
                         style: TextStyle(
                           color: Colors.green,
                           fontSize: AppFontStyles.fontSize_13.sp,
@@ -571,7 +581,8 @@ class _UserInfoInputScreenState extends State<UserInfoInputScreen> {
                   ),
                 SizedBox(height: AppDimensions.dim4.h),
                 Text(
-                  AppLocalizations.of(context)?.useLettersNumbersUnderscores ?? "Use 3-15 letters, numbers, or underscores.",
+                  AppLocalizations.of(context)?.useLettersNumbersUnderscores ??
+                      "Use 3-15 letters, numbers, or underscores.",
                   style: TextStyle(
                     color: Colors.grey.shade500,
                     fontSize: AppFontStyles.fontSize_11.sp,
@@ -625,7 +636,8 @@ class _UserInfoInputScreenState extends State<UserInfoInputScreen> {
 
               // ── Gender ──────────────────────────────────────────────────
               Text(
-                AppLocalizations.of(context)?.genderIdentity ?? "GENDER IDENTITY",
+                AppLocalizations.of(context)?.genderIdentity ??
+                    "GENDER IDENTITY",
                 style: TextStyle(
                   fontFamily: AppFontStyles.urbanistFontFamily,
                   fontSize: AppFontStyles.fontSize_13,

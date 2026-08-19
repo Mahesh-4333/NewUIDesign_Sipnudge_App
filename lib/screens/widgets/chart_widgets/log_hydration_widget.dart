@@ -8,17 +8,16 @@ import 'package:hydrify/cubit/ble/ble_cubit.dart';
 import 'package:hydrify/cubit/bottle/bottle_data_cubit.dart';
 import 'package:hydrify/cubit/data_analytics/data_analytics_cubit.dart';
 import 'package:hydrify/cubit/hydration/hydration_cubit.dart';
-import 'package:hydrify/models/hydration_entry.dart';
 import 'package:hydrify/helpers/database_helper.dart';
 import 'package:hydrify/helpers/shared_pref_helper.dart';
 import 'package:hydrify/helpers/hydration_helper.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:hydrify/screens/widgets/water_wave_widget.dart';
-import 'package:hydrify/services/database_sync_service.dart';
 import 'package:hydrify/services/home_widget_service.dart';
 import 'package:intl/intl.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:hydrify/services/api_service.dart';
+import 'package:hydrify/services/sync_bus.dart';
 
 class LogHydrationWidget extends StatefulWidget {
   const LogHydrationWidget({super.key});
@@ -106,9 +105,17 @@ class _LogHydrationWidgetState extends State<LogHydrationWidget> {
     });
   }
 
+  @override
+  void dispose() {
+    _configSubscription.cancel();
+    super.dispose();
+  }
+
   getdata() async {
     _fetchLogs();
   }
+
+  bool _isSaving = false;
 
   _fetchLogs() async {
     setState(() {
@@ -140,15 +147,16 @@ class _LogHydrationWidgetState extends State<LogHydrationWidget> {
                     : 0.0;
                 final serverId = log['_id']?.toString();
 
-                // Parse timestamp from server (always UTC) and normalize to UTC string
+                // Parse timestamp from server (always UTC) then convert to
+                // local time — DB stores timestamps in local time.
                 final rawTimestamp = log['timestamp'];
                 final DateTime parsedTs = rawTimestamp is String
-                    ? (DateTime.tryParse(rawTimestamp)?.toUtc() ??
-                        DateTime.now().toUtc())
-                    : DateTime.now().toUtc();
-                final utcTimestampStr = parsedTs.toUtc().toIso8601String();
+                    ? (DateTime.tryParse(rawTimestamp)?.toLocal() ??
+                        DateTime.now())
+                    : DateTime.now();
+                final localTimestampStr = parsedTs.toLocal().toIso8601String();
 
-                // Dedup: prefer server_id match; fall back to UTC timestamp match
+                // Dedup: prefer server_id match; fall back to local timestamp match
                 List<Map<String, dynamic>> matches = [];
                 if (serverId != null) {
                   matches = await txn.query(
@@ -161,7 +169,7 @@ class _LogHydrationWidgetState extends State<LogHydrationWidget> {
                   matches = await txn.query(
                     DatabaseHelper.logHydrationTableName,
                     where: 'type = ? AND consumed = ? AND timestamp = ?',
-                    whereArgs: [type, consumed, utcTimestampStr],
+                    whereArgs: [type, consumed, localTimestampStr],
                   );
                 }
 
@@ -172,7 +180,7 @@ class _LogHydrationWidgetState extends State<LogHydrationWidget> {
                     {
                       'type': type,
                       'consumed': consumed,
-                      'timestamp': utcTimestampStr,
+                      'timestamp': localTimestampStr,
                       if (serverId != null) 'server_id': serverId,
                     },
                   );
@@ -196,15 +204,73 @@ class _LogHydrationWidgetState extends State<LogHydrationWidget> {
           }
         }
       }
-      setState(() {
-        _recentLogs = logs;
-      });
+      if (mounted) {
+        setState(() {
+          _recentLogs = List<Map<String, dynamic>>.from(logs);
+        });
+      }
     } catch (e) {
       debugPrint("Error fetching logs: $e");
     } finally {
-      setState(() {
-        _isLoadingLogs = false;
-      });
+      if (mounted) {
+        setState(() {
+          _isLoadingLogs = false;
+        });
+      }
+    }
+
+    // Trigger background sync for any unsynced offline logs
+    _syncPendingLogs();
+  }
+
+  /// Synchronizes any pending offline logs (server_id == null) in the background.
+  Future<void> _syncPendingLogs() async {
+    try {
+      final userId = await SharedPrefsHelper.getUserId();
+      final userEmail = await SharedPrefsHelper.getUserEmail();
+      if (userId == null || userEmail == "guest_user") return;
+
+      final db = await DatabaseHelper().database;
+      final unsynced = await db.query(
+        DatabaseHelper.logHydrationTableName,
+        where: 'server_id IS NULL',
+      );
+
+      for (final log in unsynced) {
+        final localId = log['id'] as int;
+        final type = log['type']?.toString() ?? 'Water';
+        final consumed = (log['consumed'] as num?)?.toDouble() ?? 0.0;
+        final rawTs = log['timestamp']?.toString();
+        final dt = rawTs != null
+            ? (DateTime.tryParse(rawTs) ?? DateTime.now())
+            : DateTime.now();
+        final utcTs = dt.toUtc().toIso8601String();
+        final localDate =
+            '${dt.year.toString().padLeft(4, '0')}-${dt.month.toString().padLeft(2, '0')}-${dt.day.toString().padLeft(2, '0')}';
+
+        final serverId = await ApiService().createManualLog(
+          userId,
+          type,
+          consumed,
+          utcTs,
+          localDate: localDate,
+        );
+        if (serverId != null) {
+          await DatabaseHelper().updateLogServerId(localId, serverId);
+          if (mounted) {
+            setState(() {
+              final idx = _recentLogs.indexWhere((l) => l['id'] == localId);
+              if (idx != -1) {
+                final updated = Map<String, dynamic>.from(_recentLogs[idx]);
+                updated['server_id'] = serverId;
+                _recentLogs[idx] = updated;
+              }
+            });
+          }
+        }
+      }
+    } catch (e) {
+      debugPrint("Error syncing pending logs in background: $e");
     }
   }
 
@@ -217,115 +283,193 @@ class _LogHydrationWidgetState extends State<LogHydrationWidget> {
         DatabaseHelper.hydrationCoefficients[type] ?? 1.0;
     final double effectiveWater = amount * coefficient;
 
+    // 1. Optimistic UI update: Remove item from local list instantly
+    setState(() {
+      _recentLogs.removeWhere((l) => l['id'] == localId);
+    });
+
+    Fluttertoast.showToast(msg: "Log deleted");
+
     // Queue negative delta for BLE 000A
     await SharedPrefsHelper.addPendingManualDelta(-effectiveWater.toInt());
 
-    // 1. Delete from server first (before local, so we still have the record to match)
+    // 2. Delete from local SQLite
+    await DatabaseHelper().deleteHydrationLog(localId, amount, type);
+    await DatabaseHelper().updateHydrationDaySummary(-effectiveWater);
+
+    // 3. Immediately trigger Cubit & BLE UI updates and notify all chart/graph listeners
+    if (mounted) {
+      bleCubit.triggerRefresh();
+      bleCubit.syncPendingManualDelta();
+      hydrationCubit.refreshAchievementStats();
+      SyncBus.instance.notifySyncComplete();
+    }
+
+    // 4. Background Server Deletion (non-blocking)
     final userId = await SharedPrefsHelper.getUserId();
     final userEmail = await SharedPrefsHelper.getUserEmail();
     if (userId != null && userEmail != "guest_user") {
-      await ApiService().deleteManualLog(
+      final parsedTime =
+          DateTime.tryParse(utcTimestamp)?.toLocal() ?? DateTime.now();
+      final localDateStr =
+          '${parsedTime.year.toString().padLeft(4, '0')}-${parsedTime.month.toString().padLeft(2, '0')}-${parsedTime.day.toString().padLeft(2, '0')}';
+
+      // Fire and forget server delete in background
+      ApiService()
+          .deleteManualLog(
         userId,
         type,
         amount,
         utcTimestamp,
         serverId: serverId,
-      );
+        localDate: localDateStr,
+      )
+          .then((_) {
+        // Refresh analytics, bottle cubit and notify sync complete in background once server responds
+        if (mounted) {
+          context.read<BottleDataCubit>().getCurrentDayHistory();
+          context.read<DataAnalyticsCubit>().fetchAnalytics();
+          SyncBus.instance.notifySyncComplete();
+        }
+      }).catchError((e) {
+        debugPrint("Background deleteManualLog error: $e");
+      });
     }
-
-    // 2. Delete locally
-    await DatabaseHelper().deleteHydrationLog(localId, amount, type);
-
-    // 2.5. Await complete sync to server
-    await DatabaseSyncService().syncAll();
-
-    if (!mounted) return;
-
-    // 3. Refresh today's consumption from server / cubit
-    await context.read<BottleDataCubit>().getCurrentDayHistory();
-
-    if (!mounted) return;
-
-    // 4. Trigger Cubit refreshes & BLE delta sync for all charts & UI widgets
-    bleCubit.triggerRefresh();
-    bleCubit.syncPendingManualDelta();
-    hydrationCubit.refreshAchievementStats();
-    context.read<DataAnalyticsCubit>().fetchAnalytics();
-
-    Fluttertoast.showToast(msg: "Log deleted");
-
-    // 5. Refresh logs list
-    await _fetchLogs();
   }
 
   _saveLog() async {
+    if (_isSaving) return;
+
     if (_currentAmount <= 0) {
       Fluttertoast.showToast(msg: "Please select an amount");
       return;
     }
 
+    final drinkType = _selectedDrink;
+    final drinkAmount = _currentAmount;
     final hydrationCubit = context.read<HydrationCubit>();
     final bleCubit = context.read<BleCubit>();
     final now = DateTime.now();
     final utcTimestamp = now.toUtc().toIso8601String();
+    final localTimestampStr = now.toLocal().toIso8601String();
+    final localDateStr =
+        '${now.year.toString().padLeft(4, '0')}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
 
     final double coefficient =
-        DatabaseHelper.hydrationCoefficients[_selectedDrink] ?? 1.0;
-    final double effectiveWater = _currentAmount * coefficient;
+        DatabaseHelper.hydrationCoefficients[drinkType] ?? 1.0;
+    final double effectiveWater = drinkAmount * coefficient;
 
-    // Queue positive delta for BLE 000A
+    setState(() {
+      _isSaving = true;
+    });
+
+    // 1. Queue positive delta for BLE 000A
     await SharedPrefsHelper.addPendingManualDelta(effectiveWater.toInt());
 
-    // 1. Insert locally first (returns local id)
+    // 2. Insert locally first (instant)
     final localId = await DatabaseHelper().insertHydrationLog(
-      _selectedDrink,
-      _currentAmount,
+      drinkType,
+      drinkAmount,
       now,
     );
 
-    // 2. Sync new log to server and get server_id back
-    final userId = await SharedPrefsHelper.getUserId();
-    final userEmail = await SharedPrefsHelper.getUserEmail();
-    if (userId != null && userEmail != "guest_user") {
-      final serverId = await ApiService().createManualLog(
-        userId,
-        _selectedDrink,
-        _currentAmount,
-        utcTimestamp,
-      );
-      // Back-fill server_id in local DB for future reliable dedup & deletion
-      if (serverId != null) {
-        await DatabaseHelper().updateLogServerId(localId, serverId);
+    // 2.5. Update local today summary
+    await DatabaseHelper().updateHydrationDaySummary(effectiveWater);
+
+    // 3. Optimistic UI update: Insert directly into recent logs list if today is selected
+    if (DateUtils.isSameDay(_selectedDate, now)) {
+      setState(() {
+        _recentLogs.insert(0, {
+          'id': localId,
+          'type': drinkType,
+          'consumed': drinkAmount,
+          'timestamp': localTimestampStr,
+          'server_id': null,
+        });
+      });
+    }
+
+    // 4. Instant Visual & Haptic Feedback to User
+    Fluttertoast.showToast(
+      msg:
+          "Logged ${HydrationHelper.formatVolume(drinkAmount, _selectedUnit, showUnit: true)} of $drinkType",
+    );
+
+    // 5. Trigger instant Cubit, Chart & Widget refreshes
+    if (mounted) {
+      bleCubit.triggerRefresh();
+      bleCubit.syncPendingManualDelta();
+      hydrationCubit.refreshAchievementStats();
+      SyncBus.instance.notifySyncComplete();
+      try {
+        HomeWidgetService.updateWidgetData();
+      } catch (_) {}
+    }
+
+    // Re-enable button after short debounce
+    Future.delayed(const Duration(milliseconds: 600), () {
+      if (mounted) {
+        setState(() {
+          _isSaving = false;
+        });
       }
-    }
+    });
 
-    // 2.5. Await complete sync to server
-    await DatabaseSyncService().syncAll();
+    // 6. Background Server Sync (Non-blocking - does not freeze UI)
+    _syncSingleLogToServer(
+      localId: localId,
+      type: drinkType,
+      amount: drinkAmount,
+      utcTimestamp: utcTimestamp,
+      localDateStr: localDateStr,
+    );
+  }
 
-    if (!mounted) return;
-
-    // 3. Refresh today's consumption from server / cubit
-    await context.read<BottleDataCubit>().getCurrentDayHistory();
-
-    if (!mounted) return;
-
-    // 4. Trigger Cubit refreshes & BLE delta sync for all charts & UI widgets
-    bleCubit.triggerRefresh();
-    bleCubit.syncPendingManualDelta();
-    hydrationCubit.refreshAchievementStats();
-    context.read<DataAnalyticsCubit>().fetchAnalytics();
-
+  /// Sends the newly added log to the server in background without blocking UI.
+  Future<void> _syncSingleLogToServer({
+    required int localId,
+    required String type,
+    required double amount,
+    required String utcTimestamp,
+    required String localDateStr,
+  }) async {
     try {
-      await HomeWidgetService.updateWidgetData();
-    } catch (e) {
-      // Handle or ignore gracefully
-    }
+      final userId = await SharedPrefsHelper.getUserId();
+      final userEmail = await SharedPrefsHelper.getUserEmail();
+      if (userId != null && userEmail != "guest_user") {
+        final serverId = await ApiService().createManualLog(
+          userId,
+          type,
+          amount,
+          utcTimestamp,
+          localDate: localDateStr,
+        );
 
-    // Fluttertoast.showToast(
-    //     msg:
-    //         "Logged ${HydrationHelper.formatVolume(_currentAmount, _selectedUnit, showUnit: true)} of $_selectedDrink"
-    //         " (${HydrationHelper.formatVolume(effectiveWater, _selectedUnit, showUnit: true)} water equivalent)");
-    await _fetchLogs();
+        if (serverId != null) {
+          await DatabaseHelper().updateLogServerId(localId, serverId);
+
+          if (mounted) {
+            setState(() {
+              final idx = _recentLogs.indexWhere((l) => l['id'] == localId);
+              if (idx != -1) {
+                final updated = Map<String, dynamic>.from(_recentLogs[idx]);
+                updated['server_id'] = serverId;
+                _recentLogs[idx] = updated;
+              }
+            });
+            // Update Cubits with server status in background and notify graph listeners
+            context.read<BottleDataCubit>().getCurrentDayHistory();
+            context.read<DataAnalyticsCubit>().fetchAnalytics();
+            SyncBus.instance.notifySyncComplete();
+          }
+        }
+      }
+
+      // Check for any remaining pending logs
+      _syncPendingLogs();
+    } catch (e) {
+      debugPrint("Background sync error for log id=$localId: $e");
+    }
   }
 
   @override
@@ -796,9 +940,11 @@ class _LogHydrationWidgetState extends State<LogHydrationWidget> {
           ),
           SizedBox(height: 30.h),
           ElevatedButton(
-            onPressed: _saveLog,
+            onPressed: _isSaving ? null : _saveLog,
             style: ElevatedButton.styleFrom(
-              backgroundColor: Color(0xFF00A3FF),
+              backgroundColor: _isSaving
+                  ? Color(0xFF00A3FF).withValues(alpha: 0.6)
+                  : Color(0xFF00A3FF),
               minimumSize: Size(double.infinity, 55.h),
               shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(30.r)),

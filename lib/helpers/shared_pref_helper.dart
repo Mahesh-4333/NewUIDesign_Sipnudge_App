@@ -8,6 +8,8 @@ class SharedPrefsHelper {
   // Config Update Stream
   static final StreamController<void> configUpdateStream =
       StreamController<void>.broadcast();
+  static final StreamController<void> bottleColorUpdateStream =
+      StreamController<void>.broadcast();
 
   // Existing Keys
   static const String _keyUserEmail = 'user_email';
@@ -476,6 +478,7 @@ class SharedPrefsHelper {
     // safety: allow only supported bottles
     if (_bottles.contains(color.toLowerCase())) {
       await prefs.setString(_bottleKey, color.toLowerCase());
+      bottleColorUpdateStream.add(null);
     }
   }
 
@@ -857,7 +860,9 @@ class SharedPrefsHelper {
     final current = prefs.getInt(_keyPendingManualDelta) ?? 0;
     final updated = current + delta;
     await prefs.setInt(_keyPendingManualDelta, updated);
-    Console.log(tag: "BLE_DELTA", value: "Accumulated delta: $current + $delta = $updated");
+    Console.log(
+        tag: "BLE_DELTA",
+        value: "Accumulated delta: $current + $delta = $updated");
   }
 
   /// Get currently accumulated manual liquid delta

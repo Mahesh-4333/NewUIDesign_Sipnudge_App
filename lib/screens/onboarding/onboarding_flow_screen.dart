@@ -77,7 +77,13 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
           onEnableBluetooth: () {
             _nextPage();
           },
-          onSkip: widget.onFlowSkipped ?? _nextPage,
+          onSkip: () {
+            _pageController.animateToPage(
+              4,
+              duration: const Duration(milliseconds: 350),
+              curve: Curves.easeInOut,
+            );
+          },
           onBack: _previousPage,
         ),
 
@@ -105,8 +111,11 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
                   onDone: () {
                     if (widget.onFlowCompleted != null) {
                       widget.onFlowCompleted!();
-                    } else if (Navigator.canPop(context)) {
-                      Navigator.pop(context);
+                    } else {
+                      // Pop IntakeTimelineIntroScreen
+                      Navigator.of(context).pop();
+                      // Pop OnboardingFlowScreen
+                      Navigator.of(context).pop();
                     }
                   },
                 ),

@@ -272,4 +272,6 @@ class AssetsPath {
 
   static const String onboardingIntakeTutorial =
       "assets/onboarding/intake_tutorial.mp4";
+
+  static const String language = "assets/images/language.png";
 }

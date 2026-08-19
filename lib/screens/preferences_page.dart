@@ -53,7 +53,8 @@ class PreferencesPage extends StatelessWidget {
               backgroundColor: Colors.transparent,
               centerTitle: true,
               title: Text(
-                AppLocalizations.of(context)?.preferences ?? AppStrings.preferences,
+                AppLocalizations.of(context)?.preferences ??
+                    AppStrings.preferences,
                 style: TextStyle(
                     color: AppColors.bluegray,
                     fontSize: AppFontStyles.fontSize_AppBar,
@@ -98,8 +99,9 @@ class PreferencesPage extends StatelessWidget {
                           String formattedGoal = "${goal.toString()} mL";
 
                           return MenuItemTile(
-                            title: AppLocalizations.of(context)?.waterIntakeGoal ??
-                                AppStrings.waterIntakeGoal,
+                            title:
+                                AppLocalizations.of(context)?.waterIntakeGoal ??
+                                    AppStrings.waterIntakeGoal,
                             info: formattedGoal,
                             iconpatharrow: "assets/arrow.png",
                             onTap: () {
@@ -125,7 +127,8 @@ class PreferencesPage extends StatelessWidget {
                       PreferenceCard(
                         children: [
                           CustomToggleTile(
-                            title: AppLocalizations.of(context)?.ringtoneFeedback ??
+                            title: AppLocalizations.of(context)
+                                    ?.ringtoneFeedback ??
                                 AppStrings.ringtoneFeedback,
                             description: AppLocalizations.of(context)
                                     ?.playAudioWhenTargetIsMet ??
@@ -162,8 +165,9 @@ class PreferencesPage extends StatelessWidget {
                         ],
                       ),
                       SectionHeader(
-                          title: AppLocalizations.of(context)?.hapticsAndVisuals ??
-                              AppStrings.hapticsAndVisuals),
+                          title:
+                              AppLocalizations.of(context)?.hapticsAndVisuals ??
+                                  AppStrings.hapticsAndVisuals),
                       PreferenceCard(
                         children: [
                           // Vibration: Haptic Intensity — segmented (Green)
@@ -172,10 +176,12 @@ class PreferencesPage extends StatelessWidget {
                                     ?.vibrationHapticIntensity ??
                                 AppStrings.vibrationHapticIntensity,
                             options: [
-                              AppLocalizations.of(context)?.low ?? AppStrings.low,
+                              AppLocalizations.of(context)?.low ??
+                                  AppStrings.low,
                               AppLocalizations.of(context)?.medium ??
                                   AppStrings.medium,
-                              AppLocalizations.of(context)?.high ?? AppStrings.high,
+                              AppLocalizations.of(context)?.high ??
+                                  AppStrings.high,
                             ],
                             selectedOption: state.hapticIntensity,
                             activeColor: const Color(0xFF4CAF50),
@@ -192,7 +198,8 @@ class PreferencesPage extends StatelessWidget {
                                     ?.ledNotificationLight ??
                                 AppStrings.ledNotificationLight,
                             options: [
-                              AppLocalizations.of(context)?.dim ?? AppStrings.dim,
+                              AppLocalizations.of(context)?.dim ??
+                                  AppStrings.dim,
                               AppLocalizations.of(context)?.medium ??
                                   AppStrings.medium,
                               AppLocalizations.of(context)?.bright ??
@@ -219,7 +226,8 @@ class PreferencesPage extends StatelessWidget {
                             options: [
                               AppLocalizations.of(context)?.normal ??
                                   AppStrings.normal,
-                              AppLocalizations.of(context)?.fast ?? AppStrings.fast,
+                              AppLocalizations.of(context)?.fast ??
+                                  AppStrings.fast,
                             ],
                             selectedOption: state.uvSpeed,
                             activeColor: const Color(0xFF9C27B0),
@@ -261,15 +269,23 @@ class PreferencesPage extends StatelessWidget {
                                     return EraseDataDialog(
                                       onErase: () async {
                                         try {
-                                          await SharedPrefsHelper.setIsErasingData(true);
+                                          await SharedPrefsHelper
+                                              .setIsErasingData(true);
 
                                           // Set today's consumed to 0 on the server first
-                                          final userId = await SharedPrefsHelper.getUserId();
+                                          final userId = await SharedPrefsHelper
+                                              .getUserId();
                                           if (userId != null) {
-                                            final todayStr = DateTime.now().toIso8601String().substring(0, 10);
-                                            final dateUtc = '${todayStr}T00:00:00.000Z';
-                                            final goal = await SharedPrefsHelper.getUserGoal() ?? 2500;
-                                            await ApiService().updateTodayConsumed(
+                                            final todayStr = DateTime.now()
+                                                .toIso8601String()
+                                                .substring(0, 10);
+                                            final dateUtc =
+                                                '${todayStr}T00:00:00.000Z';
+                                            final goal = await SharedPrefsHelper
+                                                    .getUserGoal() ??
+                                                2500;
+                                            await ApiService()
+                                                .updateTodayConsumed(
                                               userId,
                                               dateUtc,
                                               0.0,
@@ -318,13 +334,16 @@ class PreferencesPage extends StatelessWidget {
                                           await SharedPrefsHelper
                                               .updateAndSaveDeviceConfig(
                                                   triggerStream: true);
-                                          await SharedPrefsHelper.setIsErasingData(false);
+                                          await SharedPrefsHelper
+                                              .setIsErasingData(false);
                                           Fluttertoast.showToast(
                                               msg: AppStrings.localDataCleared);
                                           Fluttertoast.showToast(
-                                              msg: AppStrings.trackingRestarted);
+                                              msg:
+                                                  AppStrings.trackingRestarted);
                                         } catch (e) {
-                                          await SharedPrefsHelper.setIsErasingData(false);
+                                          await SharedPrefsHelper
+                                              .setIsErasingData(false);
                                           Fluttertoast.showToast(
                                               msg:
                                                   "${AppStrings.errorClearingLocalData}$e");
@@ -341,7 +360,8 @@ class PreferencesPage extends StatelessWidget {
                                 ),
                               ),
                               child: Text(
-                                AppLocalizations.of(context)?.resetAllTrackings ??
+                                AppLocalizations.of(context)
+                                        ?.resetAllTrackings ??
                                     AppStrings.resetAllTrackings,
                                 style: TextStyle(
                                     color: const Color(0xffE53935),

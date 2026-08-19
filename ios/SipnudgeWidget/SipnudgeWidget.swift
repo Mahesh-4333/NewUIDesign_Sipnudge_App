@@ -96,16 +96,16 @@ struct Provider: TimelineProvider {
                 upcomingSlotTime = "\(hour12):\(minStr) \(period)"
 
                 // Calculate cumulative expected targets at current date/time
-                for slot in sortedSlots {
-                    let startMin = slot.hour * 60 + slot.minute
+                for (index, slot) in sortedSlots.enumerated() {
+                    let prevEndMin = index == 0 ? 0 : (sortedSlots[index - 1].endHour * 60 + sortedSlots[index - 1].endMinute)
                     let endMin = slot.endHour * 60 + slot.endMinute
                     
                     if nowTotalMinutes >= endMin {
                         expectedCumulative += Double(slot.target)
-                    } else if nowTotalMinutes >= startMin && nowTotalMinutes < endMin {
-                        let duration = endMin - startMin
+                    } else if nowTotalMinutes >= prevEndMin && nowTotalMinutes < endMin {
+                        let duration = endMin - prevEndMin
                         if duration > 0 {
-                            let elapsed = nowTotalMinutes - startMin
+                            let elapsed = nowTotalMinutes - prevEndMin
                             expectedCumulative += Double(slot.target) * (Double(elapsed) / Double(duration))
                         }
                         break
@@ -157,9 +157,17 @@ struct Provider: TimelineProvider {
             return
         }
 
-        // Use the dedicated widget endpoint: returns today's summary + latest
-        // battery from HydrationLog in a single request — no date params needed.
-        guard let url = URL(string: "https://api.sipnudge.com/api/database/today-widget-data/\(userId)") else {
+        let startOfToday = calendar.startOfDay(for: now)
+        let endOfToday = calendar.date(bySettingHour: 23, minute: 59, second: 59, of: startOfToday) ?? startOfToday.addingTimeInterval(86399)
+        
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime]
+        let startDateStr = formatter.string(from: startOfToday)
+        let endDateStr = formatter.string(from: endOfToday)
+        
+        let urlString = "https://api.sipnudge.com/api/database/today-widget-data/\(userId)?startDate=\(startDateStr.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? "")&endDate=\(endDateStr.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? "")"
+        
+        guard let url = URL(string: urlString) else {
             completion(compileTimeline())
             return
         }
@@ -379,26 +387,6 @@ struct SipnudgeWidgetEntryView : View {
                             Text(percentageString)
                                 .font(.system(size: 24, weight: .bold, design: .rounded))
                                 .foregroundColor(Color(red: 0.09, green: 0.15, blue: 0.27))
-                            
-                            if entry.latestDrinkType.lowercased() == "water" || (entry.waterIntake > 0 && entry.latestDrinkType.lowercased() != "coffee") {
-                                Text("+")
-                                    .font(.system(size: 11, weight: .semibold, design: .rounded))
-                                    .foregroundColor(Color(red: 0/255.0, green: 163/255.0, blue: 255/255.0))
-                                    .padding(.vertical, -3)
-                                
-                                Text("\(entry.waterIntake > 0 ? entry.waterIntake : entry.latestDrinkAmount) ml")
-                                    .font(.system(size: 12, weight: .bold, design: .rounded))
-                                    .foregroundColor(Color(red: 0/255.0, green: 163/255.0, blue: 255/255.0))
-                            } else if entry.coffeeIntake > 0 || entry.latestDrinkType.lowercased() == "coffee" {
-                                Text("+")
-                                    .font(.system(size: 11, weight: .semibold, design: .rounded))
-                                    .foregroundColor(Color(red: 0.76, green: 0.61, blue: 0.49))
-                                    .padding(.vertical, -3)
-                                
-                                Text("\(entry.coffeeIntake > 0 ? entry.coffeeIntake : entry.latestDrinkAmount) ml")
-                                    .font(.system(size: 12, weight: .bold, design: .rounded))
-                                    .foregroundColor(Color(red: 0.76, green: 0.61, blue: 0.49))
-                            }
                         }
                     }
                     .frame(width: 90, height: 90)
@@ -459,85 +447,46 @@ struct SipnudgeWidgetEntryView : View {
                         ZStack {
                             Circle()
                                 .fill(Color(red: 0.92, green: 0.96, blue: 1.00))
-                                .frame(width: 26, height: 26)
-                            Image(systemName: "clock.fill")
-                                .font(.system(size: 11, weight: .semibold))
+                                .frame(width: 28, height: 28)
+                            Image(systemName: "clock.arrow.circlepath")
+                                .font(.system(size: 12, weight: .semibold))
                                 .foregroundColor(Color(red: 0.00, green: 0.48, blue: 1.00))
                         }
-                        VStack(alignment: .leading, spacing: 0) {
+                        VStack(alignment: .leading, spacing: 1) {
                             Text("Next sip")
                                 .font(.system(size: 9, weight: .medium, design: .rounded))
                                 .foregroundColor(Color(red: 77/255.0, green: 117/255.0, blue: 139/255.0))
                             Text(entry.upcomingSlotTime)
-                                .font(.system(size: 13, weight: .bold, design: .rounded))
+                                .font(.system(size: 12, weight: .bold, design: .rounded))
                                 .foregroundColor(Color(red: 0.09, green: 0.15, blue: 0.27))
                         }
                     }
-                    .padding(.vertical, 2)
+                    .padding(.vertical, 4)
                     
-                    // Coffee & Water Action Buttons Row
-                    HStack(spacing: 5) {
-                        // Coffee Button
-                        Link(destination: URL(string: "sipnudge://quick-add?type=coffee")!) {
-                            HStack(spacing: 2) {
-                                Text("Coffee")
-                                    .font(.system(size: 11, weight: .semibold, design: .rounded))
-                                    .foregroundColor(Color(red: 0.09, green: 0.15, blue: 0.27))
-                                    .lineLimit(1)
-                                    .minimumScaleFactor(0.7)
-                                
-                                Spacer(minLength: 1)
-                                
-                                ZStack {
-                                    Circle()
-                                        .fill(Color(red: 120/255.0, green: 72/255.0, blue: 30/255.0))
-                                        .frame(width: 18, height: 18)
-                                    Text("+")
-                                        .font(.system(size: 11, weight: .bold, design: .rounded))
-                                        .foregroundColor(.white)
-                                }
-                            }
-                            .padding(.leading, 7)
-                            .padding(.trailing, 4)
-                            .padding(.vertical, 5)
-                            .background(
-                                Capsule()
-                                    .fill(Color(red: 243/255.0, green: 220/255.0, blue: 195/255.0))
-                            )
-                            .contentShape(Rectangle())
+                    Divider()
+                        .padding(.leading, 36)
+                        .padding(.vertical, 2)
+                    
+                    // Row 2: Water Left
+                    HStack(spacing: 8) {
+                        ZStack {
+                            Circle()
+                                .fill(Color(red: 0.92, green: 0.96, blue: 1.00))
+                                .frame(width: 28, height: 28)
+                            Image(systemName: "drop")
+                                .font(.system(size: 12, weight: .semibold))
+                                .foregroundColor(Color(red: 0.00, green: 0.48, blue: 1.00))
                         }
-
-                        // Water Button
-                        Link(destination: URL(string: "sipnudge://quick-add?type=water")!) {
-                            HStack(spacing: 2) {
-                                Text("Water")
-                                    .font(.system(size: 11, weight: .semibold, design: .rounded))
-                                    .foregroundColor(Color(red: 0.09, green: 0.15, blue: 0.27))
-                                    .lineLimit(1)
-                                    .minimumScaleFactor(0.7)
-                                
-                                Spacer(minLength: 1)
-                                
-                                ZStack {
-                                    Circle()
-                                        .fill(Color(red: 0/255.0, green: 163/255.0, blue: 255/255.0))
-                                        .frame(width: 18, height: 18)
-                                    Text("+")
-                                        .font(.system(size: 11, weight: .bold, design: .rounded))
-                                        .foregroundColor(.white)
-                                }
-                            }
-                            .padding(.leading, 7)
-                            .padding(.trailing, 4)
-                            .padding(.vertical, 5)
-                            .background(
-                                Capsule()
-                                    .fill(Color(red: 224/255.0, green: 242/255.0, blue: 254/255.0))
-                            )
-                            .contentShape(Rectangle())
+                        VStack(alignment: .leading, spacing: 1) {
+                            Text("Only")
+                                .font(.system(size: 9, weight: .medium, design: .rounded))
+                                .foregroundColor(Color(red: 77/255.0, green: 117/255.0, blue: 139/255.0))
+                            Text("\(formatNumber(max(0, entry.goal - entry.intake))) ml left")
+                                .font(.system(size: 12, weight: .bold, design: .rounded))
+                                .foregroundColor(Color(red: 0.09, green: 0.15, blue: 0.27))
                         }
                     }
-                    .padding(.top, 2)
+                    .padding(.vertical, 4)
                 }
             }
         }

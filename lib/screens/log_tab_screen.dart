@@ -16,7 +16,7 @@ import 'package:hydrify/models/food_scan_data.dart';
 import 'package:hydrify/screens/widgets/chart_widgets/food_scanner_widget.dart';
 import 'package:hydrify/screens/widgets/chart_widgets/log_hydration_widget.dart';
 import 'package:fluttertoast/fluttertoast.dart';
-import 'package:hydrify/services/database_sync_service.dart';
+import 'package:hydrify/services/sync_bus.dart';
 import 'package:intl/intl.dart';
 
 class LogTabScreen extends StatefulWidget {
@@ -126,6 +126,7 @@ class _LogTabScreenState extends State<LogTabScreen> {
       dishName: log.dishName,
       timestamp: log.timestamp.toIso8601String(),
     );
+    await DatabaseHelper().updateHydrationDaySummary(-log.waterContentMl);
 
     // 2. Delete on backend server
     final userId = await SharedPrefsHelper.getUserId();
@@ -144,8 +145,8 @@ class _LogTabScreenState extends State<LogTabScreen> {
     // 3. Reload list
     await _loadFoodLogs();
 
-    // 4. Background sync
-    DatabaseSyncService().syncAll();
+    // 4. Notify all charts & UI listeners
+    SyncBus.instance.notifySyncComplete();
   }
 
   Widget _buildFoodIcon(FoodScanData log) {

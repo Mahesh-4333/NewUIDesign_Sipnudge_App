@@ -265,7 +265,8 @@ class EnableBluetoothScreen extends StatelessWidget {
                         ],
                       ).createShader(bounds),
                       child: Text(
-                        AppLocalizations.of(context)?.yourSipnudgeBottle ?? 'Your Sipnudge Bottle',
+                        AppLocalizations.of(context)?.yourSipnudgeBottle ??
+                            'Your Sipnudge Bottle',
                         textAlign: TextAlign.center,
                         style: TextStyle(
                           color: Colors.white,
@@ -277,7 +278,9 @@ class EnableBluetoothScreen extends StatelessWidget {
                     ),
                     SizedBox(height: 8.h),
                     Text(
-                      AppLocalizations.of(context)?.bluetoothRequiredDescription ?? 'Bluetooth is required to sync your\nhydration data from your smart bottle\nto the app in real-time.',
+                      AppLocalizations.of(context)
+                              ?.bluetoothRequiredDescription ??
+                          'Bluetooth is required to sync your\nhydration data from your smart bottle\nto the app in real-time.',
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         color: const Color(0xFF64748B),
@@ -384,8 +387,14 @@ class EnableBluetoothScreen extends StatelessWidget {
                                     _buildFeatureRow(
                                       icon: AssetsPath
                                           .onboardingHalfRealTimeTracking,
-                                      title: AppLocalizations.of(context)?.realTimeTracking ?? 'Real-time tracking',
-                                      subtitle: AppLocalizations.of(context)?.instantLiquidLevelUpdates ?? 'Instant liquid level updates.',
+                                      title: AppLocalizations.of(context)
+                                              ?.realTimeTracking ??
+                                          'Real-time tracking',
+                                      subtitle: AppLocalizations.of(context)
+                                              ?.instantLiquidLevelUpdates ??
+                                          'Instant liquid level updates.',
+                                      iconColor: Color(0xff00629D),
+                                      bgColor: Color(0xffCFE5FF),
                                     ),
                                     SizedBox(height: 10.h),
                                     Container(
@@ -396,8 +405,14 @@ class EnableBluetoothScreen extends StatelessWidget {
                                     SizedBox(height: 10.h),
                                     _buildFeatureRow(
                                       icon: AssetsPath.onboardingSmartNudge,
-                                      title: AppLocalizations.of(context)?.smartNudges ?? 'Smart nudges',
-                                      subtitle: AppLocalizations.of(context)?.personalizedHabitBuilding ?? 'Personalized habit building.',
+                                      title: AppLocalizations.of(context)
+                                              ?.smartNudges ??
+                                          'Smart nudges',
+                                      subtitle: AppLocalizations.of(context)
+                                              ?.personalizedHabitBuilding ??
+                                          'Personalized habit building.',
+                                      iconColor: Color(0xff515F74),
+                                      bgColor: Color(0xffD5E3FC),
                                     ),
                                     SizedBox(height: 10.h),
                                     Container(
@@ -409,8 +424,14 @@ class EnableBluetoothScreen extends StatelessWidget {
                                     _buildFeatureRow(
                                       icon:
                                           AssetsPath.onboardingAccurateHistory,
-                                      title: AppLocalizations.of(context)?.accurateHistory ?? 'Accurate history',
-                                      subtitle: AppLocalizations.of(context)?.detailedConsumptionLogs ?? 'Detailed consumption logs.',
+                                      title: AppLocalizations.of(context)
+                                              ?.accurateHistory ??
+                                          'Accurate history',
+                                      subtitle: AppLocalizations.of(context)
+                                              ?.detailedConsumptionLogs ??
+                                          'Detailed consumption logs.',
+                                      iconColor: Color(0xff006686),
+                                      bgColor: Color(0xffC0E8FF),
                                     ),
                                   ],
                                 ),
@@ -458,7 +479,8 @@ class EnableBluetoothScreen extends StatelessWidget {
                             ),
                             SizedBox(width: 8.w),
                             Text(
-                              AppLocalizations.of(context)?.enableBluetooth ?? 'Enable Bluetooth',
+                              AppLocalizations.of(context)?.enableBluetooth ??
+                                  'Enable Bluetooth',
                               style: TextStyle(
                                 fontSize: 16.sp,
                                 fontFamily: AppFontStyles.urbanistFontFamily,
@@ -477,18 +499,19 @@ class EnableBluetoothScreen extends StatelessWidget {
                     GestureDetector(
                       onTap: onSkip,
                       child: Text(
-                        AppLocalizations.of(context)?.skipNoBottle ?? "Skip: I don't have a bottle",
+                        AppLocalizations.of(context)?.skipNoBottle ??
+                            "Skip: I don't have a bottle",
                         style: TextStyle(
                           color: const Color(0xFF1E293B),
                           fontSize: 14.sp,
                           fontFamily: AppFontStyles.urbanistFontFamily,
-                          decoration: TextDecoration.underline,
                           fontVariations: [
                             AppFontStyles.boldFontVariation,
                           ],
                         ),
                       ),
                     ),
+                    SizedBox(height: 10.h),
                   ],
                 ),
               ),
@@ -503,22 +526,24 @@ class EnableBluetoothScreen extends StatelessWidget {
     required String icon,
     required String title,
     required String subtitle,
+    required Color iconColor,
+    required Color bgColor,
   }) {
     return Row(
       children: [
         Container(
           width: 44.w,
           height: 44.w,
-          decoration: const BoxDecoration(
-            color: Color(0xFFE2F3FF),
-            shape: BoxShape.circle,
-          ),
+          decoration: BoxDecoration(
+              color: bgColor,
+              shape: BoxShape.circle,
+              border: Border.all(color: AppColors.greyColorText1, width: 0.7)),
           child: Center(
             child: Image.asset(
               icon,
-              color: const Color(0xFF00A2FF),
-              width: 24.w,
-              height: 24.w,
+              color: iconColor,
+              width: 20.w,
+              height: 20.w,
             ),
           ),
         ),

@@ -6,6 +6,7 @@ import 'package:hydrify/constants/app_font_styles.dart';
 import 'package:hydrify/constants/assets_path.dart';
 import 'package:hydrify/cubit/locale/locale_cubit.dart';
 import 'package:hydrify/helpers/shared_pref_helper.dart';
+import 'package:hydrify/l10n/app_localizations.dart';
 import 'package:hydrify/screens/auth/local_auth_screen.dart';
 
 class LanguageModel {
@@ -100,6 +101,7 @@ class _LanguageSelectionScreenState extends State<LanguageSelectionScreen> {
   @override
   Widget build(BuildContext context) {
     final selectedLang = _selectedLanguage;
+    final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
       body: Container(
@@ -156,7 +158,7 @@ class _LanguageSelectionScreenState extends State<LanguageSelectionScreen> {
 
                       // Title Block
                       Text(
-                        "Choose the language",
+                        l10n.chooseTheLanguage,
                         style: TextStyle(
                           color: AppColors.bluegray,
                           fontSize: 24.sp,
@@ -166,7 +168,7 @@ class _LanguageSelectionScreenState extends State<LanguageSelectionScreen> {
                       ),
                       SizedBox(height: 6.h),
                       Text(
-                        "Select your preferred language below",
+                        l10n.selectYourPreferredLanguageBelow,
                         style: TextStyle(
                           color: AppColors.greyColor,
                           fontSize: 14.sp,
@@ -178,7 +180,7 @@ class _LanguageSelectionScreenState extends State<LanguageSelectionScreen> {
 
                       // You Selected Section
                       Text(
-                        "You Selected",
+                        l10n.youSelected,
                         style: TextStyle(
                           color: AppColors.bluegray,
                           fontSize: 16.sp,
@@ -248,7 +250,7 @@ class _LanguageSelectionScreenState extends State<LanguageSelectionScreen> {
 
                       // All Languages Section
                       Text(
-                        "All Languages",
+                        l10n.allLanguages,
                         style: TextStyle(
                           color: AppColors.bluegray,
                           fontSize: 16.sp,
@@ -368,33 +370,34 @@ class _LanguageSelectionScreenState extends State<LanguageSelectionScreen> {
                 ),
               ),
 
-              // Bottom Continue Button
-              Padding(
-                padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 0.h),
-                child: SizedBox(
-                  width: double.infinity,
-                  height: 52.h,
-                  child: ElevatedButton(
-                    onPressed: _onContinue,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF2589FF),
-                      elevation: 0,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(30.r),
+              // Bottom Continue Button (Only shown on first time launch)
+              if (widget.isFirstTime)
+                Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 0.h),
+                  child: SizedBox(
+                    width: double.infinity,
+                    height: 52.h,
+                    child: ElevatedButton(
+                      onPressed: _onContinue,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF2589FF),
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(30.r),
+                        ),
                       ),
-                    ),
-                    child: Text(
-                      "Continue",
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 16.sp,
-                        fontFamily: AppFontStyles.urbanistFontFamily,
-                        fontVariations: [AppFontStyles.boldFontVariation],
+                      child: Text(
+                        l10n.continueBtn,
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 16.sp,
+                          fontFamily: AppFontStyles.urbanistFontFamily,
+                          fontVariations: [AppFontStyles.boldFontVariation],
+                        ),
                       ),
                     ),
                   ),
                 ),
-              ),
             ],
           ),
         ),

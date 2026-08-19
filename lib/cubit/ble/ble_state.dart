@@ -42,6 +42,7 @@ class BleState {
   final bool isWifiProvisioning;
   final bool showWifiFailedDialog;
   final String? wifiFailedReason;
+  final List<HydrationDaySummary> parsed30DaysList;
 
   const BleState({
     this.status = BleStatus.idle,
@@ -72,6 +73,7 @@ class BleState {
     this.isWifiProvisioning = false,
     this.showWifiFailedDialog = false,
     this.wifiFailedReason,
+    this.parsed30DaysList = const [],
   });
 
   BleState copyWith({
@@ -103,6 +105,7 @@ class BleState {
     bool? isWifiProvisioning,
     bool? showWifiFailedDialog,
     String? wifiFailedReason,
+    List<HydrationDaySummary>? parsed30DaysList,
   }) {
     return BleState(
       status: status ?? this.status,
@@ -136,6 +139,7 @@ class BleState {
       isWifiProvisioning: isWifiProvisioning ?? this.isWifiProvisioning,
       showWifiFailedDialog: showWifiFailedDialog ?? this.showWifiFailedDialog,
       wifiFailedReason: wifiFailedReason ?? this.wifiFailedReason,
+      parsed30DaysList: parsed30DaysList ?? this.parsed30DaysList,
     );
   }
 }

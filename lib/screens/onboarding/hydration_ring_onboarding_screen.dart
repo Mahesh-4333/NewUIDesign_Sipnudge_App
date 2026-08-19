@@ -959,7 +959,7 @@ class _OnboardingRingPainter extends CustomPainter {
       ..color = const Color(0xFFF1F5F9)
       ..style = PaintingStyle.stroke
       ..strokeCap = StrokeCap.round
-      ..strokeWidth = 6.w;
+      ..strokeWidth = 10.w;
 
     // Blue progress paint
     final paintBlue = Paint()

@@ -15,7 +15,28 @@ class DatabaseSyncService {
   final DatabaseHelper _dbHelper = DatabaseHelper();
   final ApiService _apiService = ApiService();
 
-  Future<void> syncAll({bool isFromBle = false, int? battery}) async {
+  static bool _isSyncing = false;
+  static DateTime? _lastSyncTime;
+
+  Future<void> syncAll({bool isFromBle = false, int? battery, bool force = false}) async {
+    if (_isSyncing) {
+      Console.log(
+          tag: "SYNC",
+          value: "DatabaseSyncService skipped: Another sync is already in progress.");
+      return;
+    }
+
+    // Throttle syncAll calls within 45 seconds unless forced or from BLE
+    if (!force && !isFromBle && _lastSyncTime != null) {
+      final elapsed = DateTime.now().difference(_lastSyncTime!);
+      if (elapsed.inSeconds < 45) {
+        Console.log(
+            tag: "SYNC",
+            value: "DatabaseSyncService throttled: Last sync was ${elapsed.inSeconds}s ago (< 45s).");
+        return;
+      }
+    }
+
     final isErasing = await SharedPrefsHelper.isErasingData();
     if (isErasing) {
       Console.log(
@@ -23,6 +44,8 @@ class DatabaseSyncService {
           value: "DatabaseSyncService skipped: Erase operation in progress.");
       return;
     }
+
+    _isSyncing = true;
 
     var userId = await SharedPrefsHelper.getUserId();
 
@@ -164,38 +187,48 @@ class DatabaseSyncService {
           var base64Str = s['image_base64'] as String?;
           final localPath = s['image_path'] as String?;
 
-          // If base64 is missing, read bytes from local image file
-          if ((base64Str == null || base64Str.isEmpty) && localPath != null) {
-            try {
-              final file = File(localPath);
-              if (file.existsSync()) {
-                final bytes = await file.readAsBytes();
-                base64Str = base64Encode(bytes);
+          // If image_path is already a remote URL (starts with http), skip file reading & uploading
+          final bool isAlreadyRemote = localPath != null &&
+              (localPath.startsWith('http://') ||
+                  localPath.startsWith('https://'));
+
+          if (!isAlreadyRemote) {
+            // If base64 is missing, read bytes from local image file
+            if ((base64Str == null || base64Str.isEmpty) && localPath != null) {
+              try {
+                final file = File(localPath);
+                if (file.existsSync()) {
+                  final bytes = await file.readAsBytes();
+                  base64Str = base64Encode(bytes);
+                }
+              } catch (e) {
+                Console.log(
+                    tag: "SYNC", value: "[syncAll] Read file failed: $e");
               }
-            } catch (e) {
-              Console.log(tag: "SYNC", value: "[syncAll] Read file failed: $e");
+            }
+
+            if (base64Str != null && base64Str.isNotEmpty) {
+              try {
+                final filename = localPath != null
+                    ? localPath.split('/').last
+                    : 'food_scan.jpg';
+                serverImageUrl =
+                    await _apiService.uploadFoodImage(base64Str, filename);
+                if (serverImageUrl != null) {
+                  final updated = Map<String, dynamic>.from(s);
+                  updated['image_path'] = serverImageUrl;
+                  await _dbHelper.insertFoodScan(updated);
+                }
+              } catch (err) {
+                Console.log(
+                    tag: "SYNC", value: "Error uploading batch image: $err");
+              }
             }
           }
 
-          if (base64Str != null && base64Str.isNotEmpty) {
-            try {
-              final filename = localPath != null
-                  ? localPath.split('/').last
-                  : 'food_scan.jpg';
-              serverImageUrl =
-                  await _apiService.uploadFoodImage(base64Str, filename);
-              if (serverImageUrl != null) {
-                final updated = Map<String, dynamic>.from(s);
-                updated['image_path'] = serverImageUrl;
-                await _dbHelper.insertFoodScan(updated);
-              }
-            } catch (err) {
-              Console.log(
-                  tag: "SYNC", value: "Error uploading batch image: $err");
-            }
-          }
-
-          final finalImagePath = serverImageUrl ?? s['image_path'];
+          final finalImagePath = isAlreadyRemote
+              ? localPath
+              : (serverImageUrl ?? s['image_path']);
 
           mappedScans.add({
             'dishName': s['dish_name'],
@@ -219,16 +252,56 @@ class DatabaseSyncService {
 
         await _syncInChunks<Map<String, dynamic>>(mappedScans, 10,
             (chunk) async {
-          await _apiService.syncFoodScans(userId!, chunk);
-        });
-      }
+          DateTime? minDate;
+          DateTime? maxDate;
+          for (final scan in chunk) {
+            final tsStr = scan['timestamp'] as String?;
+            if (tsStr != null) {
+              final date = DateTime.tryParse(tsStr);
+              if (date != null) {
+                if (minDate == null || date.isBefore(minDate)) minDate = date;
+                if (maxDate == null || date.isAfter(maxDate)) maxDate = date;
+              }
+            }
+          }
+          final startDate = minDate != null
+              ? DateTime.utc(minDate.year, minDate.month, minDate.day)
+              : null;
+          final endDate = maxDate != null
+              ? DateTime.utc(
+                  maxDate.year, maxDate.month, maxDate.day, 23, 59, 59)
+              : null;
 
-      // 4. Sync Manual Logs
-      final manualLogs = await _dbHelper.getHydrationLogs();
-      if (manualLogs.isNotEmpty) {
-        await _syncInChunks<Map<String, dynamic>>(manualLogs, 500,
-            (chunk) async {
-          await _apiService.syncManualLogs(userId!, chunk);
+          final result = await _apiService.syncFoodScans(userId!, chunk,
+              startDate: startDate, endDate: endDate);
+
+          if (result != null && result['summaries'] != null) {
+            final summaries =
+                List<Map<String, dynamic>>.from(result['summaries']);
+            for (final m in summaries) {
+              final String dateStr = m['date'] as String;
+              final datePart =
+                  dateStr.length >= 10 ? dateStr.substring(0, 10) : dateStr;
+              final targetDate = DateTime.parse(datePart);
+              final targetVal = (m['target'] as num).toDouble();
+              final consumedVal = (m['consumed'] as num).toDouble();
+              final isPerfectDay = targetVal > 0 && consumedVal >= targetVal;
+
+              final localSummary =
+                  await _dbHelper.getSummaryForDate(targetDate);
+              if (localSummary == null || localSummary.consumed < consumedVal) {
+                final updatedSummary = HydrationDaySummary(
+                  date: targetDate,
+                  dayIndex: m['dayIndex'] as int? ?? 0,
+                  target: targetVal,
+                  consumed: consumedVal,
+                  deviceId: m['deviceId'] as String?,
+                  isPerfect: isPerfectDay,
+                );
+                await _dbHelper.bulkUpsert30Days([updatedSummary]);
+              }
+            }
+          }
         });
       }
 
@@ -236,26 +309,41 @@ class DatabaseSyncService {
       // First, pull daily summaries from the server to update the local SQLite database (in case background BLE sync updated the server)
       try {
         final now = DateTime.now();
-        // Use UTC calendar dates directly (without timezone offsets)
+        // Server stores logs in UTC — query with UTC day boundaries.
         final startDate = DateTime.utc(now.year, now.month, now.day);
         final endDate = DateTime.utc(now.year, now.month, now.day, 23, 59, 59);
         final todayLocalDateStr =
             '${now.year.toString().padLeft(4, '0')}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
         final serverSummaries =
             await _apiService.getDailySummaries(userId, startDate, endDate);
+
+        Console.log(
+            tag: "SYNC_DailySummaries_Fetch",
+            value:
+                "Querying range: startDate=$startDate, endDate=$endDate | serverSummaries count=${serverSummaries?.length ?? 0}");
+
         if (serverSummaries != null && serverSummaries.isNotEmpty) {
           for (final m in serverSummaries) {
             final String dateStr = m['date'] as String;
             // Parse only the YYYY-MM-DD portion as local time to avoid timezone offset shifts
             DateTime targetDate;
             try {
-              final datePart = dateStr.length >= 10 ? dateStr.substring(0, 10) : dateStr;
+              final datePart =
+                  dateStr.length >= 10 ? dateStr.substring(0, 10) : dateStr;
               targetDate = DateTime.parse(datePart);
             } catch (_) {
               targetDate = DateTime(now.year, now.month, now.day);
             }
             final String targetDateStr =
                 '${targetDate.year.toString().padLeft(4, '0')}-${targetDate.month.toString().padLeft(2, '0')}-${targetDate.day.toString().padLeft(2, '0')}';
+
+            final targetVal = (m['target'] as num).toDouble();
+            final consumedVal = (m['consumed'] as num).toDouble();
+
+            Console.log(
+                tag: "SYNC_DailySummaries_Loop",
+                value:
+                    "Server Item: dateStr=$dateStr | parsedLocalStr=$targetDateStr | consumed=$consumedVal ml | dayIndex=${m['dayIndex']}");
 
             // Skip if the server record does not belong to today in local time.
             if (targetDateStr != todayLocalDateStr) {
@@ -266,12 +354,30 @@ class DatabaseSyncService {
               continue;
             }
 
-            final targetVal = (m['target'] as num).toDouble();
-            final consumedVal = (m['consumed'] as num).toDouble();
             final isPerfectDay = targetVal > 0 && consumedVal >= targetVal;
 
             // Prevent overwriting a larger local SQLite consumed value.
             final localSummary = await _dbHelper.getSummaryForDate(targetDate);
+
+            Console.log(
+                tag: "SYNC_DailySummaries_Compare",
+                value:
+                    "Comparing for $targetDateStr: SQLite consumed=${localSummary?.consumed ?? 'null'} ml vs Server consumed=$consumedVal ml");
+
+            // For TODAY: trust the local BLE bottle data over the server.
+            // The server may have a stale or corrupted value (e.g. from a previous
+            // fallback upload). Only apply the server value if local has no data (0)
+            // — meaning the bottle hasn't reported anything yet today.
+            final isToday = targetDateStr == todayLocalDateStr;
+            final localConsumed = localSummary?.consumed ?? 0;
+            if (isToday && localConsumed > 0) {
+              Console.log(
+                  tag: "SYNC",
+                  value:
+                      "Skipping server update for today ($targetDateStr): local BLE data ($localConsumed ml) takes precedence over server ($consumedVal ml)");
+              continue;
+            }
+
             if (localSummary == null || localSummary.consumed < consumedVal) {
               final updatedSummary = HydrationDaySummary(
                 date: targetDate,
@@ -286,6 +392,11 @@ class DatabaseSyncService {
                   tag: "SYNC",
                   value:
                       "Successfully pulled daily summary from server for $targetDate: $consumedVal ml");
+            } else {
+              Console.log(
+                  tag: "SYNC",
+                  value:
+                      "Skipping update for $targetDateStr because local SQLite consumed is already greater or equal (${localSummary.consumed} ml >= $consumedVal ml)");
             }
           }
         }
@@ -404,6 +515,7 @@ class DatabaseSyncService {
       }
 
       Console.log(tag: "SYNC", value: "Sync completed successfully");
+      _lastSyncTime = DateTime.now();
 
       // Notify chart widgets (and any other listeners) to refresh their data.
       SyncBus.instance.notifySyncComplete();
@@ -413,6 +525,8 @@ class DatabaseSyncService {
       AchievementNotifier.instance.checkAndShow(userId: userId);
     } catch (e) {
       Console.log(tag: "SYNC", value: "Sync failed: $e");
+    } finally {
+      _isSyncing = false;
     }
   }
 
@@ -514,8 +628,9 @@ class DatabaseSyncService {
 
       if (base64Str != null && base64Str.isNotEmpty) {
         final localPath = scanData['image_path'] as String?;
-        final filename =
-            localPath != null && localPath.isNotEmpty ? localPath.split('/').last : 'food_scan.jpg';
+        final filename = localPath != null && localPath.isNotEmpty
+            ? localPath.split('/').last
+            : 'food_scan.jpg';
         try {
           serverImageUrl =
               await _apiService.uploadFoodImage(base64Str, filename);
@@ -554,14 +669,54 @@ class DatabaseSyncService {
         'timestamp': scanData['timestamp'],
       };
 
+      DateTime? scanDate;
+      final tsStr = scanData['timestamp'] as String?;
+      if (tsStr != null) {
+        scanDate = DateTime.tryParse(tsStr);
+      }
+      final startDate = scanDate != null
+          ? DateTime.utc(scanDate.year, scanDate.month, scanDate.day)
+          : null;
+      final endDate = scanDate != null
+          ? DateTime.utc(
+              scanDate.year, scanDate.month, scanDate.day, 23, 59, 59)
+          : null;
+
       Console.log(
           tag: "SYNC",
           value:
               "[syncFoodScan] Sending food scan: ${payload['dishName']} (payload length: ${payload.toString().length} chars)");
-      final success = await _apiService.syncFoodScans(userId, [payload]);
+      final result = await _apiService.syncFoodScans(userId, [payload],
+          startDate: startDate, endDate: endDate);
+
+      if (result != null && result['summaries'] != null) {
+        final summaries = List<Map<String, dynamic>>.from(result['summaries']);
+        for (final m in summaries) {
+          final String dateStr = m['date'] as String;
+          final datePart =
+              dateStr.length >= 10 ? dateStr.substring(0, 10) : dateStr;
+          final targetDate = DateTime.parse(datePart);
+          final targetVal = (m['target'] as num).toDouble();
+          final consumedVal = (m['consumed'] as num).toDouble();
+          final isPerfectDay = targetVal > 0 && consumedVal >= targetVal;
+
+          final localSummary = await _dbHelper.getSummaryForDate(targetDate);
+          if (localSummary == null || localSummary.consumed < consumedVal) {
+            final updatedSummary = HydrationDaySummary(
+              date: targetDate,
+              dayIndex: m['dayIndex'] as int? ?? 0,
+              target: targetVal,
+              consumed: consumedVal,
+              deviceId: m['deviceId'] as String?,
+              isPerfect: isPerfectDay,
+            );
+            await _dbHelper.bulkUpsert30Days([updatedSummary]);
+          }
+        }
+      }
       Console.log(
           tag: "SYNC",
-          value: "[syncFoodScan] Completed. Sync status: $success");
+          value: "[syncFoodScan] Completed. Sync status: ${result != null}");
     } catch (e, stack) {
       Console.log(
           tag: "SYNC",
@@ -588,22 +743,22 @@ class DatabaseSyncService {
         dayIndex: today.dayIndex,
       );
 
-      // If the app is currently in background (lifecycle state != resumed)
-      // and today's consumed > 0, fire the background notification API.
-      final lifecycle = WidgetsBinding.instance.lifecycleState;
-      final isInBackground =
-          lifecycle != null && lifecycle != AppLifecycleState.resumed;
-      if (isInBackground && today.consumed > 0) {
-        Console.log(
-            tag: "SYNC",
-            value:
-                "App is in background (lifecycle=$lifecycle). Triggering sendBgConsumedNotification (${today.consumed}ml)...");
-        await _apiService.sendBgConsumedNotification(
-          userId,
-          today.consumed,
-          date: today.date.toIso8601String(),
-        );
-      }
+      // // If the app is currently in background (lifecycle state != resumed)
+      // // and today's consumed > 0, fire the background notification API.
+      // final lifecycle = WidgetsBinding.instance.lifecycleState;
+      // final isInBackground =
+      //     lifecycle != null && lifecycle != AppLifecycleState.resumed;
+      // if (isInBackground && today.consumed > 0) {
+      //   Console.log(
+      //       tag: "SYNC",
+      //       value:
+      //           "App is in background (lifecycle=$lifecycle). Triggering sendBgConsumedNotification (${today.consumed}ml)...");
+      //   await _apiService.sendBgConsumedNotification(
+      //     userId,
+      //     today.consumed,
+      //     date: today.date.toIso8601String(),
+      //   );
+      // }
 
       SyncBus.instance.notifySyncComplete();
     }

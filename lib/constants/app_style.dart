@@ -32,4 +32,12 @@ class AppStyle {
       offset: Offset(0, 1),
     ),
   ];
+
+  static var boxShadowVariation5 = [
+    BoxShadow(
+      color: Colors.black.withValues(alpha: 0.17),
+      blurRadius: 2,
+      offset: Offset(0, 3),
+    ),
+  ];
 }

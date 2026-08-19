@@ -11,6 +11,7 @@ class HydrationState {
   final HydrationEntry? currentSlotEntry;
   final double currentSlotConsumption; // Water Drank in this slot (in mL)
   final double currentSlotPercentage;
+  final double expectedSlotPercentage; // Expected cumulative target percentage (yellow progress)
   final int consistencyStreak;
 
   final int currentLevel;
@@ -29,6 +30,7 @@ class HydrationState {
       this.currentSlotEntry,
       this.currentSlotConsumption = 0.0,
       this.currentSlotPercentage = 0.0,
+      this.expectedSlotPercentage = 0.0,
       this.currentLevel = 0,
       this.newlyUnlockedLevel = 0,
       this.consistencyStreak = 0,
@@ -46,6 +48,7 @@ class HydrationState {
       HydrationEntry? currentSlotEntry,
       double? currentSlotConsumption,
       double? currentSlotPercentage,
+      double? expectedSlotPercentage,
       int? currentLevel,
       int? newlyUnlockedLevel,
       int? consistencyStreak,
@@ -65,6 +68,8 @@ class HydrationState {
           currentSlotConsumption ?? this.currentSlotConsumption,
       currentSlotPercentage:
           currentSlotPercentage ?? this.currentSlotPercentage,
+      expectedSlotPercentage:
+          expectedSlotPercentage ?? this.expectedSlotPercentage,
       currentLevel: currentLevel ?? this.currentLevel,
       // clearNewlyUnlockedLevel=true explicitly sets null;
       // otherwise fall back to the passed value or keep the existing one.
@@ -89,6 +94,7 @@ class HydrationState {
       selectedDate: DateTime.now(),
       currentSlotConsumption: 0.0,
       currentSlotPercentage: 0.0,
+      expectedSlotPercentage: 0.0,
       consistencyStreak: 0,
       todayHydrationHistory: [],
     );

@@ -388,5 +388,9 @@
   "tapEditThenAddWidget": "Tippen Sie auf Bearbeiten, dann Widget hinzufügen",
   "chooseMyWaterAndTapAddWidget": "Wählen Sie Mein Wasser und tippen Sie auf Widget hinzufügen",
   "smartReminders": "Smarte Erinnerungen",
-  "smartRemindersDescription": "Erhalten Sie rechtzeitige Hinweise basierend auf Ihrer Aktivität und Umgebung."
+  "smartRemindersDescription": "Erhalten Sie rechtzeitige Hinweise basierend auf Ihrer Aktivität und Umgebung.",
+  "chooseTheLanguage": "Wähle die Sprache",
+  "selectYourPreferredLanguageBelow": "Wähle unten deine bevorzugte Sprache aus",
+  "youSelected": "Du hast ausgewählt",
+  "allLanguages": "Alle Sprachen"
 }
