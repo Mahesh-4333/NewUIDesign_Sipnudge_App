@@ -8,6 +8,7 @@ import 'package:hydrify/helpers/shared_pref_helper.dart';
 import 'package:hydrify/services/api_service.dart';
 
 import 'package:hydrify/helpers/water_consumption_data_helper.dart';
+import 'package:hydrify/helpers/hydration_helper.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:hydrify/services/database_sync_service.dart';
 
@@ -22,9 +23,61 @@ class HomeWidgetService {
     // Set the App Group ID for iOS
     await HomeWidget.setAppGroupId(appGroupId);
 
-    // Register widget click listener for deep links (e.g. sipnudge://quick-add?type=coffee)
+    // Process any background clicks recorded in the iOS widget App Group
+    await processPendingWidgetLogs();
+
+    // Register widget click listener for deep links (e.g. sipnudge://quick-add?type=coffee&amount=150)
     HomeWidget.initiallyLaunchedFromHomeWidget().then(_handleWidgetUri);
     HomeWidget.widgetClicked.listen(_handleWidgetUri);
+  }
+
+  /// Processes logs added interactively in the iOS Widget background
+  static Future<void> processPendingWidgetLogs() async {
+    try {
+      final jsonString =
+          await HomeWidget.getWidgetData<String>('pending_widget_logs_json');
+      if (jsonString != null && jsonString.isNotEmpty && jsonString != '[]') {
+        final dynamic parsed = jsonDecode(jsonString);
+        if (parsed is List && parsed.isNotEmpty) {
+          final dbHelper = DatabaseHelper();
+          for (final item in parsed) {
+            if (item is Map) {
+              final drinkType = item['type'] as String? ?? 'Water';
+              final amount = (item['amount'] as num?)?.toDouble() ?? 250.0;
+              final timestampStr = item['timestamp'] as String?;
+              final timestamp = timestampStr != null
+                  ? (DateTime.tryParse(timestampStr) ?? DateTime.now())
+                  : DateTime.now();
+
+              final double coefficient =
+                  DatabaseHelper.hydrationCoefficients[drinkType] ?? 1.0;
+              final double effectiveWater = amount * coefficient;
+              final serverId = item['server_id'] as String?;
+
+              await SharedPrefsHelper.addPendingManualDelta(
+                  effectiveWater.toInt());
+              await dbHelper.insertHydrationLog(drinkType, amount, timestamp,
+                  serverId: serverId);
+              await dbHelper.updateHydrationDaySummary(effectiveWater);
+            }
+          }
+
+          // Clear processed pending logs
+          await HomeWidget.saveWidgetData<String>(
+              'pending_widget_logs_json', '[]');
+
+          DatabaseSyncService().syncAll();
+          await updateWidgetData();
+          Console.log(
+              tag: "HomeWidget",
+              value:
+                  "Processed ${parsed.length} pending widget log(s) into SQLite DB.");
+        }
+      }
+    } catch (e) {
+      Console.log(
+          tag: "HomeWidget", value: "Error processing pending widget logs: $e");
+    }
   }
 
   static void _handleWidgetUri(Uri? uri) {
@@ -33,12 +86,17 @@ class HomeWidgetService {
 
     final host = uri.host;
     final typeParam = uri.queryParameters['type'];
+    final amountParam = uri.queryParameters['amount'];
 
     if (host == 'quick-add' || uri.scheme == 'sipnudge') {
       if (typeParam != null) {
         final String drinkType =
             typeParam.toLowerCase() == 'coffee' ? 'Coffee' : 'Water';
-        quickLogDrink(drinkType, amount: 250);
+        final double defaultAmt = drinkType == 'Coffee' ? 150 : 250;
+        final double amount = amountParam != null
+            ? (double.tryParse(amountParam) ?? defaultAmt)
+            : defaultAmt;
+        quickLogDrink(drinkType, amount: amount);
       }
     }
   }
@@ -46,12 +104,12 @@ class HomeWidgetService {
   static Future<void> quickLogDrink(String drinkType, {double amount = 250}) async {
     try {
       final dbHelper = DatabaseHelper();
-      await dbHelper.insertHydrationLog(drinkType, amount, DateTime.now());
-
       final double coefficient =
           DatabaseHelper.hydrationCoefficients[drinkType] ?? 1.0;
       final double effectiveWater = amount * coefficient;
 
+      await SharedPrefsHelper.addPendingManualDelta(effectiveWater.toInt());
+      await dbHelper.insertHydrationLog(drinkType, amount, DateTime.now());
       await dbHelper.updateHydrationDaySummary(effectiveWater);
 
       DatabaseSyncService().syncAll();
@@ -170,7 +228,10 @@ class HomeWidgetService {
       }
       await HomeWidget.saveWidgetData<int>('battery', battery);
 
-      final slots = await dbHelper.getAllSlots();
+      var slots = await dbHelper.getAllSlots();
+      if (slots.isEmpty) {
+        slots = HydrationHelper.generateHydrationSlots(dailyGoal.toDouble());
+      }
       if (slots.isNotEmpty) {
         // Save all slots as a JSON string for dynamic calculations in widget when app is closed
         final List<Map<String, dynamic>> slotsJsonList = slots.map((entry) {
@@ -214,9 +275,7 @@ class HomeWidgetService {
           }
         }
 
-        if (upcomingEntry == null) {
-          upcomingEntry = slots.first;
-        }
+        upcomingEntry ??= slots.first;
 
         final tod = upcomingEntry.startTime;
         final hour = tod.hourOfPeriod == 0 ? 12 : tod.hourOfPeriod;

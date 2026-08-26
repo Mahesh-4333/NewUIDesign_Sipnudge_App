@@ -325,65 +325,47 @@ class BleCubit extends Cubit<BleState>
     final today = DateTime(now.year, now.month, now.day);
 
     final lastDate = await DatabaseHelper().getLastSyncDate();
-
     final dbHelper = DatabaseHelper();
-    var isSlotAvailableInDb = await dbHelper.getAllSlots();
-    var convertedWaterGoal = await SharedPrefsHelper.getWaterGoal();
-    final slots =
-        HydrationHelper.generateHydrationSlots(convertedWaterGoal!.toDouble());
-
-    // First ever launch
-    if (lastDate == null) {
-      await dbHelper.saveLastSyncDate(today);
-      await dbHelper.clearHydrationSlots();
-      await dbHelper.clearTodayHydrationHistory();
-
-      for (var existingSlot in isSlotAvailableInDb) {
-        final newSlot = slots.firstWhere((s) => s.slot == existingSlot.slot);
-        final updatedSlot = existingSlot.copyWith(
-            amount: newSlot.amount,
-            waterDrank: 0,
-            status: HydrationStatus.pending);
-        await dbHelper.insertOrUpdateSlot(updatedSlot);
-      }
-      return;
-    }
 
     // Same day → do nothing
-    if (lastDate.isAtSameMomentAs(today)) {
+    if (lastDate != null && lastDate.isAtSameMomentAs(today)) {
       return;
     }
 
-    // 🔥 NEW DAY DETECTED
     Console.log(
-        tag: '[BLE_Cubit] New day detected. Resetting hydration slots.\n'
+        tag: '[BLE_Cubit] New day detected or initial setup. Resetting daily hydration progress.\n'
             'Last=$lastDate | Today=$today',
         value: 'BLE_Cubit');
 
-    // 1️⃣ Clear hydration slots
-    await dbHelper.clearHydrationSlots();
-    await dbHelper.clearTodayHydrationHistory();
-    for (var existingSlot in isSlotAvailableInDb) {
-      final newSlot = slots.firstWhere((s) => s.slot == existingSlot.slot);
-      final updatedSlot = existingSlot.copyWith(
-          amount: newSlot.amount,
-          waterDrank: 0,
-          status: HydrationStatus.pending);
-      await dbHelper.insertOrUpdateSlot(updatedSlot);
-    }
-
-    // 2️⃣ Clear in-memory streams
-    _hydrationController.add([]);
-
-    // 3️⃣ Reset refills (Hardware & State)
-    // await sendResetCommandWithStateCheck();
-    emit(state.copyWith(refill: 0.0));
-
-    // 4️⃣ Update last hydration date
+    // 1️⃣ Save today's date first so we don't repeatedly reset on the same day
     await dbHelper.saveLastSyncDate(today);
 
-    // 4️⃣ Update UI state (optional but recommended)
+    // 2️⃣ Check if slots already exist in DB
+    var existingSlots = await dbHelper.getAllSlots();
+    if (existingSlots.isEmpty) {
+      // First ever launch with no slots in DB: generate default slots
+      final convertedWaterGoal = await SharedPrefsHelper.getWaterGoal() ?? 2500;
+      final defaultSlots =
+          HydrationHelper.generateHydrationSlots(convertedWaterGoal.toDouble());
+      for (var slot in defaultSlots) {
+        await dbHelper.insertOrUpdateSlot(slot);
+      }
+      existingSlots = defaultSlots;
+    } else {
+      // Slots exist: only reset waterDrank to 0 and status to pending (preserve custom startTime and endTime!)
+      await dbHelper.resetSlotProgressForNewDay();
+    }
+
+    // 3️⃣ Clear today's hydration history
+    await dbHelper.clearTodayHydrationHistory();
+
+    // 4️⃣ Clear in-memory streams
+    _hydrationController.add([]);
+
+    // 5️⃣ Reset refills (Hardware & State)
     emit(state.copyWith(
+      refill: 0.0,
+      currentHydrationValue: 0,
       message: "New day started. Hydration and refills reset.",
     ));
   }
@@ -671,12 +653,14 @@ class BleCubit extends Cubit<BleState>
       _stuckScanningSince ??= DateTime.now();
       final stuckDuration = DateTime.now().difference(_stuckScanningSince!);
 
-      if (stuckDuration.inSeconds >= 10 && !state.manualRetryRequired) {
+      if (stuckDuration.inSeconds >= 10) {
         Console.log(
             tag:
-                '[BLE_Watchdog] Scanning stuck for > 10s. Prompting manual retry.',
+                '[BLE_Watchdog] Scanning stuck for > 10s. Automatically recovering BLE service.',
             value: 'BLE_Cubit');
-        emit(state.copyWith(manualRetryRequired: true));
+        _stuckScanningSince = null;
+        await reinitialize();
+        return;
       }
 
       // 5. Trigger recovery scan

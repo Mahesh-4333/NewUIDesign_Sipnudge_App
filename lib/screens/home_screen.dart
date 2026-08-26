@@ -28,7 +28,6 @@ import 'package:hydrify/screens/hydration_30_day.dart';
 import 'package:hydrify/screens/water_intake_timeline/water_intake_timeline_screen.dart';
 import 'package:hydrify/screens/widgets/autoScroll_GoalText.dart';
 import 'package:hydrify/screens/widgets/ble_device_selection_sheet.dart';
-import 'package:hydrify/screens/widgets/ble_retry_dialog.dart';
 import 'package:hydrify/screens/widgets/custom_circular_loader/custom_circular_progress_indicator.dart';
 import 'package:hydrify/screens/widgets/custom_circular_loader/custom_circular_water_progress_indicator.dart';
 import 'package:hydrify/screens/widgets/greeting_widget.dart';
@@ -70,7 +69,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   bool _isLocationPermDialogShown = false;
 
   bool _isPickerShown = false;
-  bool _isRetryDialogShown = false;
   bool _isWifiConnectedDialogShown = false;
   bool _isWifiFailedDialogShown = false;
   BuildContext? _wifiProgressDialogContext;
@@ -298,7 +296,13 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
       () async {
         try {
+          await HomeWidgetService.processPendingWidgetLogs();
           await HomeWidgetService.updateWidgetData();
+          if (mounted) {
+            context.read<HydrationCubit>().loadSlotsFromDb();
+            context.read<HydrationCubit>().refreshAchievementStats();
+            context.read<BottleDataCubit>().getCurrentDayHistory();
+          }
         } catch (e) {
           Console.log(
               tag: "HomeWidget", value: "Error updating widget on resume: $e");
@@ -576,19 +580,23 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     final waterGoal = await SharedPrefsHelper.getWaterGoal();
 
     if (waterGoal != null && waterGoal > 0) {
-      final slots =
-          HydrationHelper.generateHydrationSlots(waterGoal.toDouble());
+      final existingSlots = await dbHelper.getAllSlots();
+      final List<HydrationEntry> slotsToUse;
 
-      await dbHelper.clearHydrationSlots();
-      await Future.delayed(Duration(seconds: 2));
-      for (var slot in slots) {
-        await dbHelper.insertOrUpdateSlot(slot);
+      if (existingSlots.isNotEmpty) {
+        slotsToUse = existingSlots;
+      } else {
+        slotsToUse =
+            HydrationHelper.generateHydrationSlots(waterGoal.toDouble());
+        for (var slot in slotsToUse) {
+          await dbHelper.insertOrUpdateSlot(slot);
+        }
       }
 
       final notificationService = NotificationService();
-      await notificationService.resetAllHydrationReminders(slots);
-      await notificationService.scheduleHydrationRemindersForFuture(slots);
-      context.read<BleCubit>().queueHydrationSlots(slots);
+      await notificationService.resetAllHydrationReminders(slotsToUse);
+      await notificationService.scheduleHydrationRemindersForFuture(slotsToUse);
+      context.read<BleCubit>().queueHydrationSlots(slotsToUse);
 
       if (mounted) {
         context.read<HydrationCubit>().loadSlotsFromDb();
@@ -712,25 +720,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             ((state.volume ?? 0) < 600)) {
           // _showStartJourneyDialog(context);
           // Removing as this causes error
-        }
-
-        if (state.manualRetryRequired && !_isRetryDialogShown) {
-          _isRetryDialogShown = true;
-          Console.log(tag: "APP", value: "⚠️ Showing manual retry dialog...");
-
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            showDialog(
-              context: context,
-              barrierDismissible: false,
-              builder: (ctx) => const BleRetryDialog(),
-            ).then((_) {
-              Console.log(tag: "APP", value: "❌ Retry dialog closed.");
-              _isRetryDialogShown = false;
-              if (context.mounted) {
-                context.read<BleCubit>().dismissRetryDialog();
-              }
-            });
-          });
         }
 
         // 1. Wi-Fi Provisioning Progress Dialog
@@ -1545,14 +1534,15 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                       final goalMl =
                           await dbHelper.getDailyWaterGoal(DateTime.now()) ??
                               2500;
-                      final slots = await dbHelper.getAllSlots();
-                      if (slots.isNotEmpty) {
-                        expectedPercent = WaterConsumptionCalculator
-                            .calculateExpectedPercentage(
-                          slots,
-                          goalMl.toDouble(),
-                        );
+                      var slots = await dbHelper.getAllSlots();
+                      if (slots.isEmpty) {
+                        slots = HydrationHelper.generateHydrationSlots(goalMl.toDouble());
                       }
+                      expectedPercent = WaterConsumptionCalculator
+                          .calculateExpectedPercentage(
+                        slots,
+                        goalMl.toDouble(),
+                      );
                     } catch (_) {}
 
                     return (

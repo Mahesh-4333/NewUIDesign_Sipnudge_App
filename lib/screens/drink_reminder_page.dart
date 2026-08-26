@@ -79,6 +79,9 @@ class DrinkReminderPage extends StatelessWidget {
                                 // reminder enable/disable
                                 buildReminderToggleRow(state, cubit),
 
+                                // notification enable/disable
+                                buildNotificationToggleRow(state, cubit),
+
                                 // reminder mode
                                 buildReminderListItem(state, context),
                               ],
@@ -151,7 +154,7 @@ class DrinkReminderPage extends StatelessWidget {
                                       mainAxisSize: MainAxisSize.min,
                                       children: [
                                         Text(
-                                          AppStrings.savingReminder,
+                                          state.savingMessage,
                                           style: TextStyle(
                                             color: Colors.white,
                                             fontSize:
@@ -322,6 +325,22 @@ class DrinkReminderPage extends StatelessWidget {
         fontVariations: [AppFontStyles.fontWeightVariation600],
       ),
       iconColor: AppColors.bluegray,
+    );
+  }
+
+  ReminderToggleRow buildNotificationToggleRow(
+      DrinkReminderState state, DrinkReminderCubit cubit) {
+    return ReminderToggleRow(
+      title: AppStrings.notification,
+      value: state.notificationEnabled,
+      onChanged: cubit.toggleNotification,
+      titleStyle: TextStyle(
+        color: AppColors.bluegray,
+        fontSize: AppFontStyles.fontSize_20.sp,
+        fontFamily: AppFontStyles.urbanistFontFamily,
+        fontVariations: [AppFontStyles.fontWeightVariation600],
+      ),
+      activeTrackColor: AppColors.switchReminderColor,
     );
   }
 

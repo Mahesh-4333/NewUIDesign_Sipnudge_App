@@ -16,8 +16,6 @@ import 'package:hydrify/helpers/vibration_helper.dart';
 import 'package:hydrify/services/health_service.dart';
 import 'package:hydrify/helpers/shared_pref_helper.dart';
 import 'package:hydrify/helpers/hydration_helper.dart';
-import 'package:hydrify/helpers/database_helper.dart';
-import 'package:hydrify/models/hydration_summary.dart';
 import 'package:hydrify/services/api_service.dart';
 import 'package:hydrify/screens/widgets/common/animated_refresh_icon.dart';
 
@@ -265,25 +263,26 @@ class _DrinkTypesWidgetState extends State<DrinkTypesWidget>
                 ),
                 Expanded(
                   child: Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 30.w),
+                    padding: EdgeInsets.only(left: 20.w, right: 8.w),
                     child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
                       mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         // Water Legend
                         Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Row(
+                            Image.asset(
+                              AssetsPath.goalWaterIcon,
+                              width: 28.w,
+                              height: 28.w,
+                            ),
+                            SizedBox(
+                              width: AppDimensions.dim10.w,
+                            ),
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Image.asset(
-                                  AssetsPath.goalWaterIcon,
-                                  width: 30.w,
-                                  height: 30.w,
-                                ),
-                                SizedBox(
-                                  width: AppDimensions.dim8.w,
-                                ),
                                 Text(
                                   AppLocalizations.of(context)?.dailyGoal ??
                                       "Goal",
@@ -297,38 +296,61 @@ class _DrinkTypesWidgetState extends State<DrinkTypesWidget>
                                     ],
                                   ),
                                 ),
+                                SizedBox(height: 2.h),
+                                Text.rich(
+                                  TextSpan(
+                                    text:
+                                        "${HydrationHelper.formatVolume(_waterIntake, _selectedUnit, showUnit: false)}/",
+                                    style: TextStyle(
+                                      color: AppColors.bluegray,
+                                      fontSize: 18.sp,
+                                      fontFamily:
+                                          AppFontStyles.urbanistFontFamily,
+                                      fontVariations: [
+                                        AppFontStyles.semiBoldFontVariation
+                                      ],
+                                    ),
+                                    children: [
+                                      TextSpan(
+                                        text: HydrationHelper.formatVolume(
+                                            _waterGoal.toDouble(),
+                                            _selectedUnit,
+                                            showUnit: true),
+                                        style: TextStyle(
+                                          color: AppColors.bluegray,
+                                          fontSize: 18.sp,
+                                          fontFamily: AppFontStyles
+                                              .urbanistFontFamily,
+                                          fontVariations: [
+                                            AppFontStyles.boldFontVariation
+                                          ],
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
                               ],
-                            ),
-                            Text(
-                              "${HydrationHelper.formatVolume(_waterIntake, _selectedUnit, showUnit: false)}/${HydrationHelper.formatVolume(_waterGoal.toDouble(), _selectedUnit, showUnit: true)}",
-                              style: TextStyle(
-                                color: AppColors.switchReminderColor,
-                                fontSize: AppFontStyles.fontSize_16,
-                                fontFamily: AppFontStyles.urbanistFontFamily,
-                                fontVariations: [
-                                  AppFontStyles.semiBoldFontVariation
-                                ],
-                              ),
                             ),
                           ],
                         ),
                         SizedBox(
-                          height: AppDimensions.dim15.h,
+                          height: 14.h,
                         ),
                         // Steps Legend
                         Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Row(
+                            Image.asset(
+                              AssetsPath.goalStepsIcon,
+                              width: 28.w,
+                              height: 24.w,
+                            ),
+                            SizedBox(
+                              width: AppDimensions.dim10.w,
+                            ),
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Image.asset(
-                                  AssetsPath.goalStepsIcon,
-                                  width: 30.w,
-                                  height: 25.w,
-                                ),
-                                SizedBox(
-                                  width: AppDimensions.dim8.w,
-                                ),
                                 Text(
                                   AppLocalizations.of(context)?.steps ??
                                       "Steps",
@@ -342,36 +364,56 @@ class _DrinkTypesWidgetState extends State<DrinkTypesWidget>
                                     ],
                                   ),
                                 ),
+                                SizedBox(height: 2.h),
+                                _isLoading
+                                    ? SizedBox(
+                                        width: 14.w,
+                                        height: 14.w,
+                                        child: const CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                          valueColor:
+                                              AlwaysStoppedAnimation<Color>(
+                                                  Color(0xFFEF4444)),
+                                        ),
+                                      )
+                                    : Text.rich(
+                                        TextSpan(
+                                          text: "$_stepCount/",
+                                          style: TextStyle(
+                                            color: AppColors.bluegray,
+                                            fontSize: 18.sp,
+                                            fontFamily: AppFontStyles
+                                                .urbanistFontFamily,
+                                            fontVariations: [
+                                              AppFontStyles
+                                                  .semiBoldFontVariation
+                                            ],
+                                          ),
+                                          children: [
+                                            TextSpan(
+                                              text: "$_stepGoal",
+                                              style: TextStyle(
+                                                color: AppColors.bluegray,
+                                                fontSize: 18.sp,
+                                                fontFamily: AppFontStyles
+                                                    .urbanistFontFamily,
+                                                fontVariations: [
+                                                  AppFontStyles
+                                                      .boldFontVariation
+                                                ],
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
                               ],
                             ),
-                            _isLoading
-                                ? SizedBox(
-                                    width: AppDimensions.dim16.w,
-                                    height: AppDimensions.dim16.w,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                      valueColor: AlwaysStoppedAnimation<Color>(
-                                          Color(0xFFEF4444)),
-                                    ),
-                                  )
-                                : Text(
-                                    "$_stepCount/$_stepGoal",
-                                    style: TextStyle(
-                                      color: AppColors.switchReminderColor,
-                                      fontSize: AppFontStyles.fontSize_16,
-                                      fontFamily:
-                                          AppFontStyles.urbanistFontFamily,
-                                      fontVariations: [
-                                        AppFontStyles.semiBoldFontVariation
-                                      ],
-                                    ),
-                                  ),
                           ],
-                        )
+                        ),
                       ],
                     ),
                   ),
-                )
+                ),
               ],
             )
           ],

@@ -30,6 +30,8 @@ import 'package:hydrify/screens/widgets/preferences_widgets/erase_data_dialog.da
 import 'package:hydrify/screens/widgets/preferences_widgets/segmented_choice_tile.dart';
 import 'package:hydrify/services/notification/notification_service.dart';
 import 'package:hydrify/services/api_service.dart';
+import 'package:hydrify/services/sync_bus.dart';
+import 'package:hydrify/services/home_widget_service.dart';
 import 'package:intl/intl.dart';
 
 class PreferencesPage extends StatelessWidget {
@@ -293,43 +295,113 @@ class PreferencesPage extends StatelessWidget {
                                               target: goal.toDouble(),
                                             );
                                           }
-
                                           final bottleDataCubit =
-                                              context.read<BottleDataCubit>();
-                                          await bottleDataCubit
-                                              .clearAllBottleData();
+                                               context.read<BottleDataCubit>();
+                                           await bottleDataCubit
+                                               .clearTodayBottleData();
 
-                                          final hydrationCubit =
-                                              context.read<HydrationCubit>();
-                                          final bleCubit =
-                                              context.read<BleCubit>();
-                                          await hydrationCubit.resetUI();
-                                          context
-                                              .read<HydrationCubit>()
-                                              .clearTodayHistory();
-                                          await hydrationCubit
-                                              .refreshAchievementStats(
-                                                  updateUnlock: false);
+                                           final hydrationCubit =
+                                               context.read<HydrationCubit>();
+                                           final bleCubit =
+                                               context.read<BleCubit>();
+                                           await hydrationCubit.resetUI();
+                                           context
+                                               .read<HydrationCubit>()
+                                               .clearTodayHistory();
+                                           await hydrationCubit
+                                               .refreshAchievementStats(
+                                                   updateUnlock: false);
 
-                                          await bleCubit.clearData();
-                                          await bleCubit.forgetDevice();
-                                          log("-=-=-=-=-=-=-=- Sending Commnand =-=-=-=-=-=-=-");
-                                          var commandSent = await bleCubit
-                                              .sendResetCommandWithStateCheck();
-                                          await DatabaseHelper()
-                                              .clearAppMetadata();
-                                          await DatabaseHelper()
-                                              .clearHydrationLogs();
+                                           await bleCubit.clearData();
+                                           await bleCubit.forgetDevice();
+                                           log("-=-=-=-=-=-=-=- Sending Commnand =-=-=-=-=-=-=-");
+                                           var commandSent = await bleCubit
+                                               .sendResetCommandWithStateCheck();
+                                           await DatabaseHelper()
+                                               .clearAppMetadata();
 
-                                          await cubit.updateLastResetDate();
+                                           // Clear today's manual hydration logs & food scans from server & local DB
+                                           final userEmail = await SharedPrefsHelper.getUserEmail();
+                                           final now = DateTime.now();
+                                           final todayDateStr =
+                                               '${now.year.toString().padLeft(4, '0')}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
+
+                                           if (userId != null && userEmail != "guest_user") {
+                                             try {
+                                               // 1. Delete all server manual logs for today
+                                               final serverLogs = await ApiService().getManualLogs(userId, date: todayDateStr);
+                                               if (serverLogs != null && serverLogs.isNotEmpty) {
+                                                 for (final logItem in serverLogs) {
+                                                   final serverId = logItem['_id']?.toString();
+                                                   final type = logItem['type']?.toString() ?? 'Water';
+                                                   final consumed = logItem['consumed'] != null
+                                                       ? (double.tryParse(logItem['consumed'].toString()) ?? 0.0)
+                                                       : 0.0;
+                                                   final rawTs = logItem['timestamp']?.toString() ?? '';
+                                                   await ApiService().deleteManualLog(userId, type, consumed, rawTs, serverId: serverId, localDate: todayDateStr);
+                                                 }
+                                               }
+
+                                               // 2. Also delete today's local manual logs from server
+                                               final todayLogs = await DatabaseHelper().getHydrationLogs(date: now);
+                                               for (final logItem in todayLogs) {
+                                                 final serverId = logItem['server_id']?.toString();
+                                                 final type = logItem['type']?.toString() ?? 'Water';
+                                                 final consumed = (logItem['consumed'] as num?)?.toDouble() ?? 0.0;
+                                                 final rawTs = logItem['timestamp']?.toString() ?? '';
+                                                 final dt = DateTime.tryParse(rawTs) ?? DateTime.now();
+                                                 final utcTs = dt.toUtc().toIso8601String();
+                                                 final localDate = '${dt.year.toString().padLeft(4, '0')}-${dt.month.toString().padLeft(2, '0')}-${dt.day.toString().padLeft(2, '0')}';
+                                                 await ApiService().deleteManualLog(userId, type, consumed, utcTs, serverId: serverId, localDate: localDate);
+                                               }
+                                             } catch (e) {
+                                               log("Error clearing manual logs on server: $e");
+                                             }
+
+                                             try {
+                                               // 1. Delete today's server food scans
+                                               final startUtc = DateTime.utc(now.year, now.month, now.day);
+                                               final endUtc = DateTime.utc(now.year, now.month, now.day, 23, 59, 59, 999);
+                                               final serverFoodScans = await ApiService().getFoodScans(userId, startDate: startUtc, endDate: endUtc);
+                                               if (serverFoodScans != null && serverFoodScans.isNotEmpty) {
+                                                 for (final scan in serverFoodScans) {
+                                                   final serverId = scan['_id']?.toString() ?? scan['id']?.toString();
+                                                   final dishName = scan['dishName']?.toString();
+                                                   final rawTs = scan['timestamp']?.toString();
+                                                   await ApiService().deleteFoodScan(userId, scanId: serverId, dishName: dishName, timestamp: rawTs);
+                                                 }
+                                               }
+
+                                               // 2. Also delete today's local food scans from server
+                                               final todayFoodScans = await DatabaseHelper().getAllFoodScans(date: now);
+                                               for (final scan in todayFoodScans) {
+                                                 final serverId = scan['server_id']?.toString();
+                                                 final dishName = scan['dish_name']?.toString();
+                                                 final rawTs = scan['timestamp']?.toString();
+                                                 await ApiService().deleteFoodScan(userId, scanId: serverId, dishName: dishName, timestamp: rawTs);
+                                               }
+                                             } catch (e) {
+                                               log("Error clearing food scans on server: $e");
+                                             }
+                                           }
+
+                                           // Clear only today's hydration logs & food scans from local DB
+                                           await DatabaseHelper()
+                                               .clearTodayHydrationLogs(now);
+                                           await DatabaseHelper()
+                                               .deleteTodayFoodScans(now);
+
+                                           await cubit.updateLastResetDate();
 
                                           await hydrationCubit.setGoalParam();
 
-                                          await DatabaseHelper()
-                                              .deleteFoodScans();
-
-                                          // Trigger UI refresh for FoodScanner etc.
+                                          // Trigger UI refresh for FoodScanner, LogHydration, Charts etc.
+                                          SyncBus.instance.notifySyncComplete();
                                           bleCubit.triggerRefresh();
+
+                                          try {
+                                            await HomeWidgetService.updateWidgetData();
+                                          } catch (_) {}
 
                                           await SharedPrefsHelper
                                               .updateAndSaveDeviceConfig(

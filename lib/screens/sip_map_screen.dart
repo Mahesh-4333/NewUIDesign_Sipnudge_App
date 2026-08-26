@@ -12,6 +12,7 @@ import 'package:hydrify/constants/app_api_constants.dart';
 import 'package:hydrify/constants/assets_path.dart';
 import 'package:hydrify/cubit/bottom_nav/bottom_nav_cubit.dart';
 import 'package:hydrify/helpers/shared_pref_helper.dart';
+import 'package:hydrify/helpers/country_borders_helper.dart';
 import 'package:hydrify/services/api_service.dart';
 import 'package:provider/provider.dart';
 
@@ -51,12 +52,12 @@ class _SipMapScreenState extends State<SipMapScreen> {
   int _myBottlesSaved = 0;
   double _myCarbonReduced = 0.0;
 
-  // Zoom level tracking (Global < 6.0, Country 6.0 - 10.0, State >= 10.0)
-  double _currentZoom = 5.0;
+  // Country-wise zoom tracking
+  double _currentZoom = 4.8;
 
-  // Reverse geocoded location names of map camera center target
+  // Country selection & highlight state
+  String _selectedCountry = 'India';
   String _currentCountry = 'India';
-  String _currentState = 'Maharashtra';
   LatLng _lastCameraTarget = _defaultCoords;
   Timer? _geocodeDebounceTimer;
 
@@ -190,6 +191,9 @@ class _SipMapScreenState extends State<SipMapScreen> {
   @override
   void initState() {
     super.initState();
+    CountryBordersHelper.loadDataset().then((_) {
+      if (mounted) setState(() {});
+    });
     _loadPrivacySettings();
     _initMap();
     _fetchRealLocations();
@@ -247,35 +251,44 @@ class _SipMapScreenState extends State<SipMapScreen> {
         });
       }
 
-      // Obtain user's real GPS position if permission is granted
-      LocationPermission permission = await Geolocator.checkPermission();
-      if (permission == LocationPermission.denied) {
-        permission = await Geolocator.requestPermission();
-      }
-      if (permission == LocationPermission.whileInUse ||
-          permission == LocationPermission.always) {
-        final pos = await Geolocator.getCurrentPosition(
-          locationSettings:
-              const LocationSettings(accuracy: LocationAccuracy.medium),
-        );
-        final currentLatLng = LatLng(pos.latitude, pos.longitude);
-        await SharedPrefsHelper.setUserLatitude(pos.latitude);
-        await SharedPrefsHelper.setUserLongitude(pos.longitude);
-        if (mounted) {
-          setState(() {
-            _currentUserLocation = currentLatLng;
-          });
-          _mapController?.animateCamera(
-            CameraUpdate.newCameraPosition(
-              CameraPosition(target: currentLatLng, zoom: 12.0),
-            ),
+        // Obtain user's real GPS position if permission is granted
+        LocationPermission permission = await Geolocator.checkPermission();
+        if (permission == LocationPermission.denied) {
+          permission = await Geolocator.requestPermission();
+        }
+        if (permission == LocationPermission.whileInUse ||
+            permission == LocationPermission.always) {
+          final pos = await Geolocator.getCurrentPosition(
+            locationSettings:
+                const LocationSettings(accuracy: LocationAccuracy.medium),
           );
+          final currentLatLng = LatLng(pos.latitude, pos.longitude);
+          await SharedPrefsHelper.setUserLatitude(pos.latitude);
+          await SharedPrefsHelper.setUserLongitude(pos.longitude);
+          if (mounted) {
+            setState(() {
+              _currentUserLocation = currentLatLng;
+            });
+            try {
+              final placemarks = await placemarkFromCoordinates(
+                  pos.latitude, pos.longitude);
+              if (placemarks.isNotEmpty &&
+                  placemarks.first.country != null &&
+                  placemarks.first.country!.isNotEmpty) {
+                _selectCountry(placemarks.first.country!,
+                    center: currentLatLng, zoom: 4.8);
+              } else {
+                _animateToLocation(currentLatLng, zoom: 4.8);
+              }
+            } catch (_) {
+              _animateToLocation(currentLatLng, zoom: 4.8);
+            }
+          }
+          final uid = await SharedPrefsHelper.getUserId();
+          if (uid != null && uid.isNotEmpty) {
+            _syncLocationToServer();
+          }
         }
-        final uid = await SharedPrefsHelper.getUserId();
-        if (uid != null && uid.isNotEmpty) {
-          _syncLocationToServer();
-        }
-      }
     } catch (e) {
       debugPrint("Error fetching real locations: $e");
     }
@@ -325,6 +338,19 @@ class _SipMapScreenState extends State<SipMapScreen> {
     }
   }
 
+  void _selectCountry(String countryName, {LatLng? center, double? zoom}) {
+    final info = CountryBordersHelper.getCountryInfo(countryName,
+        fallbackCenter: center);
+    setState(() {
+      _selectedCountry = info.name;
+      _currentCountry = info.name;
+    });
+
+    final targetCenter = center ?? info.center;
+    final targetZoom = (zoom ?? info.zoom).clamp(2.0, 6.2);
+    _animateToLocation(targetCenter, zoom: targetZoom);
+  }
+
   Future<void> _updateLocationNames(LatLng target) async {
     try {
       List<Placemark> placemarks =
@@ -335,22 +361,10 @@ class _SipMapScreenState extends State<SipMapScreen> {
             ? place.country!
             : '';
 
-        String state = '';
-        if (place.administrativeArea != null &&
-            place.administrativeArea!.isNotEmpty) {
-          state = place.administrativeArea!;
-        } else if (place.locality != null && place.locality!.isNotEmpty) {
-          state = place.locality!;
-        } else if (place.subAdministrativeArea != null &&
-            place.subAdministrativeArea!.isNotEmpty) {
-          state = place.subAdministrativeArea!;
-        }
-
-        if ((country.isNotEmpty && country != _currentCountry) ||
-            (state.isNotEmpty && state != _currentState)) {
+        if (country.isNotEmpty && country != _currentCountry) {
           setState(() {
-            if (country.isNotEmpty) _currentCountry = country;
-            if (state.isNotEmpty) _currentState = state;
+            _currentCountry = country;
+            _selectedCountry = country;
           });
         }
       }
@@ -360,10 +374,11 @@ class _SipMapScreenState extends State<SipMapScreen> {
   }
 
   Map<String, dynamic> _getScopeDetails() {
-    final center = _lastCameraTarget;
+    final countryName = _selectedCountry;
+    final isGlobal = countryName == 'Global' || _currentZoom < 3.0;
 
-    if (_currentZoom < 6.0) {
-      // Global View: Sum of all unique users globally
+    if (isGlobal) {
+      // Global View: Sum of all users globally
       final Map<String, int> userBottles = {};
       final Map<String, double> userCarbon = {};
 
@@ -388,16 +403,17 @@ class _SipMapScreenState extends State<SipMapScreen> {
         'title': 'Global Community',
         'tag': 'Global View',
         'story': _serverUserLocations.isNotEmpty
-            ? 'Worldwide hydration impact by active Sipnudge community members.'
+            ? 'Worldwide hydration impact across all active Sipnudge hydrators.'
             : 'No active global hydrators currently visible on the map.',
         'bottlesSaved': totalBottles,
         'carbonReduced': carbonStr,
-        'hydratorCount': _serverUserLocations.length,
+        'hydratorCount':
+            _serverUserLocations.isNotEmpty ? _serverUserLocations.length : 1,
       };
-    } else if (_currentZoom < 10.0) {
-      // Country View: Sum of users in Country (500km radius)
-      final countryName =
-          _currentCountry.isNotEmpty ? _currentCountry : 'Country';
+    } else {
+      // Country View
+      final info = CountryBordersHelper.getCountryInfo(countryName);
+      final center = info.center;
       int countryBottles = 0;
       double countryCarbon = 0.0;
       int hydratorCount = 0;
@@ -409,7 +425,7 @@ class _SipMapScreenState extends State<SipMapScreen> {
           loc.position.latitude,
           loc.position.longitude,
         );
-        if (dist <= 500000) {
+        if (dist <= 1200000) {
           hydratorCount++;
           countryBottles += loc.bottlesSaved;
           countryCarbon += loc.carbonReduced;
@@ -421,51 +437,19 @@ class _SipMapScreenState extends State<SipMapScreen> {
         countryCarbon = _myCarbonReduced;
       }
 
-      final carbonStr = countryCarbon.toStringAsFixed(1);
+      final carbonStr = countryCarbon > 0
+          ? countryCarbon.toStringAsFixed(1)
+          : _myCarbonReduced.toStringAsFixed(1);
+      final finalBottles =
+          countryBottles > 0 ? countryBottles : _myBottlesSaved;
+
       return {
-        'title': '$countryName Community',
-        'tag': '$countryName View',
+        'title': '${info.name} Community',
+        'tag': '${info.name} View',
         'story': hydratorCount > 0
-            ? 'Viewing $hydratorCount active hydrator(s) and regional hydration impact in $countryName.'
-            : 'No active country hydrators currently visible in $countryName.',
-        'bottlesSaved': countryBottles,
-        'carbonReduced': carbonStr,
-        'hydratorCount': hydratorCount,
-      };
-    } else {
-      // State View: State / Local view showing exact Impact Story
-      final stateName = _currentState.isNotEmpty ? _currentState : 'State';
-      final countryName =
-          _currentCountry.isNotEmpty ? ' ($_currentCountry)' : '';
-
-      int stateBottles = _myBottlesSaved;
-      double stateCarbon = _myCarbonReduced;
-      int hydratorCount = 0;
-
-      for (final loc in _serverUserLocations) {
-        final dist = Geolocator.distanceBetween(
-          center.latitude,
-          center.longitude,
-          loc.position.latitude,
-          loc.position.longitude,
-        );
-        if (dist <= 40000) {
-          hydratorCount++;
-          if (stateBottles == 0 && loc.bottlesSaved > 0) {
-            stateBottles += loc.bottlesSaved;
-            stateCarbon += loc.carbonReduced;
-          }
-        }
-      }
-
-      final carbonStr = stateCarbon.toStringAsFixed(1);
-      return {
-        'title': '$stateName Community',
-        'tag': '$stateName View',
-        'story': hydratorCount > 0
-            ? 'Zoomed into $stateName$countryName. Local community hydration impact in this 40km zone.'
-            : 'No local active hydrators currently in this 40km zone for $stateName.',
-        'bottlesSaved': stateBottles,
+            ? 'Highlighting ${info.name} with $hydratorCount active hydrator(s) and community hydration impact.'
+            : 'Active regional hydration impact and community statistics in ${info.name}.',
+        'bottlesSaved': finalBottles,
         'carbonReduced': carbonStr,
         'hydratorCount': hydratorCount > 0 ? hydratorCount : 1,
       };
@@ -478,11 +462,21 @@ class _SipMapScreenState extends State<SipMapScreen> {
     return LatLng(base.latitude + 0.008, base.longitude + 0.008);
   }
 
-  void _animateToLocation(LatLng target, {double zoom = 12.0}) {
+  void _animateToLocation(LatLng target, {double zoom = 4.8}) {
     _mapController?.animateCamera(
       CameraUpdate.newCameraPosition(
-        CameraPosition(target: target, zoom: zoom),
+        CameraPosition(target: target, zoom: zoom.clamp(2.0, 6.2)),
       ),
+    );
+  }
+
+  Set<Polygon> _buildPolygons() {
+    if (_selectedCountry == 'Global') return {};
+    return CountryBordersHelper.buildCountryPolygons(
+      _selectedCountry,
+      fillColor: const Color(0xFF00A2FF).withOpacity(0.18),
+      strokeColor: const Color(0xFF00A2FF),
+      strokeWidth: 2,
     );
   }
 
@@ -499,10 +493,21 @@ class _SipMapScreenState extends State<SipMapScreen> {
               BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueAzure),
           infoWindow: InfoWindow(
             title: "Hydrator #$index",
-            snippet: "Active community member",
+            snippet: "${loc.bottlesSaved} bottles saved",
           ),
-          onTap: () {
-            _animateToLocation(loc.position);
+          onTap: () async {
+            try {
+              final placemarks = await placemarkFromCoordinates(
+                loc.position.latitude,
+                loc.position.longitude,
+              );
+              if (placemarks.isNotEmpty &&
+                  placemarks.first.country != null &&
+                  placemarks.first.country!.isNotEmpty) {
+                _selectCountry(placemarks.first.country!,
+                    center: loc.position);
+              }
+            } catch (_) {}
           },
         ),
       );
@@ -529,6 +534,20 @@ class _SipMapScreenState extends State<SipMapScreen> {
   Set<Circle> _buildCircles() {
     final Set<Circle> circles = {};
 
+    if (_selectedCountry != 'Global') {
+      final info = CountryBordersHelper.getCountryInfo(_selectedCountry);
+      circles.add(
+        Circle(
+          circleId: CircleId('country_glow_${info.name}'),
+          center: info.center,
+          radius: 350000,
+          fillColor: const Color(0xFF00A2FF).withOpacity(0.06),
+          strokeColor: const Color(0xFF00A2FF).withOpacity(0.25),
+          strokeWidth: 1,
+        ),
+      );
+    }
+
     if (_isHeatmapMode) {
       int index = 0;
       for (final loc in _serverUserLocations) {
@@ -536,9 +555,9 @@ class _SipMapScreenState extends State<SipMapScreen> {
           Circle(
             circleId: CircleId("server_heatmap_$index"),
             center: loc.position,
-            radius: 40000,
-            fillColor: const Color(0xFFFF3D00).withOpacity(0.20),
-            strokeColor: const Color(0xFFFF3D00).withOpacity(0.40),
+            radius: 80000,
+            fillColor: const Color(0xFFFF3D00).withOpacity(0.25),
+            strokeColor: const Color(0xFFFF3D00).withOpacity(0.50),
             strokeWidth: 1,
           ),
         );
@@ -551,7 +570,7 @@ class _SipMapScreenState extends State<SipMapScreen> {
         Circle(
           circleId: const CircleId('user_fuzzy_radius'),
           center: _getUserCoords(),
-          radius: 1200,
+          radius: 20000,
           fillColor: const Color(0xFF00A2FF).withOpacity(0.08),
           strokeColor: const Color(0xFF00A2FF).withOpacity(0.25),
           strokeWidth: 2,
@@ -748,13 +767,14 @@ class _SipMapScreenState extends State<SipMapScreen> {
               child: GoogleMap(
                 initialCameraPosition: CameraPosition(
                   target: initialTarget,
-                  zoom: 5.0,
+                  zoom: 4.8,
                 ),
+                minMaxZoomPreference: const MinMaxZoomPreference(2.0, 6.2),
                 onMapCreated: (GoogleMapController controller) {
                   _mapController = controller;
                   _mapController?.setMapStyle(_mapStyleJson);
                   if (_currentUserLocation != null) {
-                    _animateToLocation(_getUserCoords(), zoom: 12.0);
+                    _animateToLocation(_getUserCoords(), zoom: 4.8);
                   }
                 },
                 onCameraMove: (CameraPosition position) {
@@ -774,6 +794,22 @@ class _SipMapScreenState extends State<SipMapScreen> {
                   _geocodeDebounceTimer?.cancel();
                   _updateLocationNames(_lastCameraTarget);
                 },
+                onTap: (LatLng tappedCoords) async {
+                  try {
+                    List<Placemark> placemarks =
+                        await placemarkFromCoordinates(
+                            tappedCoords.latitude, tappedCoords.longitude);
+                    if (placemarks.isNotEmpty) {
+                      final country = placemarks.first.country;
+                      if (country != null && country.isNotEmpty) {
+                        _selectCountry(country, center: tappedCoords);
+                      }
+                    }
+                  } catch (e) {
+                    debugPrint("Map onTap geocode error: $e");
+                  }
+                },
+                polygons: _buildPolygons(),
                 markers: _buildMarkers(),
                 circles: _buildCircles(),
                 zoomControlsEnabled: false,
@@ -790,7 +826,7 @@ class _SipMapScreenState extends State<SipMapScreen> {
                   color: AppColors.white,
                 ),
                 padding: EdgeInsets.only(
-                    top: 60.h, bottom: 20.h, left: 20.w, right: 20.w),
+                    top: 60.h, bottom: 14.h, left: 20.w, right: 20.w),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -853,12 +889,48 @@ class _SipMapScreenState extends State<SipMapScreen> {
                 ),
               ),
             ),
+            // Horizontal Country Selector Chips Bar
             Positioned(
-              top: 130.h,
+              top: 116.h,
+              left: 0,
+              right: 0,
+              child: SizedBox(
+                height: 38.h,
+                child: ListView(
+                  scrollDirection: Axis.horizontal,
+                  padding: EdgeInsets.symmetric(horizontal: 16.w),
+                  physics: const BouncingScrollPhysics(),
+                  children: [
+                    _buildCountryChip(
+                      label: "🌍 Global",
+                      isSelected: _selectedCountry == 'Global',
+                      onTap: () {
+                        setState(() {
+                          _selectedCountry = 'Global';
+                        });
+                        _animateToLocation(const LatLng(20, 0), zoom: 2.6);
+                      },
+                    ),
+                    ...CountryBordersHelper.popularCountries.map((c) {
+                      final isSelected = _selectedCountry == c['name'];
+                      return _buildCountryChip(
+                        label: "${c['flag']} ${c['name']}",
+                        isSelected: isSelected,
+                        onTap: () {
+                          _selectCountry(c['name']!);
+                        },
+                      );
+                    }),
+                  ],
+                ),
+              ),
+            ),
+            Positioned(
+              top: 166.h,
               left: 50.w,
               right: 50.w,
               child: Container(
-                height: 48.h,
+                height: 44.h,
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(100.r),
@@ -1031,6 +1103,54 @@ class _SipMapScreenState extends State<SipMapScreen> {
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCountryChip({
+    required String label,
+    required bool isSelected,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        margin: EdgeInsets.only(right: 8.w),
+        padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 6.h),
+        decoration: BoxDecoration(
+          color: isSelected ? const Color(0xFF00A2FF) : Colors.white,
+          borderRadius: BorderRadius.circular(100.r),
+          border: Border.all(
+            color: isSelected
+                ? const Color(0xFF00A2FF)
+                : Colors.black.withOpacity(0.08),
+            width: 1.2,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: isSelected
+                  ? const Color(0xFF00A2FF).withOpacity(0.3)
+                  : Colors.black.withOpacity(0.04),
+              blurRadius: 6,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        alignment: Alignment.center,
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 12.sp,
+            color: isSelected ? Colors.white : const Color(0xFF334155),
+            fontFamily: AppFontStyles.urbanistFontFamily,
+            fontVariations: [
+              isSelected
+                  ? AppFontStyles.boldFontVariation
+                  : AppFontStyles.semiBoldFontVariation
+            ],
+          ),
         ),
       ),
     );

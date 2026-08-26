@@ -1201,4 +1201,188 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get allLanguages => 'Alle Sprachen';
+
+  @override
+  String get connectToBottleAnalysis =>
+      'Verbinden Sie die Sipnudge-Flasche, um auf die Analyse zuzugreifen';
+
+  @override
+  String get habitConsistency => 'Gewohnheitsbeständigkeit';
+
+  @override
+  String get eliteTier => 'Elite-Stufe';
+
+  @override
+  String get improving => 'Verbessernd';
+
+  @override
+  String get consistency => 'Beständigkeit';
+
+  @override
+  String get streak => 'Serie';
+
+  @override
+  String get days => 'Tage';
+
+  @override
+  String get consecutiveDaysGoal =>
+      'Aufeinanderfolgende Tage, an denen das Tagesziel erreicht wurde';
+
+  @override
+  String get followingScheduleVsOffSlot =>
+      'Zeitplan einhalten vs. Trinken außerhalb der Zeitfenster';
+
+  @override
+  String get analytics => 'Analysen';
+
+  @override
+  String get hydrationData => 'Hydratationsdaten';
+
+  @override
+  String get weeklyIntake => 'Wöchentliche Aufnahme';
+
+  @override
+  String get monthlyIntake => 'Monatliche Aufnahme';
+
+  @override
+  String get yearlyIntake => 'Jährliche Aufnahme';
+
+  @override
+  String get quarterlyIntake => 'Vierteljährliche Aufnahme';
+
+  @override
+  String get couldNotLoadAnalytics =>
+      'Analysen konnten nicht geladen werden.\nÜberprüfen Sie Ihre Verbindung.';
+
+  @override
+  String get exportData => 'Daten exportieren';
+
+  @override
+  String get monthlyGoal => 'MONATLICHES ZIEL';
+
+  @override
+  String get annualPerformance => 'JÄHRLICHE LEISTUNG';
+
+  @override
+  String get totalIntake => 'Gesamtaufnahme';
+
+  @override
+  String get target => 'Ziel';
+
+  @override
+  String get weeklyDistribution => 'Wöchentliche Verteilung';
+
+  @override
+  String get quarterlyDistribution => 'Vierteljährliche Verteilung';
+
+  @override
+  String get scheduledVsOffSlot => 'Geplant vs. Außerhalb';
+
+  @override
+  String get scheduledUpper => 'GEPLANT';
+
+  @override
+  String get offSlotUpper => 'AUßERHALB';
+
+  @override
+  String get vsLastMonth => 'vs. letzten Monat';
+
+  @override
+  String get vsLastYear => 'vs. letztes Jahr';
+
+  @override
+  String get keepUpHydrationHabits =>
+      'Behalten Sie Ihre Trinkgewohnheiten bei!';
+
+  @override
+  String get historicalTrends => 'Historische Trends';
+
+  @override
+  String get averageDaily => 'Täglicher Durchschnitt';
+
+  @override
+  String get basedOnLast30Days => 'Basierend auf den letzten 30 Tagen';
+
+  @override
+  String get peakStreak => 'Spitzenserie';
+
+  @override
+  String get goalMetConsecutiveDays =>
+      'Ziel an aufeinanderfolgenden Tagen erreicht';
+
+  @override
+  String get quarterlyBreakdown => 'Vierteljährliche Aufschlüsselung';
+
+  @override
+  String get firstQuarter => 'Erstes Quartal';
+
+  @override
+  String get secondQuarter => 'Zweites Quartal';
+
+  @override
+  String get thirdQuarter => 'Drittes Quartal';
+
+  @override
+  String get fourthQuarter => 'Viertes Quartal';
+
+  @override
+  String get quarter => 'Quartal';
+
+  @override
+  String get januaryToMarch => 'Januar bis März';
+
+  @override
+  String get aprilToJune => 'April bis Juni';
+
+  @override
+  String get julyToSeptember => 'Juli bis September';
+
+  @override
+  String get octoberToDecember => 'Oktober bis Dezember';
+
+  @override
+  String get exportOptions => 'Exportoptionen';
+
+  @override
+  String get downloadHydrationHistorySubtitle =>
+      'Laden Sie Ihren Trinkverlauf für Ihre Unterlagen herunter';
+
+  @override
+  String get downloadAsJpg => 'Als JPG herunterladen';
+
+  @override
+  String get downloadAsJpgDescription =>
+      'Hochauflösende visuelle Zusammenfassung zum Teilen in sozialen Netzwerken.';
+
+  @override
+  String get downloadAsPdf => 'Als PDF herunterladen';
+
+  @override
+  String get downloadAsPdfDescription =>
+      'Detailliertes Dokument der täglichen Statistiken und Trends.';
+
+  @override
+  String get failedToExportJpg => 'Fehler beim Exportieren als JPG';
+
+  @override
+  String get shareHydrationAnalyticsText =>
+      'Schauen Sie sich meine Trinkanalysen an!';
+
+  @override
+  String get eliteSmartInsights => 'Elite Smarte Einblicke';
+
+  @override
+  String get optimalWindow => 'Optimales Zeitfenster';
+
+  @override
+  String get milk => 'Milch';
+
+  @override
+  String get meal => 'Mahlzeit';
+
+  @override
+  String get bottle => 'Flasche';
+
+  @override
+  String get logged => 'Protokolliert';
 }

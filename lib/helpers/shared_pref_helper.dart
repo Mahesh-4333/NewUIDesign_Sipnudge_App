@@ -901,6 +901,7 @@ class SharedPrefsHelper {
   }
 
   static const String _keyOnboardingFlowCompleted = 'onboarding_flow_completed';
+  static const String _keyFirebaseNotificationEnabled = 'firebase_notification_enabled';
 
   static Future<bool> isOnboardingFlowCompleted() async {
     final prefs = await SharedPreferences.getInstance();
@@ -910,5 +911,15 @@ class SharedPrefsHelper {
   static Future<void> setOnboardingFlowCompleted(bool value) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(_keyOnboardingFlowCompleted, value);
+  }
+
+  static Future<void> setFirebaseNotificationEnabled(bool value) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_keyFirebaseNotificationEnabled, value);
+  }
+
+  static Future<bool> isFirebaseNotificationEnabled() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool(_keyFirebaseNotificationEnabled) ?? true;
   }
 }

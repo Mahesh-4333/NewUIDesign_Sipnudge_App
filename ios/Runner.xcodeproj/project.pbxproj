@@ -14,7 +14,7 @@
 		915E31BE2FD47CC600F9C2C7 /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 915E31BD2FD47CC600F9C2C7 /* WidgetKit.framework */; };
 		915E31C02FD47CC600F9C2C7 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 915E31BF2FD47CC600F9C2C7 /* SwiftUI.framework */; };
 		915E31CF2FD47CCB00F9C2C7 /* SipnudgeWidgetExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 915E31BC2FD47CC600F9C2C7 /* SipnudgeWidgetExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
-		917EA4CB302C85E800DD7E82 /* mixkit-achievement-bell-600.aiff in Resources */ = {isa = PBXBuildFile; fileRef = 917EA4CA302C85E800DD7E82 /* mixkit-achievement-bell-600.aiff */; };
+		91972BD13035949600CADD13 /* mixkitachievementbell.caf in Resources */ = {isa = PBXBuildFile; fileRef = 91972BD03035949600CADD13 /* mixkitachievementbell.caf */; };
 		91B840032F77CDBA009332E9 /* ringtone3.caf in Resources */ = {isa = PBXBuildFile; fileRef = 91B83FF82F77CDBA009332E9 /* ringtone3.caf */; };
 		91B840042F77CDBA009332E9 /* ringtone8.caf in Resources */ = {isa = PBXBuildFile; fileRef = 91B83FFD2F77CDBA009332E9 /* ringtone8.caf */; };
 		91B840052F77CDBA009332E9 /* ringtone1.caf in Resources */ = {isa = PBXBuildFile; fileRef = 91B83FF62F77CDBA009332E9 /* ringtone1.caf */; };
@@ -96,7 +96,7 @@
 		915E31BD2FD47CC600F9C2C7 /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
 		915E31BF2FD47CC600F9C2C7 /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
 		915E31D62FD47D3200F9C2C7 /* SipnudgeWidgetExtension.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = SipnudgeWidgetExtension.entitlements; sourceTree = "<group>"; };
-		917EA4CA302C85E800DD7E82 /* mixkit-achievement-bell-600.aiff */ = {isa = PBXFileReference; lastKnownFileType = audio.aiff; path = "mixkit-achievement-bell-600.aiff"; sourceTree = "<group>"; };
+		91972BD03035949600CADD13 /* mixkitachievementbell.caf */ = {isa = PBXFileReference; lastKnownFileType = file; path = mixkitachievementbell.caf; sourceTree = "<group>"; };
 		91B83FF62F77CDBA009332E9 /* ringtone1.caf */ = {isa = PBXFileReference; lastKnownFileType = file; path = ringtone1.caf; sourceTree = "<group>"; };
 		91B83FF72F77CDBA009332E9 /* ringtone2.caf */ = {isa = PBXFileReference; lastKnownFileType = file; path = ringtone2.caf; sourceTree = "<group>"; };
 		91B83FF82F77CDBA009332E9 /* ringtone3.caf */ = {isa = PBXFileReference; lastKnownFileType = file; path = ringtone3.caf; sourceTree = "<group>"; };
@@ -227,6 +227,7 @@
 		97C146F01CF9000F007C117D /* Runner */ = {
 			isa = PBXGroup;
 			children = (
+				91972BD03035949600CADD13 /* mixkitachievementbell.caf */,
 				91B83FF62F77CDBA009332E9 /* ringtone1.caf */,
 				91B83FF72F77CDBA009332E9 /* ringtone2.caf */,
 				91B83FF82F77CDBA009332E9 /* ringtone3.caf */,
@@ -249,7 +250,6 @@
 				1498D2331E8E89220040F4C2 /* GeneratedPluginRegistrant.m */,
 				74858FAE1ED2DC5600515810 /* AppDelegate.swift */,
 				74858FAD1ED2DC5600515810 /* Runner-Bridging-Header.h */,
-				917EA4CA302C85E800DD7E82 /* mixkit-achievement-bell-600.aiff */,
 			);
 			path = Runner;
 			sourceTree = "<group>";
@@ -427,8 +427,8 @@
 				97C146FE1CF9000F007C117D /* Assets.xcassets in Resources */,
 				97C146FC1CF9000F007C117D /* Main.storyboard in Resources */,
 				A3F1CBDC8D1E0EDB5879EB69 /* GoogleService-Info.plist in Resources */,
-				917EA4CB302C85E800DD7E82 /* mixkit-achievement-bell-600.aiff in Resources */,
 				91B840152F77CDBA009332E9 /* Secrets.plist in Resources */,
+				91972BD13035949600CADD13 /* mixkitachievementbell.caf in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

@@ -8,6 +8,7 @@ import 'package:hydrify/constants/app_colors.dart';
 import 'package:hydrify/constants/app_dimensions.dart';
 import 'package:hydrify/constants/app_font_styles.dart';
 import 'package:hydrify/constants/app_strings.dart';
+import 'package:hydrify/l10n/app_localizations.dart';
 import 'package:hydrify/cubit/bottle/bottle_data_cubit.dart';
 import 'package:hydrify/cubit/filter/filter_cubit.dart';
 import 'package:hydrify/helpers/database_helper.dart';
@@ -298,14 +299,15 @@ class _CustomChartDataWidgetState extends State<CustomChartDataWidget>
           color: AppColors.white),
       child: BlocBuilder<FilterCubit, FilterState>(
         builder: (context, filterState) {
+          final l10n = AppLocalizations.of(context);
           final String titleText =
               filterState.currentInterval == FilterInterval.weekly
-                  ? 'Weekly Intake: ${DateFormat('MMM, yyyy').format(filterState.currentDate)}'
+                  ? '${l10n?.weeklyIntake ?? "Weekly Intake"}: ${DateFormat('MMM, yyyy').format(filterState.currentDate)}'
                   : filterState.currentInterval == FilterInterval.monthly
-                      ? 'Monthly Intake: ${DateFormat('yyyy').format(filterState.currentDate)}'
+                      ? '${l10n?.monthlyIntake ?? "Monthly Intake"}: ${DateFormat('yyyy').format(filterState.currentDate)}'
                       : filterState.currentInterval == FilterInterval.yearly
-                          ? 'Yearly Intake: ${DateFormat('yyyy').format(filterState.currentDate)}'
-                          : AppStrings.drinkCompletion;
+                          ? '${l10n?.yearlyIntake ?? "Yearly Intake"}: ${DateFormat('yyyy').format(filterState.currentDate)}'
+                          : (l10n?.drinkCompletion ?? AppStrings.drinkCompletion);
 
           final future = _buildFuture(filterState, context);
 

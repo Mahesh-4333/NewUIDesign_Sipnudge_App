@@ -24,10 +24,17 @@ import 'package:hydrify/cubit/ble/ble_cubit.dart';
 import 'package:hydrify/cubit/bottle/bottle_data_cubit.dart';
 import 'package:hydrify/cubit/hydration/hydration_cubit.dart';
 import 'package:hydrify/services/sync_bus.dart';
+import 'package:hydrify/services/home_widget_service.dart';
 
 class FoodScannerWidget extends StatefulWidget {
   final VoidCallback? onScanCompleted;
-  const FoodScannerWidget({super.key, this.onScanCompleted});
+  final FoodScanData? selectedScan;
+
+  const FoodScannerWidget({
+    super.key,
+    this.onScanCompleted,
+    this.selectedScan,
+  });
 
   @override
   State<FoodScannerWidget> createState() => _FoodScannerWidgetState();
@@ -36,13 +43,17 @@ class FoodScannerWidget extends StatefulWidget {
 class _FoodScannerWidgetState extends State<FoodScannerWidget> {
   File? _image;
   Uint8List? _imageBytes;
+  String? _imageUrl;
   final ImagePicker _picker = ImagePicker();
   bool _isAnalyzing = false;
   String? _errorMessage;
 
   // Food Data
   int? _currentScanId;
+  String? _currentServerId;
+  DateTime? _currentTimestamp;
   String? _dishName;
+  String _foodKey = 'Meal';
   double _currentWeight = 100.0;
   double _baseWeight = 100.0;
   double _waterPercentage = 0.0;
@@ -71,7 +82,97 @@ class _FoodScannerWidgetState extends State<FoodScannerWidget> {
   @override
   void initState() {
     super.initState();
-    _loadTodayScan();
+    SyncBus.instance.addListener(_onSyncComplete);
+    if (widget.selectedScan != null) {
+      _populateFromData(widget.selectedScan!);
+    } else {
+      _loadTodayScan();
+    }
+  }
+
+  void _onSyncComplete() {
+    if (mounted && widget.selectedScan == null) {
+      _loadTodayScan();
+    }
+  }
+
+  @override
+  void dispose() {
+    SyncBus.instance.removeListener(_onSyncComplete);
+    super.dispose();
+  }
+
+  @override
+  void didUpdateWidget(covariant FoodScannerWidget oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.selectedScan != oldWidget.selectedScan ||
+        widget.selectedScan?.id != oldWidget.selectedScan?.id ||
+        widget.selectedScan?.serverId != oldWidget.selectedScan?.serverId ||
+        widget.selectedScan?.dishName != oldWidget.selectedScan?.dishName ||
+        widget.selectedScan?.foodKey != oldWidget.selectedScan?.foodKey) {
+      if (widget.selectedScan != null) {
+        _populateFromData(widget.selectedScan!);
+      } else {
+        _loadTodayScan();
+      }
+    }
+  }
+
+  void _populateFromData(FoodScanData data) {
+    setState(() {
+      _currentScanId = data.id;
+      _currentServerId = data.serverId;
+      _currentTimestamp = data.timestamp;
+      _dishName = data.dishName;
+      _foodKey = data.foodKey ?? 'Meal';
+      _currentWeight = data.weightG;
+      _baseWeight = data.weightG;
+      _waterPercentage = data.waterPercentage;
+      _waterMl = data.waterContentMl;
+      _calories = data.caloriesKcal.toInt();
+      _protein = data.proteinG;
+      _carbs = data.carbsG;
+      _fat = data.fatG;
+      _sodium = data.sodiumMg;
+      _fiber = data.fiberG;
+      _confidenceScore = data.confidenceScore;
+      _ingredients = data.ingredients;
+      _reasoning = data.reasoning;
+      _lastSavedWaterMl = data.waterContentMl;
+
+      _imageBytes = null;
+      _image = null;
+      _imageUrl = null;
+
+      if (data.imageBase64 != null && data.imageBase64!.isNotEmpty) {
+        try {
+          _imageBytes = base64Decode(data.imageBase64!);
+        } catch (_) {}
+      } else if (data.imagePath != null && data.imagePath!.isNotEmpty) {
+        if (data.imagePath!.startsWith('http')) {
+          _imageUrl = data.imagePath;
+        } else if (data.imagePath!.startsWith('/uploads/')) {
+          _imageUrl = "https://api.sipnudge.com${data.imagePath}";
+        } else {
+          final f = File(data.imagePath!);
+          if (f.existsSync()) {
+            _image = f;
+          }
+        }
+      }
+
+      // Set base values for future recalculations
+      _baseWaterMl = _waterMl;
+      _baseCalories = _calories;
+      _baseProtein = _protein;
+      _baseCarbs = _carbs;
+      _baseFat = _fat;
+      _baseSodium = _sodium;
+      _baseFiber = _fiber;
+      _baseWeight = _currentWeight;
+
+      _updateConfidenceLevel(_confidenceScore);
+    });
   }
 
   Future<void> _loadTodayScan() async {
@@ -82,67 +183,39 @@ class _FoodScannerWidgetState extends State<FoodScannerWidget> {
       if (latest.timestamp.year == now.year &&
           latest.timestamp.month == now.month &&
           latest.timestamp.day == now.day) {
-        setState(() {
-          _currentScanId = latest.id;
-          _dishName = latest.dishName;
-          _currentWeight = latest.weightG;
-          _baseWeight = latest.weightG;
-          _waterPercentage = latest.waterPercentage;
-          _waterMl = latest.waterContentMl;
-          _calories = latest.caloriesKcal.toInt();
-          _protein = latest.proteinG;
-          _carbs = latest.carbsG;
-          _fat = latest.fatG;
-          _sodium = latest.sodiumMg;
-          _fiber = latest.fiberG;
-          _confidenceScore = latest.confidenceScore;
-          _ingredients = latest.ingredients;
-          _reasoning = latest.reasoning;
-          _lastSavedWaterMl = latest.waterContentMl;
-          if (latest.imageBase64 != null) {
-            _imageBytes = base64Decode(latest.imageBase64!);
-          } else if (latest.imagePath != null) {
-            _image = File(latest.imagePath!);
-          }
-
-          // Set base values for future recalculations
-          _baseWaterMl = _waterMl;
-          _baseCalories = _calories;
-          _baseProtein = _protein;
-          _baseCarbs = _carbs;
-          _baseFat = _fat;
-          _baseSodium = _sodium;
-          _baseFiber = _fiber;
-          _baseWeight = _currentWeight;
-
-          _updateConfidenceLevel(_confidenceScore);
-        });
+        _populateFromData(latest);
         return;
       }
     }
 
     // If no today's scan found or list empty, clear the state
-    setState(() {
-      _currentScanId = null;
-      _dishName = null;
-      _image = null;
-      _imageBytes = null;
-      _currentWeight = 100.0;
-      _baseWeight = 100.0;
-      _waterPercentage = 0.0;
-      _waterMl = 0.0;
-      _calories = 0;
-      _protein = 0.0;
-      _carbs = 0.0;
-      _fat = 0.0;
-      _sodium = null;
-      _fiber = null;
-      _confidenceScore = "0%";
-      _confidenceLevel = "NA";
-      _ingredients = [];
-      _reasoning = null;
-      _lastSavedWaterMl = 0.0;
-    });
+    if (mounted) {
+      setState(() {
+        _currentScanId = null;
+        _currentServerId = null;
+        _currentTimestamp = null;
+        _dishName = null;
+        _foodKey = 'Meal';
+        _image = null;
+        _imageBytes = null;
+        _imageUrl = null;
+        _currentWeight = 100.0;
+        _baseWeight = 100.0;
+        _waterPercentage = 0.0;
+        _waterMl = 0.0;
+        _calories = 0;
+        _protein = 0.0;
+        _carbs = 0.0;
+        _fat = 0.0;
+        _sodium = null;
+        _fiber = null;
+        _confidenceScore = "0%";
+        _confidenceLevel = "NA";
+        _ingredients = [];
+        _reasoning = null;
+        _lastSavedWaterMl = 0.0;
+      });
+    }
   }
 
   void _updateConfidenceLevel(String score) {
@@ -162,6 +235,7 @@ class _FoodScannerWidgetState extends State<FoodScannerWidget> {
   void _recalculate(double newWeight) {
     if (_baseWeight == 0) return;
     final ratio = newWeight / _baseWeight;
+
     setState(() {
       _currentWeight = newWeight;
       _waterMl = _baseWaterMl * ratio;
@@ -169,34 +243,38 @@ class _FoodScannerWidgetState extends State<FoodScannerWidget> {
       _protein = _baseProtein * ratio;
       _carbs = _baseCarbs * ratio;
       _fat = _baseFat * ratio;
-      if (_baseSodium != null) _sodium = _baseSodium! * ratio;
-      if (_baseFiber != null) _fiber = _baseFiber! * ratio;
+      _sodium = _baseSodium != null ? _baseSodium! * ratio : null;
+      _fiber = _baseFiber != null ? _baseFiber! * ratio : null;
     });
   }
 
   Future<void> _captureAndAnalyze() async {
-    if (_dishName != null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            "You can only scan one food item per day.",
-            style: TextStyle(
-              fontFamily: AppFontStyles.urbanistFontFamily,
-              fontVariations: [AppFontStyles.boldFontVariation],
-            ),
-          ),
-          backgroundColor: const Color(0xFFE05252),
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
-      return;
-    }
+    // if (_dishName != null) {
+    //   ScaffoldMessenger.of(context).showSnackBar(
+    //     SnackBar(
+    //       content: Text(
+    //         "You can only scan one food item per day.",
+    //         style: TextStyle(
+    //           fontFamily: AppFontStyles.urbanistFontFamily,
+    //           fontVariations: [AppFontStyles.boldFontVariation],
+    //         ),
+    //       ),
+    //       backgroundColor: const Color(0xFFE05252),
+    //       behavior: SnackBarBehavior.floating,
+    //     ),
+    //   );
+    //   return;
+    // }
+    _pickImage(ImageSource.camera);
+  }
+
+  Future<void> _pickImage(ImageSource source) async {
     try {
       final XFile? photo = await _picker.pickImage(
-        source: ImageSource.camera,
+        source: source,
         maxWidth: 1024,
         maxHeight: 1024,
-        imageQuality: 50,
+        imageQuality: 85,
       );
 
       if (photo == null) return;
@@ -208,6 +286,7 @@ class _FoodScannerWidgetState extends State<FoodScannerWidget> {
         _isAnalyzing = true;
         _errorMessage = null;
         _currentScanId = null;
+        _foodKey = 'Meal';
         _lastSavedWaterMl = 0.0;
       });
 
@@ -231,10 +310,11 @@ class _FoodScannerWidgetState extends State<FoodScannerWidget> {
     final content = [
       Content.multi([
         TextPart(
-            "You are an expert nutritionist. Analyze this food image and provide nutritional info for 100g portion.\n\n"
+            "You are an expert nutritionist. Analyze this food or beverage image and provide nutritional info for 100g portion.\n\n"
             "Use the following JSON schema:\n"
             "{\n"
             "  \"dish_name\": \"Name\",\n"
+            "  \"food_key\": \"Meal\",\n"
             "  \"visible_ingredients\": [\"item 1\", \"item 2\"],\n"
             "  \"hydration_data\": {\n"
             "    \"water_percentage\": 65,\n"
@@ -250,7 +330,8 @@ class _FoodScannerWidgetState extends State<FoodScannerWidget> {
             "  },\n"
             "  \"confidence_score\": \"85%\",\n"
             "  \"reasoning\": \"A brief explanation.\"\n"
-            "}"),
+            "}\n\n"
+            "IMPORTANT for \"food_key\": Must be EXACTLY one of these values based on the image: \"Water\", \"Coffee\", \"Tea\", \"Milk\", \"Juice\", or \"Meal\". If it is solid food or a mixed dish, use \"Meal\". If it is a beverage, use the matching beverage type."),
         DataPart('image/jpeg', bytes),
       ])
     ];
@@ -298,8 +379,48 @@ class _FoodScannerWidgetState extends State<FoodScannerWidget> {
       final hydration = data['hydration_data'] ?? {};
       final nutrition = data['nutritional_estimates'] ?? {};
 
+      String rawKey = (data['food_key'] ?? 'Meal').toString().trim();
+      String normalizedKey = 'Meal';
+      final lower = rawKey.toLowerCase();
+      final dishLower = (data['dish_name'] ?? '').toString().toLowerCase();
+
+      if (lower == 'water' || dishLower == 'water') {
+        normalizedKey = 'Water';
+      } else if (lower == 'coffee' ||
+          dishLower.contains('coffee') ||
+          dishLower.contains('latte') ||
+          dishLower.contains('cappuccino') ||
+          dishLower.contains('espresso') ||
+          dishLower.contains('mocha')) {
+        normalizedKey = 'Coffee';
+      } else if (lower == 'tea' ||
+          dishLower.contains('tea') ||
+          dishLower.contains('chai') ||
+          dishLower.contains('matcha')) {
+        normalizedKey = 'Tea';
+      } else if (lower == 'milk' ||
+          dishLower.contains('milk') ||
+          dishLower.contains('shake') ||
+          dishLower.contains('lassi') ||
+          dishLower.contains('smoothie') ||
+          dishLower.contains('buttermilk') ||
+          dishLower.contains('chaas')) {
+        normalizedKey = 'Milk';
+      } else if (lower == 'juice' ||
+          dishLower.contains('juice') ||
+          dishLower.contains('lemonade') ||
+          dishLower.contains('soda') ||
+          dishLower.contains('drink') ||
+          dishLower.contains('mojito') ||
+          dishLower.contains('squash')) {
+        normalizedKey = 'Juice';
+      } else {
+        normalizedKey = 'Meal';
+      }
+
       setState(() {
         _dishName = data['dish_name'] ?? "Unknown Dish";
+        _foodKey = normalizedKey;
         _ingredients = List<String>.from(data['visible_ingredients'] ?? []);
         _waterPercentage = (hydration['water_percentage'] ?? 0).toDouble();
         _waterMl = (hydration['total_water_ml'] ?? 0).toDouble();
@@ -342,8 +463,10 @@ class _FoodScannerWidgetState extends State<FoodScannerWidget> {
     try {
       final scan = FoodScanData(
         id: _currentScanId,
+        serverId: _currentServerId,
         dishName: _dishName!,
-        imagePath: _image?.path,
+        foodKey: _foodKey,
+        imagePath: _image?.path ?? _imageUrl,
         weightG: _currentWeight,
         waterContentMl: _waterMl,
         waterPercentage: _waterPercentage,
@@ -357,40 +480,49 @@ class _FoodScannerWidgetState extends State<FoodScannerWidget> {
         ingredients: _ingredients,
         reasoning: _reasoning,
         imageBase64: _imageBytes != null ? base64Encode(_imageBytes!) : null,
-        timestamp: DateTime.now(),
+        timestamp: _currentTimestamp ?? DateTime.now(),
       );
-      final id = await DatabaseHelper().insertFoodScan(scan.toMap());
+      final id = await DatabaseHelper().upsertFoodScan(scan.toMap());
       setState(() {
         _currentScanId = id;
       });
 
-      // Sync to backend
+      // Sync to backend food scans
       await DatabaseSyncService().syncFoodScan(scan.toMap());
+
+      // Update Hydration Summary with water delta
+      final double delta = _waterMl - _lastSavedWaterMl;
+      if (delta != 0) {
+        await SharedPrefsHelper.addPendingManualDelta(delta.toInt());
+        await DatabaseHelper().updateHydrationDaySummary(delta);
+        await DatabaseSyncService().pushTodayConsumed();
+      }
 
       widget.onScanCompleted?.call();
       await SharedPrefsHelper.setAiHydrationGoalShown(true);
       Console.log(
-          tag: 'FoodScanner', value: '[DB] Food scan saved: ${scan.dishName}');
+          tag: 'FoodScanner',
+          value:
+              '[DB] Food scan saved: ${scan.dishName} (food_key: $_foodKey)');
 
-      // Update Hydration Summary
-      final double delta = _waterMl - _lastSavedWaterMl;
-      if (delta != 0) {
-        await DatabaseHelper().updateHydrationDaySummary(delta);
-        if (mounted) {
-          final hydrationCubit = context.read<HydrationCubit>();
-          final bleCubit = context.read<BleCubit>();
+      if (mounted) {
+        final hydrationCubit = context.read<HydrationCubit>();
+        final bleCubit = context.read<BleCubit>();
 
-          _lastSavedWaterMl = _waterMl;
+        _lastSavedWaterMl = _waterMl;
 
-          // Fetch updated consumption from server / cubit
-          await context.read<BottleDataCubit>().getCurrentDayHistory();
+        // Fetch updated consumption from server / cubit
+        await context.read<BottleDataCubit>().getCurrentDayHistory();
 
-          // Refresh Cubits & sync BLE delta for UI synchronization
-          bleCubit.triggerRefresh();
-          bleCubit.syncPendingManualDelta();
-          hydrationCubit.refreshAchievementStats();
-          SyncBus.instance.notifySyncComplete();
-        }
+        // Refresh Cubits & sync BLE delta for UI synchronization
+        bleCubit.triggerRefresh();
+        bleCubit.syncPendingManualDelta();
+        hydrationCubit.loadSlotsFromDb();
+        hydrationCubit.refreshAchievementStats();
+        SyncBus.instance.notifySyncComplete();
+        try {
+          HomeWidgetService.updateWidgetData();
+        } catch (_) {}
       }
     } catch (e, st) {
       Console.log(tag: 'FoodScanner', value: '[DB] _saveToDb failed: $e\n$st');
@@ -423,7 +555,9 @@ class _FoodScannerWidgetState extends State<FoodScannerWidget> {
                 children: [
                   const SizedBox(width: 60), // Spacer for centering title
                   Text(
-                    "Select Weight (g)",
+                    _foodKey != 'Meal'
+                        ? "Select Volume (ml)"
+                        : "Select Weight (g)",
                     style: TextStyle(
                       fontSize: 18.sp,
                       fontVariations: [AppFontStyles.boldFontVariation],
@@ -476,9 +610,10 @@ class _FoodScannerWidgetState extends State<FoodScannerWidget> {
                       },
                       childDelegate: ListWheelChildBuilderDelegate(
                         builder: (context, index) {
+                          final unit = _foodKey != 'Meal' ? "ml" : "g";
                           return Center(
                             child: Text(
-                              "${(index + 1) * 50} g",
+                              "${(index + 1) * 50} $unit",
                               style: TextStyle(
                                 fontSize: 22.sp,
                                 fontVariations: [
@@ -501,7 +636,9 @@ class _FoodScannerWidgetState extends State<FoodScannerWidget> {
         );
       },
     );
-    context.read<BottomNavCubit>().showBar();
+    if (mounted) {
+      context.read<BottomNavCubit>().showBar();
+    }
   }
 
   @override
@@ -512,7 +649,9 @@ class _FoodScannerWidgetState extends State<FoodScannerWidget> {
       listenWhen: (previous, current) =>
           previous.refreshTrigger != current.refreshTrigger,
       listener: (context, state) {
-        _loadTodayScan();
+        if (widget.selectedScan == null) {
+          _loadTodayScan();
+        }
       },
       child: Container(
         margin: EdgeInsets.symmetric(horizontal: 8.w),
@@ -617,7 +756,9 @@ class _FoodScannerWidgetState extends State<FoodScannerWidget> {
                               alignment: Alignment.center,
                               children: [
                                 // Captured Image
-                                if (_imageBytes != null || _image != null)
+                                if (_imageBytes != null ||
+                                    _image != null ||
+                                    _imageUrl != null)
                                   Positioned.fill(
                                     child: Container(
                                       margin: EdgeInsets.all(12.w),
@@ -627,13 +768,18 @@ class _FoodScannerWidgetState extends State<FoodScannerWidget> {
                                         child: _imageBytes != null
                                             ? Image.memory(_imageBytes!,
                                                 fit: BoxFit.cover)
-                                            : Image.file(_image!,
-                                                fit: BoxFit.cover),
+                                            : _imageUrl != null
+                                                ? Image.network(_imageUrl!,
+                                                    fit: BoxFit.cover)
+                                                : Image.file(_image!,
+                                                    fit: BoxFit.cover),
                                       ),
                                     ),
                                   ),
                                 // Translucent white background inside brackets
-                                if (_imageBytes == null && _image == null)
+                                if (_imageBytes == null &&
+                                    _image == null &&
+                                    _imageUrl == null)
                                   Positioned.fill(
                                     child: Container(
                                       margin: EdgeInsets.all(12.w),
@@ -648,6 +794,7 @@ class _FoodScannerWidgetState extends State<FoodScannerWidget> {
                                 // Camera Icon
                                 if (_imageBytes == null &&
                                     _image == null &&
+                                    _imageUrl == null &&
                                     !_isAnalyzing)
                                   Image.asset(
                                     AssetsPath.camera_food_scn,
@@ -770,14 +917,60 @@ class _FoodScannerWidgetState extends State<FoodScannerWidget> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Expanded(
-                child: Text(
-                  dishName,
-                  style: TextStyle(
-                    fontSize: 18.sp,
-                    fontVariations: [AppFontStyles.boldFontVariation],
-                    color: mainTextColor,
-                    fontFamily: AppFontStyles.urbanistFontFamily,
-                  ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      dishName,
+                      style: TextStyle(
+                        fontSize: 18.sp,
+                        fontVariations: [AppFontStyles.boldFontVariation],
+                        color: mainTextColor,
+                        fontFamily: AppFontStyles.urbanistFontFamily,
+                      ),
+                    ),
+                    if (!isDummy && _foodKey.isNotEmpty) ...[
+                      SizedBox(height: 4.h),
+                      InkWell(
+                        onTap: isDummy ? null : _showFoodTypePicker,
+                        borderRadius: BorderRadius.circular(6.r),
+                        child: Container(
+                          padding: EdgeInsets.symmetric(
+                              horizontal: 8.w, vertical: 3.h),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFEFF6FF),
+                            borderRadius: BorderRadius.circular(6.r),
+                            border: Border.all(
+                              color: const Color(0xFFBFDBFE),
+                              width: 0.8,
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                _foodKey.toUpperCase(),
+                                style: TextStyle(
+                                  fontSize: 10.sp,
+                                  fontVariations: [AppFontStyles.boldFontVariation],
+                                  color: AppColors.blueWaterIntake,
+                                  fontFamily: AppFontStyles.urbanistFontFamily,
+                                  letterSpacing: 0.5,
+                                ),
+                              ),
+                              SizedBox(width: 4.w),
+                              Icon(
+                                Icons.keyboard_arrow_down_rounded,
+                                size: 13.sp,
+                                color: AppColors.blueWaterIntake,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
               ),
               Column(
@@ -910,7 +1103,7 @@ class _FoodScannerWidgetState extends State<FoodScannerWidget> {
           SizedBox(height: 20.h),
           Center(
             child: Text(
-              "Calculated based on ${isDummy ? 100 : _currentWeight.toInt()}g portion size",
+              "Calculated based on ${isDummy ? 100 : _currentWeight.toInt()}${_foodKey != 'Meal' ? 'ml' : 'g'} portion size",
               style: TextStyle(
                   fontSize: 10.sp,
                   fontStyle: FontStyle.italic,
@@ -923,7 +1116,96 @@ class _FoodScannerWidgetState extends State<FoodScannerWidget> {
     );
   }
 
+  void _showFoodTypePicker() {
+    final types = ['Meal', 'Juice', 'Milk', 'Coffee', 'Tea', 'Water'];
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        return Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(24.r)),
+          ),
+          padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 20.h),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    "Select Item Type",
+                    style: TextStyle(
+                      fontSize: 18.sp,
+                      fontVariations: [AppFontStyles.boldFontVariation],
+                      fontFamily: AppFontStyles.urbanistFontFamily,
+                      color: AppColors.bluegray,
+                    ),
+                  ),
+                  IconButton(
+                    onPressed: () => Navigator.pop(ctx),
+                    icon: const Icon(Icons.close_rounded),
+                  ),
+                ],
+              ),
+              SizedBox(height: 12.h),
+              Wrap(
+                spacing: 10.w,
+                runSpacing: 10.h,
+                children: types.map((t) {
+                  final isSelected = _foodKey.toLowerCase() == t.toLowerCase();
+                  return InkWell(
+                    onTap: () async {
+                      Navigator.pop(ctx);
+                      setState(() {
+                        _foodKey = t;
+                      });
+                      await _saveToDb();
+                    },
+                    borderRadius: BorderRadius.circular(12.r),
+                    child: Container(
+                      padding: EdgeInsets.symmetric(
+                          horizontal: 16.w, vertical: 10.h),
+                      decoration: BoxDecoration(
+                        color: isSelected
+                            ? AppColors.blueWaterIntake
+                            : const Color(0xFFF1F5F9),
+                        borderRadius: BorderRadius.circular(12.r),
+                        border: Border.all(
+                          color: isSelected
+                              ? AppColors.blueWaterIntake
+                              : const Color(0xFFE2E8F0),
+                        ),
+                      ),
+                      child: Text(
+                        t,
+                        style: TextStyle(
+                          fontSize: 14.sp,
+                          color: isSelected ? Colors.white : AppColors.bluegray,
+                          fontVariations: [
+                            isSelected
+                                ? AppFontStyles.boldFontVariation
+                                : AppFontStyles.regularFontVariation
+                          ],
+                          fontFamily: AppFontStyles.urbanistFontFamily,
+                        ),
+                      ),
+                    ),
+                  );
+                }).toList(),
+              ),
+              SizedBox(height: 20.h),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   Widget _buildWeightSelector({bool isDummy = false}) {
+    final unit = _foodKey != 'Meal' ? "ml" : "g";
     return InkWell(
       onTap: isDummy ? null : _showWeightPicker,
       child: Container(
@@ -935,7 +1217,7 @@ class _FoodScannerWidgetState extends State<FoodScannerWidget> {
         child: Row(
           children: [
             Text(
-              isDummy ? "100 g" : "${_currentWeight.toInt()} g",
+              isDummy ? "100 $unit" : "${_currentWeight.toInt()} $unit",
               style: TextStyle(
                 fontSize: 12.sp,
                 fontVariations: [AppFontStyles.boldFontVariation],

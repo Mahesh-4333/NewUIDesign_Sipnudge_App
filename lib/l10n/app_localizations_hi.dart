@@ -508,7 +508,7 @@ class AppLocalizationsHi extends AppLocalizations {
   String get allTab => 'सभी';
 
   @override
-  String get offSlot => 'ऑफ-स्लॉट';
+  String get offSlot => 'ऑफ स्लॉट';
 
   @override
   String get scheduledRecords => 'निर्धारित रिकॉर्ड';
@@ -1192,4 +1192,183 @@ class AppLocalizationsHi extends AppLocalizations {
 
   @override
   String get allLanguages => 'सभी भाषाएं';
+
+  @override
+  String get connectToBottleAnalysis =>
+      'विश्लेषण एक्सेस करने के लिए सिपनज बॉटल कनेक्ट करें';
+
+  @override
+  String get habitConsistency => 'आदत निरंतरता';
+
+  @override
+  String get eliteTier => 'एलीट टीयर';
+
+  @override
+  String get improving => 'सुधार हो रहा है';
+
+  @override
+  String get consistency => 'निरंतरता';
+
+  @override
+  String get streak => 'स्ट्रीक';
+
+  @override
+  String get days => 'दिन';
+
+  @override
+  String get consecutiveDaysGoal => 'दैनिक लक्ष्य तक पहुंचने वाले लगातार दिन';
+
+  @override
+  String get followingScheduleVsOffSlot => 'शेड्यूल बनाम ऑफ-स्लॉट पीने का पालन';
+
+  @override
+  String get analytics => 'विश्लेषण';
+
+  @override
+  String get hydrationData => 'हाइड्रेशन डेटा';
+
+  @override
+  String get weeklyIntake => 'साप्ताहिक सेवन';
+
+  @override
+  String get monthlyIntake => 'मासिक सेवन';
+
+  @override
+  String get yearlyIntake => 'वार्षिक सेवन';
+
+  @override
+  String get quarterlyIntake => 'त्रैमासिक सेवन';
+
+  @override
+  String get couldNotLoadAnalytics =>
+      'विश्लेषण लोड नहीं किया जा सका।\nअपना कनेक्शन जांचें।';
+
+  @override
+  String get exportData => 'डेटा निर्यात करें';
+
+  @override
+  String get monthlyGoal => 'मासिक लक्ष्य';
+
+  @override
+  String get annualPerformance => 'वार्षिक प्रदर्शन';
+
+  @override
+  String get totalIntake => 'कुल सेवन';
+
+  @override
+  String get target => 'लक्ष्य';
+
+  @override
+  String get weeklyDistribution => 'साप्ताहिक वितरण';
+
+  @override
+  String get quarterlyDistribution => 'त्रैमासिक वितरण';
+
+  @override
+  String get scheduledVsOffSlot => 'निर्धारित बनाम ऑफ-स्लॉट';
+
+  @override
+  String get scheduledUpper => 'निर्धारित';
+
+  @override
+  String get offSlotUpper => 'ऑफ-स्लॉट';
+
+  @override
+  String get vsLastMonth => 'पिछले महीने की तुलना में';
+
+  @override
+  String get vsLastYear => 'पिछले वर्ष की तुलना में';
+
+  @override
+  String get keepUpHydrationHabits => 'अपनी हाइड्रेशन की आदतें बनाए रखें!';
+
+  @override
+  String get historicalTrends => 'ऐतिहासिक रुझान';
+
+  @override
+  String get averageDaily => 'दैनिक औसत';
+
+  @override
+  String get basedOnLast30Days => 'पिछले 30 दिनों के आधार पर';
+
+  @override
+  String get peakStreak => 'पीक स्ट्रीक';
+
+  @override
+  String get goalMetConsecutiveDays => 'लगातार दिनों तक लक्ष्य पूरा किया';
+
+  @override
+  String get quarterlyBreakdown => 'त्रैमासिक विवरण';
+
+  @override
+  String get firstQuarter => 'पहली तिमाही';
+
+  @override
+  String get secondQuarter => 'दूसरी तिमाही';
+
+  @override
+  String get thirdQuarter => 'तीसरी तिमाही';
+
+  @override
+  String get fourthQuarter => 'चौथी तिमाही';
+
+  @override
+  String get quarter => 'तिमाही';
+
+  @override
+  String get januaryToMarch => 'जनवरी से मार्च';
+
+  @override
+  String get aprilToJune => 'अप्रैल से जून';
+
+  @override
+  String get julyToSeptember => 'जुलाई से सितंबर';
+
+  @override
+  String get octoberToDecember => 'अक्टूबर से दिसंबर';
+
+  @override
+  String get exportOptions => 'निर्यात विकल्प';
+
+  @override
+  String get downloadHydrationHistorySubtitle =>
+      'अपने रिकॉर्ड के लिए अपना हाइड्रेशन इतिहास डाउनलोड करें';
+
+  @override
+  String get downloadAsJpg => 'JPG के रूप में डाउनलोड करें';
+
+  @override
+  String get downloadAsJpgDescription =>
+      'सोशल शेयरिंग के लिए उच्च-रिज़ॉल्यूशन विज़ुअल सारांश।';
+
+  @override
+  String get downloadAsPdf => 'PDF के रूप में डाउनलोड करें';
+
+  @override
+  String get downloadAsPdfDescription =>
+      'दैनिक आंकड़ों और रुझानों का विस्तृत दस्तावेज़।';
+
+  @override
+  String get failedToExportJpg => 'JPG निर्यात करने में विफल';
+
+  @override
+  String get shareHydrationAnalyticsText => 'मेरा हाइड्रेशन विश्लेषण देखें!';
+
+  @override
+  String get eliteSmartInsights => 'एलीट स्मार्ट अंतर्दृष्टि';
+
+  @override
+  String get optimalWindow => 'अनुकूलतम समय';
+
+  @override
+  String get milk => 'दूध';
+
+  @override
+  String get meal => 'भोजन';
+
+  @override
+  String get bottle => 'बोतल';
+
+  @override
+  String get logged => 'लॉग किया गया';
 }

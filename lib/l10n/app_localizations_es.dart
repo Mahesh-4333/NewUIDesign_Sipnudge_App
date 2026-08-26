@@ -1195,4 +1195,186 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get allLanguages => 'Todos los idiomas';
+
+  @override
+  String get connectToBottleAnalysis =>
+      'Conecta la botella Sipnudge para acceder al análisis';
+
+  @override
+  String get habitConsistency => 'Consistencia de hábito';
+
+  @override
+  String get eliteTier => 'Nivel Élite';
+
+  @override
+  String get improving => 'Mejorando';
+
+  @override
+  String get consistency => 'Consistencia';
+
+  @override
+  String get streak => 'Racha';
+
+  @override
+  String get days => 'días';
+
+  @override
+  String get consecutiveDaysGoal =>
+      'Días consecutivos alcanzando la meta diaria';
+
+  @override
+  String get followingScheduleVsOffSlot =>
+      'Siguiendo el horario frente a bebida fuera de horario';
+
+  @override
+  String get analytics => 'Análisis';
+
+  @override
+  String get hydrationData => 'Datos de hidratación';
+
+  @override
+  String get weeklyIntake => 'Ingesta semanal';
+
+  @override
+  String get monthlyIntake => 'Ingesta mensual';
+
+  @override
+  String get yearlyIntake => 'Ingesta anual';
+
+  @override
+  String get quarterlyIntake => 'Ingesta trimestral';
+
+  @override
+  String get couldNotLoadAnalytics =>
+      'No se pudo cargar el análisis.\nRevisa tu conexión.';
+
+  @override
+  String get exportData => 'Exportar datos';
+
+  @override
+  String get monthlyGoal => 'META MENSUAL';
+
+  @override
+  String get annualPerformance => 'RENDIMIENTO ANUAL';
+
+  @override
+  String get totalIntake => 'Ingesta total';
+
+  @override
+  String get target => 'Meta';
+
+  @override
+  String get weeklyDistribution => 'Distribución semanal';
+
+  @override
+  String get quarterlyDistribution => 'Distribución trimestral';
+
+  @override
+  String get scheduledVsOffSlot => 'Programado vs. Fuera de horario';
+
+  @override
+  String get scheduledUpper => 'PROGRAMADO';
+
+  @override
+  String get offSlotUpper => 'FUERA DE HORARIO';
+
+  @override
+  String get vsLastMonth => 'vs el mes pasado';
+
+  @override
+  String get vsLastYear => 'vs el año pasado';
+
+  @override
+  String get keepUpHydrationHabits => '¡Mantén tus hábitos de hidratación!';
+
+  @override
+  String get historicalTrends => 'Tendencias históricas';
+
+  @override
+  String get averageDaily => 'Promedio diario';
+
+  @override
+  String get basedOnLast30Days => 'Basado en los últimos 30 días';
+
+  @override
+  String get peakStreak => 'Racha máxima';
+
+  @override
+  String get goalMetConsecutiveDays => 'Meta cumplida en días consecutivos';
+
+  @override
+  String get quarterlyBreakdown => 'Desglose trimestral';
+
+  @override
+  String get firstQuarter => 'Primer trimestre';
+
+  @override
+  String get secondQuarter => 'Segundo trimestre';
+
+  @override
+  String get thirdQuarter => 'Tercer trimestre';
+
+  @override
+  String get fourthQuarter => 'Cuarto trimestre';
+
+  @override
+  String get quarter => 'Trimestre';
+
+  @override
+  String get januaryToMarch => 'Enero a marzo';
+
+  @override
+  String get aprilToJune => 'Abril a junio';
+
+  @override
+  String get julyToSeptember => 'Julio a septiembre';
+
+  @override
+  String get octoberToDecember => 'Octubre a diciembre';
+
+  @override
+  String get exportOptions => 'Opciones de exportación';
+
+  @override
+  String get downloadHydrationHistorySubtitle =>
+      'Descarga tu historial de hidratación para tus registros';
+
+  @override
+  String get downloadAsJpg => 'Descargar como JPG';
+
+  @override
+  String get downloadAsJpgDescription =>
+      'Resumen visual de alta resolución para compartir en redes sociales.';
+
+  @override
+  String get downloadAsPdf => 'Descargar como PDF';
+
+  @override
+  String get downloadAsPdfDescription =>
+      'Documento detallado de estadísticas y tendencias diarias.';
+
+  @override
+  String get failedToExportJpg => 'Error al exportar JPG';
+
+  @override
+  String get shareHydrationAnalyticsText =>
+      '¡Mira mis análisis de hidratación!';
+
+  @override
+  String get eliteSmartInsights => 'Información Inteligente Élite';
+
+  @override
+  String get optimalWindow => 'Ventana óptima';
+
+  @override
+  String get milk => 'Leche';
+
+  @override
+  String get meal => 'Comida';
+
+  @override
+  String get bottle => 'Botella';
+
+  @override
+  String get logged => 'Registrado';
 }

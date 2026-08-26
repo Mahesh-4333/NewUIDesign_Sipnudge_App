@@ -18,11 +18,13 @@ class DatabaseSyncService {
   static bool _isSyncing = false;
   static DateTime? _lastSyncTime;
 
-  Future<void> syncAll({bool isFromBle = false, int? battery, bool force = false}) async {
+  Future<void> syncAll(
+      {bool isFromBle = false, int? battery, bool force = false}) async {
     if (_isSyncing) {
       Console.log(
           tag: "SYNC",
-          value: "DatabaseSyncService skipped: Another sync is already in progress.");
+          value:
+              "DatabaseSyncService skipped: Another sync is already in progress.");
       return;
     }
 
@@ -32,7 +34,8 @@ class DatabaseSyncService {
       if (elapsed.inSeconds < 45) {
         Console.log(
             tag: "SYNC",
-            value: "DatabaseSyncService throttled: Last sync was ${elapsed.inSeconds}s ago (< 45s).");
+            value:
+                "DatabaseSyncService throttled: Last sync was ${elapsed.inSeconds}s ago (< 45s).");
         return;
       }
     }
@@ -226,12 +229,12 @@ class DatabaseSyncService {
             }
           }
 
-          final finalImagePath = isAlreadyRemote
-              ? localPath
-              : (serverImageUrl ?? s['image_path']);
+          final finalImagePath =
+              isAlreadyRemote ? localPath : (serverImageUrl ?? s['image_path']);
 
           mappedScans.add({
             'dishName': s['dish_name'],
+            'foodKey': s['food_key'] ?? s['foodKey'] ?? 'Meal',
             'imagePath': finalImagePath,
             'imageBase64': null, // No need to send base64 anymore
             'weightG': s['weight_g'],
@@ -651,6 +654,7 @@ class DatabaseSyncService {
 
       final payload = {
         'dishName': scanData['dish_name'],
+        'foodKey': scanData['food_key'] ?? scanData['foodKey'] ?? 'Meal',
         'imagePath': serverImageUrl ?? scanData['image_path'],
         'imageBase64':
             null, // Keep sync JSON payload small (~300 bytes) to prevent HTTP 413

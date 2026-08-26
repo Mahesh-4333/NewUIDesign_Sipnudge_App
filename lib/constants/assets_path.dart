@@ -274,4 +274,13 @@ class AssetsPath {
       "assets/onboarding/intake_tutorial.mp4";
 
   static const String language = "assets/images/language.png";
+
+  static const String logHydrationCoffee =
+      "assets/log_hydration/coffee_tea.png";
+  static const String logHydrationJuice = "assets/log_hydration/juice.png";
+  static const String logHydrationLogged = "assets/log_hydration/logged.png";
+  static const String logHydrationMeal = "assets/log_hydration/meal.png";
+  static const String logHydrationMilk = "assets/log_hydration/milk.png";
+  static const String logHydrationTea = "assets/log_hydration/tea.png";
+  static const String logHydrationBottle = "assets/log_hydration/bottle.png";
 }

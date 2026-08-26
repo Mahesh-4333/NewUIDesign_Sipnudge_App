@@ -17,6 +17,11 @@ import 'package:hydrify/screens/widgets/chart_widgets/food_scanner_widget.dart';
 import 'package:hydrify/screens/widgets/chart_widgets/log_hydration_widget.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:hydrify/services/sync_bus.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:hydrify/cubit/ble/ble_cubit.dart';
+import 'package:hydrify/cubit/bottle/bottle_data_cubit.dart';
+import 'package:hydrify/cubit/hydration/hydration_cubit.dart';
+import 'package:hydrify/services/home_widget_service.dart';
 import 'package:intl/intl.dart';
 
 class LogTabScreen extends StatefulWidget {
@@ -30,6 +35,8 @@ class _LogTabScreenState extends State<LogTabScreen> {
   int _selectedSubTab = 0; // 0: Food Intake, 1: Liquid Intake
   List<FoodScanData> _allFoodLogs = [];
   List<FoodScanData> _foodLogs = [];
+  FoodScanData? _selectedFoodLog;
+  final ScrollController _scrollController = ScrollController();
   bool _isLoadingLogs = false;
 
   DateTime _selectedDate = DateUtils.dateOnly(DateTime.now());
@@ -68,6 +75,7 @@ class _LogTabScreenState extends State<LogTabScreen> {
   @override
   void dispose() {
     _configSubscription?.cancel();
+    _scrollController.dispose();
     super.dispose();
   }
 
@@ -120,7 +128,13 @@ class _LogTabScreenState extends State<LogTabScreen> {
   }
 
   Future<void> _deleteFoodLog(FoodScanData log) async {
-    // 1. Delete locally from SQLite
+    final userId = await SharedPrefsHelper.getUserId();
+    final userEmail = await SharedPrefsHelper.getUserEmail();
+
+    // 1. Queue negative delta for BLE / live hydration value
+    await SharedPrefsHelper.addPendingManualDelta(-log.waterContentMl.toInt());
+
+    // 2. Delete locally from SQLite user_food_scanner
     await DatabaseHelper().deleteFoodScanById(
       log.id,
       dishName: log.dishName,
@@ -128,25 +142,67 @@ class _LogTabScreenState extends State<LogTabScreen> {
     );
     await DatabaseHelper().updateHydrationDaySummary(-log.waterContentMl);
 
-    // 2. Delete on backend server
-    final userId = await SharedPrefsHelper.getUserId();
-    final userEmail = await SharedPrefsHelper.getUserEmail();
+    // 3. If it was logged as a beverage (Coffee, Tea, Juice, Milk, Water), also delete from log_hydration
+    final String? foodKey = log.foodKey;
+    if (foodKey != null && foodKey.toLowerCase() != 'meal') {
+      final drinkType =
+          foodKey[0].toUpperCase() + foodKey.substring(1).toLowerCase();
+      await DatabaseHelper().deleteHydrationLogByTimestampAndType(
+        log.timestamp.toIso8601String(),
+        drinkType,
+      );
+      if (userId != null && userEmail != "guest_user") {
+        final localDateStr =
+            '${log.timestamp.year.toString().padLeft(4, '0')}-${log.timestamp.month.toString().padLeft(2, '0')}-${log.timestamp.day.toString().padLeft(2, '0')}';
+        ApiService()
+            .deleteManualLog(
+          userId,
+          drinkType,
+          log.waterContentMl,
+          log.timestamp.toIso8601String(),
+          localDate: localDateStr,
+        )
+            .catchError((_) => false);
+      }
+    }
+
+    // 4. Delete food scan on backend server
     if (userId != null && userEmail != "guest_user") {
+      final String? validServerId = (log.serverId != null &&
+              log.serverId!.isNotEmpty &&
+              log.serverId!.length == 24)
+          ? log.serverId
+          : null;
+
       await ApiService().deleteFoodScan(
         userId,
-        scanId: log.id?.toString(),
+        scanId: validServerId,
         dishName: log.dishName,
-        timestamp: log.timestamp.toIso8601String(),
+        timestamp: log.timestamp.toUtc().toIso8601String(),
+        localTimestamp: log.timestamp.toIso8601String(),
       );
     }
 
+    if (_selectedFoodLog?.id != null && _selectedFoodLog?.id == log.id) {
+      _selectedFoodLog = null;
+    }
     Fluttertoast.showToast(msg: "Food log deleted");
 
-    // 3. Reload list
+    // 5. Reload list
     await _loadFoodLogs();
 
-    // 4. Notify all charts & UI listeners
-    SyncBus.instance.notifySyncComplete();
+    // 5. Notify all charts, cubits & UI listeners
+    if (mounted) {
+      context.read<BleCubit>().triggerRefresh();
+      context.read<BleCubit>().syncPendingManualDelta();
+      context.read<HydrationCubit>().loadSlotsFromDb();
+      context.read<HydrationCubit>().refreshAchievementStats();
+      context.read<BottleDataCubit>().getCurrentDayHistory();
+      SyncBus.instance.notifySyncComplete();
+      try {
+        HomeWidgetService.updateWidgetData();
+      } catch (_) {}
+    }
   }
 
   Widget _buildFoodIcon(FoodScanData log) {
@@ -400,13 +456,18 @@ class _LogTabScreenState extends State<LogTabScreen> {
 
   Widget _buildFoodIntakeView(AppLocalizations? loc) {
     return ListView(
+      controller: _scrollController,
       padding: EdgeInsets.only(bottom: 200.h),
       physics: const BouncingScrollPhysics(),
       children: [
         FoodScannerWidget(
+          key: ValueKey(
+              '${_selectedFoodLog?.id}_${_selectedFoodLog?.serverId}_${_selectedFoodLog?.dishName}_${_selectedFoodLog?.foodKey}_${_selectedFoodLog?.weightG}'),
+          selectedScan: _selectedFoodLog,
           onScanCompleted: () {
             setState(() {
               _selectedDate = DateUtils.dateOnly(DateTime.now());
+              _selectedFoodLog = null;
             });
             _loadFoodLogs();
           },
@@ -440,6 +501,7 @@ class _LogTabScreenState extends State<LogTabScreen> {
                   if (DateUtils.isSameDay(date, _selectedDate)) return;
                   setState(() {
                     _selectedDate = date;
+                    _selectedFoodLog = null;
                     _foodLogs = []; // clear immediately so old data doesn't flash
                   });
                   _loadFoodLogs();
@@ -554,23 +616,50 @@ class _LogTabScreenState extends State<LogTabScreen> {
                   log.timestamp.month == DateTime.now().month &&
                   log.timestamp.year == DateTime.now().year;
 
-              return Container(
-                margin: EdgeInsets.only(bottom: 12.h),
-                padding: EdgeInsets.all(12.w),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(20.r),
-                  border:
-                      Border.all(color: AppColors.bluegray.withOpacity(0.05)),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.02),
-                      blurRadius: 10,
-                      offset: const Offset(0, 4),
+              final isSelected = _selectedFoodLog != null &&
+                  ((log.id != null && _selectedFoodLog?.id == log.id) ||
+                      (log.serverId != null &&
+                          _selectedFoodLog?.serverId == log.serverId) ||
+                      (_selectedFoodLog?.dishName == log.dishName &&
+                          _selectedFoodLog?.timestamp == log.timestamp));
+
+              return InkWell(
+                onTap: () {
+                  setState(() {
+                    _selectedFoodLog = log;
+                  });
+                  if (_scrollController.hasClients) {
+                    _scrollController.animateTo(
+                      0,
+                      duration: const Duration(milliseconds: 300),
+                      curve: Curves.easeOut,
+                    );
+                  }
+                },
+                borderRadius: BorderRadius.circular(20.r),
+                child: Container(
+                  margin: EdgeInsets.only(bottom: 12.h),
+                  padding: EdgeInsets.all(12.w),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(20.r),
+                    border: Border.all(
+                      color: isSelected
+                          ? AppColors.blueWaterIntake
+                          : AppColors.bluegray.withValues(alpha: 0.08),
+                      width: isSelected ? 1.5 : 1.0,
                     ),
-                  ],
-                ),
-                child: Row(
+                    boxShadow: [
+                      BoxShadow(
+                        color: isSelected
+                            ? AppColors.blueWaterIntake.withValues(alpha: 0.1)
+                            : Colors.black.withValues(alpha: 0.02),
+                        blurRadius: 10,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: Row(
                   children: [
                     _buildFoodIcon(log),
                     SizedBox(width: 12.w),
@@ -625,8 +714,9 @@ class _LogTabScreenState extends State<LogTabScreen> {
                     ),
                   ],
                 ),
-              );
-            },
+              ),
+            );
+          },
           ),
       ],
     );

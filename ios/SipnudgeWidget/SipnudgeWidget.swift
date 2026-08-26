@@ -1,5 +1,8 @@
 import WidgetKit
 import SwiftUI
+#if canImport(AppIntents)
+import AppIntents
+#endif
 
 struct SlotItem: Codable {
     let label: String
@@ -10,15 +13,141 @@ struct SlotItem: Codable {
     let target: Int
 }
 
+#if canImport(AppIntents)
+@available(iOS 16.0, *)
+struct LogDrinkIntent: AppIntent {
+    static var title: LocalizedStringResource = "Log Drink"
+    static var description = IntentDescription("Quickly log water or coffee from the widget")
+    
+    @Parameter(title: "Drink Type")
+    var drinkType: String
+    
+    @Parameter(title: "Amount")
+    var amount: Int
+    
+    init() {
+        self.drinkType = "Water"
+        self.amount = 250
+    }
+    
+    init(drinkType: String, amount: Int) {
+        self.drinkType = drinkType
+        self.amount = amount
+    }
+    
+    func perform() async throws -> some IntentResult {
+        let userDefaults = UserDefaults(suiteName: "group.com.sipnudge.sipnudge")
+        let currentIntake = userDefaults?.integer(forKey: "current_intake") ?? 0
+        
+        let isCoffee = drinkType.lowercased() == "coffee"
+        let coefficient: Double = isCoffee ? 0.8 : 1.0
+        let effectiveWater = Int(Double(amount) * coefficient)
+        let newIntake = currentIntake + effectiveWater
+        
+        userDefaults?.set(newIntake, forKey: "current_intake")
+        
+        if isCoffee {
+            let currentCoffee = userDefaults?.integer(forKey: "coffee_intake") ?? 0
+            userDefaults?.set(currentCoffee + amount, forKey: "coffee_intake")
+        } else {
+            let currentWater = userDefaults?.integer(forKey: "water_intake") ?? 0
+            userDefaults?.set(currentWater + amount, forKey: "water_intake")
+        }
+        
+        userDefaults?.set(drinkType, forKey: "latest_drink_type")
+        userDefaults?.set(amount, forKey: "latest_drink_amount")
+        
+        // Save latest added indication for the circular indicator (+ 250 ml / + 150 ml)
+        userDefaults?.set(amount, forKey: "recent_added_amount")
+        userDefaults?.set(Date().timeIntervalSince1970, forKey: "recent_added_time")
+        
+        let now = Date()
+        let isoFormatter = ISO8601DateFormatter()
+        isoFormatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        let utcTimestamp = isoFormatter.string(from: now)
+        
+        let localDateFormatter = DateFormatter()
+        localDateFormatter.dateFormat = "yyyy-MM-dd"
+        localDateFormatter.timeZone = TimeZone.current
+        let localDate = localDateFormatter.string(from: now)
+        
+        // Asynchronously post to backend server directly so data is saved even if the app is never opened
+        var serverId: String? = nil
+        if let userId = userDefaults?.string(forKey: "flutter.user_id") ?? userDefaults?.string(forKey: "user_id"),
+           !userId.isEmpty, userId != "guest_user" {
+            if let url = URL(string: "https://api.sipnudge.com/api/database/create-manual-log-v2") {
+                var request = URLRequest(url: url)
+                request.httpMethod = "POST"
+                request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+                request.timeoutInterval = 10.0
+                
+                let bodyDict: [String: Any] = [
+                    "userId": userId,
+                    "type": drinkType,
+                    "consumed": Double(amount),
+                    "timestamp": utcTimestamp,
+                    "localDate": localDate
+                ]
+                
+                if let bodyData = try? JSONSerialization.data(withJSONObject: bodyDict) {
+                    request.httpBody = bodyData
+                    do {
+                        let (data, response) = try await URLSession.shared.data(for: request)
+                        if let httpResponse = response as? HTTPURLResponse,
+                           (httpResponse.statusCode == 200 || httpResponse.statusCode == 201),
+                           let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                           let success = json["success"] as? Bool, success {
+                            serverId = json["serverId"] as? String
+                        }
+                    } catch {
+                        // Offline or network error; will be synced via pendingLogs when app opens
+                    }
+                }
+            }
+        }
+        
+        // Save to pending logs JSON in shared App Group UserDefaults for Flutter SQLite sync
+        var pendingLogs: [[String: Any]] = []
+        if let existingJson = userDefaults?.string(forKey: "pending_widget_logs_json"),
+           let data = existingJson.data(using: .utf8),
+           let array = try? JSONSerialization.jsonObject(with: data) as? [[String: Any]] {
+            pendingLogs = array
+        }
+        
+        var logEntry: [String: Any] = [
+            "type": drinkType,
+            "amount": amount,
+            "effective_water": effectiveWater,
+            "timestamp": utcTimestamp,
+            "localDate": localDate
+        ]
+        if let serverId = serverId {
+            logEntry["server_id"] = serverId
+        }
+        pendingLogs.append(logEntry)
+        
+        if let updatedData = try? JSONSerialization.data(withJSONObject: pendingLogs),
+           let updatedJson = String(data: updatedData, encoding: .utf8) {
+            userDefaults?.set(updatedJson, forKey: "pending_widget_logs_json")
+        }
+        
+        userDefaults?.synchronize()
+        WidgetCenter.shared.reloadAllTimelines()
+        
+        return .result()
+    }
+}
+#endif
+
 struct Provider: TimelineProvider {
     func placeholder(in context: Context) -> SimpleEntry {
-        SimpleEntry(date: Date(), intake: 0, goal: 2000, coffeeIntake: 200, waterIntake: 0, latestDrinkType: "Coffee", latestDrinkAmount: 200, upcomingSlotName: "Wakeup Time", upcomingSlotTarget: 500, upcomingSlotTime: "07:00 AM", streak: 7,
+        SimpleEntry(date: Date(), intake: 0, goal: 2000, coffeeIntake: 200, waterIntake: 0, latestDrinkType: "Coffee", latestDrinkAmount: 200, recentAddedAmount: nil, upcomingSlotName: "Wakeup Time", upcomingSlotTarget: 500, upcomingSlotTime: "07:00 AM", streak: 7,
                     battery: 72, expectedPercent: 30.0,
                     dbgUUID: "-", dbgConnected: "-", dbgSubscribed: "-", dbgBleRx: "-")
     }
 
     func getSnapshot(in context: Context, completion: @escaping (SimpleEntry) -> ()) {
-        let entry = SimpleEntry(date: Date(), intake: 750, goal: 2500, coffeeIntake: 200, waterIntake: 0, latestDrinkType: "Coffee", latestDrinkAmount: 200, upcomingSlotName: "Lunch Time", upcomingSlotTarget: 300, upcomingSlotTime: "01:00 PM", streak: 7,
+        let entry = SimpleEntry(date: Date(), intake: 750, goal: 2500, coffeeIntake: 200, waterIntake: 0, latestDrinkType: "Coffee", latestDrinkAmount: 200, recentAddedAmount: nil, upcomingSlotName: "Lunch Time", upcomingSlotTarget: 300, upcomingSlotTime: "01:00 PM", streak: 7,
                                 battery: 72, expectedPercent: 40.0,
                                 dbgUUID: "-", dbgConnected: "-", dbgSubscribed: "-", dbgBleRx: "-")
         completion(entry)
@@ -38,12 +167,24 @@ struct Provider: TimelineProvider {
         var latestDrinkType = userDefaults?.string(forKey: "latest_drink_type") ?? ""
         var latestDrinkAmount = userDefaults?.integer(forKey: "latest_drink_amount") ?? 0
 
-        if lastUpdateDateStr != todayStr {
+        if lastUpdateDateStr != todayStr && !lastUpdateDateStr.isEmpty {
             intake = 0
             coffeeIntake = 0
             waterIntake = 0
             latestDrinkType = ""
             latestDrinkAmount = 0
+        }
+        
+        var recentAddedAmount: Int? = nil
+        if let recentTime = userDefaults?.double(forKey: "recent_added_time"), recentTime > 0 {
+            let elapsed = date.timeIntervalSince1970 - recentTime
+            // Show + xxx ml indicator if added recently (within 5 seconds)
+            if elapsed >= 0 && elapsed < 5.0 {
+                let amt = userDefaults?.integer(forKey: "recent_added_amount") ?? 0
+                if amt > 0 {
+                    recentAddedAmount = amt
+                }
+            }
         }
         
         let goal = userDefaults?.integer(forKey: "daily_goal") ?? 2000
@@ -95,21 +236,24 @@ struct Provider: TimelineProvider {
                 let minStr = String(format: "%02d", upcomingSlot.minute)
                 upcomingSlotTime = "\(hour12):\(minStr) \(period)"
 
-                // Calculate cumulative expected targets at current date/time
-                for (index, slot) in sortedSlots.enumerated() {
-                    let prevEndMin = index == 0 ? 0 : (sortedSlots[index - 1].endHour * 60 + sortedSlots[index - 1].endMinute)
+                // Calculate cumulative expected targets at current date/time (Slot-by-slot)
+                for slot in sortedSlots {
+                    let startMin = slot.hour * 60 + slot.minute
                     let endMin = slot.endHour * 60 + slot.endMinute
                     
                     if nowTotalMinutes >= endMin {
+                        // Slot has passed -> add full slot target
                         expectedCumulative += Double(slot.target)
-                    } else if nowTotalMinutes >= prevEndMin && nowTotalMinutes < endMin {
-                        let duration = endMin - prevEndMin
+                    } else if nowTotalMinutes >= startMin && nowTotalMinutes < endMin {
+                        // Currently active slot -> progress smoothly during its active window
+                        let duration = endMin - startMin
                         if duration > 0 {
-                            let elapsed = nowTotalMinutes - prevEndMin
+                            let elapsed = nowTotalMinutes - startMin
                             expectedCumulative += Double(slot.target) * (Double(elapsed) / Double(duration))
                         }
                         break
                     } else {
+                        // Next slots haven't started yet
                         break
                     }
                 }
@@ -121,7 +265,7 @@ struct Provider: TimelineProvider {
             expectedPercent = userDefaults?.double(forKey: "expected_percent") ?? 0.0
         }
         
-        return SimpleEntry(date: date, intake: intake, goal: goal, coffeeIntake: coffeeIntake, waterIntake: waterIntake, latestDrinkType: latestDrinkType, latestDrinkAmount: latestDrinkAmount, upcomingSlotName: upcomingSlotName, upcomingSlotTarget: upcomingSlotTarget, upcomingSlotTime: upcomingSlotTime, streak: streak,
+        return SimpleEntry(date: date, intake: intake, goal: goal, coffeeIntake: coffeeIntake, waterIntake: waterIntake, latestDrinkType: latestDrinkType, latestDrinkAmount: latestDrinkAmount, recentAddedAmount: recentAddedAmount, upcomingSlotName: upcomingSlotName, upcomingSlotTarget: upcomingSlotTarget, upcomingSlotTime: upcomingSlotTime, streak: streak,
                            battery: battery, expectedPercent: expectedPercent,
                            dbgUUID: userDefaults?.string(forKey: "dbg_uuid") ?? "nil",
                            dbgConnected: userDefaults?.string(forKey: "dbg_connected") ?? "nil",
@@ -142,12 +286,27 @@ struct Provider: TimelineProvider {
             midnight = now.addingTimeInterval(86400) // 24 hours fallback
         }
         
-        // Define fallback timeline compilation
+        // Define timeline compilation with 5-second indicator transition
         let compileTimeline: () -> Timeline<Entry> = {
+            var entries: [SimpleEntry] = []
             let entryNow = self.createEntry(for: now, userDefaults: userDefaults)
+            entries.append(entryNow)
+            
+            // If drink was added within the last 5 seconds, schedule an entry at 5.0 seconds to automatically clear the indicator
+            if let recentTime = userDefaults?.double(forKey: "recent_added_time"), recentTime > 0 {
+                let elapsed = now.timeIntervalSince1970 - recentTime
+                if elapsed >= 0 && elapsed < 5.0 {
+                    let dateAfter5Sec = Date(timeIntervalSince1970: recentTime + 5.1)
+                    let entryAfter5Sec = self.createEntry(for: dateAfter5Sec, userDefaults: userDefaults)
+                    entries.append(entryAfter5Sec)
+                }
+            }
+            
             let entryMidnight = self.createEntry(for: midnight, userDefaults: userDefaults)
+            entries.append(entryMidnight)
+            
             let nextUpdate = calendar.date(byAdding: .minute, value: 5, to: now) ?? now.addingTimeInterval(300)
-            return Timeline(entries: [entryNow, entryMidnight], policy: .after(nextUpdate))
+            return Timeline(entries: entries, policy: .after(nextUpdate))
         }
 
         // Try getting userId to fetch from server
@@ -218,6 +377,7 @@ struct SimpleEntry: TimelineEntry {
     let waterIntake: Int
     let latestDrinkType: String
     let latestDrinkAmount: Int
+    let recentAddedAmount: Int?
     let upcomingSlotName: String
     let upcomingSlotTarget: Int
     let upcomingSlotTime: String
@@ -241,15 +401,22 @@ struct SipnudgeWidgetEntryView : View {
     }
 
     var isCurrentlyOnTrack: Bool {
-        Double(entry.intake) >= (Double(entry.goal) * entry.expectedPercent / 100.0)
+        guard entry.goal > 0 else { return false }
+        return entry.intake > 0 && Double(entry.intake) >= (Double(entry.goal) * entry.expectedPercent / 100.0)
     }
 
     var headingText: String {
-        isCurrentlyOnTrack ? "You're on track" : "Time to drink!"
+        if entry.intake <= 0 {
+            return "Time to drink!"
+        } else if isCurrentlyOnTrack {
+            return "You’re on track"
+        } else {
+            return "You’re not on track"
+        }
     }
 
     var headingColor: Color {
-        isCurrentlyOnTrack ? Color(red: 0.00, green: 0.29, blue: 0.46) : Color(red: 0.94, green: 0.27, blue: 0.27)
+        isCurrentlyOnTrack ? Color(red: 0.09, green: 0.15, blue: 0.27) : Color(red: 0.94, green: 0.27, blue: 0.27)
     }
 
     var percentageString: String {
@@ -343,156 +510,230 @@ struct SipnudgeWidgetEntryView : View {
 
     // MARK: - Medium Layout
     private var mediumLayout: some View {
-        VStack(spacing: 0) {
-            HStack(spacing: 16) {
-                // Left Side: Circular Progress Ring with top gap and double progress arcs (Blue and Yellow)
-                VStack(spacing: 6) {
-                    ZStack {
-                        // Background track (300 degrees arc with gap at 12 o'clock)
-                        Circle()
-                            .trim(from: 0.0, to: 0.833)
-                            .stroke(Color(red: 0.92, green: 0.93, blue: 0.95), style: StrokeStyle(lineWidth: 8, lineCap: .round))
-                            .rotationEffect(Angle(degrees: 300))
-                        
-                        // Yellow progress (Expected cumulative schedule target progress)
-                        if entry.expectedPercent > 0 {
-                            Circle()
-                                .trim(from: 0.0, to: CGFloat(min(entry.expectedPercent / 100.0, 1.0)) * 0.833)
-                                .stroke(
-                                    Color(red: 245/255.0, green: 185/255.0, blue: 30/255.0), // Amber/Yellow
-                                    style: StrokeStyle(lineWidth: 8, lineCap: .round)
-                                )
-                                .rotationEffect(Angle(degrees: 300))
-                        }
-                        
-                        // Blue progress (Actual intake completion progress)
-                        if progress > 0 {
-                            Circle()
-                                .trim(from: 0.0, to: CGFloat(min(progress, 1.0)) * 0.833)
-                                .stroke(
-                                    LinearGradient(
-                                        gradient: Gradient(colors: [
-                                            Color(red: 180/255.0, green: 217/255.0, blue: 255/255.0),
-                                            Color(red: 28/255.0, green: 141/255.0, blue: 187/255.0) // 1C8DBB
-                                        ]),
-                                        startPoint: .top,
-                                        endPoint: .bottom
-                                    ),
-                                    style: StrokeStyle(lineWidth: 8, lineCap: .round)
-                                )
-                                .rotationEffect(Angle(degrees: 300))
-                        }
-                        
-                        VStack(spacing: 0) {
-                            Text(percentageString)
-                                .font(.system(size: 24, weight: .bold, design: .rounded))
-                                .foregroundColor(Color(red: 0.09, green: 0.15, blue: 0.27))
-                        }
-                    }
-                    .frame(width: 90, height: 90)
+        HStack(spacing: 12) {
+            // Left Side: Circular Progress Ring with top gap and double progress arcs (Blue and Yellow)
+            VStack(spacing: 4) {
+                ZStack {
+                    // Background track (300 degrees arc with gap at 12 o'clock)
+                    Circle()
+                        .trim(from: 0.0, to: 0.833)
+                        .stroke(Color(red: 0.92, green: 0.93, blue: 0.95), style: StrokeStyle(lineWidth: 7.5, lineCap: .round))
+                        .rotationEffect(Angle(degrees: 300))
                     
-                    // ml count below ring
-                    (Text(formatNumber(entry.intake))
-                        .font(.system(size: 13, weight: .bold, design: .rounded))
-                        .foregroundColor(Color(red: 0.09, green: 0.15, blue: 0.27))
-                     + Text(" / \(formatNumber(entry.goal)) ml")
-                        .font(.system(size: 12, weight: .medium, design: .rounded))
-                        .foregroundColor(Color(red: 85/255.0, green: 104/255.0, blue: 127/255.0)))
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.8)
-                    .padding(.top, 4)
-                }
-                
-                // Right Side: Details (Battery progress, status, Next sip & Coffee/Water quick actions)
-                VStack(alignment: .leading, spacing: 4) {
-                    // Battery indicator
-                    VStack(alignment: .leading, spacing: 2) {
-                        HStack(spacing: 4) {
-                            Image(systemName: batteryIconName)
-                                .font(.system(size: 10))
-                                .foregroundColor(batteryColor)
-                            Text("BATTERY")
-                                .font(.system(size: 8, weight: .bold, design: .rounded))
-                                .foregroundColor(Color(red: 0.40, green: 0.45, blue: 0.55))
-                            Spacer()
-                            Text("\(entry.battery)%")
-                                .font(.system(size: 9, weight: .bold, design: .rounded))
-                                .foregroundColor(Color(red: 0.09, green: 0.15, blue: 0.27))
-                        }
+                    // Yellow progress (Expected cumulative schedule target progress)
+                    if entry.expectedPercent > 0 {
+                        Circle()
+                            .trim(from: 0.0, to: CGFloat(min(entry.expectedPercent / 100.0, 1.0)) * 0.833)
+                            .stroke(
+                                Color(red: 245/255.0, green: 185/255.0, blue: 30/255.0), // Amber/Yellow
+                                style: StrokeStyle(lineWidth: 7.5, lineCap: .round)
+                            )
+                            .rotationEffect(Angle(degrees: 300))
+                    }
+                    
+                    // Blue progress (Actual intake completion progress)
+                    if progress > 0 {
+                        Circle()
+                            .trim(from: 0.0, to: CGFloat(min(progress, 1.0)) * 0.833)
+                            .stroke(
+                                LinearGradient(
+                                    gradient: Gradient(colors: [
+                                        Color(red: 180/255.0, green: 217/255.0, blue: 255/255.0),
+                                        Color(red: 28/255.0, green: 141/255.0, blue: 187/255.0) // 1C8DBB
+                                    ]),
+                                    startPoint: .top,
+                                    endPoint: .bottom
+                                ),
+                                style: StrokeStyle(lineWidth: 7.5, lineCap: .round)
+                            )
+                            .rotationEffect(Angle(degrees: 300))
+                    }
+                    
+                    VStack(spacing: 1) {
+                        Text(percentageString)
+                            .font(.system(size: 22, weight: .bold, design: .rounded))
+                            .foregroundColor(Color(red: 0.09, green: 0.15, blue: 0.27))
                         
-                        // Green battery bar
-                        GeometryReader { geo in
-                            ZStack(alignment: .leading) {
-                                RoundedRectangle(cornerRadius: 2)
-                                    .fill(Color(red: 0.92, green: 0.93, blue: 0.95))
-                                    .frame(height: 4)
-                                RoundedRectangle(cornerRadius: 2)
-                                    .fill(batteryColor)
-                                    .frame(width: geo.size.width * CGFloat(Double(entry.battery) / 100.0), height: 4)
+                        if let recentAmt = entry.recentAddedAmount {
+                            VStack(spacing: 0) {
+                                Text("+")
+                                    .font(.system(size: 9, weight: .bold, design: .rounded))
+                                    .foregroundColor(Color(red: 0.64, green: 0.48, blue: 0.32))
+                                Text("\(recentAmt) ml")
+                                    .font(.system(size: 10, weight: .bold, design: .rounded))
+                                    .foregroundColor(Color(red: 0.64, green: 0.48, blue: 0.32))
                             }
                         }
-                        .frame(height: 4)
                     }
-                    .padding(.bottom, 2)
-                    
-                    // Heading (Dynamic color depending on "on-track" state)
-                    Text(headingText)
-                        .font(.system(size: 20, weight: .bold, design: .rounded))
-                        .foregroundColor(headingColor)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.7)
-                    
-                    // Next Sip Row
-                    HStack(spacing: 8) {
-                        ZStack {
-                            Circle()
-                                .fill(Color(red: 0.92, green: 0.96, blue: 1.00))
-                                .frame(width: 28, height: 28)
-                            Image(systemName: "clock.arrow.circlepath")
-                                .font(.system(size: 12, weight: .semibold))
-                                .foregroundColor(Color(red: 0.00, green: 0.48, blue: 1.00))
-                        }
-                        VStack(alignment: .leading, spacing: 1) {
-                            Text("Next sip")
-                                .font(.system(size: 9, weight: .medium, design: .rounded))
-                                .foregroundColor(Color(red: 77/255.0, green: 117/255.0, blue: 139/255.0))
-                            Text(entry.upcomingSlotTime)
-                                .font(.system(size: 12, weight: .bold, design: .rounded))
-                                .foregroundColor(Color(red: 0.09, green: 0.15, blue: 0.27))
-                        }
-                    }
-                    .padding(.vertical, 4)
-                    
-                    Divider()
-                        .padding(.leading, 36)
-                        .padding(.vertical, 2)
-                    
-                    // Row 2: Water Left
-                    HStack(spacing: 8) {
-                        ZStack {
-                            Circle()
-                                .fill(Color(red: 0.92, green: 0.96, blue: 1.00))
-                                .frame(width: 28, height: 28)
-                            Image(systemName: "drop")
-                                .font(.system(size: 12, weight: .semibold))
-                                .foregroundColor(Color(red: 0.00, green: 0.48, blue: 1.00))
-                        }
-                        VStack(alignment: .leading, spacing: 1) {
-                            Text("Only")
-                                .font(.system(size: 9, weight: .medium, design: .rounded))
-                                .foregroundColor(Color(red: 77/255.0, green: 117/255.0, blue: 139/255.0))
-                            Text("\(formatNumber(max(0, entry.goal - entry.intake))) ml left")
-                                .font(.system(size: 12, weight: .bold, design: .rounded))
-                                .foregroundColor(Color(red: 0.09, green: 0.15, blue: 0.27))
-                        }
-                    }
-                    .padding(.vertical, 4)
                 }
+                .frame(width: 82, height: 82)
+                
+                // ml count below ring
+                (Text(formatNumber(entry.intake))
+                    .font(.system(size: 12.5, weight: .bold, design: .rounded))
+                    .foregroundColor(Color(red: 0.09, green: 0.15, blue: 0.27))
+                 + Text(" / \(formatNumber(entry.goal)) ml")
+                    .font(.system(size: 11.5, weight: .medium, design: .rounded))
+                    .foregroundColor(Color(red: 85/255.0, green: 104/255.0, blue: 127/255.0)))
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
+                .padding(.top, 1)
+            }
+            
+            // Right Side: Details (Battery progress, status, Next sip & Coffee/Water quick actions)
+            VStack(alignment: .leading, spacing: 5) {
+                // Battery indicator
+                VStack(alignment: .leading, spacing: 2) {
+                    HStack(spacing: 4) {
+                        Image(systemName: batteryIconName)
+                            .font(.system(size: 10))
+                            .foregroundColor(batteryColor)
+                        Text("BATTERY")
+                            .font(.system(size: 8, weight: .bold, design: .rounded))
+                            .foregroundColor(Color(red: 0.40, green: 0.45, blue: 0.55))
+                        Spacer()
+                        Text("\(entry.battery)%")
+                            .font(.system(size: 9, weight: .bold, design: .rounded))
+                            .foregroundColor(Color(red: 0.09, green: 0.15, blue: 0.27))
+                    }
+                    
+                    // Green battery bar
+                    GeometryReader { geo in
+                        ZStack(alignment: .leading) {
+                            RoundedRectangle(cornerRadius: 2)
+                                .fill(Color(red: 0.92, green: 0.93, blue: 0.95))
+                                .frame(height: 4)
+                            RoundedRectangle(cornerRadius: 2)
+                                .fill(batteryColor)
+                                .frame(width: geo.size.width * CGFloat(Double(entry.battery) / 100.0), height: 4)
+                        }
+                    }
+                    .frame(height: 4)
+                }
+                
+                // Heading (Dynamic color depending on "on-track" state)
+                Text(headingText)
+                    .font(.system(size: 19, weight: .bold, design: .rounded))
+                    .foregroundColor(headingColor)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
+                
+                // Next Sip Row
+                HStack(spacing: 7) {
+                    ZStack {
+                        Circle()
+                            .fill(Color(red: 0.92, green: 0.96, blue: 1.00))
+                            .frame(width: 26, height: 26)
+                        Image(systemName: "clock.arrow.circlepath")
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundColor(Color(red: 0.00, green: 0.48, blue: 1.00))
+                    }
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text("Next Sip")
+                            .font(.system(size: 8.5, weight: .medium, design: .rounded))
+                            .foregroundColor(Color(red: 77/255.0, green: 117/255.0, blue: 139/255.0))
+                        Text(entry.upcomingSlotTime)
+                            .font(.system(size: 11.5, weight: .bold, design: .rounded))
+                            .foregroundColor(Color(red: 0.09, green: 0.15, blue: 0.27))
+                    }
+                }
+                
+                // Quick Action Buttons Row (Coffee 150ml & Water 250ml)
+                HStack(spacing: 6) {
+                    #if canImport(AppIntents)
+                    if #available(iOS 17.0, *) {
+                        Button(intent: LogDrinkIntent(drinkType: "Coffee", amount: 150)) {
+                            coffeeButtonContent
+                        }
+                        .buttonStyle(.plain)
+                        
+                        Button(intent: LogDrinkIntent(drinkType: "Water", amount: 250)) {
+                            waterButtonContent
+                        }
+                        .buttonStyle(.plain)
+                    } else {
+                        Link(destination: URL(string: "sipnudge://quick-add?type=coffee&amount=150")!) {
+                            coffeeButtonContent
+                        }
+                        Link(destination: URL(string: "sipnudge://quick-add?type=water&amount=250")!) {
+                            waterButtonContent
+                        }
+                    }
+                    #else
+                    Link(destination: URL(string: "sipnudge://quick-add?type=coffee&amount=150")!) {
+                        coffeeButtonContent
+                    }
+                    Link(destination: URL(string: "sipnudge://quick-add?type=water&amount=250")!) {
+                        waterButtonContent
+                    }
+                    #endif
+                }
+                .padding(.top, 4)
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
-        .padding(.horizontal, 14)
-        .padding(.vertical, 8)
+        .padding(.horizontal, 11)
+        .padding(.vertical, 6)
+    }
+
+    private var coffeeButtonContent: some View {
+        HStack(spacing: 2) {
+            Text("Coffee")
+                .font(.system(size: 11, weight: .bold, design: .rounded))
+                .foregroundColor(Color.black)
+                .lineLimit(1)
+                .fixedSize(horizontal: true, vertical: false)
+            
+            Spacer(minLength: 1)
+            
+            ZStack {
+                Circle()
+                    .fill(Color(red: 139/255.0, green: 80/255.0, blue: 35/255.0)) // Rich coffee brown
+                    .frame(width: 20, height: 20)
+                
+                Image(systemName: "plus")
+                    .font(.system(size: 9, weight: .heavy))
+                    .foregroundColor(.white)
+            }
+        }
+        .padding(.leading, 7)
+        .padding(.trailing, 3)
+        .frame(maxWidth: .infinity)
+        .frame(height: 27)
+        .background(
+            Capsule()
+                .fill(Color(red: 236/255.0, green: 203/255.0, blue: 175/255.0)) // Warm soft beige/tan
+        )
+    }
+
+    private var waterButtonContent: some View {
+        HStack(spacing: 2) {
+            Text("Water")
+                .font(.system(size: 11, weight: .bold, design: .rounded))
+                .foregroundColor(Color.black)
+                .lineLimit(1)
+                .fixedSize(horizontal: true, vertical: false)
+            
+            Spacer(minLength: 1)
+            
+            ZStack {
+                Circle()
+                    .fill(Color(red: 0/255.0, green: 153/255.0, blue: 255/255.0)) // Electric vibrant blue
+                    .frame(width: 20, height: 20)
+                
+                Image(systemName: "plus")
+                    .font(.system(size: 9, weight: .heavy))
+                    .foregroundColor(.white)
+            }
+        }
+        .padding(.leading, 7)
+        .padding(.trailing, 3)
+        .frame(maxWidth: .infinity)
+        .frame(height: 27)
+        .background(
+            Capsule()
+                .fill(Color(red: 201/255.0, green: 239/255.0, blue: 255/255.0)) // Soft pastel sky blue
+        )
     }
 
     // MARK: - Small Layout

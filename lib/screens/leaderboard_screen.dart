@@ -35,7 +35,6 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
   bool _fuzzyLocation = true;
   String _currentCityName = "Active Zone";
 
-
   @override
   void initState() {
     super.initState();
@@ -320,7 +319,8 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
         SizedBox(height: 6.h),
         Center(
           child: Text(
-            AppLocalizations.of(context)?.trackYourContribution ?? "Track your contribution and social standing.",
+            AppLocalizations.of(context)?.trackYourContribution ??
+                "Track your contribution and social standing.",
             style: TextStyle(
               fontSize: 16.sp,
               fontFamily: AppFontStyles.urbanistFontFamily,
@@ -392,7 +392,8 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      AppLocalizations.of(context)?.globalRanking ?? "Global \nRanking",
+                      AppLocalizations.of(context)?.globalRanking ??
+                          "Global \nRanking",
                       style: TextStyle(
                           fontSize: 20.sp,
                           color: Colors.white.withOpacity(0.9),
@@ -439,7 +440,9 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      AppLocalizations.of(context)?.progressTo(ranking['tierName'] as String? ?? '') ?? "Progress to ${ranking['tierName']}",
+                      AppLocalizations.of(context)?.progressTo(
+                              ranking['tierName'] as String? ?? '') ??
+                          "Progress to ${ranking['tierName']}",
                       style: TextStyle(
                           fontSize: 16.sp,
                           color: Colors.white,
@@ -494,7 +497,8 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
         loc.latitude,
         loc.longitude,
       );
-      if (dist <= 40000) { // 40km local heatmap circle radius
+      if (dist <= 40000) {
+        // 40km local heatmap circle radius
         activeCount++;
       }
     }
@@ -509,7 +513,8 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text(
-              AppLocalizations.of(context)?.socialImpactMap ?? "Social Impact Map",
+              AppLocalizations.of(context)?.socialImpactMap ??
+                  "Social Impact Map",
               style: TextStyle(
                   fontSize: 18.sp,
                   fontFamily: AppFontStyles.urbanistFontFamily,
@@ -526,7 +531,8 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
               child: Row(
                 children: [
                   Text(
-                    (AppLocalizations.of(context)?.expandMap ?? "EXPAND MAP").toUpperCase(),
+                    (AppLocalizations.of(context)?.expandMap ?? "EXPAND MAP")
+                        .toUpperCase(),
                     style: TextStyle(
                       fontSize: 12.sp,
                       fontFamily: AppFontStyles.urbanistFontFamily,
@@ -555,7 +561,8 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
             height: 190.h,
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(24.r),
-              border: Border.all(color: Colors.white.withOpacity(0.4), width: 1.5),
+              border:
+                  Border.all(color: Colors.white.withOpacity(0.4), width: 1.5),
               boxShadow: [
                 BoxShadow(
                   color: Colors.black.withOpacity(0.08),
@@ -594,7 +601,8 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
                                 Icon(Icons.map_rounded,
-                                    color: const Color(0xFF00A2FF), size: 38.sp),
+                                    color: const Color(0xFF00A2FF),
+                                    size: 38.sp),
                                 SizedBox(height: 6.h),
                                 Text(
                                   "Tap to view live map",
@@ -758,7 +766,8 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
               Image.asset(AssetsPath.leaderWorld, width: 24.w, height: 24.h),
               SizedBox(width: 10.w),
               Text(
-                AppLocalizations.of(context)?.yourImpactStory ?? "Your Impact Story",
+                AppLocalizations.of(context)?.yourImpactStory ??
+                    "Your Impact Story",
                 style: TextStyle(
                   fontSize: 18.sp,
                   fontFamily: AppFontStyles.urbanistFontFamily,
@@ -820,7 +829,9 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
                               ),
                             ),
                             Text(
-                              (AppLocalizations.of(context)?.bottleSaved ?? "BOTTLES SAVED").toUpperCase(),
+                              (AppLocalizations.of(context)?.bottleSaved ??
+                                      "BOTTLES SAVED")
+                                  .toUpperCase(),
                               style: TextStyle(
                                 fontSize: 12.sp,
                                 fontFamily: AppFontStyles.urbanistFontFamily,
@@ -872,7 +883,9 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
                                   ]),
                             ),
                             Text(
-                              (AppLocalizations.of(context)?.carbonReduced ?? "CARBON REDUCED").toUpperCase(),
+                              (AppLocalizations.of(context)?.carbonReduced ??
+                                      "CARBON REDUCED")
+                                  .toUpperCase(),
                               style: TextStyle(
                                 fontSize: 12.sp,
                                 fontFamily: AppFontStyles.urbanistFontFamily,

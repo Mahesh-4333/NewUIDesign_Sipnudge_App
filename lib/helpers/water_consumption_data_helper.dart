@@ -12,8 +12,11 @@ import 'package:intl/intl.dart';
 
 class WaterConsumptionCalculator {
   /// Calculate cumulative expected slot target percentage at current time.
-  /// When a slot's end time finishes, that slot's yellow progress contribution is 100% complete,
-  /// and progress smoothly fills towards the next slot's end time.
+  /// Each slot progresses one by one:
+  /// - Before a slot's startTime: 0% contribution for that slot.
+  /// - Between startTime and endTime: Smoothly progresses from 0% to 100% of that slot's target.
+  /// - After endTime: 100% contribution of that slot's target is retained.
+  /// - Between slots (gap time): Stays static at the completed slots' cumulative target until the next slot starts.
   static double calculateExpectedPercentage(
     List<HydrationEntry> slots,
     double dailyGoalMl, {
@@ -34,22 +37,22 @@ class WaterConsumptionCalculator {
 
     for (int i = 0; i < sortedSlots.length; i++) {
       final slot = sortedSlots[i];
-      final prevEndMin = i == 0
-          ? 0
-          : sortedSlots[i - 1].endTime.hour * 60 +
-              sortedSlots[i - 1].endTime.minute;
+      final startMin = slot.startTime.hour * 60 + slot.startTime.minute;
       final endMin = slot.endTime.hour * 60 + slot.endTime.minute;
 
       if (nowMinutes >= endMin) {
+        // Slot has passed -> add full slot target
         expectedCumulative += slot.amount;
-      } else if (nowMinutes >= prevEndMin && nowMinutes < endMin) {
-        final duration = endMin - prevEndMin;
+      } else if (nowMinutes >= startMin && nowMinutes < endMin) {
+        // Currently active slot -> progress smoothly from startMin to endMin
+        final duration = endMin - startMin;
         if (duration > 0) {
-          final elapsed = nowMinutes - prevEndMin;
+          final elapsed = nowMinutes - startMin;
           expectedCumulative += slot.amount * (elapsed / duration);
         }
-        break;
+        break; // Subsequent slots haven't started yet
       } else {
+        // Next slots haven't started yet
         break;
       }
     }

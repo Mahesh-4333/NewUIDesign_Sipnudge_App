@@ -372,20 +372,32 @@ class ApiService {
   }
 
   Future<bool> deleteFoodScan(String userId,
-      {String? scanId, String? dishName, String? timestamp}) async {
+      {String? scanId,
+      String? dishName,
+      String? timestamp,
+      String? localTimestamp}) async {
     try {
       final response = await _dio.post(
         '/api/database/delete-food-scan',
         data: {
           'userId': userId,
-          if (scanId != null) 'scanId': scanId,
-          if (dishName != null) 'dishName': dishName,
-          if (timestamp != null) 'timestamp': timestamp,
+          if (scanId != null && scanId.isNotEmpty) 'scanId': scanId,
+          if (dishName != null && dishName.isNotEmpty) 'dishName': dishName,
+          if (timestamp != null && timestamp.isNotEmpty) 'timestamp': timestamp,
+          if (localTimestamp != null && localTimestamp.isNotEmpty)
+            'localTimestamp': localTimestamp,
         },
       );
+      Console.log(
+          tag: "APP",
+          value:
+              "[deleteFoodScan] Response: ${response.statusCode} - ${response.data}");
       return response.data['success'] == true;
     } on DioException catch (e) {
-      Console.log(tag: "APP", value: "Exception in deleteFoodScan: $e");
+      Console.log(
+          tag: "APP",
+          value:
+              "Exception in deleteFoodScan: $e, response: ${e.response?.data}");
       return false;
     }
   }

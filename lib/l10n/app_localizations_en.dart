@@ -506,7 +506,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get allTab => 'All';
 
   @override
-  String get offSlot => 'Off-slot';
+  String get offSlot => 'Off Slot';
 
   @override
   String get scheduledRecords => 'Scheduled Records';
@@ -1188,4 +1188,184 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get allLanguages => 'All Languages';
+
+  @override
+  String get connectToBottleAnalysis =>
+      'Connect to Sipnudge bottle to access analysis';
+
+  @override
+  String get habitConsistency => 'Habit Consistency';
+
+  @override
+  String get eliteTier => 'Elite Tier';
+
+  @override
+  String get improving => 'Improving';
+
+  @override
+  String get consistency => 'Consistency';
+
+  @override
+  String get streak => 'Streak';
+
+  @override
+  String get days => 'days';
+
+  @override
+  String get consecutiveDaysGoal => 'Consecutive days reaching daily goal';
+
+  @override
+  String get followingScheduleVsOffSlot =>
+      'Following schedule vs off-slot drinking';
+
+  @override
+  String get analytics => 'Analytics';
+
+  @override
+  String get hydrationData => 'Hydration Data';
+
+  @override
+  String get weeklyIntake => 'Weekly Intake';
+
+  @override
+  String get monthlyIntake => 'Monthly Intake';
+
+  @override
+  String get yearlyIntake => 'Yearly Intake';
+
+  @override
+  String get quarterlyIntake => 'Quarterly Intake';
+
+  @override
+  String get couldNotLoadAnalytics =>
+      'Could not load analytics.\nCheck your connection.';
+
+  @override
+  String get exportData => 'Export Data';
+
+  @override
+  String get monthlyGoal => 'MONTHLY GOAL';
+
+  @override
+  String get annualPerformance => 'ANNUAL PERFORMANCE';
+
+  @override
+  String get totalIntake => 'Total Intake';
+
+  @override
+  String get target => 'Target';
+
+  @override
+  String get weeklyDistribution => 'Weekly Distribution';
+
+  @override
+  String get quarterlyDistribution => 'Quarterly Distribution';
+
+  @override
+  String get scheduledVsOffSlot => 'Scheduled vs. Off-slot';
+
+  @override
+  String get scheduledUpper => 'SCHEDULED';
+
+  @override
+  String get offSlotUpper => 'OFF-SLOT';
+
+  @override
+  String get vsLastMonth => 'vs last month';
+
+  @override
+  String get vsLastYear => 'vs last year';
+
+  @override
+  String get keepUpHydrationHabits => 'Keep up your hydration habits!';
+
+  @override
+  String get historicalTrends => 'Historical Trends';
+
+  @override
+  String get averageDaily => 'Average Daily';
+
+  @override
+  String get basedOnLast30Days => 'Based on last 30 days';
+
+  @override
+  String get peakStreak => 'Peak Streak';
+
+  @override
+  String get goalMetConsecutiveDays => 'Goal met consecutive days';
+
+  @override
+  String get quarterlyBreakdown => 'Quarterly Breakdown';
+
+  @override
+  String get firstQuarter => 'First Quarter';
+
+  @override
+  String get secondQuarter => 'Second Quarter';
+
+  @override
+  String get thirdQuarter => 'Third Quarter';
+
+  @override
+  String get fourthQuarter => 'Fourth Quarter';
+
+  @override
+  String get quarter => 'Quarter';
+
+  @override
+  String get januaryToMarch => 'January to March';
+
+  @override
+  String get aprilToJune => 'April to June';
+
+  @override
+  String get julyToSeptember => 'July to September';
+
+  @override
+  String get octoberToDecember => 'October to December';
+
+  @override
+  String get exportOptions => 'Export Options';
+
+  @override
+  String get downloadHydrationHistorySubtitle =>
+      'Download your hydration history for your records';
+
+  @override
+  String get downloadAsJpg => 'Download as JPG';
+
+  @override
+  String get downloadAsJpgDescription =>
+      'High-resolution visual summary for social sharing.';
+
+  @override
+  String get downloadAsPdf => 'Download as PDF';
+
+  @override
+  String get downloadAsPdfDescription =>
+      'Detailed document of daily statistics and trends.';
+
+  @override
+  String get failedToExportJpg => 'Failed to export JPG';
+
+  @override
+  String get shareHydrationAnalyticsText => 'Check out my hydration analytics!';
+
+  @override
+  String get eliteSmartInsights => 'Elite Smart Insights';
+
+  @override
+  String get optimalWindow => 'Optimal Window';
+
+  @override
+  String get milk => 'Milk';
+
+  @override
+  String get meal => 'Meal';
+
+  @override
+  String get bottle => 'Bottle';
+
+  @override
+  String get logged => 'Logged';
 }

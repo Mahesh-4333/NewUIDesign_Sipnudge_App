@@ -89,6 +89,7 @@ class _LogHydrationWidgetState extends State<LogHydrationWidget> {
   void initState() {
     super.initState();
     getdata();
+    SyncBus.instance.addListener(_onSyncComplete);
     // Initialize selected unit from shared preferences
     SharedPrefsHelper.getSelectedUnit().then((unit) {
       if (unit != null) {
@@ -105,8 +106,15 @@ class _LogHydrationWidgetState extends State<LogHydrationWidget> {
     });
   }
 
+  void _onSyncComplete() {
+    if (mounted) {
+      _fetchLogs();
+    }
+  }
+
   @override
   void dispose() {
+    SyncBus.instance.removeListener(_onSyncComplete);
     _configSubscription.cancel();
     super.dispose();
   }
@@ -503,7 +511,7 @@ class _LogHydrationWidgetState extends State<LogHydrationWidget> {
           ),
           SizedBox(height: 8.h),
           Text(
-            "Precise measurement tracking for high-performance fluid optimization and metabolic synchronization.",
+            "Log every sip from your morning coffee to your workout water to optimize your daily intake.",
             style: TextStyle(
               color: AppColors.darkgray,
               fontSize: 12.sp,

@@ -4,8 +4,9 @@ import 'package:hydrify/cubit/bottle/bottle_data_cubit.dart';
 import 'package:hydrify/cubit/drinkreminder/drink_reminder_state.dart';
 import 'package:hydrify/cubit/hydration/hydration_cubit.dart';
 import 'package:hydrify/helpers/shared_pref_helper.dart';
+import 'package:hydrify/constants/app_strings.dart';
 import 'package:hydrify/helpers/water_consumption_data_helper.dart';
-import 'package:hydrify/models/hydration_entry.dart';
+import 'package:hydrify/services/firebase_messaging_service.dart';
 import 'package:hydrify/services/notification/notification_service.dart';
 
 class DrinkReminderCubit extends Cubit<DrinkReminderState> {
@@ -13,7 +14,9 @@ class DrinkReminderCubit extends Cubit<DrinkReminderState> {
   final BottleDataCubit bottleDataCubit;
 
   final List<String> alarmRepeatOptions = ['1 Times', '3 Times', '5 Times'];
-  DrinkReminderCubit({required this.hydrationCubit, required this.bottleDataCubit}) : super(const DrinkReminderState()){
+  DrinkReminderCubit(
+      {required this.hydrationCubit, required this.bottleDataCubit})
+      : super(const DrinkReminderState()) {
     _init();
   }
 
@@ -27,16 +30,38 @@ class DrinkReminderCubit extends Cubit<DrinkReminderState> {
 
     final alarmRepeatIndex = await SharedPrefsHelper.getAlarmRepeatIndex();
     final stopWhenFull = await SharedPrefsHelper.getStopWhenFull();
-    
+    final notificationEnabled =
+        await SharedPrefsHelper.isFirebaseNotificationEnabled();
+
     emit(state.copyWith(
       alarmRepeatIndex: alarmRepeatIndex,
       stopWhenFull: stopWhenFull,
+      notificationEnabled: notificationEnabled,
     ));
   }
 
+  Future<void> toggleNotification(bool value) async {
+    emit(state.copyWith(
+      notificationEnabled: value,
+      isSaving: true,
+      savingMessage: AppStrings.savingNotificationConfig,
+    ));
+
+    // Slight delay to show the saving animation
+    await Future.delayed(const Duration(seconds: 2));
+
+    await FirebaseMessagingService().setNotificationEnabled(value);
+
+    emit(state.copyWith(isSaving: false));
+  }
+
   Future<void> toggleReminder(bool value) async {
-    emit(state.copyWith(reminderEnabled: value, isSaving: true));
-    
+    emit(state.copyWith(
+      reminderEnabled: value,
+      isSaving: true,
+      savingMessage: AppStrings.savingReminder,
+    ));
+
     // Slight delay to show the saving animation
     await Future.delayed(const Duration(seconds: 2));
 
@@ -47,7 +72,7 @@ class DrinkReminderCubit extends Cubit<DrinkReminderState> {
     } else {
       await notificationService.cancelAllHydrationReminders();
     }
-    
+
     emit(state.copyWith(isSaving: false));
 
     await SharedPrefsHelper.updateAndSaveDeviceConfig();
@@ -60,7 +85,6 @@ class DrinkReminderCubit extends Cubit<DrinkReminderState> {
     await notificationService.scheduleHydrationRemindersForFuture(allSlots);
   }
 
-
   Future<void> _rescheduleAllRemindersRepeat() async {
     final notificationService = NotificationService();
     final allSlots = hydrationCubit.state.entries;
@@ -69,7 +93,11 @@ class DrinkReminderCubit extends Cubit<DrinkReminderState> {
   }
 
   Future<void> toggleStopWhenFull(bool value) async {
-    emit(state.copyWith(stopWhenFull: value, isSaving: true));
+    emit(state.copyWith(
+      stopWhenFull: value,
+      isSaving: true,
+      savingMessage: AppStrings.savingReminder,
+    ));
     // Slight delay to show the saving animation
     await Future.delayed(const Duration(seconds: 2));
 
@@ -80,7 +108,8 @@ class DrinkReminderCubit extends Cubit<DrinkReminderState> {
     if (value) {
       final history = await bottleDataCubit.getCurrentDayHistory();
       final completionPercent =
-          await WaterConsumptionCalculator.calculateCompletionPercentage(history);
+          await WaterConsumptionCalculator.calculateCompletionPercentage(
+              history);
 
       if (completionPercent >= 100) {
         notificationService.cancelAllHydrationReminders();
@@ -97,14 +126,18 @@ class DrinkReminderCubit extends Cubit<DrinkReminderState> {
     //     await _rescheduleAllRemindersRepeat();
     //   }
     // }
-    
+
     emit(state.copyWith(isSaving: false));
     await SharedPrefsHelper.updateAndSaveDeviceConfig();
   }
 
   void cycleAlarmRepeat() async {
     final nextIndex = (state.alarmRepeatIndex + 1) % alarmRepeatOptions.length;
-    emit(state.copyWith(alarmRepeatIndex: nextIndex, isSaving: true));
+    emit(state.copyWith(
+      alarmRepeatIndex: nextIndex,
+      isSaving: true,
+      savingMessage: AppStrings.savingReminder,
+    ));
 
     // Slight delay to show the saving animation
     await Future.delayed(const Duration(seconds: 2));

@@ -283,6 +283,51 @@ class BottleDataCubit extends Cubit<BottleDataState> {
     }
   }
 
+  Future<void> clearTodayBottleData() async {
+    try {
+      final db = await _dbHelper.database;
+      final now = DateTime.now();
+      final startOfDay =
+          DateTime(now.year, now.month, now.day).toIso8601String();
+      final endOfDay =
+          DateTime(now.year, now.month, now.day, 23, 59, 59, 999)
+              .toIso8601String();
+      final dateStr =
+          "${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}";
+
+      await db.delete(
+        DatabaseHelper.tableName,
+        where: 'timestamp >= ? AND timestamp <= ?',
+        whereArgs: [startOfDay, endOfDay],
+      );
+      await db.delete(
+        DatabaseHelper.hydrationSummaryTableName,
+        where: 'date LIKE ?',
+        whereArgs: ['$dateStr%'],
+      );
+
+      await _bleCubit.clearData();
+
+      await Future.delayed(
+          const Duration(seconds: 1)); // Small delay for DB stability
+
+      final dbEntry = await _dbHelper.getAllSlots();
+      for (final updatedEntry in dbEntry) {
+        await _dbHelper.insertOrUpdateSlot(updatedEntry.copyWith(
+            waterDrank: 0.0, status: HydrationStatus.pending));
+      }
+
+      await _restoreLastValues();
+      refresh();
+      Console.log(
+          tag: "BottleDataCubit",
+          value: "✅ Today's bottle tracking data cleared successfully.");
+    } catch (e) {
+      Console.error(
+          "BottleDataCubit", "❌ Error clearing today's bottle data: $e");
+    }
+  }
+
   void refresh() {
     emit(state.copyWith(lastRefreshed: DateTime.now()));
   }

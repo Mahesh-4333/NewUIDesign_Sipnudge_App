@@ -20,6 +20,7 @@ import 'package:hydrify/cubit/bottom_nav/bottom_nav_cubit.dart';
 import 'package:hydrify/cubit/hydration/hydration_cubit.dart';
 import 'package:hydrify/cubit/hydration/hydration_state.dart';
 import 'package:hydrify/helpers/database_helper.dart';
+import 'package:hydrify/helpers/hydration_helper.dart';
 import 'package:hydrify/helpers/logger.dart';
 import 'package:hydrify/helpers/shared_pref_helper.dart';
 import 'package:hydrify/helpers/water_consumption_data_helper.dart';
@@ -259,9 +260,11 @@ class _WaterIntakeTimelineState extends State<WaterIntakeTimelineScreen> {
       ),
       child: Row(
         children: [
-          _buildTabItem(AppLocalizations.of(context)?.completed ?? "Completed", 0),
+          _buildTabItem(
+              AppLocalizations.of(context)?.completed ?? "Completed", 0),
           _buildTabItem(AppLocalizations.of(context)?.pending ?? "Pending", 1),
-          _buildTabItem(AppLocalizations.of(context)?.schedule ?? "Schedule", 2),
+          _buildTabItem(
+              AppLocalizations.of(context)?.schedule ?? "Schedule", 2),
         ],
       ),
     );
@@ -314,88 +317,8 @@ class _WaterIntakeTimelineState extends State<WaterIntakeTimelineScreen> {
   Widget _getTabContent(HydrationState state) {
     if (_activeTabIndex == 0) {
       return _buildActivityCompletedView(state);
-      // return Padding(
-      //   padding: EdgeInsets.only(bottom: 120.h),
-      //   child: Stack(
-      //     alignment: Alignment.center,
-      //     children: [
-      //       SizedBox(
-      //         width: AppDimensions.dim600,
-      //       ),
-      //       // Blur overlay
-      //       Positioned.fill(
-      //         child: ClipRRect(
-      //           borderRadius:
-      //               BorderRadius.circular(16), // match your card radius
-      //           child: BackdropFilter(
-      //             filter: ImageFilter.blur(sigmaX: 6, sigmaY: 6),
-      //             child: Container(
-      //               color: Colors.black.withOpacity(0.2),
-      //             ),
-      //           ),
-      //         ),
-      //       ),
-      //
-      //       // Center Text
-      //       Container(
-      //         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      //         decoration: BoxDecoration(
-      //           color: Colors.black.withOpacity(0.7),
-      //           borderRadius: BorderRadius.circular(20),
-      //         ),
-      //         child: const Text(
-      //           "Coming Soon",
-      //           style: TextStyle(
-      //             color: Colors.white,
-      //             fontWeight: FontWeight.bold,
-      //           ),
-      //         ),
-      //       ),
-      //     ],
-      //   ),
-      // );
     } else if (_activeTabIndex == 1) {
       return _buildActivityPendingView(state);
-      // return Padding(
-      //   padding: EdgeInsets.only(bottom: 120.h),
-      //   child: Stack(
-      //     alignment: Alignment.center,
-      //     children: [
-      //       SizedBox(
-      //         width: AppDimensions.dim600,
-      //       ),
-      //       // Blur overlay
-      //       Positioned.fill(
-      //         child: ClipRRect(
-      //           borderRadius:
-      //               BorderRadius.circular(16), // match your card radius
-      //           child: BackdropFilter(
-      //             filter: ImageFilter.blur(sigmaX: 6, sigmaY: 6),
-      //             child: Container(
-      //               color: Colors.black.withOpacity(0.2),
-      //             ),
-      //           ),
-      //         ),
-      //       ),
-      //
-      //       // Center Text
-      //       Container(
-      //         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      //         decoration: BoxDecoration(
-      //           color: Colors.black.withOpacity(0.7),
-      //           borderRadius: BorderRadius.circular(20),
-      //         ),
-      //         child: const Text(
-      //           "Coming Soon",
-      //           style: TextStyle(
-      //             color: Colors.white,
-      //             fontWeight: FontWeight.bold,
-      //           ),
-      //         ),
-      //       ),
-      //     ],
-      //   ),
-      // );
     } else {
       return _buildIntakeScheduleView(state);
     }
@@ -438,7 +361,8 @@ class _WaterIntakeTimelineState extends State<WaterIntakeTimelineScreen> {
                   ),
                 ),
                 Text(
-                  AppLocalizations.of(context)?.completedSlots ?? "Completed Slots",
+                  AppLocalizations.of(context)?.completedSlots ??
+                      "Completed Slots",
                   style: TextStyle(
                     color: Color(0xFF3FB7FF),
                     fontSize: 14.sp,
@@ -455,8 +379,11 @@ class _WaterIntakeTimelineState extends State<WaterIntakeTimelineScreen> {
                 ? Center(
                     child: Text(
                       _activeTabIndex == 0
-                          ? (AppLocalizations.of(context)?.noCompletedSlotsYet ?? "No completed slots yet")
-                          : (AppLocalizations.of(context)?.allSlotsCompleted ?? "All slots completed!"),
+                          ? (AppLocalizations.of(context)
+                                  ?.noCompletedSlotsYet ??
+                              "No completed slots yet")
+                          : (AppLocalizations.of(context)?.allSlotsCompleted ??
+                              "All slots completed!"),
                       style: TextStyle(
                         color: AppColors.greyColor,
                         fontFamily: AppFontStyles.urbanistFontFamily,
@@ -531,8 +458,11 @@ class _WaterIntakeTimelineState extends State<WaterIntakeTimelineScreen> {
                 ? Center(
                     child: Text(
                       _activeTabIndex == 0
-                          ? (AppLocalizations.of(context)?.noCompletedSlotsYet ?? "No completed slots yet")
-                          : (AppLocalizations.of(context)?.allSlotsCompleted ?? "All slots completed!"),
+                          ? (AppLocalizations.of(context)
+                                  ?.noCompletedSlotsYet ??
+                              "No completed slots yet")
+                          : (AppLocalizations.of(context)?.allSlotsCompleted ??
+                              "All slots completed!"),
                       style: TextStyle(
                         color: AppColors.greyColor,
                         fontFamily: AppFontStyles.urbanistFontFamily,
@@ -642,7 +572,8 @@ class _WaterIntakeTimelineState extends State<WaterIntakeTimelineScreen> {
                           children: [
                             TextSpan(
                               text: status == HydrationStatus.completed
-                                  ? (AppLocalizations.of(context)?.targetMet ?? "Target Met")
+                                  ? (AppLocalizations.of(context)?.targetMet ??
+                                      "Target Met")
                                   : "${(entry.amount - entry.waterDrank).toInt()}ml",
                               style: TextStyle(
                                 color: status == HydrationStatus.completed
@@ -1183,7 +1114,8 @@ class _WaterIntakeTimelineState extends State<WaterIntakeTimelineScreen> {
             children: [
               TextButton(
                 onPressed: () => setState(() => _expandedIndex = null),
-                child: Text(AppLocalizations.of(context)?.cancelUpper ?? "CANCEL",
+                child: Text(
+                    AppLocalizations.of(context)?.cancelUpper ?? "CANCEL",
                     style: TextStyle(
                         color: AppColors.greyColor,
                         fontFamily: AppFontStyles.urbanistFontFamily,
@@ -1199,9 +1131,9 @@ class _WaterIntakeTimelineState extends State<WaterIntakeTimelineScreen> {
                   );
 
                   if (isConflict) {
-                    context
-                        .read<HydrationCubit>()
-                        .showError(AppLocalizations.of(context)?.timeSlotOverlapping ?? "Time slot overlapping!");
+                    context.read<HydrationCubit>().showError(
+                        AppLocalizations.of(context)?.timeSlotOverlapping ??
+                            "Time slot overlapping!");
                     return;
                   }
 
@@ -1228,7 +1160,8 @@ class _WaterIntakeTimelineState extends State<WaterIntakeTimelineScreen> {
                       topRight: Radius.circular(15.r),
                     ),
                   ),
-                  child: Text(AppLocalizations.of(context)?.updateUpper ?? "UPDATE",
+                  child: Text(
+                      AppLocalizations.of(context)?.updateUpper ?? "UPDATE",
                       style: TextStyle(
                           color: Colors.white,
                           fontFamily: AppFontStyles.urbanistFontFamily,
@@ -1437,14 +1370,15 @@ class ProgressCircle extends StatelessWidget {
             double expectedPercent = 0.0;
             try {
               final dbHelper = DatabaseHelper();
-              final slots = await dbHelper.getAllSlots();
-              if (slots.isNotEmpty) {
-                expectedPercent =
-                    WaterConsumptionCalculator.calculateExpectedPercentage(
-                  slots,
-                  userGoalMl.toDouble(),
-                );
+              var slots = await dbHelper.getAllSlots();
+              if (slots.isEmpty) {
+                slots = HydrationHelper.generateHydrationSlots(userGoalMl.toDouble());
               }
+              expectedPercent =
+                  WaterConsumptionCalculator.calculateExpectedPercentage(
+                slots,
+                userGoalMl.toDouble(),
+              );
             } catch (_) {}
 
             return {
@@ -1462,10 +1396,14 @@ class ProgressCircle extends StatelessWidget {
               );
             }
 
-            final history = (snapshot.data!['history'] as num?)?.toDouble() ?? 0.0;
+            final history =
+                (snapshot.data!['history'] as num?)?.toDouble() ?? 0.0;
             final userGoalMl =
-                ((snapshot.data!['userGoalLiters'] as num?)?.toDouble() ?? 2.0) * 1000;
-            final expectedPercent = (snapshot.data!['expectedPercent'] as num?)?.toDouble() ?? 0.0;
+                ((snapshot.data!['userGoalLiters'] as num?)?.toDouble() ??
+                        2.0) *
+                    1000;
+            final expectedPercent =
+                (snapshot.data!['expectedPercent'] as num?)?.toDouble() ?? 0.0;
 
             double waterVolumeConsumed = history;
             double completionPercent = userGoalMl > 0
@@ -1479,7 +1417,8 @@ class ProgressCircle extends StatelessWidget {
                 painter: _TimelineArcPainter(
                   percent: completionPercent,
                   expectedPercent: expectedPercent,
-                  strokeWidth: strokeWidth > 0 ? strokeWidth : AppDimensions.dim8.w,
+                  strokeWidth:
+                      strokeWidth > 0 ? strokeWidth : AppDimensions.dim8.w,
                   progressColor: progressColor ?? const Color(0xFF1C8DBB),
                 ),
                 child: Center(
@@ -1567,7 +1506,8 @@ class _TimelineArcPainter extends CustomPainter {
         ..style = PaintingStyle.stroke
         ..strokeCap = StrokeCap.round;
 
-      final expectedSweep = sweepAngle * (expectedPercent.clamp(0.0, 100.0) / 100.0);
+      final expectedSweep =
+          sweepAngle * (expectedPercent.clamp(0.0, 100.0) / 100.0);
       canvas.drawArc(
         deflatedRect,
         startAngle,

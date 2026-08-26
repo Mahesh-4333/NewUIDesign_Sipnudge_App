@@ -99,11 +99,8 @@ Future<void> main() async {
 
   InternetConnectionHelper().initialize();
 
-  // Initialize Firebase Messaging asynchronously in background if onboarding is completed
-  final onboardingCompleted = await SharedPrefsHelper.isOnboardingFlowCompleted();
-  if (onboardingCompleted) {
-    FirebaseMessagingService().init();
-  }
+  // Initialize Firebase Messaging for push notifications and notification channels
+  FirebaseMessagingService().init();
 
   FlutterError.onError = (FlutterErrorDetails details) {
     FirebaseCrashlytics.instance.recordFlutterError(details);

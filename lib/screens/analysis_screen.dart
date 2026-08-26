@@ -147,7 +147,7 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
                 ),
               ),
               child: Text(
-                AppLocalizations.of(context)?.trackingRestarted ??
+                AppLocalizations.of(context)?.connectToBottleAnalysis ??
                     "Connect to Sipnudge bottle to access analysis",
                 textAlign: TextAlign.center,
                 style: TextStyle(
@@ -214,11 +214,12 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
         final streak = habit?['streak']?.toString() ?? '0';
         final percentage =
             state.analyticsData?['monthlyIntake']?['percentage'] ?? 0;
+        final l10n = AppLocalizations.of(context);
         final tierLabel = percentage >= 80
-            ? 'Elite Tier'
+            ? (l10n?.eliteTier ?? 'Elite Tier')
             : percentage >= 60
-                ? 'Good'
-                : 'Improving';
+                ? (l10n?.good ?? 'Good')
+                : (l10n?.improving ?? 'Improving');
 
         return Container(
           margin:
@@ -248,7 +249,7 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
                   Container(
                     alignment: Alignment.topLeft,
                     child: Text(
-                      "Habit Consistency",
+                      l10n?.habitConsistency ?? "Habit Consistency",
                       style: TextStyle(
                         color: AppColors.bluegray,
                         fontSize: AppFontStyles.fontSize_18,
@@ -303,11 +304,14 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
     required String value,
     required bool isStreak,
   }) {
+    final l10n = AppLocalizations.of(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          isStreak ? "Streak" : "Consistency",
+          isStreak
+              ? (l10n?.streak ?? "Streak")
+              : (l10n?.consistency ?? "Consistency"),
           style: TextStyle(
             color: AppColors.color_4D758B,
             fontSize: AppFontStyles.fontSize_14,
@@ -345,7 +349,7 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
                   Text(
-                    "days",
+                    l10n?.days ?? "days",
                     style: TextStyle(
                       color: AppColors.color_64748B,
                       fontSize: AppFontStyles.fontSize_12,
@@ -371,8 +375,10 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
         ),
         Text(
           isStreak
-              ? "Consecutive days reaching daily goal"
-              : "Following schedule vs off-slot drinking",
+              ? (l10n?.consecutiveDaysGoal ??
+                  "Consecutive days reaching daily goal")
+              : (l10n?.followingScheduleVsOffSlot ??
+                  "Following schedule vs off-slot drinking"),
           style: TextStyle(
             color: AppColors.color_4D758B,
             fontSize: AppFontStyles.fontSize_10,
@@ -385,6 +391,7 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
   }
 
   Widget _buildAnalyticsButton() {
+    final l10n = AppLocalizations.of(context);
     return Container(
       margin: EdgeInsets.symmetric(horizontal: AppDimensions.defaultPadding.w),
       decoration: BoxDecoration(
@@ -439,7 +446,7 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
                     crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
                       Text(
-                        "Analytics",
+                        l10n?.analytics ?? "Analytics",
                         textAlign: TextAlign.center,
                         style: TextStyle(
                           color: AppColors.black,
@@ -450,7 +457,7 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
                       ),
                       SizedBox(height: 2.h),
                       Text(
-                        "Hydration Data",
+                        l10n?.hydrationData ?? "Hydration Data",
                         textAlign: TextAlign.center,
                         style: TextStyle(
                           color: Color(0xff64748B),

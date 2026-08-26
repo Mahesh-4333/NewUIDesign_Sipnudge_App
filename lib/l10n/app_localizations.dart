@@ -1083,7 +1083,7 @@ abstract class AppLocalizations {
   /// No description provided for @offSlot.
   ///
   /// In en, this message translates to:
-  /// **'Off-slot'**
+  /// **'Off Slot'**
   String get offSlot;
 
   /// No description provided for @scheduledRecords.
@@ -2351,6 +2351,354 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'All Languages'**
   String get allLanguages;
+
+  /// No description provided for @connectToBottleAnalysis.
+  ///
+  /// In en, this message translates to:
+  /// **'Connect to Sipnudge bottle to access analysis'**
+  String get connectToBottleAnalysis;
+
+  /// No description provided for @habitConsistency.
+  ///
+  /// In en, this message translates to:
+  /// **'Habit Consistency'**
+  String get habitConsistency;
+
+  /// No description provided for @eliteTier.
+  ///
+  /// In en, this message translates to:
+  /// **'Elite Tier'**
+  String get eliteTier;
+
+  /// No description provided for @improving.
+  ///
+  /// In en, this message translates to:
+  /// **'Improving'**
+  String get improving;
+
+  /// No description provided for @consistency.
+  ///
+  /// In en, this message translates to:
+  /// **'Consistency'**
+  String get consistency;
+
+  /// No description provided for @streak.
+  ///
+  /// In en, this message translates to:
+  /// **'Streak'**
+  String get streak;
+
+  /// No description provided for @days.
+  ///
+  /// In en, this message translates to:
+  /// **'days'**
+  String get days;
+
+  /// No description provided for @consecutiveDaysGoal.
+  ///
+  /// In en, this message translates to:
+  /// **'Consecutive days reaching daily goal'**
+  String get consecutiveDaysGoal;
+
+  /// No description provided for @followingScheduleVsOffSlot.
+  ///
+  /// In en, this message translates to:
+  /// **'Following schedule vs off-slot drinking'**
+  String get followingScheduleVsOffSlot;
+
+  /// No description provided for @analytics.
+  ///
+  /// In en, this message translates to:
+  /// **'Analytics'**
+  String get analytics;
+
+  /// No description provided for @hydrationData.
+  ///
+  /// In en, this message translates to:
+  /// **'Hydration Data'**
+  String get hydrationData;
+
+  /// No description provided for @weeklyIntake.
+  ///
+  /// In en, this message translates to:
+  /// **'Weekly Intake'**
+  String get weeklyIntake;
+
+  /// No description provided for @monthlyIntake.
+  ///
+  /// In en, this message translates to:
+  /// **'Monthly Intake'**
+  String get monthlyIntake;
+
+  /// No description provided for @yearlyIntake.
+  ///
+  /// In en, this message translates to:
+  /// **'Yearly Intake'**
+  String get yearlyIntake;
+
+  /// No description provided for @quarterlyIntake.
+  ///
+  /// In en, this message translates to:
+  /// **'Quarterly Intake'**
+  String get quarterlyIntake;
+
+  /// No description provided for @couldNotLoadAnalytics.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not load analytics.\nCheck your connection.'**
+  String get couldNotLoadAnalytics;
+
+  /// No description provided for @exportData.
+  ///
+  /// In en, this message translates to:
+  /// **'Export Data'**
+  String get exportData;
+
+  /// No description provided for @monthlyGoal.
+  ///
+  /// In en, this message translates to:
+  /// **'MONTHLY GOAL'**
+  String get monthlyGoal;
+
+  /// No description provided for @annualPerformance.
+  ///
+  /// In en, this message translates to:
+  /// **'ANNUAL PERFORMANCE'**
+  String get annualPerformance;
+
+  /// No description provided for @totalIntake.
+  ///
+  /// In en, this message translates to:
+  /// **'Total Intake'**
+  String get totalIntake;
+
+  /// No description provided for @target.
+  ///
+  /// In en, this message translates to:
+  /// **'Target'**
+  String get target;
+
+  /// No description provided for @weeklyDistribution.
+  ///
+  /// In en, this message translates to:
+  /// **'Weekly Distribution'**
+  String get weeklyDistribution;
+
+  /// No description provided for @quarterlyDistribution.
+  ///
+  /// In en, this message translates to:
+  /// **'Quarterly Distribution'**
+  String get quarterlyDistribution;
+
+  /// No description provided for @scheduledVsOffSlot.
+  ///
+  /// In en, this message translates to:
+  /// **'Scheduled vs. Off-slot'**
+  String get scheduledVsOffSlot;
+
+  /// No description provided for @scheduledUpper.
+  ///
+  /// In en, this message translates to:
+  /// **'SCHEDULED'**
+  String get scheduledUpper;
+
+  /// No description provided for @offSlotUpper.
+  ///
+  /// In en, this message translates to:
+  /// **'OFF-SLOT'**
+  String get offSlotUpper;
+
+  /// No description provided for @vsLastMonth.
+  ///
+  /// In en, this message translates to:
+  /// **'vs last month'**
+  String get vsLastMonth;
+
+  /// No description provided for @vsLastYear.
+  ///
+  /// In en, this message translates to:
+  /// **'vs last year'**
+  String get vsLastYear;
+
+  /// No description provided for @keepUpHydrationHabits.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep up your hydration habits!'**
+  String get keepUpHydrationHabits;
+
+  /// No description provided for @historicalTrends.
+  ///
+  /// In en, this message translates to:
+  /// **'Historical Trends'**
+  String get historicalTrends;
+
+  /// No description provided for @averageDaily.
+  ///
+  /// In en, this message translates to:
+  /// **'Average Daily'**
+  String get averageDaily;
+
+  /// No description provided for @basedOnLast30Days.
+  ///
+  /// In en, this message translates to:
+  /// **'Based on last 30 days'**
+  String get basedOnLast30Days;
+
+  /// No description provided for @peakStreak.
+  ///
+  /// In en, this message translates to:
+  /// **'Peak Streak'**
+  String get peakStreak;
+
+  /// No description provided for @goalMetConsecutiveDays.
+  ///
+  /// In en, this message translates to:
+  /// **'Goal met consecutive days'**
+  String get goalMetConsecutiveDays;
+
+  /// No description provided for @quarterlyBreakdown.
+  ///
+  /// In en, this message translates to:
+  /// **'Quarterly Breakdown'**
+  String get quarterlyBreakdown;
+
+  /// No description provided for @firstQuarter.
+  ///
+  /// In en, this message translates to:
+  /// **'First Quarter'**
+  String get firstQuarter;
+
+  /// No description provided for @secondQuarter.
+  ///
+  /// In en, this message translates to:
+  /// **'Second Quarter'**
+  String get secondQuarter;
+
+  /// No description provided for @thirdQuarter.
+  ///
+  /// In en, this message translates to:
+  /// **'Third Quarter'**
+  String get thirdQuarter;
+
+  /// No description provided for @fourthQuarter.
+  ///
+  /// In en, this message translates to:
+  /// **'Fourth Quarter'**
+  String get fourthQuarter;
+
+  /// No description provided for @quarter.
+  ///
+  /// In en, this message translates to:
+  /// **'Quarter'**
+  String get quarter;
+
+  /// No description provided for @januaryToMarch.
+  ///
+  /// In en, this message translates to:
+  /// **'January to March'**
+  String get januaryToMarch;
+
+  /// No description provided for @aprilToJune.
+  ///
+  /// In en, this message translates to:
+  /// **'April to June'**
+  String get aprilToJune;
+
+  /// No description provided for @julyToSeptember.
+  ///
+  /// In en, this message translates to:
+  /// **'July to September'**
+  String get julyToSeptember;
+
+  /// No description provided for @octoberToDecember.
+  ///
+  /// In en, this message translates to:
+  /// **'October to December'**
+  String get octoberToDecember;
+
+  /// No description provided for @exportOptions.
+  ///
+  /// In en, this message translates to:
+  /// **'Export Options'**
+  String get exportOptions;
+
+  /// No description provided for @downloadHydrationHistorySubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Download your hydration history for your records'**
+  String get downloadHydrationHistorySubtitle;
+
+  /// No description provided for @downloadAsJpg.
+  ///
+  /// In en, this message translates to:
+  /// **'Download as JPG'**
+  String get downloadAsJpg;
+
+  /// No description provided for @downloadAsJpgDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'High-resolution visual summary for social sharing.'**
+  String get downloadAsJpgDescription;
+
+  /// No description provided for @downloadAsPdf.
+  ///
+  /// In en, this message translates to:
+  /// **'Download as PDF'**
+  String get downloadAsPdf;
+
+  /// No description provided for @downloadAsPdfDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Detailed document of daily statistics and trends.'**
+  String get downloadAsPdfDescription;
+
+  /// No description provided for @failedToExportJpg.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to export JPG'**
+  String get failedToExportJpg;
+
+  /// No description provided for @shareHydrationAnalyticsText.
+  ///
+  /// In en, this message translates to:
+  /// **'Check out my hydration analytics!'**
+  String get shareHydrationAnalyticsText;
+
+  /// No description provided for @eliteSmartInsights.
+  ///
+  /// In en, this message translates to:
+  /// **'Elite Smart Insights'**
+  String get eliteSmartInsights;
+
+  /// No description provided for @optimalWindow.
+  ///
+  /// In en, this message translates to:
+  /// **'Optimal Window'**
+  String get optimalWindow;
+
+  /// No description provided for @milk.
+  ///
+  /// In en, this message translates to:
+  /// **'Milk'**
+  String get milk;
+
+  /// No description provided for @meal.
+  ///
+  /// In en, this message translates to:
+  /// **'Meal'**
+  String get meal;
+
+  /// No description provided for @bottle.
+  ///
+  /// In en, this message translates to:
+  /// **'Bottle'**
+  String get bottle;
+
+  /// No description provided for @logged.
+  ///
+  /// In en, this message translates to:
+  /// **'Logged'**
+  String get logged;
 }
 
 class _AppLocalizationsDelegate

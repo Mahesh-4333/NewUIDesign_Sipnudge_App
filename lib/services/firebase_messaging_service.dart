@@ -9,10 +9,10 @@ import 'package:hydrify/services/api_service.dart';
 
 /// The Android notification channel used for all FCM push notifications.
 /// Must match the `android.notification.channel_id` value sent in FCM payloads.
-const String _kFcmChannelId = 'fcm_default_channel';
-const String _kFcmChannelName = 'Push Notifications';
+const String _kFcmChannelId = 'sipnudge_custom_sound_v1';
+const String _kFcmChannelName = 'Sipnudge Notifications';
 const String _kFcmChannelDesc =
-    'App push notifications (support tickets, updates)';
+    'App push notifications (hydration reminders, support tickets, updates)';
 
 class FirebaseMessagingService {
   static final FirebaseMessagingService _instance =
@@ -47,11 +47,11 @@ class FirebaseMessagingService {
         // timeSensitive: true,
       );
 
-      // Configure foreground notification options so Firebase notifications do NOT show when app is in foreground
+      // Configure foreground notification options so sound & banner work even when app is open
       await _firebaseMessaging.setForegroundNotificationPresentationOptions(
-        alert: false,
-        badge: false,
-        sound: false,
+        alert: true,
+        badge: true,
+        sound: true,
       );
 
       Console.log(
@@ -66,9 +66,9 @@ class FirebaseMessagingService {
             requestAlertPermission: false, // Already requested above via FCM
             requestBadgePermission: false,
             requestSoundPermission: false,
-            defaultPresentAlert: false,
-            defaultPresentBadge: false,
-            defaultPresentSound: false,
+            defaultPresentAlert: true,
+            defaultPresentBadge: true,
+            defaultPresentSound: true,
           ),
         ),
       );
@@ -132,12 +132,49 @@ class FirebaseMessagingService {
       // 6. Handle notifications when app is in background and opened via push
       FirebaseMessaging.onMessageOpenedApp.listen(_handleNotificationClick);
 
-      // 7. Handle foreground FCM messages (data processing only, no foreground notifications shown).
-      FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+      // 7. Handle foreground FCM messages (show heads-up banner with sound on Android & iOS)
+      FirebaseMessaging.onMessage.listen((RemoteMessage message) async {
+        final isEnabled =
+            await SharedPrefsHelper.isFirebaseNotificationEnabled();
+        if (!isEnabled) {
+          Console.log(
+              tag: "FCM",
+              value: 'FCM message received but ignored (notifications disabled)');
+          return;
+        }
+
         Console.log(
             tag: "FCM",
             value:
-                'Foreground message received: ${message.notification?.title}');
+                'Foreground message received: ${message.notification?.title}, data: ${message.data}');
+
+        // On Android / iOS, show local notification with sound if FCM arrived in foreground
+        if (message.notification != null) {
+          _localNotifications.show(
+            id: message.hashCode,
+            title: message.notification?.title,
+            body: message.notification?.body,
+            notificationDetails: const NotificationDetails(
+              android: AndroidNotificationDetails(
+                _kFcmChannelId,
+                _kFcmChannelName,
+                channelDescription: _kFcmChannelDesc,
+                importance: Importance.max,
+                priority: Priority.max,
+                playSound: true,
+                enableVibration: true,
+                sound: RawResourceAndroidNotificationSound('ringtone1'),
+                icon: '@mipmap/launcher_icon',
+              ),
+              iOS: DarwinNotificationDetails(
+                presentAlert: true,
+                presentBadge: true,
+                presentSound: true,
+                sound: 'mixkitachievementbell.caf',
+              ),
+            ),
+          );
+        }
 
         if (message.data['type'] == 'ticket_reply' ||
             message.data['type'] == 'ticket_closed') {
@@ -147,6 +184,46 @@ class FirebaseMessagingService {
     } catch (e) {
       Console.log(
           tag: "FCM", value: 'Error initializing Firebase Messaging: $e');
+    }
+  }
+
+  /// Enable or disable Firebase push notifications
+  Future<void> setNotificationEnabled(bool enabled) async {
+    await SharedPrefsHelper.setFirebaseNotificationEnabled(enabled);
+    try {
+      if (enabled) {
+        await _firebaseMessaging.setAutoInitEnabled(true);
+        NotificationSettings settings =
+            await _firebaseMessaging.requestPermission(
+          alert: true,
+          announcement: false,
+          badge: true,
+          carPlay: false,
+          criticalAlert: false,
+          provisional: false,
+          sound: true,
+        );
+        Console.log(
+            tag: "FCM",
+            value: 'User granted permission: ${settings.authorizationStatus}');
+        String? token = await _firebaseMessaging.getToken();
+        if (token != null) {
+          await syncTokenToBackend(token);
+        }
+      } else {
+        await _firebaseMessaging.setAutoInitEnabled(false);
+        final userId = await SharedPrefsHelper.getUserId();
+        if (userId != null && userId.isNotEmpty) {
+          await _apiService.syncUserInfo(userId, {'fcmToken': ''});
+        }
+        try {
+          await _firebaseMessaging.deleteToken();
+        } catch (e) {
+          Console.log(tag: "FCM", value: 'Error deleting FCM token: $e');
+        }
+      }
+    } catch (e) {
+      Console.log(tag: "FCM", value: 'Error setting notification enabled: $e');
     }
   }
 
@@ -160,16 +237,15 @@ class FirebaseMessagingService {
     // Delete old channel first so Android updates channel settings (sound, importance)
     await androidPlugin?.deleteNotificationChannel(channelId: _kFcmChannelId);
 
-    // Reference the custom sound file at android/app/src/main/res/raw/bell.mp3
+    // Channel with custom louder ringtone1 + max importance
     const channel = AndroidNotificationChannel(
       _kFcmChannelId,
       _kFcmChannelName,
       description: _kFcmChannelDesc,
-      importance: Importance.max, // Required for heads-up + sound
+      importance: Importance.max,
       playSound: true,
       enableVibration: true,
-      sound:
-          RawResourceAndroidNotificationSound('bell'), // file: res/raw/bell.mp3
+      sound: RawResourceAndroidNotificationSound('ringtone1'),
     );
 
     await androidPlugin?.createNotificationChannel(channel);
@@ -178,8 +254,6 @@ class FirebaseMessagingService {
         tag: "FCM",
         value: 'Android FCM notification channel created: $_kFcmChannelId');
   }
-
-
 
   void _handleNotificationClick(RemoteMessage message) {
     Console.log(

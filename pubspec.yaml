@@ -126,6 +126,7 @@ flutter:
     - assets/ai_goal/
     - assets/leaderboard/
     - assets/onboarding/
+    - assets/log_hydration/
     - assets/onboarding/logo_anim.mp4
     - assets/onboarding/intake_tutorial.mp4
 

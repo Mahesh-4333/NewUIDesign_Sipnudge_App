@@ -162,6 +162,7 @@ class AppStrings {
   static const linkyouraccounts = "Link Your Accounts";
   static const linkaccounts = "Linked Accounts";
   static const reminder = "Reminder";
+  static const notification = "Notification";
   static const reminderMode = "Reminder Mode";
   static const alarmRepeat = "Alarm Repeat";
   static const stopWhen100 = "Stop When 100%";
@@ -258,6 +259,7 @@ class AppStrings {
   static const typicalIntakeSubtitle =
       "Your current typical intake before using the app.";
   static const savingReminder = "Saving reminder";
+  static const savingNotificationConfig = "Saving notification config";
   static const calendar = "Calendar";
 
   // Preferences & Haptics Strings

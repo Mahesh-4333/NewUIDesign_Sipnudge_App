@@ -10,6 +10,7 @@ import 'package:hydrify/constants/app_colors.dart';
 import 'package:hydrify/constants/app_dimensions.dart';
 import 'package:hydrify/constants/app_font_styles.dart';
 import 'package:hydrify/constants/app_strings.dart';
+import 'package:hydrify/l10n/app_localizations.dart';
 import 'package:hydrify/cubit/bottom_nav/bottom_nav_cubit.dart';
 import 'package:hydrify/cubit/data_analytics/data_analytics_cubit.dart';
 import 'package:hydrify/helpers/common.dart';
@@ -18,6 +19,7 @@ import 'package:hydrify/services/analytics_pdf_service.dart';
 import 'package:hydrify/screens/calendar/calendar_screen.dart';
 import 'package:hydrify/screens/widgets/chart_widgets/custom_stacked_bar_chart.dart';
 import 'package:hydrify/screens/widgets/data_analytics/animated_month_item.dart';
+import 'package:intl/intl.dart';
 import 'package:percent_indicator/percent_indicator.dart';
 import 'package:syncfusion_flutter_charts/charts.dart';
 
@@ -118,12 +120,14 @@ class _DataNAnalyticsScreenState extends State<DataNAnalyticsScreen> {
                                 }
                                 if (state.error != null &&
                                     state.analyticsData == null) {
+                                  final l10n = AppLocalizations.of(context);
                                   return Padding(
                                     padding:
                                         EdgeInsets.symmetric(vertical: 32.h),
                                     child: Center(
                                       child: Text(
-                                        "Could not load analytics.\nCheck your connection.",
+                                        l10n?.couldNotLoadAnalytics ??
+                                            "Could not load analytics.\nCheck your connection.",
                                         textAlign: TextAlign.center,
                                         style: TextStyle(
                                           color: AppColors.color_4D758B,
@@ -211,7 +215,8 @@ class _DataNAnalyticsScreenState extends State<DataNAnalyticsScreen> {
                                     ),
                                   ),
                                   child: Text(
-                                    "Export Data",
+                                    AppLocalizations.of(context)?.exportData ??
+                                        "Export Data",
                                     style: TextStyle(
                                       color: AppColors.white,
                                       fontFamily:
@@ -253,7 +258,8 @@ class _DataNAnalyticsScreenState extends State<DataNAnalyticsScreen> {
           Expanded(
             child: Center(
               child: Text(
-                'Data & Analytics',
+                AppLocalizations.of(context)?.dataAnalytics ??
+                    'Data & Analytics',
                 style: TextStyle(
                   fontSize: 22.sp,
                   fontVariations: [
@@ -319,6 +325,7 @@ class _DataNAnalyticsScreenState extends State<DataNAnalyticsScreen> {
     return BlocBuilder<DataAnalyticsCubit, DataAnalyticsState>(
       builder: (context, state) {
         final bool isMonthlyAnalyticsSelected = state.isMonthlySelected;
+        final l10n = AppLocalizations.of(context);
         return Container(
           decoration: BoxDecoration(
             color: AppColors.white,
@@ -359,7 +366,7 @@ class _DataNAnalyticsScreenState extends State<DataNAnalyticsScreen> {
                     ),
                     child: Center(
                       child: Text(
-                        "Monthly",
+                        l10n?.monthly ?? "Monthly",
                         style: TextStyle(
                           color: isMonthlyAnalyticsSelected
                               ? AppColors.white
@@ -395,7 +402,7 @@ class _DataNAnalyticsScreenState extends State<DataNAnalyticsScreen> {
                     ),
                     child: Center(
                       child: Text(
-                        "Yearly",
+                        l10n?.yearly ?? "Yearly",
                         style: TextStyle(
                           color: !isMonthlyAnalyticsSelected
                               ? AppColors.white
@@ -419,23 +426,13 @@ class _DataNAnalyticsScreenState extends State<DataNAnalyticsScreen> {
   Widget buildMonthGrid() {
     final currentYear = DateTime.now().year;
 
-    final months = [
-      'January',
-      'February',
-      'March',
-      'April',
-      'May',
-      'June',
-      'July',
-      'August',
-      'September',
-      'October',
-      'November',
-      'December'
-    ];
-
     return BlocBuilder<DataAnalyticsCubit, DataAnalyticsState>(
       builder: (context, state) {
+        final locale = Localizations.localeOf(context).toString();
+        final months = List.generate(12, (index) {
+          final date = DateTime(2024, index + 1, 1);
+          return DateFormat('MMMM', locale).format(date);
+        });
         return Container(
           decoration: BoxDecoration(
             color: AppColors.white,
@@ -597,17 +594,29 @@ class _DataNAnalyticsScreenState extends State<DataNAnalyticsScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              Container(
-                alignment: Alignment.topLeft,
-                child: Text(
-                  "${isMonthlyIntake ? "Monthly Intake: " : "Quaterly Intake: "}${isMonthlyIntake ? selectedMonthName : ""}${isMonthlyIntake ? ", $selectedYear" : "$selectedYear"}",
-                  style: TextStyle(
-                    color: AppColors.bluegray,
-                    fontSize: AppFontStyles.fontSize_18,
-                    fontFamily: AppFontStyles.urbanistFontFamily,
-                    fontVariations: [AppFontStyles.boldFontVariation],
-                  ),
-                ),
+              Builder(
+                builder: (context) {
+                  final l10n = AppLocalizations.of(context);
+                  final prefix = isMonthlyIntake
+                      ? (l10n?.monthlyIntake ?? "Monthly Intake")
+                      : (l10n?.quarterlyIntake ?? "Quarterly Intake");
+                  final suffix = isMonthlyIntake
+                      ? "$selectedMonthName, $selectedYear"
+                      : "$selectedYear";
+
+                  return Container(
+                    alignment: Alignment.topLeft,
+                    child: Text(
+                      "$prefix: $suffix",
+                      style: TextStyle(
+                        color: AppColors.bluegray,
+                        fontSize: AppFontStyles.fontSize_18,
+                        fontFamily: AppFontStyles.urbanistFontFamily,
+                        fontVariations: [AppFontStyles.boldFontVariation],
+                      ),
+                    ),
+                  );
+                },
               ),
               SizedBox(
                 height: 29.h,
@@ -635,7 +644,11 @@ class _DataNAnalyticsScreenState extends State<DataNAnalyticsScreen> {
                       ),
                     ),
                     Text(
-                      isMonthlyIntake ? "MONTHLY GOAL" : "ANNUAL PERFORMANCE",
+                      isMonthlyIntake
+                          ? (AppLocalizations.of(context)?.monthlyGoal ??
+                              "MONTHLY GOAL")
+                          : (AppLocalizations.of(context)?.annualPerformance ??
+                              "ANNUAL PERFORMANCE"),
                       style: TextStyle(
                           color: AppColors.bluegray,
                           fontSize: AppFontStyles.fontSize_12,
@@ -657,7 +670,8 @@ class _DataNAnalyticsScreenState extends State<DataNAnalyticsScreen> {
                     crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
                       Text(
-                        "Total Intake",
+                        AppLocalizations.of(context)?.totalIntake ??
+                            "Total Intake",
                         style: TextStyle(
                             color: AppColors.bluegray,
                             fontSize: AppFontStyles.fontSize_12,
@@ -681,7 +695,7 @@ class _DataNAnalyticsScreenState extends State<DataNAnalyticsScreen> {
                     crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
                       Text(
-                        "Target",
+                        AppLocalizations.of(context)?.target ?? "Target",
                         style: TextStyle(
                             color: AppColors.bluegray,
                             fontSize: AppFontStyles.fontSize_12,
@@ -705,7 +719,7 @@ class _DataNAnalyticsScreenState extends State<DataNAnalyticsScreen> {
                     crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
                       Text(
-                        "Off Slot",
+                        AppLocalizations.of(context)?.offSlot ?? "Off Slot",
                         style: TextStyle(
                             color: AppColors.bluegray,
                             fontSize: AppFontStyles.fontSize_12,
@@ -790,8 +804,12 @@ class _DataNAnalyticsScreenState extends State<DataNAnalyticsScreen> {
                             alignment: Alignment.topLeft,
                             child: Text(
                               state.isMonthlySelected
-                                  ? "Weekly Distribution"
-                                  : "Quarterly Distribution",
+                                  ? (AppLocalizations.of(context)
+                                          ?.weeklyDistribution ??
+                                      "Weekly Distribution")
+                                  : (AppLocalizations.of(context)
+                                          ?.quarterlyDistribution ??
+                                      "Quarterly Distribution"),
                               style: TextStyle(
                                 color: AppColors.bluegray,
                                 fontSize: AppFontStyles.fontSize_18,
@@ -805,7 +823,9 @@ class _DataNAnalyticsScreenState extends State<DataNAnalyticsScreen> {
                           Container(
                             alignment: Alignment.topLeft,
                             child: Text(
-                              "Scheduled vs. Off-slot",
+                              AppLocalizations.of(context)
+                                      ?.scheduledVsOffSlot ??
+                                  "Scheduled vs. Off-slot",
                               style: TextStyle(
                                 color: AppColors.bluegray,
                                 fontSize: AppFontStyles.fontSize_14,
@@ -851,6 +871,10 @@ class _DataNAnalyticsScreenState extends State<DataNAnalyticsScreen> {
                                 ? AppColors.color_F0FDF4
                                 : AppColors.redAccent.withOpacity(0.1);
                             final sign = isPositive ? "+" : "";
+                            final l10n = AppLocalizations.of(context);
+                            final comparisonText = state.isMonthlySelected
+                                ? (l10n?.vsLastMonth ?? "vs last month")
+                                : (l10n?.vsLastYear ?? "vs last year");
 
                             return Container(
                               padding: EdgeInsets.symmetric(
@@ -859,7 +883,7 @@ class _DataNAnalyticsScreenState extends State<DataNAnalyticsScreen> {
                                   color: bgColor,
                                   borderRadius: BorderRadius.circular(360)),
                               child: Text(
-                                "$sign$vsLastMonth% vs last ${state.isMonthlySelected ? 'month' : 'year'}",
+                                "$sign$vsLastMonth% $comparisonText",
                                 style: TextStyle(
                                   color: color,
                                   fontSize: AppFontStyles.fontSize_10,
@@ -891,8 +915,10 @@ class _DataNAnalyticsScreenState extends State<DataNAnalyticsScreen> {
                     mainAxisSize: MainAxisSize.min,
                     spacing: AppDimensions.dim16.w,
                     children: [
-                      buildLegendItem(AppColors.lightBlue400, "SCHEDULED"),
-                      buildLegendItem(AppColors.color_136DEC0D, "OFF-SLOT")
+                      buildLegendItem(AppColors.lightBlue400,
+                          AppLocalizations.of(context)?.scheduledUpper ?? "SCHEDULED"),
+                      buildLegendItem(AppColors.color_136DEC0D,
+                          AppLocalizations.of(context)?.offSlotUpper ?? "OFF-SLOT")
                     ],
                   )
                 ]));
@@ -903,18 +929,19 @@ class _DataNAnalyticsScreenState extends State<DataNAnalyticsScreen> {
   Widget buildHabitConsistencyCard() {
     return BlocBuilder<DataAnalyticsCubit, DataAnalyticsState>(
       builder: (context, state) {
+        final l10n = AppLocalizations.of(context);
         final habit = state.analyticsData?['habitConsistency'];
         final efficiency = habit?['efficiency']?.toString() ?? '0';
         final streak = habit?['streak']?.toString() ?? '0';
-        final insight =
-            habit?['insight'] as String? ?? 'Keep up your hydration habits!';
+        final insight = habit?['insight'] as String? ??
+            (l10n?.keepUpHydrationHabits ?? 'Keep up your hydration habits!');
         final percentage =
             state.analyticsData?['monthlyIntake']?['percentage'] ?? 0;
         final tierLabel = percentage >= 80
-            ? 'Elite Tier'
+            ? (l10n?.eliteTier ?? 'Elite Tier')
             : percentage >= 60
-                ? 'Good'
-                : 'Improving';
+                ? (l10n?.good ?? 'Good')
+                : (l10n?.improving ?? 'Improving');
 
         return Container(
           decoration: BoxDecoration(
@@ -942,7 +969,7 @@ class _DataNAnalyticsScreenState extends State<DataNAnalyticsScreen> {
                   Container(
                     alignment: Alignment.topLeft,
                     child: Text(
-                      "Habit Consistency",
+                      l10n?.habitConsistency ?? "Habit Consistency",
                       style: TextStyle(
                         color: AppColors.bluegray,
                         fontSize: AppFontStyles.fontSize_18,
@@ -1035,11 +1062,14 @@ class _DataNAnalyticsScreenState extends State<DataNAnalyticsScreen> {
     required String value,
     required bool isStreak,
   }) {
+    final l10n = AppLocalizations.of(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          isStreak ? "Streak" : "Consistency",
+          isStreak
+              ? (l10n?.streak ?? "Streak")
+              : (l10n?.consistency ?? "Consistency"),
           style: TextStyle(
             color: AppColors.color_4D758B,
             fontSize: AppFontStyles.fontSize_14,
@@ -1077,7 +1107,7 @@ class _DataNAnalyticsScreenState extends State<DataNAnalyticsScreen> {
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
                   Text(
-                    "days",
+                    l10n?.days ?? "days",
                     style: TextStyle(
                       color: AppColors.color_64748B,
                       fontSize: AppFontStyles.fontSize_12,
@@ -1103,8 +1133,10 @@ class _DataNAnalyticsScreenState extends State<DataNAnalyticsScreen> {
         ),
         Text(
           isStreak
-              ? "Consecutive days reaching daily goal"
-              : "Following schedule vs off-slot drinking",
+              ? (l10n?.consecutiveDaysGoal ??
+                  "Consecutive days reaching daily goal")
+              : (l10n?.followingScheduleVsOffSlot ??
+                  "Following schedule vs off-slot drinking"),
           style: TextStyle(
             color: AppColors.color_4D758B,
             fontSize: AppFontStyles.fontSize_10,
@@ -1242,7 +1274,8 @@ class _DataNAnalyticsScreenState extends State<DataNAnalyticsScreen> {
                       ),
                     ),
                     Text(
-                      "Export Options",
+                      AppLocalizations.of(context)?.exportOptions ??
+                          "Export Options",
                       style: TextStyle(
                         color: AppColors.black,
                         fontFamily: AppFontStyles.urbanistFontFamily,
@@ -1254,7 +1287,9 @@ class _DataNAnalyticsScreenState extends State<DataNAnalyticsScreen> {
                     ),
                     SizedBox(height: 10.h),
                     Text(
-                      "Download your hydration history for your records",
+                      AppLocalizations.of(context)
+                              ?.downloadHydrationHistorySubtitle ??
+                          "Download your hydration history for your records",
                       style: TextStyle(
                         color: AppColors.color_414755,
                         fontFamily: AppFontStyles.urbanistFontFamily,
@@ -1297,19 +1332,27 @@ class _DataNAnalyticsScreenState extends State<DataNAnalyticsScreen> {
                                     .create();
                             await imagePath.writeAsBytes(imageBytes);
 
-                            await Share.shareXFiles(
-                              [XFile(imagePath.path)],
-                              text: 'Check out my hydration analytics!',
-                              sharePositionOrigin: shareRect,
-                            );
+                            if (context.mounted) {
+                              final shareText = AppLocalizations.of(context)
+                                      ?.shareHydrationAnalyticsText ??
+                                  'Check out my hydration analytics!';
+                              await Share.shareXFiles(
+                                [XFile(imagePath.path)],
+                                text: shareText,
+                                sharePositionOrigin: shareRect,
+                              );
+                            }
                           }
                         } catch (e) {
                           setState(() => _isCapturing = false);
                           debugPrint("Error capturing screenshot: $e");
                           if (mounted) {
                             ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                  content: Text("Failed to export JPG")),
+                              SnackBar(
+                                  content: Text(
+                                      AppLocalizations.of(context)
+                                              ?.failedToExportJpg ??
+                                          "Failed to export JPG")),
                             );
                           }
                         }
@@ -1349,7 +1392,8 @@ class _DataNAnalyticsScreenState extends State<DataNAnalyticsScreen> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  "Download as JPG",
+                                  AppLocalizations.of(context)?.downloadAsJpg ??
+                                      "Download as JPG",
                                   style: TextStyle(
                                     color: AppColors.color_414141,
                                     fontFamily:
@@ -1361,7 +1405,9 @@ class _DataNAnalyticsScreenState extends State<DataNAnalyticsScreen> {
                                   ),
                                 ),
                                 Text(
-                                  "High-resolution visual summary for social sharing.",
+                                  AppLocalizations.of(context)
+                                          ?.downloadAsJpgDescription ??
+                                      "High-resolution visual summary for social sharing.",
                                   style: TextStyle(
                                     color: AppColors.color_464545,
                                     fontFamily:
@@ -1441,7 +1487,8 @@ class _DataNAnalyticsScreenState extends State<DataNAnalyticsScreen> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  "Download as PDF",
+                                  AppLocalizations.of(context)?.downloadAsPdf ??
+                                      "Download as PDF",
                                   style: TextStyle(
                                     color: AppColors.color_414141,
                                     fontFamily:
@@ -1453,7 +1500,9 @@ class _DataNAnalyticsScreenState extends State<DataNAnalyticsScreen> {
                                   ),
                                 ),
                                 Text(
-                                  "Detailed document of daily statistics and trends.",
+                                  AppLocalizations.of(context)
+                                          ?.downloadAsPdfDescription ??
+                                      "Detailed document of daily statistics and trends.",
                                   style: TextStyle(
                                     color: AppColors.color_464545,
                                     fontFamily:
@@ -1508,7 +1557,7 @@ class _DataNAnalyticsScreenState extends State<DataNAnalyticsScreen> {
                           ),
                         ),
                         child: Text(
-                          "Cancel",
+                          AppLocalizations.of(context)?.cancel ?? "Cancel",
                           style: TextStyle(
                             color: AppColors.white,
                             fontFamily: AppFontStyles.urbanistFontFamily,
@@ -1563,7 +1612,8 @@ class _DataNAnalyticsScreenState extends State<DataNAnalyticsScreen> {
                     width: AppDimensions.dim12.w,
                   ),
                   Text(
-                    "Elite Smart Insights",
+                    AppLocalizations.of(context)?.eliteSmartInsights ??
+                        "Elite Smart Insights",
                     style: TextStyle(
                       color: AppColors.white,
                       fontFamily: AppFontStyles.urbanistFontFamily,
@@ -1616,7 +1666,7 @@ class _DataNAnalyticsScreenState extends State<DataNAnalyticsScreen> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      "Optimal Window: $optimalWindow",
+                      "${AppLocalizations.of(context)?.optimalWindow ?? 'Optimal Window'}: $optimalWindow",
                       style: TextStyle(
                         color: AppColors.white,
                         fontFamily: AppFontStyles.urbanistFontFamily,
@@ -1642,16 +1692,18 @@ class _DataNAnalyticsScreenState extends State<DataNAnalyticsScreen> {
   Widget buildHistoricalTrends() {
     return BlocBuilder<DataAnalyticsCubit, DataAnalyticsState>(
       builder: (context, state) {
+        final l10n = AppLocalizations.of(context);
         final trends = state.analyticsData?['historicalTrends'];
         final avgDaily = trends != null ? "${trends['averageDaily']}L" : "0.0L";
-        final peakStreak =
-            trends != null ? "${trends['peakStreak']} Days" : "0 Days";
+        final peakStreak = trends != null
+            ? "${trends['peakStreak']} ${l10n?.days ?? 'Days'}"
+            : "0 ${l10n?.days ?? 'Days'}";
 
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              "Historical Trends",
+              l10n?.historicalTrends ?? "Historical Trends",
               style: TextStyle(
                 color: AppColors.color_4D758B,
                 fontFamily: AppFontStyles.urbanistFontFamily,
@@ -1700,7 +1752,7 @@ class _DataNAnalyticsScreenState extends State<DataNAnalyticsScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        "Average Daily",
+                        l10n?.averageDaily ?? "Average Daily",
                         style: TextStyle(
                           color: AppColors.color_4D758B,
                           fontFamily: AppFontStyles.urbanistFontFamily,
@@ -1711,7 +1763,7 @@ class _DataNAnalyticsScreenState extends State<DataNAnalyticsScreen> {
                         ),
                       ),
                       Text(
-                        "Based on last 30 days",
+                        l10n?.basedOnLast30Days ?? "Based on last 30 days",
                         style: TextStyle(
                           color: AppColors.color_4D758B,
                           fontFamily: AppFontStyles.urbanistFontFamily,
@@ -1779,7 +1831,7 @@ class _DataNAnalyticsScreenState extends State<DataNAnalyticsScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        "Peak Streak",
+                        l10n?.peakStreak ?? "Peak Streak",
                         style: TextStyle(
                           color: AppColors.color_4D758B,
                           fontFamily: AppFontStyles.urbanistFontFamily,
@@ -1790,7 +1842,8 @@ class _DataNAnalyticsScreenState extends State<DataNAnalyticsScreen> {
                         ),
                       ),
                       Text(
-                        "Goal met consecutive days",
+                        l10n?.goalMetConsecutiveDays ??
+                            "Goal met consecutive days",
                         style: TextStyle(
                           color: AppColors.color_4D758B,
                           fontFamily: AppFontStyles.urbanistFontFamily,
@@ -1836,7 +1889,8 @@ class _DataNAnalyticsScreenState extends State<DataNAnalyticsScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              "Quarterly Breakdown",
+              AppLocalizations.of(context)?.quarterlyBreakdown ??
+                  "Quarterly Breakdown",
               style: TextStyle(
                 color: AppColors.color_4D758B,
                 fontFamily: AppFontStyles.urbanistFontFamily,
@@ -1876,32 +1930,32 @@ class _DataNAnalyticsScreenState extends State<DataNAnalyticsScreen> {
       {required int quarterNumber,
       required double consumed,
       required double percent}) {
+    final l10n = AppLocalizations.of(context);
     String quarterTitle;
     String monthRange;
 
     switch (quarterNumber) {
       case 0:
-        quarterTitle = "First Quarter";
-        monthRange = "January to March";
+        quarterTitle = l10n?.firstQuarter ?? "First Quarter";
+        monthRange = l10n?.januaryToMarch ?? "January to March";
         break;
       case 1:
-        quarterTitle = "Second Quarter";
-        monthRange = "April to June";
+        quarterTitle = l10n?.secondQuarter ?? "Second Quarter";
+        monthRange = l10n?.aprilToJune ?? "April to June";
         break;
       case 2:
-        quarterTitle = "Third Quarter";
-        monthRange = "July to September";
+        quarterTitle = l10n?.thirdQuarter ?? "Third Quarter";
+        monthRange = l10n?.julyToSeptember ?? "July to September";
         break;
       case 3:
-        quarterTitle = "Fourth Quarter";
-        monthRange = "October to December";
+        quarterTitle = l10n?.fourthQuarter ?? "Fourth Quarter";
+        monthRange = l10n?.octoberToDecember ?? "October to December";
         break;
       default:
-        quarterTitle = "Quarter ${quarterNumber + 1}";
+        quarterTitle =
+            "${l10n?.quarter ?? 'Quarter'} ${quarterNumber + 1}";
         monthRange = "";
     }
-
-    int goalCompletionStatus = 0;
 
     return Container(
       padding: EdgeInsets.all(AppDimensions.dim13.w),
@@ -1996,7 +2050,7 @@ class _DataNAnalyticsScreenState extends State<DataNAnalyticsScreen> {
                 ),
               ),
               Text(
-                "Goal Reached",
+                l10n?.goalReached ?? "Goal Reached",
                 style: TextStyle(
                   color: AppColors.bluegray,
                   fontSize: AppFontStyles.fontSize_12,

@@ -19,7 +19,8 @@ class InAppUpdateService {
   Future<void> checkAndTriggerUpdate() async {
     // Skip during local debug builds.
     if (kDebugMode) {
-      debugPrint('[InAppUpdateService] Skipping in-app update check in debug mode.');
+      debugPrint(
+          '[InAppUpdateService] Skipping in-app update check in debug mode.');
       return;
     }
 
@@ -28,7 +29,8 @@ class InAppUpdateService {
         final InAppUpdateFlutter updater = InAppUpdateFlutter();
         final info = await updater.checkUpdateAndroid();
 
-        if (info.updateAvailability == UpdateAvailabilityAndroid.updateAvailable) {
+        if (info.updateAvailability ==
+            UpdateAvailabilityAndroid.updateAvailable) {
           if (info.isImmediateUpdateAllowed) {
             await updater.startImmediateUpdateAndroid();
           } else if (info.isFlexibleUpdateAllowed) {
@@ -74,7 +76,8 @@ class InAppUpdateService {
       );
 
       if (_isNewerVersion(storeVersion, installedVersion)) {
-        debugPrint('[InAppUpdateService] Update available — opening App Store.');
+        debugPrint(
+            '[InAppUpdateService] Update available — opening App Store.');
         final storeUrl = Uri.parse(
           'https://apps.apple.com/app/id$appStoreId',
         );
@@ -93,7 +96,8 @@ class InAppUpdateService {
   /// Compares each numeric segment (major.minor.patch).
   bool _isNewerVersion(String storeVersion, String installedVersion) {
     final storeParts = storeVersion.split('.').map(_parseSegment).toList();
-    final installedParts = installedVersion.split('.').map(_parseSegment).toList();
+    final installedParts =
+        installedVersion.split('.').map(_parseSegment).toList();
 
     final length = storeParts.length > installedParts.length
         ? storeParts.length

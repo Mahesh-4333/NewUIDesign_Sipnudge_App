@@ -73,7 +73,7 @@ class DatabaseHelper {
     String finalPath = path.join(await getDatabasesPath(), 'bottle_history.db');
     final db = await openDatabase(
       finalPath,
-      version: 21,
+      version: 22,
       onUpgrade: (db, oldVersion, newVersion) async {
         if (oldVersion < 2) {
           await db.execute('ALTER TABLE user ADD COLUMN stepGoal INTEGER');
@@ -241,6 +241,14 @@ class DatabaseHelper {
             // Already exists — safe to ignore.
           }
         }
+        if (oldVersion < 22) {
+          try {
+            await db.execute(
+                'ALTER TABLE $foodScannerTableName ADD COLUMN food_key TEXT');
+          } catch (_) {
+            // Already exists — safe to ignore.
+          }
+        }
       },
       onCreate: (Database db, int version) async {
         await db.execute('''
@@ -332,6 +340,7 @@ CREATE TABLE IF NOT EXISTS $appMetadataTableName (
             CREATE TABLE IF NOT EXISTS $foodScannerTableName (
               id INTEGER PRIMARY KEY AUTOINCREMENT,
               dish_name TEXT,
+              food_key TEXT,
               image_path TEXT,
               image_base64 TEXT,
               weight_g REAL,
@@ -476,8 +485,9 @@ CREATE TABLE IF NOT EXISTS $appMetadataTableName (
 
   Future<double> getManualWaterDrankForRange(
       TimeOfDay startTime, TimeOfDay endTime) async {
+    final now = DateTime.now();
     final List<Map<String, dynamic>> todayLogs =
-        await getHydrationLogs(date: DateTime.now());
+        await getHydrationLogs(date: now);
     double manualWaterDrank = 0.0;
     final startMinutes = startTime.hour * 60 + startTime.minute;
     final endMinutes = endTime.hour * 60 + endTime.minute;
@@ -502,6 +512,35 @@ CREATE TABLE IF NOT EXISTS $appMetadataTableName (
         manualWaterDrank += (logConsumed * coefficient);
       }
     }
+
+    // Also include water content from food scans
+    try {
+      final List<Map<String, dynamic>> allFoodScans = await getAllFoodScans();
+      for (final food in allFoodScans) {
+        if (food['timestamp'] == null) continue;
+        final foodTimestamp = DateTime.tryParse(food['timestamp'] as String);
+        if (foodTimestamp != null &&
+            foodTimestamp.year == now.year &&
+            foodTimestamp.month == now.month &&
+            foodTimestamp.day == now.day) {
+          final foodTime = TimeOfDay.fromDateTime(foodTimestamp);
+          final foodMinutes = foodTime.hour * 60 + foodTime.minute;
+          final foodWater = (food['water_content_ml'] as num?)?.toDouble() ?? 0.0;
+
+          bool isWithin;
+          if (startMinutes <= endMinutes) {
+            isWithin = foodMinutes >= startMinutes && foodMinutes <= endMinutes;
+          } else {
+            isWithin = foodMinutes >= startMinutes || foodMinutes <= endMinutes;
+          }
+
+          if (isWithin) {
+            manualWaterDrank += foodWater;
+          }
+        }
+      }
+    } catch (_) {}
+
     return manualWaterDrank;
   }
 
@@ -572,6 +611,28 @@ CREATE TABLE IF NOT EXISTS $appMetadataTableName (
     } catch (e) {
       Console.log(
           tag: "APP", value: "[DB] Error clearing hydration_slots table: $e");
+    }
+  }
+
+  /// Resets daily progress for all existing slots without changing their custom startTime or endTime.
+  Future<void> resetSlotProgressForNewDay() async {
+    try {
+      final db = await database;
+      final count = await db.update(
+        'hydration_slots',
+        {
+          'waterDrank': 0,
+          'status': 'pending',
+        },
+      );
+      Console.log(
+          tag: "APP",
+          value:
+              "[DB] resetSlotProgressForNewDay: Updated $count slots to waterDrank=0 and status=pending");
+    } catch (e) {
+      Console.log(
+          tag: "APP",
+          value: "[DB] Error in resetSlotProgressForNewDay: $e");
     }
   }
 
@@ -799,6 +860,17 @@ CREATE TABLE IF NOT EXISTS $appMetadataTableName (
     );
   }
 
+  /// Updates the consumed liquid amount for an existing hydration log.
+  Future<void> updateHydrationLogAmount(int id, double newAmount) async {
+    final db = await database;
+    await db.update(
+      logHydrationTableName,
+      {'consumed': newAmount},
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+  }
+
   Future<List<Map<String, dynamic>>> getHydrationLogs({DateTime? date}) async {
     final db = await database;
     if (date != null) {
@@ -824,6 +896,19 @@ CREATE TABLE IF NOT EXISTS $appMetadataTableName (
       logHydrationTableName,
       where: 'id = ?',
       whereArgs: [id],
+    );
+  }
+
+  Future<void> deleteHydrationLogByTimestampAndType(
+      String timestamp, String type) async {
+    final db = await database;
+    // Allow matching timestamp exactly or prefix (e.g. up to seconds)
+    final tsPrefix =
+        timestamp.length >= 19 ? timestamp.substring(0, 19) : timestamp;
+    await db.delete(
+      logHydrationTableName,
+      where: 'timestamp LIKE ? AND type = ?',
+      whereArgs: ['$tsPrefix%', type],
     );
   }
 
@@ -870,6 +955,31 @@ CREATE TABLE IF NOT EXISTS $appMetadataTableName (
     } catch (e) {
       Console.log(
           tag: "APP", value: "[DB] Error clearing $logHydrationTableName: $e");
+    }
+  }
+
+  Future<void> clearTodayHydrationLogs([DateTime? date]) async {
+    try {
+      final db = await database;
+      final target = date ?? DateTime.now();
+      final startOfDay =
+          DateTime(target.year, target.month, target.day).toIso8601String();
+      final endOfDay =
+          DateTime(target.year, target.month, target.day, 23, 59, 59, 999)
+              .toIso8601String();
+      final count = await db.delete(
+        logHydrationTableName,
+        where: 'timestamp >= ? AND timestamp <= ?',
+        whereArgs: [startOfDay, endOfDay],
+      );
+      Console.log(
+          tag: "APP",
+          value:
+              "[DB] Cleared today's $logHydrationTableName. Rows deleted: $count");
+    } catch (e) {
+      Console.log(
+          tag: "APP",
+          value: "[DB] Error clearing today's $logHydrationTableName: $e");
     }
   }
 
@@ -1328,6 +1438,31 @@ CREATE TABLE IF NOT EXISTS $appMetadataTableName (
         tag: "APP", value: "[DB] Cleared all data in $foodScannerTableName");
   }
 
+  Future<void> deleteTodayFoodScans([DateTime? date]) async {
+    try {
+      final db = await database;
+      final target = date ?? DateTime.now();
+      final startOfDay =
+          DateTime(target.year, target.month, target.day).toIso8601String();
+      final endOfDay =
+          DateTime(target.year, target.month, target.day, 23, 59, 59, 999)
+              .toIso8601String();
+      final count = await db.delete(
+        foodScannerTableName,
+        where: 'timestamp >= ? AND timestamp <= ?',
+        whereArgs: [startOfDay, endOfDay],
+      );
+      Console.log(
+          tag: "APP",
+          value:
+              "[DB] Cleared today's $foodScannerTableName. Rows deleted: $count");
+    } catch (e) {
+      Console.log(
+          tag: "APP",
+          value: "[DB] Error clearing today's $foodScannerTableName: $e");
+    }
+  }
+
   Future<void> deleteFoodScanById(int? id,
       {String? dishName, String? timestamp}) async {
     final db = await database;
@@ -1337,11 +1472,20 @@ CREATE TABLE IF NOT EXISTS $appMetadataTableName (
         where: 'id = ?',
         whereArgs: [id],
       );
-    } else if (dishName != null && timestamp != null) {
+    }
+    if (dishName != null && timestamp != null) {
+      final tsPrefix =
+          timestamp.length >= 10 ? timestamp.substring(0, 10) : timestamp;
       await db.delete(
         foodScannerTableName,
-        where: 'dish_name = ? AND timestamp = ?',
-        whereArgs: [dishName, timestamp],
+        where: 'dish_name = ? AND timestamp LIKE ?',
+        whereArgs: [dishName, '$tsPrefix%'],
+      );
+    } else if (dishName != null) {
+      await db.delete(
+        foodScannerTableName,
+        where: 'dish_name = ?',
+        whereArgs: [dishName],
       );
     }
   }
@@ -1360,8 +1504,62 @@ CREATE TABLE IF NOT EXISTS $appMetadataTableName (
     return id;
   }
 
-  Future<List<Map<String, dynamic>>> getAllFoodScans() async {
+  Future<int> upsertFoodScan(Map<String, dynamic> data) async {
     final db = await database;
+    final id = data['id'] as int?;
+    final timestamp = data['timestamp'] as String?;
+    final dishName = data['dish_name'] as String?;
+
+    if (id != null && id > 0) {
+      return await db.insert(
+        foodScannerTableName,
+        data,
+        conflictAlgorithm: ConflictAlgorithm.replace,
+      );
+    } else if (timestamp != null && dishName != null) {
+      final tsPrefix =
+          timestamp.length >= 10 ? timestamp.substring(0, 10) : timestamp;
+      final existing = await db.query(
+        foodScannerTableName,
+        where: 'dish_name = ? AND timestamp LIKE ?',
+        whereArgs: [dishName, '$tsPrefix%'],
+        limit: 1,
+      );
+      if (existing.isNotEmpty) {
+        final existingId = existing.first['id'] as int;
+        final updatedData = Map<String, dynamic>.from(data);
+        updatedData['id'] = existingId;
+        await db.update(
+          foodScannerTableName,
+          updatedData,
+          where: 'id = ?',
+          whereArgs: [existingId],
+        );
+        return existingId;
+      }
+    }
+    return await db.insert(
+      foodScannerTableName,
+      data,
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+  }
+
+  Future<List<Map<String, dynamic>>> getAllFoodScans({DateTime? date}) async {
+    final db = await database;
+    if (date != null) {
+      final startOfDay =
+          DateTime(date.year, date.month, date.day).toIso8601String();
+      final endOfDay =
+          DateTime(date.year, date.month, date.day, 23, 59, 59, 999)
+              .toIso8601String();
+      return await db.query(
+        foodScannerTableName,
+        where: 'timestamp >= ? AND timestamp <= ?',
+        whereArgs: [startOfDay, endOfDay],
+        orderBy: 'timestamp DESC',
+      );
+    }
     return await db.query(foodScannerTableName, orderBy: 'timestamp DESC');
   }
 

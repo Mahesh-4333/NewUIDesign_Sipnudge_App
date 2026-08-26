@@ -76,11 +76,11 @@ class ProfileCubit extends Cubit<ProfileState> {
                 title: "Help & Support",
                 groupLabel: "DATA & SUPPORT",
               ),
-              ProfileMenuItem(
-                iconPath: "assets/drink_rem.png",
-                title: "Timeline Intro",
-                groupLabel: "DATA & SUPPORT",
-              ),
+              // ProfileMenuItem(
+              //   iconPath: "assets/drink_rem.png",
+              //   title: "Timeline Intro",
+              //   groupLabel: "DATA & SUPPORT",
+              // ),
 
               // OTHER group (hidden)
               // ProfileMenuItem(
