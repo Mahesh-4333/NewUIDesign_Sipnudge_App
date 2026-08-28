@@ -515,7 +515,7 @@ class _WaterIntakeTimelineState extends State<WaterIntakeTimelineScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    entry.slot.label,
+                    entry.slot.getLocalizedLabel(context),
                     style: TextStyle(
                       height: 0.9,
                       color: AppColors.bluegray,
@@ -721,7 +721,7 @@ class _WaterIntakeTimelineState extends State<WaterIntakeTimelineScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    entry.slot.label,
+                    entry.slot.getLocalizedLabel(context),
                     style: TextStyle(
                       height: 0.9,
                       color: AppColors.bluegray,
@@ -937,20 +937,20 @@ class _WaterIntakeTimelineState extends State<WaterIntakeTimelineScreen> {
                       letterSpacing: 1.2,
                     ),
                   ),
-                  GestureDetector(
-                    onTap: () {
-                      // Logic to add slots
-                    },
-                    child: Text(
-                      "Add Slots",
-                      style: TextStyle(
-                        color: AppColors.blueWaterIntake,
-                        fontSize: AppFontStyles.fontSize_14,
-                        fontFamily: AppFontStyles.urbanistFontFamily,
-                        fontVariations: [AppFontStyles.boldFontVariation],
-                      ),
-                    ),
-                  ),
+                  // GestureDetector(
+                  //   onTap: () {
+                  //     // Logic to add slots
+                  //   },
+                  //   child: Text(
+                  //     "Add Slots",
+                  //     style: TextStyle(
+                  //       color: AppColors.blueWaterIntake,
+                  //       fontSize: AppFontStyles.fontSize_14,
+                  //       fontFamily: AppFontStyles.urbanistFontFamily,
+                  //       fontVariations: [AppFontStyles.boldFontVariation],
+                  //     ),
+                  //   ),
+                  // ),
                 ],
               ),
             ),
@@ -982,7 +982,7 @@ class _WaterIntakeTimelineState extends State<WaterIntakeTimelineScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              entry.slot.label.trim(),
+                              entry.slot.getLocalizedLabel(context),
                               style: TextStyle(
                                 height: 0.9,
                                 color: AppColors.bluegray,
@@ -1372,7 +1372,8 @@ class ProgressCircle extends StatelessWidget {
               final dbHelper = DatabaseHelper();
               var slots = await dbHelper.getAllSlots();
               if (slots.isEmpty) {
-                slots = HydrationHelper.generateHydrationSlots(userGoalMl.toDouble());
+                slots = HydrationHelper.generateHydrationSlots(
+                    userGoalMl.toDouble());
               }
               expectedPercent =
                   WaterConsumptionCalculator.calculateExpectedPercentage(

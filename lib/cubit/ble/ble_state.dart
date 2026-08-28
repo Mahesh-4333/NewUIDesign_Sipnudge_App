@@ -27,6 +27,8 @@ class BleState {
   final dynamic bottleData;
   final dynamic historyData;
   final dynamic slotData;
+  final dynamic otherData;
+  final DeviceOtherData? parsedOtherData;
   final double currentHydrationValue;
   final DateTime? ts;
   final int commandSentTimestamp;
@@ -59,6 +61,8 @@ class BleState {
     this.bottleData,
     this.historyData,
     this.slotData,
+    this.otherData,
+    this.parsedOtherData,
     this.currentHydrationValue = 0,
     this.ts,
     this.commandSentTimestamp = 0,
@@ -92,6 +96,8 @@ class BleState {
     dynamic bottleData,
     dynamic historyData,
     dynamic slotData,
+    dynamic otherData,
+    DeviceOtherData? parsedOtherData,
     double? currentHydrationValue,
     int? commandSentTimestamp,
     String? lastCommandSent,
@@ -124,6 +130,8 @@ class BleState {
       bottleData: bottleData ?? this.bottleData,
       historyData: historyData ?? this.historyData,
       slotData: slotData ?? this.slotData,
+      otherData: otherData ?? this.otherData,
+      parsedOtherData: parsedOtherData ?? this.parsedOtherData,
       currentHydrationValue:
           currentHydrationValue ?? this.currentHydrationValue,
       commandSentTimestamp: commandSentTimestamp ?? this.commandSentTimestamp,

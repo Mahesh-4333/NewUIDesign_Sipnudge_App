@@ -130,7 +130,7 @@ class AssetsPath {
       "assets/achievement_badge/badge_leaves_left.svg";
   static const String badge_leaves_right =
       "assets/achievement_badge/badge_leaves_right.svg";
-  static const String badge_ring = "assets/achievement_badge/badge_ring.svg";
+  static const String badge_ring = "assets/achievement_badge/badge_ring.png";
   static const String badge_core = "assets/achievement_badge/badge_core.svg";
   static const String camera_food_scn = "assets/camera.png";
   static const String confidence = "assets/confidence.png";

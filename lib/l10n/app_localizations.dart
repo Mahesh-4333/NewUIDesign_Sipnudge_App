@@ -1143,7 +1143,7 @@ abstract class AppLocalizations {
   /// No description provided for @progressTo.
   ///
   /// In en, this message translates to:
-  /// **'progress to {tier}'**
+  /// **'Progress to {tier}'**
   String progressTo(String tier);
 
   /// No description provided for @socialImpactMap.
@@ -2699,6 +2699,270 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Logged'**
   String get logged;
+
+  /// No description provided for @logHydrationSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Log every sip from your morning coffee to your workout water to optimize your daily intake.'**
+  String get logHydrationSubtitle;
+
+  /// No description provided for @selectedDrink.
+  ///
+  /// In en, this message translates to:
+  /// **'Selected Drink'**
+  String get selectedDrink;
+
+  /// No description provided for @quickPresets.
+  ///
+  /// In en, this message translates to:
+  /// **'Quick Presets'**
+  String get quickPresets;
+
+  /// No description provided for @addToProgress.
+  ///
+  /// In en, this message translates to:
+  /// **'Add to Progress'**
+  String get addToProgress;
+
+  /// No description provided for @yesterday.
+  ///
+  /// In en, this message translates to:
+  /// **'Yesterday'**
+  String get yesterday;
+
+  /// No description provided for @todayText.
+  ///
+  /// In en, this message translates to:
+  /// **'Today'**
+  String get todayText;
+
+  /// No description provided for @noLogsYet.
+  ///
+  /// In en, this message translates to:
+  /// **'No logs yet'**
+  String get noLogsYet;
+
+  /// No description provided for @pleaseSelectAnAmount.
+  ///
+  /// In en, this message translates to:
+  /// **'Please select an amount'**
+  String get pleaseSelectAnAmount;
+
+  /// No description provided for @logDeleted.
+  ///
+  /// In en, this message translates to:
+  /// **'Log deleted'**
+  String get logDeleted;
+
+  /// No description provided for @glass.
+  ///
+  /// In en, this message translates to:
+  /// **'Glass'**
+  String get glass;
+
+  /// No description provided for @mug.
+  ///
+  /// In en, this message translates to:
+  /// **'Mug'**
+  String get mug;
+
+  /// No description provided for @cup.
+  ///
+  /// In en, this message translates to:
+  /// **'Cup'**
+  String get cup;
+
+  /// No description provided for @alertnessBoost.
+  ///
+  /// In en, this message translates to:
+  /// **'Alertness Boost'**
+  String get alertnessBoost;
+
+  /// No description provided for @relaxationAndFocus.
+  ///
+  /// In en, this message translates to:
+  /// **'Relaxation and focus'**
+  String get relaxationAndFocus;
+
+  /// No description provided for @morningRoutine.
+  ///
+  /// In en, this message translates to:
+  /// **'Morning routine'**
+  String get morningRoutine;
+
+  /// No description provided for @refreshment.
+  ///
+  /// In en, this message translates to:
+  /// **'Refreshment'**
+  String get refreshment;
+
+  /// No description provided for @yourImpactStoryDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'By maintaining this streak and opting for reusable hydration, you\'ve significantly reduced your environmental footprint. Your daily commitment echoes beyond personal health.'**
+  String get yourImpactStoryDescription;
+
+  /// No description provided for @sipMap.
+  ///
+  /// In en, this message translates to:
+  /// **'Sip Map'**
+  String get sipMap;
+
+  /// No description provided for @locationPrivacySettings.
+  ///
+  /// In en, this message translates to:
+  /// **'Location Privacy Settings'**
+  String get locationPrivacySettings;
+
+  /// No description provided for @locationPrivacyDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Manage how your smart bottle and location interact with the community.'**
+  String get locationPrivacyDescription;
+
+  /// No description provided for @ghostMode.
+  ///
+  /// In en, this message translates to:
+  /// **'Ghost Mode'**
+  String get ghostMode;
+
+  /// No description provided for @ghostModeDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'When enabled, your avatar is completely hidden. Your logs still anonymously support the global community heatmap.'**
+  String get ghostModeDescription;
+
+  /// No description provided for @fuzzyLocation.
+  ///
+  /// In en, this message translates to:
+  /// **'Fuzzy Location'**
+  String get fuzzyLocation;
+
+  /// No description provided for @fuzzyLocationDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Off-sets your marker by 500m–1km on the map so others see your general neighborhood, not your exact address.'**
+  String get fuzzyLocationDescription;
+
+  /// No description provided for @global.
+  ///
+  /// In en, this message translates to:
+  /// **'Global'**
+  String get global;
+
+  /// No description provided for @friendsMap.
+  ///
+  /// In en, this message translates to:
+  /// **'Friends Map'**
+  String get friendsMap;
+
+  /// No description provided for @globalHeatmap.
+  ///
+  /// In en, this message translates to:
+  /// **'Global Heatmap'**
+  String get globalHeatmap;
+
+  /// No description provided for @globalCommunity.
+  ///
+  /// In en, this message translates to:
+  /// **'Global Community'**
+  String get globalCommunity;
+
+  /// No description provided for @globalView.
+  ///
+  /// In en, this message translates to:
+  /// **'Global View'**
+  String get globalView;
+
+  /// No description provided for @communityText.
+  ///
+  /// In en, this message translates to:
+  /// **'Community'**
+  String get communityText;
+
+  /// No description provided for @viewText.
+  ///
+  /// In en, this message translates to:
+  /// **'View'**
+  String get viewText;
+
+  /// No description provided for @globalStoryActive.
+  ///
+  /// In en, this message translates to:
+  /// **'Worldwide hydration impact across all active Sipnudge hydrators.'**
+  String get globalStoryActive;
+
+  /// No description provided for @globalStoryEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No active global hydrators currently visible on the map.'**
+  String get globalStoryEmpty;
+
+  /// No description provided for @bottlesSavedUpper.
+  ///
+  /// In en, this message translates to:
+  /// **'BOTTLES SAVED'**
+  String get bottlesSavedUpper;
+
+  /// No description provided for @carbonReducedUpper.
+  ///
+  /// In en, this message translates to:
+  /// **'CARBON REDUCED'**
+  String get carbonReducedUpper;
+
+  /// No description provided for @letsScheduleYourTimeline.
+  ///
+  /// In en, this message translates to:
+  /// **'Let\'s Schedule your timeline'**
+  String get letsScheduleYourTimeline;
+
+  /// No description provided for @scheduleTimelineSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Set your schedule to complete the 7 micro goals. Sipnudge will keep you on track with reminders and smart snoozes.'**
+  String get scheduleTimelineSubtitle;
+
+  /// No description provided for @demoVideo.
+  ///
+  /// In en, this message translates to:
+  /// **'Demo video'**
+  String get demoVideo;
+
+  /// No description provided for @skip.
+  ///
+  /// In en, this message translates to:
+  /// **'Skip'**
+  String get skip;
+
+  /// No description provided for @scheduleNow.
+  ///
+  /// In en, this message translates to:
+  /// **'Schedule now'**
+  String get scheduleNow;
+
+  /// No description provided for @ofDailyTarget.
+  ///
+  /// In en, this message translates to:
+  /// **' of Daily Target'**
+  String get ofDailyTarget;
+
+  /// No description provided for @connectBottleTo.
+  ///
+  /// In en, this message translates to:
+  /// **'Connect your Bottle to '**
+  String get connectBottleTo;
+
+  /// No description provided for @syncWord.
+  ///
+  /// In en, this message translates to:
+  /// **'sync'**
+  String get syncWord;
+
+  /// No description provided for @dataWord.
+  ///
+  /// In en, this message translates to:
+  /// **' data'**
+  String get dataWord;
 }
 
 class _AppLocalizationsDelegate

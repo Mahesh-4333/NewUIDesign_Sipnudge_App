@@ -2,6 +2,7 @@ import 'dart:convert';
 
 class FoodScanData {
   final int? id;
+  final String? scanId;
   final String? serverId;
   final String dishName;
   final String? foodKey;
@@ -23,6 +24,7 @@ class FoodScanData {
 
   FoodScanData({
     this.id,
+    this.scanId,
     this.serverId,
     required this.dishName,
     this.foodKey,
@@ -45,6 +47,7 @@ class FoodScanData {
 
   Map<String, dynamic> toMap() {
     final map = <String, dynamic>{
+      'scan_id': scanId,
       'dish_name': dishName,
       'food_key': foodKey ?? 'Meal',
       'image_path': imagePath,
@@ -66,6 +69,52 @@ class FoodScanData {
     // Only include id when updating an existing record (non-null id)
     if (id != null) map['id'] = id;
     return map;
+  }
+
+  FoodScanData copyWith({
+    int? id,
+    String? scanId,
+    String? serverId,
+    String? dishName,
+    String? foodKey,
+    String? imagePath,
+    String? imageBase64,
+    double? weightG,
+    double? waterContentMl,
+    double? waterPercentage,
+    double? caloriesKcal,
+    double? proteinG,
+    double? carbsG,
+    double? fatG,
+    double? sodiumMg,
+    double? fiberG,
+    String? confidenceScore,
+    List<String>? ingredients,
+    String? reasoning,
+    DateTime? timestamp,
+  }) {
+    return FoodScanData(
+      id: id ?? this.id,
+      scanId: scanId ?? this.scanId,
+      serverId: serverId ?? this.serverId,
+      dishName: dishName ?? this.dishName,
+      foodKey: foodKey ?? this.foodKey,
+      imagePath: imagePath ?? this.imagePath,
+      imageBase64: imageBase64 ?? this.imageBase64,
+      weightG: weightG ?? this.weightG,
+      waterContentMl: waterContentMl ?? this.waterContentMl,
+      waterPercentage: waterPercentage ?? this.waterPercentage,
+      caloriesKcal: caloriesKcal ?? this.caloriesKcal,
+      proteinG: proteinG ?? this.proteinG,
+      carbsG: carbsG ?? this.carbsG,
+      fatG: fatG ?? this.fatG,
+      sodiumMg: sodiumMg ?? this.sodiumMg,
+      fiberG: fiberG ?? this.fiberG,
+      confidenceScore: confidenceScore ?? this.confidenceScore,
+      ingredients: ingredients ?? this.ingredients,
+      reasoning: reasoning ?? this.reasoning,
+      timestamp: timestamp ?? this.timestamp,
+    );
   }
 
   factory FoodScanData.fromMap(Map<String, dynamic> map) {
@@ -122,11 +171,19 @@ class FoodScanData {
       }
     }
 
+    final String? resolvedScanId = map['scan_id']?.toString() ??
+        map['scanId']?.toString() ??
+        map['food_scan_id']?.toString() ??
+        map['foodScanId']?.toString();
+
+    final String? resolvedServerId = map['_id']?.toString() ??
+        map['serverId']?.toString() ??
+        (map['id'] is String ? map['id'] : null);
+
     return FoodScanData(
       id: map['id'] is int ? map['id'] : null,
-      serverId: map['_id']?.toString() ??
-          map['scanId']?.toString() ??
-          (map['id'] is String ? map['id'] : null),
+      scanId: resolvedScanId ?? resolvedServerId,
+      serverId: resolvedServerId,
       dishName: dish,
       foodKey: resolvedKey,
       imagePath: map['image_path'] ?? map['imagePath'],

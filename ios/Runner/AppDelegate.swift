@@ -821,6 +821,8 @@ class SipnudgeBackgroundBLE: NSObject, CBCentralManagerDelegate, CBPeripheralDel
                 headers: ["Content-Type": "application/json"],
                 body: jsonData
             )
+
+            updateWidget(from: "")
         } catch {
             NSLog("[BG-BLE] ❌ JSON serialization error: \(error.localizedDescription)")
             writeDebug("api_tx", "JSON_ERR")
@@ -867,10 +869,12 @@ class SipnudgeBackgroundBLE: NSObject, CBCentralManagerDelegate, CBPeripheralDel
         log("[BG-BLE] Peripheral \(uuid) not in cache yet — will connect after flutter_blue_plus pairs")
     }
 
-    private func updateWidget(from payload: String) {
-        // Disabled widget updates here to avoid local state interference.
-        // The background BLE sync now uploads today's consumed value directly to the API.
-        // The Flutter app will fetch this data upon startup or resume.
-        log("[BG-BLE] updateWidget called (disabled - uploading directly to API instead)")
+    private func updateWidget(from payload: String = "") {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 5.0) {
+            if #available(iOS 14.0, *) {
+                NSLog("[BG-BLE] 🔄 Triggering WidgetCenter.shared.reloadAllTimelines() 3 seconds after API trigger")
+                WidgetCenter.shared.reloadAllTimelines()
+            }
+        }
     }
 }

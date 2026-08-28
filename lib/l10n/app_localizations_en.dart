@@ -540,7 +540,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String progressTo(String tier) {
-    return 'progress to $tier';
+    return 'Progress to $tier';
   }
 
   @override
@@ -1368,4 +1368,144 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get logged => 'Logged';
+
+  @override
+  String get logHydrationSubtitle =>
+      'Log every sip from your morning coffee to your workout water to optimize your daily intake.';
+
+  @override
+  String get selectedDrink => 'Selected Drink';
+
+  @override
+  String get quickPresets => 'Quick Presets';
+
+  @override
+  String get addToProgress => 'Add to Progress';
+
+  @override
+  String get yesterday => 'Yesterday';
+
+  @override
+  String get todayText => 'Today';
+
+  @override
+  String get noLogsYet => 'No logs yet';
+
+  @override
+  String get pleaseSelectAnAmount => 'Please select an amount';
+
+  @override
+  String get logDeleted => 'Log deleted';
+
+  @override
+  String get glass => 'Glass';
+
+  @override
+  String get mug => 'Mug';
+
+  @override
+  String get cup => 'Cup';
+
+  @override
+  String get alertnessBoost => 'Alertness Boost';
+
+  @override
+  String get relaxationAndFocus => 'Relaxation and focus';
+
+  @override
+  String get morningRoutine => 'Morning routine';
+
+  @override
+  String get refreshment => 'Refreshment';
+
+  @override
+  String get yourImpactStoryDescription =>
+      'By maintaining this streak and opting for reusable hydration, you\'ve significantly reduced your environmental footprint. Your daily commitment echoes beyond personal health.';
+
+  @override
+  String get sipMap => 'Sip Map';
+
+  @override
+  String get locationPrivacySettings => 'Location Privacy Settings';
+
+  @override
+  String get locationPrivacyDescription =>
+      'Manage how your smart bottle and location interact with the community.';
+
+  @override
+  String get ghostMode => 'Ghost Mode';
+
+  @override
+  String get ghostModeDescription =>
+      'When enabled, your avatar is completely hidden. Your logs still anonymously support the global community heatmap.';
+
+  @override
+  String get fuzzyLocation => 'Fuzzy Location';
+
+  @override
+  String get fuzzyLocationDescription =>
+      'Off-sets your marker by 500m–1km on the map so others see your general neighborhood, not your exact address.';
+
+  @override
+  String get global => 'Global';
+
+  @override
+  String get friendsMap => 'Friends Map';
+
+  @override
+  String get globalHeatmap => 'Global Heatmap';
+
+  @override
+  String get globalCommunity => 'Global Community';
+
+  @override
+  String get globalView => 'Global View';
+
+  @override
+  String get communityText => 'Community';
+
+  @override
+  String get viewText => 'View';
+
+  @override
+  String get globalStoryActive =>
+      'Worldwide hydration impact across all active Sipnudge hydrators.';
+
+  @override
+  String get globalStoryEmpty =>
+      'No active global hydrators currently visible on the map.';
+
+  @override
+  String get bottlesSavedUpper => 'BOTTLES SAVED';
+
+  @override
+  String get carbonReducedUpper => 'CARBON REDUCED';
+
+  @override
+  String get letsScheduleYourTimeline => 'Let\'s Schedule your timeline';
+
+  @override
+  String get scheduleTimelineSubtitle =>
+      'Set your schedule to complete the 7 micro goals. Sipnudge will keep you on track with reminders and smart snoozes.';
+
+  @override
+  String get demoVideo => 'Demo video';
+
+  @override
+  String get skip => 'Skip';
+
+  @override
+  String get scheduleNow => 'Schedule now';
+
+  @override
+  String get ofDailyTarget => ' of Daily Target';
+
+  @override
+  String get connectBottleTo => 'Connect your Bottle to ';
+
+  @override
+  String get syncWord => 'sync';
+
+  @override
+  String get dataWord => ' data';
 }

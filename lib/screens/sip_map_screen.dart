@@ -14,6 +14,7 @@ import 'package:hydrify/cubit/bottom_nav/bottom_nav_cubit.dart';
 import 'package:hydrify/helpers/shared_pref_helper.dart';
 import 'package:hydrify/helpers/country_borders_helper.dart';
 import 'package:hydrify/services/api_service.dart';
+import 'package:hydrify/l10n/app_localizations.dart';
 import 'package:provider/provider.dart';
 
 class UserMapLocation {
@@ -251,44 +252,44 @@ class _SipMapScreenState extends State<SipMapScreen> {
         });
       }
 
-        // Obtain user's real GPS position if permission is granted
-        LocationPermission permission = await Geolocator.checkPermission();
-        if (permission == LocationPermission.denied) {
-          permission = await Geolocator.requestPermission();
-        }
-        if (permission == LocationPermission.whileInUse ||
-            permission == LocationPermission.always) {
-          final pos = await Geolocator.getCurrentPosition(
-            locationSettings:
-                const LocationSettings(accuracy: LocationAccuracy.medium),
-          );
-          final currentLatLng = LatLng(pos.latitude, pos.longitude);
-          await SharedPrefsHelper.setUserLatitude(pos.latitude);
-          await SharedPrefsHelper.setUserLongitude(pos.longitude);
-          if (mounted) {
-            setState(() {
-              _currentUserLocation = currentLatLng;
-            });
-            try {
-              final placemarks = await placemarkFromCoordinates(
-                  pos.latitude, pos.longitude);
-              if (placemarks.isNotEmpty &&
-                  placemarks.first.country != null &&
-                  placemarks.first.country!.isNotEmpty) {
-                _selectCountry(placemarks.first.country!,
-                    center: currentLatLng, zoom: 4.8);
-              } else {
-                _animateToLocation(currentLatLng, zoom: 4.8);
-              }
-            } catch (_) {
+      // Obtain user's real GPS position if permission is granted
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+      }
+      if (permission == LocationPermission.whileInUse ||
+          permission == LocationPermission.always) {
+        final pos = await Geolocator.getCurrentPosition(
+          locationSettings:
+              const LocationSettings(accuracy: LocationAccuracy.medium),
+        );
+        final currentLatLng = LatLng(pos.latitude, pos.longitude);
+        await SharedPrefsHelper.setUserLatitude(pos.latitude);
+        await SharedPrefsHelper.setUserLongitude(pos.longitude);
+        if (mounted) {
+          setState(() {
+            _currentUserLocation = currentLatLng;
+          });
+          try {
+            final placemarks =
+                await placemarkFromCoordinates(pos.latitude, pos.longitude);
+            if (placemarks.isNotEmpty &&
+                placemarks.first.country != null &&
+                placemarks.first.country!.isNotEmpty) {
+              _selectCountry(placemarks.first.country!,
+                  center: currentLatLng, zoom: 4.8);
+            } else {
               _animateToLocation(currentLatLng, zoom: 4.8);
             }
-          }
-          final uid = await SharedPrefsHelper.getUserId();
-          if (uid != null && uid.isNotEmpty) {
-            _syncLocationToServer();
+          } catch (_) {
+            _animateToLocation(currentLatLng, zoom: 4.8);
           }
         }
+        final uid = await SharedPrefsHelper.getUserId();
+        if (uid != null && uid.isNotEmpty) {
+          _syncLocationToServer();
+        }
+      }
     } catch (e) {
       debugPrint("Error fetching real locations: $e");
     }
@@ -373,7 +374,8 @@ class _SipMapScreenState extends State<SipMapScreen> {
     }
   }
 
-  Map<String, dynamic> _getScopeDetails() {
+  Map<String, dynamic> _getScopeDetails(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final countryName = _selectedCountry;
     final isGlobal = countryName == 'Global' || _currentZoom < 3.0;
 
@@ -400,11 +402,13 @@ class _SipMapScreenState extends State<SipMapScreen> {
 
       final carbonStr = totalCarbon.toStringAsFixed(1);
       return {
-        'title': 'Global Community',
-        'tag': 'Global View',
+        'title': l10n?.globalCommunity ?? 'Global Community',
+        'tag': l10n?.globalView ?? 'Global View',
         'story': _serverUserLocations.isNotEmpty
-            ? 'Worldwide hydration impact across all active Sipnudge hydrators.'
-            : 'No active global hydrators currently visible on the map.',
+            ? (l10n?.globalStoryActive ??
+                'Worldwide hydration impact across all active Sipnudge hydrators.')
+            : (l10n?.globalStoryEmpty ??
+                'No active global hydrators currently visible on the map.'),
         'bottlesSaved': totalBottles,
         'carbonReduced': carbonStr,
         'hydratorCount':
@@ -443,9 +447,12 @@ class _SipMapScreenState extends State<SipMapScreen> {
       final finalBottles =
           countryBottles > 0 ? countryBottles : _myBottlesSaved;
 
+      final communitySuffix = l10n?.communityText ?? 'Community';
+      final viewSuffix = l10n?.viewText ?? 'View';
+
       return {
-        'title': '${info.name} Community',
-        'tag': '${info.name} View',
+        'title': '${info.name} $communitySuffix',
+        'tag': '${info.name} $viewSuffix',
         'story': hydratorCount > 0
             ? 'Highlighting ${info.name} with $hydratorCount active hydrator(s) and community hydration impact.'
             : 'Active regional hydration impact and community statistics in ${info.name}.',
@@ -504,8 +511,7 @@ class _SipMapScreenState extends State<SipMapScreen> {
               if (placemarks.isNotEmpty &&
                   placemarks.first.country != null &&
                   placemarks.first.country!.isNotEmpty) {
-                _selectCountry(placemarks.first.country!,
-                    center: loc.position);
+                _selectCountry(placemarks.first.country!, center: loc.position);
               }
             } catch (_) {}
           },
@@ -582,6 +588,8 @@ class _SipMapScreenState extends State<SipMapScreen> {
   }
 
   void _showPrivacyPanel() {
+    final l10n = AppLocalizations.of(context);
+
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
@@ -617,7 +625,8 @@ class _SipMapScreenState extends State<SipMapScreen> {
                   ),
                   SizedBox(height: 20.h),
                   Text(
-                    "Location Privacy Settings",
+                    l10n?.locationPrivacySettings ??
+                        "Location Privacy Settings",
                     style: TextStyle(
                       fontSize: 20.sp,
                       fontFamily: AppFontStyles.urbanistFontFamily,
@@ -627,7 +636,8 @@ class _SipMapScreenState extends State<SipMapScreen> {
                   ),
                   SizedBox(height: 8.h),
                   Text(
-                    "Manage how your smart bottle and location interact with the community.",
+                    l10n?.locationPrivacyDescription ??
+                        "Manage how your smart bottle and location interact with the community.",
                     style: TextStyle(
                       fontSize: 13.sp,
                       fontFamily: AppFontStyles.urbanistFontFamily,
@@ -643,7 +653,7 @@ class _SipMapScreenState extends State<SipMapScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              "Ghost Mode",
+                              l10n?.ghostMode ?? "Ghost Mode",
                               style: TextStyle(
                                   fontSize: 16.sp,
                                   fontFamily: AppFontStyles.urbanistFontFamily,
@@ -654,7 +664,8 @@ class _SipMapScreenState extends State<SipMapScreen> {
                             ),
                             SizedBox(height: 4.h),
                             Text(
-                              "When enabled, your avatar is completely hidden. Your logs still anonymously support the global community heatmap.",
+                              l10n?.ghostModeDescription ??
+                                  "When enabled, your avatar is completely hidden. Your logs still anonymously support the global community heatmap.",
                               style: TextStyle(
                                 fontSize: 12.sp,
                                 fontFamily: AppFontStyles.urbanistFontFamily,
@@ -689,7 +700,7 @@ class _SipMapScreenState extends State<SipMapScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              "Fuzzy Location",
+                              l10n?.fuzzyLocation ?? "Fuzzy Location",
                               style: TextStyle(
                                   fontSize: 16.sp,
                                   fontFamily: AppFontStyles.urbanistFontFamily,
@@ -700,7 +711,8 @@ class _SipMapScreenState extends State<SipMapScreen> {
                             ),
                             SizedBox(height: 4.h),
                             Text(
-                              "Off-sets your marker by 500m–1km on the map so others see your general neighborhood, not your exact address.",
+                              l10n?.fuzzyLocationDescription ??
+                                  "Off-sets your marker by 500m–1km on the map so others see your general neighborhood, not your exact address.",
                               style: TextStyle(
                                 fontSize: 12.sp,
                                 fontFamily: AppFontStyles.urbanistFontFamily,
@@ -738,6 +750,8 @@ class _SipMapScreenState extends State<SipMapScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+
     if (!_isMapInitialized) {
       return const Scaffold(
         backgroundColor: Color(0xFFF8FAFC),
@@ -796,9 +810,8 @@ class _SipMapScreenState extends State<SipMapScreen> {
                 },
                 onTap: (LatLng tappedCoords) async {
                   try {
-                    List<Placemark> placemarks =
-                        await placemarkFromCoordinates(
-                            tappedCoords.latitude, tappedCoords.longitude);
+                    List<Placemark> placemarks = await placemarkFromCoordinates(
+                        tappedCoords.latitude, tappedCoords.longitude);
                     if (placemarks.isNotEmpty) {
                       final country = placemarks.first.country;
                       if (country != null && country.isNotEmpty) {
@@ -853,7 +866,7 @@ class _SipMapScreenState extends State<SipMapScreen> {
                       ),
                     ),
                     Text(
-                      "Sip Map",
+                      l10n?.sipMap ?? "Sip Map",
                       style: TextStyle(
                         fontSize: 20.sp,
                         fontFamily: AppFontStyles.urbanistFontFamily,
@@ -901,16 +914,6 @@ class _SipMapScreenState extends State<SipMapScreen> {
                   padding: EdgeInsets.symmetric(horizontal: 16.w),
                   physics: const BouncingScrollPhysics(),
                   children: [
-                    _buildCountryChip(
-                      label: "🌍 Global",
-                      isSelected: _selectedCountry == 'Global',
-                      onTap: () {
-                        setState(() {
-                          _selectedCountry = 'Global';
-                        });
-                        _animateToLocation(const LatLng(20, 0), zoom: 2.6);
-                      },
-                    ),
                     ...CountryBordersHelper.popularCountries.map((c) {
                       final isSelected = _selectedCountry == c['name'];
                       return _buildCountryChip(
@@ -957,7 +960,7 @@ class _SipMapScreenState extends State<SipMapScreen> {
                           ),
                           alignment: Alignment.center,
                           child: Text(
-                            "Friends Map",
+                            l10n?.friendsMap ?? "Friends Map",
                             style: TextStyle(
                               fontSize: 13.sp,
                               color: !_isHeatmapMode
@@ -985,7 +988,7 @@ class _SipMapScreenState extends State<SipMapScreen> {
                           ),
                           alignment: Alignment.center,
                           child: Text(
-                            "Global Heatmap",
+                            l10n?.globalHeatmap ?? "Global Heatmap",
                             style: TextStyle(
                               fontSize: 13.sp,
                               color: _isHeatmapMode
@@ -1011,7 +1014,8 @@ class _SipMapScreenState extends State<SipMapScreen> {
               right: 20.w,
               child: Builder(
                 builder: (context) {
-                  final scopeInfo = _getScopeDetails();
+                  final scopeInfo = _getScopeDetails(context);
+                  final l10n = AppLocalizations.of(context);
                   return Container(
                     padding: EdgeInsets.all(18.w),
                     decoration: BoxDecoration(
@@ -1081,7 +1085,8 @@ class _SipMapScreenState extends State<SipMapScreen> {
                               child: _buildImpactStatCard(
                                 iconAsset: AssetsPath.leaderWaterIntake,
                                 value: "${scopeInfo['bottlesSaved']}",
-                                label: "BOTTLES SAVED",
+                                label:
+                                    l10n?.bottlesSavedUpper ?? "BOTTLES SAVED",
                                 valueColor: const Color(0xFF003057),
                               ),
                             ),
@@ -1090,7 +1095,8 @@ class _SipMapScreenState extends State<SipMapScreen> {
                               child: _buildImpactStatCard(
                                 iconAsset: AssetsPath.leaderCo2,
                                 value: "${scopeInfo['carbonReduced']} kg",
-                                label: "CARBON REDUCED",
+                                label: l10n?.carbonReducedUpper ??
+                                    "CARBON REDUCED",
                                 valueColor: const Color(0xFF1B5E20),
                               ),
                             ),

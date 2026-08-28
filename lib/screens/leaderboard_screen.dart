@@ -389,7 +389,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
               SizedBox(width: 16.w),
               Expanded(
                 child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                  crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
                     Text(
                       AppLocalizations.of(context)?.globalRanking ??
@@ -402,22 +402,19 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
                             AppFontStyles.extraBoldFontVariation
                           ]),
                     ),
+                    Text(
+                      "Top ${percentileDisplay.replaceAll('Top ', '')}",
+                      style: TextStyle(
+                          fontSize: 30.sp,
+                          color: Colors.white,
+                          height: 1.3,
+                          fontFamily: AppFontStyles.urbanistFontFamily,
+                          fontVariations: [
+                            AppFontStyles.extraBoldFontVariation
+                          ]),
+                    ),
                   ],
                 ),
-              ),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Text(
-                    "Top \n${percentileDisplay.replaceAll('Top ', '')}",
-                    style: TextStyle(
-                        fontSize: 30.sp,
-                        color: Colors.white,
-                        height: 1.3,
-                        fontFamily: AppFontStyles.urbanistFontFamily,
-                        fontVariations: [AppFontStyles.extraBoldFontVariation]),
-                  ),
-                ],
               ),
             ],
           ),
@@ -779,7 +776,8 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
           ),
           SizedBox(height: 12.h),
           Text(
-            "By maintaining this streak and opting for reusable hydration, you've significantly reduced your environmental footprint. Your daily commitment echoes beyond personal health.",
+            AppLocalizations.of(context)?.yourImpactStoryDescription ??
+                "By maintaining this streak and opting for reusable hydration, you've significantly reduced your environmental footprint. Your daily commitment echoes beyond personal health.",
             textAlign: TextAlign.justify,
             style: TextStyle(
               fontSize: 15.sp,

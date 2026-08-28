@@ -542,22 +542,39 @@ class ApiService {
         '/api/database/upload-image',
         data: {'imageBase64': imageBase64, 'filename': filename},
       );
-      if (response.data != null &&
-          (response.data['success'] == true ||
-              response.data['url'] != null ||
-              response.data['imageUrl'] != null)) {
+      if (response.data != null) {
         final data = response.data;
-        final url =
-            data['url'] ?? data['imageUrl'] ?? data['path'] ?? data['data'];
-        return url?.toString();
+        if (data is Map) {
+          final nestedData = data['data'];
+          String? url;
+          if (nestedData is Map) {
+            url = (nestedData['url'] ??
+                    nestedData['imageUrl'] ??
+                    nestedData['path'] ??
+                    nestedData['filePath'])
+                ?.toString();
+          }
+          url ??= (data['url'] ??
+                  data['imageUrl'] ??
+                  data['path'] ??
+                  data['filePath'] ??
+                  (nestedData is String ? nestedData : null))
+              ?.toString();
+
+          Console.log(
+              tag: "API", value: "[uploadFoodImage] Response URL: $url");
+          return url;
+        }
       }
       return null;
     } on DioException catch (e) {
-      print("!!! Exception in uploadFoodImage: $e");
-      if (e.response != null) {
-        print("!!! Response Data: ${e.response?.data}");
-        print("!!! Response Status: ${e.response?.statusCode}");
-      }
+      Console.log(
+          tag: "API",
+          value:
+              "Exception in uploadFoodImage: $e, response: ${e.response?.data}, status: ${e.response?.statusCode}");
+      return null;
+    } catch (e) {
+      Console.log(tag: "API", value: "Generic exception in uploadFoodImage: $e");
       return null;
     }
   }

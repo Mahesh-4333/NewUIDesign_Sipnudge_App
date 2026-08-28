@@ -1371,4 +1371,144 @@ class AppLocalizationsHi extends AppLocalizations {
 
   @override
   String get logged => 'लॉग किया गया';
+
+  @override
+  String get logHydrationSubtitle =>
+      'अपनी दैनिक खपत को अनुकूलित करने के लिए अपनी सुबह की कॉफी से लेकर कसरत के पानी तक हर घूंट को लॉग करें।';
+
+  @override
+  String get selectedDrink => 'चुना हुआ पेय';
+
+  @override
+  String get quickPresets => 'त्वरित प्रीसेट';
+
+  @override
+  String get addToProgress => 'प्रगति में जोड़ें';
+
+  @override
+  String get yesterday => 'कल';
+
+  @override
+  String get todayText => 'आज';
+
+  @override
+  String get noLogsYet => 'अभी तक कोई लॉग नहीं है';
+
+  @override
+  String get pleaseSelectAnAmount => 'कृपया एक मात्रा चुनें';
+
+  @override
+  String get logDeleted => 'लॉग हटाया गया';
+
+  @override
+  String get glass => 'गिलास';
+
+  @override
+  String get mug => 'मग';
+
+  @override
+  String get cup => 'कप';
+
+  @override
+  String get alertnessBoost => 'सतर्कता बूस्ट';
+
+  @override
+  String get relaxationAndFocus => 'आराम और एकाग्रता';
+
+  @override
+  String get morningRoutine => 'सुबह की दिनचर्या';
+
+  @override
+  String get refreshment => 'ताज़गी';
+
+  @override
+  String get yourImpactStoryDescription =>
+      'इस स्ट्रीक को बनाए रखकर और पुन: प्रयोज्य हाइड्रेशन का विकल्प चुनकर, आपने अपने पर्यावरणीय पदचिह्न को काफी कम कर दिया है। आपकी दैनिक प्रतिबद्धता व्यक्तिगत स्वास्थ्य से भी आगे गूंजती है।';
+
+  @override
+  String get sipMap => 'सिप मैप';
+
+  @override
+  String get locationPrivacySettings => 'स्थान गोपनीयता सेटिंग्स';
+
+  @override
+  String get locationPrivacyDescription =>
+      'प्रबंधित करें कि आपकी स्मार्ट बोतल और स्थान समुदाय के साथ कैसे इंटरैक्ट करते हैं।';
+
+  @override
+  String get ghostMode => 'घोस्ट मोड';
+
+  @override
+  String get ghostModeDescription =>
+      'सक्षम होने पर, आपका अवतार पूरी तरह से छिप जाता है। आपके लॉग अभी भी गुमनाम रूप से वैश्विक समुदाय हीटमैप का समर्थन करते हैं।';
+
+  @override
+  String get fuzzyLocation => 'फ़ज़ी स्थान';
+
+  @override
+  String get fuzzyLocationDescription =>
+      'मानचित्र पर आपके मार्कर को 500 मीटर–1 किमी दूर कर देता है ताकि अन्य लोग आपका सामान्य पड़ोस देख सकें, न कि आपका सटीक पता।';
+
+  @override
+  String get global => 'वैश्विक';
+
+  @override
+  String get friendsMap => 'मित्र मानचित्र';
+
+  @override
+  String get globalHeatmap => 'वैश्विक हीटमैप';
+
+  @override
+  String get globalCommunity => 'वैश्विक समुदाय';
+
+  @override
+  String get globalView => 'वैश्विक दृश्य';
+
+  @override
+  String get communityText => 'समुदाय';
+
+  @override
+  String get viewText => 'दृश्य';
+
+  @override
+  String get globalStoryActive =>
+      'सभी सक्रिय सिपनज हाइड्रेटर्स का विश्वव्यापी हाइड्रेशन प्रभाव।';
+
+  @override
+  String get globalStoryEmpty =>
+      'मानचित्र पर वर्तमान में कोई सक्रिय वैश्विक हाइड्रेटर्स दिखाई नहीं दे रहे हैं।';
+
+  @override
+  String get bottlesSavedUpper => 'बचाई गई बोतलें';
+
+  @override
+  String get carbonReducedUpper => 'कार्बन में कमी';
+
+  @override
+  String get letsScheduleYourTimeline => 'आइए अपनी समयरेखा निर्धारित करें';
+
+  @override
+  String get scheduleTimelineSubtitle =>
+      '7 सूक्ष्म लक्ष्यों को पूरा करने के लिए अपना शेड्यूल सेट करें। सिपनज आपको रिमाइंडर और स्मार्ट स्नूज़ के साथ ट्रैक पर रखेगा।';
+
+  @override
+  String get demoVideo => 'डेमो वीडियो';
+
+  @override
+  String get skip => 'छोड़ें';
+
+  @override
+  String get scheduleNow => 'अभी शेड्यूल करें';
+
+  @override
+  String get ofDailyTarget => ' दैनिक लक्ष्य का';
+
+  @override
+  String get connectBottleTo => 'डेटा सिंक के लिए बोतल ';
+
+  @override
+  String get syncWord => 'सिंक';
+
+  @override
+  String get dataWord => ' करें';
 }

@@ -1385,4 +1385,145 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get logged => 'Protokolliert';
+
+  @override
+  String get logHydrationSubtitle =>
+      'Erfassen Sie jeden Schluck vom Morgenkaffee bis zum Trainingswasser, um Ihre tägliche Aufnahme zu optimieren.';
+
+  @override
+  String get selectedDrink => 'Ausgewähltes Getränk';
+
+  @override
+  String get quickPresets => 'Schnellvoreinstellungen';
+
+  @override
+  String get addToProgress => 'Zum Fortschritt hinzufügen';
+
+  @override
+  String get yesterday => 'Gestern';
+
+  @override
+  String get todayText => 'Heute';
+
+  @override
+  String get noLogsYet => 'Noch keine Protokolle';
+
+  @override
+  String get pleaseSelectAnAmount => 'Bitte wählen Sie eine Menge';
+
+  @override
+  String get logDeleted => 'Protokoll gelöscht';
+
+  @override
+  String get glass => 'Glas';
+
+  @override
+  String get mug => 'Becher';
+
+  @override
+  String get cup => 'Tasse';
+
+  @override
+  String get alertnessBoost => 'Aufmerksamkeits-Boost';
+
+  @override
+  String get relaxationAndFocus => 'Entspannung und Fokus';
+
+  @override
+  String get morningRoutine => 'Morgenroutine';
+
+  @override
+  String get refreshment => 'Erfrischung';
+
+  @override
+  String get yourImpactStoryDescription =>
+      'Indem Sie diese Serie aufrechterhalten und sich für wiederverwendbare Trinkflaschen entscheiden, haben Sie Ihren ökologischen Fußabdruck erheblich reduziert. Ihr tägliches Engagement wirkt über die persönliche Gesundheit hinaus.';
+
+  @override
+  String get sipMap => 'Sip-Karte';
+
+  @override
+  String get locationPrivacySettings => 'Standort-Datenschutzeinstellungen';
+
+  @override
+  String get locationPrivacyDescription =>
+      'Verwalten Sie, wie Ihre smarte Flasche und Ihr Standort mit der Community interagieren.';
+
+  @override
+  String get ghostMode => 'Geistermodus';
+
+  @override
+  String get ghostModeDescription =>
+      'Wenn aktiviert, ist Ihr Avatar vollständig ausgeblendet. Ihre Protokolle unterstützen weiterhin anonym die globale Community-Heatmap.';
+
+  @override
+  String get fuzzyLocation => 'Ungefährer Standort';
+
+  @override
+  String get fuzzyLocationDescription =>
+      'Versetzt Ihre Markierung auf der Karte um 500 m–1 km, sodass andere Ihre allgemeine Nachbarschaft sehen, nicht Ihre genaue Adresse.';
+
+  @override
+  String get global => 'Global';
+
+  @override
+  String get friendsMap => 'Freunde-Karte';
+
+  @override
+  String get globalHeatmap => 'Globale Heatmap';
+
+  @override
+  String get globalCommunity => 'Globale Community';
+
+  @override
+  String get globalView => 'Globale Ansicht';
+
+  @override
+  String get communityText => 'Community';
+
+  @override
+  String get viewText => 'Ansicht';
+
+  @override
+  String get globalStoryActive =>
+      'Weltweite Trinkauswirkung auf alle aktiven Sipnudge-Nutzer.';
+
+  @override
+  String get globalStoryEmpty =>
+      'Derzeit sind keine aktiven globalen Trinker auf der Karte sichtbar.';
+
+  @override
+  String get bottlesSavedUpper => 'GESPARTE FLASCHEN';
+
+  @override
+  String get carbonReducedUpper => 'REDUZIERTES CO2';
+
+  @override
+  String get letsScheduleYourTimeline =>
+      'Lassen Sie uns Ihren Zeitplan erstellen';
+
+  @override
+  String get scheduleTimelineSubtitle =>
+      'Legen Sie Ihren Zeitplan fest, um die 7 Mikro-Ziele zu erreichen. Sipnudge hält Sie mit Erinnerungen und intelligenten Schlummerfunktionen auf Kurs.';
+
+  @override
+  String get demoVideo => 'Demovideo';
+
+  @override
+  String get skip => 'Überspringen';
+
+  @override
+  String get scheduleNow => 'Jetzt planen';
+
+  @override
+  String get ofDailyTarget => ' des Tagesziels';
+
+  @override
+  String get connectBottleTo => 'Verbinde deine Flasche für ';
+
+  @override
+  String get syncWord => 'Sync';
+
+  @override
+  String get dataWord => ' Daten';
 }

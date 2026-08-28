@@ -92,7 +92,7 @@ class _SettingScreenState extends State<SettingScreen> {
     final packageInfo = await PackageInfo.fromPlatform();
     setState(() {
       _appVersion =
-          'Version : ${packageInfo.version}+${packageInfo.buildNumber}';
+          'App Version : ${packageInfo.version}+${packageInfo.buildNumber}';
     });
   }
 
@@ -933,6 +933,10 @@ class _SettingScreenState extends State<SettingScreen> {
           groupedItems.where((i) => i.groupLabel == label).toList();
       sections.add(_buildSettingsGroup(context, label, groupItems));
       sections.add(SizedBox(height: 16.h));
+      if (label.toUpperCase() == 'ACCOUNT') {
+        sections.add(const SipnudgeShopWidget());
+        sections.add(SizedBox(height: 16.h));
+      }
     }
 
     // Logout button standalone below all groups
@@ -1170,19 +1174,15 @@ class _SettingScreenState extends State<SettingScreen> {
                         // Build grouped sections
                         ..._buildGroupedSections(context, state.menuItems),
 
-                        SizedBox(height: AppDimensions.dim34.h),
-                        const SipnudgeShopWidget(),
-                        SizedBox(height: 100.h),
+                        SizedBox(height: 20.h),
                         if (_appVersion.isNotEmpty)
                           Text(
                             _appVersion,
                             style: TextStyle(
                               color: AppColors.bluegray,
-                              fontSize: AppFontStyles.fontSize_14.sp,
+                              fontSize: AppFontStyles.fontSize_17.sp,
                               fontFamily: AppFontStyles.museoModernoFontFamily,
-                              fontVariations: [
-                                AppFontStyles.semiBoldFontVariation
-                              ],
+                              fontVariations: [AppFontStyles.boldFontVariation],
                             ),
                           ),
                         SizedBox(height: AppDimensions.dim149.h),

@@ -26,14 +26,6 @@ class SipnudgeShopWidget extends StatelessWidget {
         margin: EdgeInsets.symmetric(horizontal: AppDimensions.dim24.w),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(AppDimensions.radius_16.r),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.1),
-              blurRadius: 8.r,
-              spreadRadius: 2.r,
-              offset: Offset(0, 4.r),
-            ),
-          ],
         ),
         child: ClipRRect(
           borderRadius: BorderRadius.circular(AppDimensions.radius_16.r),

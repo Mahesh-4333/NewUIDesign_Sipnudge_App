@@ -613,39 +613,76 @@ struct SipnudgeWidgetEntryView : View {
                 
                 // Heading (Dynamic color depending on "on-track" state)
                 Text(headingText)
-                    .font(.system(size: 19, weight: .bold, design: .rounded))
+                    .font(.system(size: 19, weight: .semibold, design: .rounded))
                     .foregroundColor(headingColor)
                     .lineLimit(1)
                     .minimumScaleFactor(0.7)
                 
-                // Next Sip Row
-                HStack(spacing: 7) {
-                    ZStack {
-                        Circle()
-                            .fill(Color(red: 0.92, green: 0.96, blue: 1.00))
-                            .frame(width: 26, height: 26)
-                        Image(systemName: "clock.arrow.circlepath")
-                            .font(.system(size: 11, weight: .semibold))
-                            .foregroundColor(Color(red: 0.00, green: 0.48, blue: 1.00))
+                // Next Sip & Only Left Row
+                HStack(spacing: 0) {
+                    // Next Sip
+                    HStack(spacing: 6) {
+                        ZStack {
+                            Circle()
+                                .fill(Color(red: 0.94, green: 0.97, blue: 1.00))
+                                .frame(width: 24, height: 24)
+                                .overlay(
+                                    Circle()
+                                        .stroke(Color(red: 0.82, green: 0.90, blue: 0.98), lineWidth: 1)
+                                )
+                            Image(systemName: "clock")
+                                .font(.system(size: 11, weight: .semibold))
+                                .foregroundColor(Color(red: 0.00, green: 0.48, blue: 1.00))
+                        }
+                        VStack(alignment: .leading, spacing: 1) {
+                            Text("Next Sip")
+                                .font(.system(size: 8.5, weight: .medium, design: .rounded))
+                                .foregroundColor(Color(red: 120/255.0, green: 135/255.0, blue: 155/255.0))
+                            Text(entry.upcomingSlotTime)
+                                .font(.system(size: 11.5, weight: .bold, design: .rounded))
+                                .foregroundColor(Color(red: 0.09, green: 0.15, blue: 0.27))
+                                .lineLimit(1)
+                        }
                     }
-                    VStack(alignment: .leading, spacing: 1) {
-                        Text("Next Sip")
-                            .font(.system(size: 8.5, weight: .medium, design: .rounded))
-                            .foregroundColor(Color(red: 77/255.0, green: 117/255.0, blue: 139/255.0))
-                        Text(entry.upcomingSlotTime)
-                            .font(.system(size: 11.5, weight: .bold, design: .rounded))
-                            .foregroundColor(Color(red: 0.09, green: 0.15, blue: 0.27))
+                    
+                    Spacer(minLength: 8)
+                    
+                    // Only Left
+                    HStack(spacing: 6) {
+                        ZStack {
+                            Circle()
+                                .fill(Color(red: 0.94, green: 0.97, blue: 1.00))
+                                .frame(width: 24, height: 24)
+                                .overlay(
+                                    Circle()
+                                        .stroke(Color(red: 0.82, green: 0.90, blue: 0.98), lineWidth: 1)
+                                )
+                            Image(systemName: "drop")
+                                .font(.system(size: 11, weight: .semibold))
+                                .foregroundColor(Color(red: 0.00, green: 0.48, blue: 1.00))
+                        }
+                        VStack(alignment: .leading, spacing: 1) {
+                            Text("Only Left")
+                                .font(.system(size: 8.5, weight: .medium, design: .rounded))
+                                .foregroundColor(Color(red: 120/255.0, green: 135/255.0, blue: 155/255.0))
+                            Text("\(formatNumber(max(0, entry.goal - entry.intake))) ml")
+                                .font(.system(size: 11.5, weight: .bold, design: .rounded))
+                                .foregroundColor(Color(red: 0.09, green: 0.15, blue: 0.27))
+                                .lineLimit(1)
+                        }
                     }
                 }
                 
                 // Quick Action Buttons Row (Coffee 150ml & Water 250ml)
-                HStack(spacing: 6) {
+                HStack {
                     #if canImport(AppIntents)
                     if #available(iOS 17.0, *) {
                         Button(intent: LogDrinkIntent(drinkType: "Coffee", amount: 150)) {
                             coffeeButtonContent
                         }
                         .buttonStyle(.plain)
+                        
+                        Spacer()
                         
                         Button(intent: LogDrinkIntent(drinkType: "Water", amount: 250)) {
                             waterButtonContent
@@ -655,6 +692,7 @@ struct SipnudgeWidgetEntryView : View {
                         Link(destination: URL(string: "sipnudge://quick-add?type=coffee&amount=150")!) {
                             coffeeButtonContent
                         }
+                        Spacer()
                         Link(destination: URL(string: "sipnudge://quick-add?type=water&amount=250")!) {
                             waterButtonContent
                         }
@@ -663,6 +701,7 @@ struct SipnudgeWidgetEntryView : View {
                     Link(destination: URL(string: "sipnudge://quick-add?type=coffee&amount=150")!) {
                         coffeeButtonContent
                     }
+                    Spacer()
                     Link(destination: URL(string: "sipnudge://quick-add?type=water&amount=250")!) {
                         waterButtonContent
                     }
@@ -677,14 +716,12 @@ struct SipnudgeWidgetEntryView : View {
     }
 
     private var coffeeButtonContent: some View {
-        HStack(spacing: 2) {
+        HStack(spacing: 6) {
             Text("Coffee")
-                .font(.system(size: 11, weight: .bold, design: .rounded))
-                .foregroundColor(Color.black)
+                .font(.system(size: 11.5, weight: .bold, design: .rounded))
+                .foregroundColor(Color(red: 70/255.0, green: 70/255.0, blue: 70/255.0))
                 .lineLimit(1)
                 .fixedSize(horizontal: true, vertical: false)
-            
-            Spacer(minLength: 1)
             
             ZStack {
                 Circle()
@@ -696,25 +733,27 @@ struct SipnudgeWidgetEntryView : View {
                     .foregroundColor(.white)
             }
         }
-        .padding(.leading, 7)
+        .padding(.leading, 8)
         .padding(.trailing, 3)
-        .frame(maxWidth: .infinity)
-        .frame(height: 27)
+        .padding(.vertical, 2.5)
+        .frame(height: 26)
         .background(
             Capsule()
-                .fill(Color(red: 236/255.0, green: 203/255.0, blue: 175/255.0)) // Warm soft beige/tan
+                .fill(Color(red: 243/255.0, green: 213/255.0, blue: 181/255.0)) // Warm soft beige/tan
+                .overlay(
+                    Capsule()
+                        .stroke(Color(red: 230/255.0, green: 196/255.0, blue: 158/255.0), lineWidth: 1)
+                )
         )
     }
 
     private var waterButtonContent: some View {
-        HStack(spacing: 2) {
+        HStack(spacing: 6) {
             Text("Water")
-                .font(.system(size: 11, weight: .bold, design: .rounded))
-                .foregroundColor(Color.black)
+                .font(.system(size: 11.5, weight: .bold, design: .rounded))
+                .foregroundColor(Color(red: 70/255.0, green: 70/255.0, blue: 70/255.0))
                 .lineLimit(1)
                 .fixedSize(horizontal: true, vertical: false)
-            
-            Spacer(minLength: 1)
             
             ZStack {
                 Circle()
@@ -726,13 +765,17 @@ struct SipnudgeWidgetEntryView : View {
                     .foregroundColor(.white)
             }
         }
-        .padding(.leading, 7)
+        .padding(.leading, 8)
         .padding(.trailing, 3)
-        .frame(maxWidth: .infinity)
-        .frame(height: 27)
+        .padding(.vertical, 2.5)
+        .frame(height: 26)
         .background(
             Capsule()
-                .fill(Color(red: 201/255.0, green: 239/255.0, blue: 255/255.0)) // Soft pastel sky blue
+                .fill(Color(red: 214/255.0, green: 243/255.0, blue: 255/255.0)) // Soft pastel sky blue
+                .overlay(
+                    Capsule()
+                        .stroke(Color(red: 175/255.0, green: 228/255.0, blue: 255/255.0), lineWidth: 1)
+                )
         )
     }
 

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:equatable/equatable.dart';
+import 'package:hydrify/l10n/app_localizations.dart';
 
 /// Represents the completion status of a hydration slot.
 enum HydrationStatus { pending, completed, ongoing }
@@ -34,6 +35,28 @@ extension HydrationSlotX on HydrationSlot {
         return 'Evening';
       case HydrationSlot.afterDinner:
         return 'After Dinner';
+    }
+  }
+
+  /// Localized label for each hydration slot.
+  String getLocalizedLabel(BuildContext context) {
+    final loc = AppLocalizations.of(context);
+    if (loc == null) return label;
+    switch (this) {
+      case HydrationSlot.wakeup:
+        return loc.wakeupLabel;
+      case HydrationSlot.breakfast:
+        return loc.breakfastLabel;
+      case HydrationSlot.midMorning:
+        return loc.midMorningLabel;
+      case HydrationSlot.lunch:
+        return loc.lunchLabel;
+      case HydrationSlot.midAfternoon:
+        return loc.midAfternoonLabel;
+      case HydrationSlot.evening:
+        return loc.eveningLabel;
+      case HydrationSlot.afterDinner:
+        return loc.dinnerLabel;
     }
   }
 

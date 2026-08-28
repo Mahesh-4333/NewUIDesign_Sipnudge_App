@@ -25,6 +25,7 @@ import 'package:hydrify/cubit/bottle/bottle_data_cubit.dart';
 import 'package:hydrify/cubit/hydration/hydration_cubit.dart';
 import 'package:hydrify/services/sync_bus.dart';
 import 'package:hydrify/services/home_widget_service.dart';
+import 'package:hydrify/services/api_service.dart';
 
 class FoodScannerWidget extends StatefulWidget {
   final VoidCallback? onScanCompleted;
@@ -50,7 +51,7 @@ class _FoodScannerWidgetState extends State<FoodScannerWidget> {
 
   // Food Data
   int? _currentScanId;
-  String? _currentServerId;
+  String? _currentScanIdString;
   DateTime? _currentTimestamp;
   String? _dishName;
   String _foodKey = 'Meal';
@@ -107,7 +108,7 @@ class _FoodScannerWidgetState extends State<FoodScannerWidget> {
     super.didUpdateWidget(oldWidget);
     if (widget.selectedScan != oldWidget.selectedScan ||
         widget.selectedScan?.id != oldWidget.selectedScan?.id ||
-        widget.selectedScan?.serverId != oldWidget.selectedScan?.serverId ||
+        widget.selectedScan?.scanId != oldWidget.selectedScan?.scanId ||
         widget.selectedScan?.dishName != oldWidget.selectedScan?.dishName ||
         widget.selectedScan?.foodKey != oldWidget.selectedScan?.foodKey) {
       if (widget.selectedScan != null) {
@@ -121,7 +122,7 @@ class _FoodScannerWidgetState extends State<FoodScannerWidget> {
   void _populateFromData(FoodScanData data) {
     setState(() {
       _currentScanId = data.id;
-      _currentServerId = data.serverId;
+      _currentScanIdString = data.scanId;
       _currentTimestamp = data.timestamp;
       _dishName = data.dishName;
       _foodKey = data.foodKey ?? 'Meal';
@@ -157,6 +158,9 @@ class _FoodScannerWidgetState extends State<FoodScannerWidget> {
           final f = File(data.imagePath!);
           if (f.existsSync()) {
             _image = f;
+            try {
+              _imageBytes = f.readAsBytesSync();
+            } catch (_) {}
           }
         }
       }
@@ -192,7 +196,7 @@ class _FoodScannerWidgetState extends State<FoodScannerWidget> {
     if (mounted) {
       setState(() {
         _currentScanId = null;
-        _currentServerId = null;
+        _currentScanIdString = null;
         _currentTimestamp = null;
         _dishName = null;
         _foodKey = 'Meal';
@@ -249,22 +253,22 @@ class _FoodScannerWidgetState extends State<FoodScannerWidget> {
   }
 
   Future<void> _captureAndAnalyze() async {
-    // if (_dishName != null) {
-    //   ScaffoldMessenger.of(context).showSnackBar(
-    //     SnackBar(
-    //       content: Text(
-    //         "You can only scan one food item per day.",
-    //         style: TextStyle(
-    //           fontFamily: AppFontStyles.urbanistFontFamily,
-    //           fontVariations: [AppFontStyles.boldFontVariation],
-    //         ),
-    //       ),
-    //       backgroundColor: const Color(0xFFE05252),
-    //       behavior: SnackBarBehavior.floating,
-    //     ),
-    //   );
-    //   return;
-    // }
+    if (_dishName != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            "You can only scan one food item per day.",
+            style: TextStyle(
+              fontFamily: AppFontStyles.urbanistFontFamily,
+              fontVariations: [AppFontStyles.boldFontVariation],
+            ),
+          ),
+          backgroundColor: const Color(0xFFE05252),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
     _pickImage(ImageSource.camera);
   }
 
@@ -283,11 +287,35 @@ class _FoodScannerWidgetState extends State<FoodScannerWidget> {
       setState(() {
         _image = File(photo.path);
         _imageBytes = bytes;
+        _imageUrl = null;
+        _dishName = null;
         _isAnalyzing = true;
         _errorMessage = null;
         _currentScanId = null;
+        _currentTimestamp = null;
+        _currentScanIdString =
+            'scan_${DateTime.now().millisecondsSinceEpoch}_${Random().nextInt(999999)}';
         _foodKey = 'Meal';
         _lastSavedWaterMl = 0.0;
+      });
+
+      // Immediately trigger uploadFoodImage in parallel with AI analysis
+      ApiService()
+          .uploadFoodImage(base64Encode(bytes),
+              photo.name.isNotEmpty ? photo.name : 'food_scan.jpg')
+          .then((url) {
+        if (url != null && mounted) {
+          setState(() {
+            _imageUrl = url;
+          });
+          Console.log(
+              tag: "FoodScanner",
+              value: "[FoodScanner] Image uploaded successfully, URL: $url");
+        }
+      }).catchError((err) {
+        Console.log(
+            tag: "FoodScanner",
+            value: "[FoodScanner] Image upload failed: $err");
       });
 
       await _analyzeWithGemini(photo);
@@ -461,12 +489,31 @@ class _FoodScannerWidgetState extends State<FoodScannerWidget> {
   Future<void> _saveToDb() async {
     if (_dishName == null) return;
     try {
+      // Ensure image is uploaded if not done yet
+      if (_imageUrl == null && _imageBytes != null) {
+        try {
+          final filename =
+              _image != null ? _image!.path.split('/').last : 'food_scan.jpg';
+          final url = await ApiService()
+              .uploadFoodImage(base64Encode(_imageBytes!), filename);
+          if (url != null) {
+            _imageUrl = url;
+          }
+        } catch (e) {
+          Console.log(
+              tag: "FoodScanner",
+              value: "[FoodScanner] Upload in _saveToDb failed: $e");
+        }
+      }
+
+      _currentScanIdString ??=
+          'scan_${DateTime.now().millisecondsSinceEpoch}_${Random().nextInt(999999)}';
       final scan = FoodScanData(
         id: _currentScanId,
-        serverId: _currentServerId,
+        scanId: _currentScanIdString,
         dishName: _dishName!,
         foodKey: _foodKey,
-        imagePath: _image?.path ?? _imageUrl,
+        imagePath: _imageUrl ?? _image?.path,
         weightG: _currentWeight,
         waterContentMl: _waterMl,
         waterPercentage: _waterPercentage,
@@ -487,13 +534,15 @@ class _FoodScannerWidgetState extends State<FoodScannerWidget> {
         _currentScanId = id;
       });
 
-      // Sync to backend food scans
-      await DatabaseSyncService().syncFoodScan(scan.toMap());
+      // Sync to backend food scans with newly created local ID
+      final scanMap = scan.toMap();
+      scanMap['id'] = id;
+      await DatabaseSyncService().syncFoodScan(scanMap);
 
       // Update Hydration Summary with water delta
       final double delta = _waterMl - _lastSavedWaterMl;
       if (delta != 0) {
-        await SharedPrefsHelper.addPendingManualDelta(delta.toInt());
+        await SharedPrefsHelper.addPendingManualDelta(delta.round());
         await DatabaseHelper().updateHydrationDaySummary(delta);
         await DatabaseSyncService().pushTodayConsumed();
       }
@@ -953,7 +1002,9 @@ class _FoodScannerWidgetState extends State<FoodScannerWidget> {
                                 _foodKey.toUpperCase(),
                                 style: TextStyle(
                                   fontSize: 10.sp,
-                                  fontVariations: [AppFontStyles.boldFontVariation],
+                                  fontVariations: [
+                                    AppFontStyles.boldFontVariation
+                                  ],
                                   color: AppColors.blueWaterIntake,
                                   fontFamily: AppFontStyles.urbanistFontFamily,
                                   letterSpacing: 0.5,
@@ -1010,7 +1061,7 @@ class _FoodScannerWidgetState extends State<FoodScannerWidget> {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Text(
-                        "${waterMl.toInt()}mL",
+                        "${waterMl.round()}mL",
                         style: TextStyle(
                           fontSize: 24.sp,
                           fontVariations: [AppFontStyles.boldFontVariation],
@@ -1040,7 +1091,7 @@ class _FoodScannerWidgetState extends State<FoodScannerWidget> {
               Expanded(
                 child: _buildInfoColumn(
                   "Water: ",
-                  "${waterPercentage.toInt()}% (${waterMl.toInt()}ml)",
+                  "${waterPercentage.round()}% (${waterMl.round()}ml)",
                   ingredients.take((ingredients.length / 2).round()).toList(),
                   "",
                   isDummy: isDummy,

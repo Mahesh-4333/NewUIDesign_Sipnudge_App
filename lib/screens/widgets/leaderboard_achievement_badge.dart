@@ -220,7 +220,7 @@ class _LeaderboardAchievementBadgeState
                   Transform.rotate(
                     angle: _rotationController.value * 2 * pi,
                     alignment: _badgeCenterAlignment,
-                    child: _alignedLayer(widget.ringAssetPath),
+                    child: _alignedLayerPNG(widget.ringAssetPath),
                   ),
                   _alignedLayer(widget.coreAssetPath),
                   Align(
@@ -297,6 +297,16 @@ class _LeaderboardAchievementBadgeState
   Widget _alignedLayer(String assetPath) {
     return SizedBox.expand(
       child: SvgPicture.asset(
+        assetPath,
+        fit: BoxFit.fill,
+        alignment: Alignment.center,
+      ),
+    );
+  }
+
+  Widget _alignedLayerPNG(String assetPath) {
+    return SizedBox.expand(
+      child: Image.asset(
         assetPath,
         fit: BoxFit.fill,
         alignment: Alignment.center,

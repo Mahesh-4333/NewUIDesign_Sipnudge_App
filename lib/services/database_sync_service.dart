@@ -220,7 +220,7 @@ class DatabaseSyncService {
                 if (serverImageUrl != null) {
                   final updated = Map<String, dynamic>.from(s);
                   updated['image_path'] = serverImageUrl;
-                  await _dbHelper.insertFoodScan(updated);
+                  await _dbHelper.upsertFoodScan(updated);
                 }
               } catch (err) {
                 Console.log(
@@ -229,10 +229,13 @@ class DatabaseSyncService {
             }
           }
 
-          final finalImagePath =
-              isAlreadyRemote ? localPath : (serverImageUrl ?? s['image_path']);
+          final pathStr = (serverImageUrl ?? s['image_path'])?.toString();
+          final finalImagePath = (pathStr != null && (pathStr.startsWith('http') || pathStr.startsWith('/uploads/')))
+              ? pathStr
+              : null;
 
           mappedScans.add({
+            'scanId': s['scan_id'] ?? s['scanId'],
             'dishName': s['dish_name'],
             'foodKey': s['food_key'] ?? s['foodKey'] ?? 'Meal',
             'imagePath': finalImagePath,
@@ -644,7 +647,7 @@ class DatabaseSyncService {
           if (serverImageUrl != null) {
             final updatedData = Map<String, dynamic>.from(scanData);
             updatedData['image_path'] = serverImageUrl;
-            await _dbHelper.insertFoodScan(updatedData);
+            await _dbHelper.upsertFoodScan(updatedData);
           }
         } catch (err) {
           Console.log(
@@ -652,12 +655,18 @@ class DatabaseSyncService {
         }
       }
 
+      final pathStr = (serverImageUrl ?? scanData['image_path'])?.toString();
+      final finalImagePath = (pathStr != null && (pathStr.startsWith('http') || pathStr.startsWith('/uploads/')))
+          ? pathStr
+          : null;
+
       final payload = {
+        'scanId': scanData['scan_id'] ?? scanData['scanId'],
         'dishName': scanData['dish_name'],
         'foodKey': scanData['food_key'] ?? scanData['foodKey'] ?? 'Meal',
-        'imagePath': serverImageUrl ?? scanData['image_path'],
+        'imagePath': finalImagePath,
         'imageBase64':
-            null, // Keep sync JSON payload small (~300 bytes) to prevent HTTP 413
+            finalImagePath != null ? null : scanData['image_base64'],
         'weightG': scanData['weight_g'],
         'waterContentMl': scanData['water_content_ml'],
         'waterPercentage': scanData['water_percentage'],

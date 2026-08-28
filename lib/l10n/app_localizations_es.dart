@@ -1377,4 +1377,145 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get logged => 'Registrado';
+
+  @override
+  String get logHydrationSubtitle =>
+      'Registra cada sorbo desde el café de la mañana hasta el agua de tu entrenamiento para optimizar tu consumo diario.';
+
+  @override
+  String get selectedDrink => 'Bebida seleccionada';
+
+  @override
+  String get quickPresets => 'Ajustes rápidos';
+
+  @override
+  String get addToProgress => 'Añadir al progreso';
+
+  @override
+  String get yesterday => 'Ayer';
+
+  @override
+  String get todayText => 'Hoy';
+
+  @override
+  String get noLogsYet => 'Aún no hay registros';
+
+  @override
+  String get pleaseSelectAnAmount => 'Por favor seleccione una cantidad';
+
+  @override
+  String get logDeleted => 'Registro eliminado';
+
+  @override
+  String get glass => 'Vaso';
+
+  @override
+  String get mug => 'Taza';
+
+  @override
+  String get cup => 'Taza';
+
+  @override
+  String get alertnessBoost => 'Aumento de alerta';
+
+  @override
+  String get relaxationAndFocus => 'Relajación y concentración';
+
+  @override
+  String get morningRoutine => 'Rutina matutina';
+
+  @override
+  String get refreshment => 'Refresco';
+
+  @override
+  String get yourImpactStoryDescription =>
+      'Al mantener esta racha y optar por una hidratación reutilizable, has reducido significativamente tu huella ambiental. Tu compromiso diario va más allá de la salud personal.';
+
+  @override
+  String get sipMap => 'Mapa de sorbos';
+
+  @override
+  String get locationPrivacySettings =>
+      'Configuración de privacidad de ubicación';
+
+  @override
+  String get locationPrivacyDescription =>
+      'Administra cómo tu botella inteligente y tu ubicación interactúan con la comunidad.';
+
+  @override
+  String get ghostMode => 'Modo fantasma';
+
+  @override
+  String get ghostModeDescription =>
+      'Cuando está habilitado, tu avatar está completamente oculto. Tus registros aún respaldan de forma anónima el mapa de calor de la comunidad global.';
+
+  @override
+  String get fuzzyLocation => 'Ubicación difusa';
+
+  @override
+  String get fuzzyLocationDescription =>
+      'Desplaza tu marcador de 500 m a 1 km en el mapa para que otros vean tu vecindario general, no tu dirección exacta.';
+
+  @override
+  String get global => 'Global';
+
+  @override
+  String get friendsMap => 'Mapa de amigos';
+
+  @override
+  String get globalHeatmap => 'Mapa de calor global';
+
+  @override
+  String get globalCommunity => 'Comunidad global';
+
+  @override
+  String get globalView => 'Vista global';
+
+  @override
+  String get communityText => 'Comunidad';
+
+  @override
+  String get viewText => 'Vista';
+
+  @override
+  String get globalStoryActive =>
+      'Impacto mundial de hidratación en todos los usuarios activos de Sipnudge.';
+
+  @override
+  String get globalStoryEmpty =>
+      'No hay usuarios globales activos visibles actualmente en el mapa.';
+
+  @override
+  String get bottlesSavedUpper => 'BOTELLAS AHORRADAS';
+
+  @override
+  String get carbonReducedUpper => 'CARBONO REDUCIDO';
+
+  @override
+  String get letsScheduleYourTimeline => 'Programemos tu cronograma';
+
+  @override
+  String get scheduleTimelineSubtitle =>
+      'Configura tu horario para completar las 7 micro metas. Sipnudge te mantendrá al día con recordatorios y pausas inteligentes.';
+
+  @override
+  String get demoVideo => 'Video de demostración';
+
+  @override
+  String get skip => 'Omitir';
+
+  @override
+  String get scheduleNow => 'Programar ahora';
+
+  @override
+  String get ofDailyTarget => ' del objetivo diario';
+
+  @override
+  String get connectBottleTo => 'Conecta tu botella para ';
+
+  @override
+  String get syncWord => 'sincronizar';
+
+  @override
+  String get dataWord => ' datos';
 }

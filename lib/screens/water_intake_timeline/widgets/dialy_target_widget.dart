@@ -6,12 +6,15 @@ import 'package:hydrify/constants/app_font_styles.dart';
 import 'package:hydrify/cubit/ble/ble_cubit.dart';
 import 'package:hydrify/cubit/bottle/bottle_data_cubit.dart';
 import 'package:hydrify/helpers/water_consumption_data_helper.dart';
+import 'package:hydrify/l10n/app_localizations.dart';
 
 class DailyTargetWidget extends StatelessWidget {
   const DailyTargetWidget({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+
     return BlocBuilder<BleCubit, BleState>(
         buildWhen: (previous, current) =>
             previous.currentHydrationValue != current.currentHydrationValue,
@@ -60,7 +63,7 @@ class DailyTargetWidget extends StatelessWidget {
                           ),
                         ),
                         TextSpan(
-                          text: " of Daily Target",
+                          text: l10n?.ofDailyTarget ?? " of Daily Target",
                           style: TextStyle(
                             color: AppColors.bluegray,
                             fontSize: 20.sp,
@@ -89,16 +92,18 @@ class DailyTargetWidget extends StatelessWidget {
                             ],
                           ),
                           children: [
-                            const TextSpan(text: "Connect your Bottle to "),
                             TextSpan(
-                              text: "sync",
+                                text: l10n?.connectBottleTo ??
+                                    "Connect your Bottle to "),
+                            TextSpan(
+                              text: l10n?.syncWord ?? "sync",
                               style: TextStyle(
                                   color: syncColor,
                                   fontVariations: [
                                     AppFontStyles.extraBoldFontVariation
                                   ]),
                             ),
-                            const TextSpan(text: " data"),
+                            TextSpan(text: l10n?.dataWord ?? " data"),
                           ],
                         ),
                       );

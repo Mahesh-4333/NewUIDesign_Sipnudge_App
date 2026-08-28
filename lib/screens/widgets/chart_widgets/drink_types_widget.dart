@@ -263,7 +263,7 @@ class _DrinkTypesWidgetState extends State<DrinkTypesWidget>
                 ),
                 Expanded(
                   child: Padding(
-                    padding: EdgeInsets.only(left: 20.w, right: 8.w),
+                    padding: EdgeInsets.only(left: 50.w, right: 8.w),
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -319,8 +319,8 @@ class _DrinkTypesWidgetState extends State<DrinkTypesWidget>
                                         style: TextStyle(
                                           color: AppColors.bluegray,
                                           fontSize: 18.sp,
-                                          fontFamily: AppFontStyles
-                                              .urbanistFontFamily,
+                                          fontFamily:
+                                              AppFontStyles.urbanistFontFamily,
                                           fontVariations: [
                                             AppFontStyles.boldFontVariation
                                           ],

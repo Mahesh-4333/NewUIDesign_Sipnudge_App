@@ -120,6 +120,7 @@ class _FlColumnChartWidgetState extends State<FlColumnChartWidget> {
           (_kCarouselLoop * _carouselCategories.length) + _carouselIndex,
       viewportFraction: 0.333,
     );
+    _selectedCategory = _carouselCategories[_carouselIndex]['label'];
     SyncBus.instance.addListener(_onSyncComplete);
     _updateChartData();
     WidgetsBinding.instance
@@ -546,13 +547,7 @@ class _FlColumnChartWidgetState extends State<FlColumnChartWidget> {
       chartData = [];
     }
 
-    double maxP = 0;
-    if (chartData.isNotEmpty) {
-      maxP = chartData
-          .map((e) => e.completionPercent)
-          .reduce((a, b) => a > b ? a : b);
-    }
-    maxY = maxP > 100 ? (maxP / 20).ceil() * 20.0 : 100.0;
+    maxY = 100.0;
   }
 
   @override
@@ -597,7 +592,7 @@ class _FlColumnChartWidgetState extends State<FlColumnChartWidget> {
         Container(
           color: Colors.transparent,
           width: double.maxFinite,
-          height: 300.h,
+          height: 330.h,
           child: Row(
             mainAxisAlignment: MainAxisAlignment.start,
             crossAxisAlignment: CrossAxisAlignment.end,
@@ -610,7 +605,7 @@ class _FlColumnChartWidgetState extends State<FlColumnChartWidget> {
               Expanded(
                 child: isWeekly
                     ? SizedBox(
-                        height: 300.h,
+                        height: 330.h,
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.spaceAround,
                           crossAxisAlignment: CrossAxisAlignment.end,
@@ -629,7 +624,7 @@ class _FlColumnChartWidgetState extends State<FlColumnChartWidget> {
                         clipBehavior: Clip.hardEdge,
                         padding: EdgeInsets.symmetric(horizontal: 6.w),
                         child: SizedBox(
-                          height: 300.h,
+                          height: 330.h,
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             mainAxisAlignment: MainAxisAlignment.start,
@@ -708,7 +703,7 @@ class _FlColumnChartWidgetState extends State<FlColumnChartWidget> {
                 barHeight <= 0
                     ? const SizedBox.shrink()
                     : _buildStackedBarSegments(
-                        item, isSelectedBar, barHeight, usableHeight),
+                        item, isToday, isSelectedBar, barHeight, usableHeight),
                 // 2. Bottom Label Area
                 SizedBox(
                   height: 36.h,
@@ -758,8 +753,8 @@ class _FlColumnChartWidgetState extends State<FlColumnChartWidget> {
     );
   }
 
-  Widget _buildStackedBarSegments(ChartData item, bool isSelectedBar,
-      double totalBarHeight, double usableHeight) {
+  Widget _buildStackedBarSegments(ChartData item, bool isTodayBar,
+      bool isSelectedBar, double totalBarHeight, double usableHeight) {
     // List of active segments in order from bottom to top:
     final List<_BarSegmentData> segments = [];
 
@@ -821,41 +816,100 @@ class _FlColumnChartWidgetState extends State<FlColumnChartWidget> {
       ));
     }
 
+    final bool isTargetBar = isTodayBar || isSelectedBar;
+
+    // Calculate segment heights and find elevated segment if any
+    final List<double> segHeights = [];
+    int elevatedIndex = -1;
+    double elevatedBottomOffset = 0.0;
+    double currentBottom = 0.0;
+
+    final double effectiveTotalPercent = math.max(item.completionPercent, maxY);
+
+    for (int i = 0; i < segments.length; i++) {
+      final double h =
+          ((segments[i].percent / effectiveTotalPercent) * usableHeight)
+              .clamp(0.0, totalBarHeight);
+      segHeights.add(h);
+
+      if (isTargetBar &&
+          _selectedCategory != null &&
+          _selectedCategory == segments[i].category &&
+          elevatedIndex == -1) {
+        elevatedIndex = i;
+        elevatedBottomOffset = currentBottom;
+      }
+      currentBottom += h;
+    }
+
     return SizedBox(
       width: _getItemColumnWidth(),
       height: totalBarHeight,
       child: Center(
-        child: ClipRRect(
-          borderRadius: BorderRadius.vertical(
-            top: Radius.circular(AppDimensions.radius_100),
-          ),
-          child: Column(
-            verticalDirection: VerticalDirection.up, // Stack bottom to top!
-            children: List.generate(segments.length, (i) {
-              final seg = segments[i];
-              final double segHeight = ((seg.percent / maxY) * usableHeight)
-                  .clamp(0.0, totalBarHeight);
-              final bool isThisSegmentSelected =
-                  isSelectedBar && (_selectedCategory == seg.category);
-
-              return Container(
-                width: isThisSegmentSelected ? barWidth + 5.w : barWidth,
-                height: segHeight,
-                decoration: BoxDecoration(
-                  color: seg.color,
-                  boxShadow: isThisSegmentSelected
-                      ? [
-                          BoxShadow(
-                              color: AppColors.black.withValues(alpha: 0.5),
-                              blurRadius: 10.0,
-                              spreadRadius: 0.5,
-                              offset: Offset(0, 0)),
-                        ]
-                      : null,
+        child: Stack(
+          alignment: Alignment.bottomCenter,
+          clipBehavior: Clip.none,
+          children: [
+            // 1. Base Stacked Bar with Original Perfect Rounded Dome Top
+            ClipRRect(
+              borderRadius: BorderRadius.vertical(
+                top: Radius.circular(AppDimensions.radius_100),
+              ),
+              child: SizedBox(
+                width: barWidth,
+                height: totalBarHeight,
+                child: Column(
+                  verticalDirection:
+                      VerticalDirection.up, // Stack bottom to top!
+                  mainAxisSize: MainAxisSize.min,
+                  children: List.generate(segments.length, (i) {
+                    return Container(
+                      width: barWidth,
+                      height: segHeights[i],
+                      color: segments[i].color,
+                    );
+                  }),
                 ),
-              );
-            }),
-          ),
+              ),
+            ),
+
+            // 2. Elevated Ribbon Segment Overlay (Extending wider with drop shadow)
+            if (elevatedIndex != -1)
+              Positioned(
+                bottom: elevatedBottomOffset,
+                child: Container(
+                  width: barWidth + 8.w,
+                  height: segHeights[elevatedIndex],
+                  decoration: BoxDecoration(
+                    color: segments[elevatedIndex].color,
+                    borderRadius: elevatedIndex == segments.length - 1
+                        ? BorderRadius.vertical(
+                            top: Radius.circular(AppDimensions.radius_100),
+                          )
+                        : (elevatedIndex == 0
+                            ? BorderRadius.vertical(
+                                top: Radius.circular(6.r),
+                              )
+                            : BorderRadius.circular(6.r)),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.28),
+                        blurRadius: 8,
+                        offset: const Offset(0, 3),
+                      ),
+                      BoxShadow(
+                        color: segments[elevatedIndex]
+                            .color
+                            .withValues(alpha: 0.3),
+                        blurRadius: 4,
+                        spreadRadius: 0.5,
+                        offset: const Offset(0, 0),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+          ],
         ),
       ),
     );
@@ -971,13 +1025,11 @@ class _FlColumnChartWidgetState extends State<FlColumnChartWidget> {
                     physics: const BouncingScrollPhysics(),
                     onPageChanged: (pageIndex) {
                       final newIndex = pageIndex % _carouselCategories.length;
-                      _carouselIndex = newIndex;
-                      if (_selectedCategory != null) {
-                        setState(() {
-                          _selectedCategory =
-                              _carouselCategories[newIndex]['label'];
-                        });
-                      }
+                      setState(() {
+                        _carouselIndex = newIndex;
+                        _selectedCategory =
+                            _carouselCategories[newIndex]['label'];
+                      });
                     },
                     itemBuilder: (context, index) {
                       final int actualIndex =
@@ -1152,13 +1204,19 @@ class CustomYAxis extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: List.generate(divisions + 1, (i) {
           final value = maxY - (i * step);
-          return Text(
-            "${value.toInt()}%",
-            style: TextStyle(
-              fontFamily: AppFontStyles.urbanistFontFamily,
-              color: AppColors.black,
-              fontSize: AppFontStyles.fontSize_14,
-              fontVariations: [AppFontStyles.semiBoldFontVariation],
+          final String label =
+              (i == 0 && value >= 100) ? "100%+" : "${value.toInt()}%";
+          return FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: Text(
+              label,
+              style: TextStyle(
+                fontFamily: AppFontStyles.urbanistFontFamily,
+                color: AppColors.black,
+                fontSize: AppFontStyles.fontSize_14,
+                fontVariations: [AppFontStyles.semiBoldFontVariation],
+              ),
             ),
           );
         }),

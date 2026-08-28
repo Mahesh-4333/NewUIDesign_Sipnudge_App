@@ -18,6 +18,7 @@ import 'package:intl/intl.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:hydrify/services/api_service.dart';
 import 'package:hydrify/services/sync_bus.dart';
+import 'package:hydrify/l10n/app_localizations.dart';
 
 class LogHydrationWidget extends StatefulWidget {
   const LogHydrationWidget({super.key});
@@ -36,6 +37,50 @@ class _LogHydrationWidgetState extends State<LogHydrationWidget> {
   DateTime _selectedDate = DateUtils.dateOnly(DateTime.now());
   double _dragTempAmount = 0;
   bool _isLoadingLogs = false;
+
+  String _getDrinkName(String name, AppLocalizations? l10n) {
+    switch (name.toLowerCase()) {
+      case 'water':
+        return l10n?.water ?? 'Water';
+      case 'coffee':
+        return l10n?.coffee ?? 'Coffee';
+      case 'tea':
+        return l10n?.tea ?? 'Tea';
+      case 'juice':
+        return l10n?.juice ?? 'Juice';
+      case 'milk':
+        return l10n?.milk ?? 'Milk';
+      default:
+        return name;
+    }
+  }
+
+  String _getDrinkItemName(String itemName, AppLocalizations? l10n) {
+    switch (itemName.toLowerCase()) {
+      case 'glass':
+        return l10n?.glass ?? 'Glass';
+      case 'mug':
+        return l10n?.mug ?? 'Mug';
+      case 'cup':
+        return l10n?.cup ?? 'Cup';
+      default:
+        return itemName;
+    }
+  }
+
+  String _getDrinkDesc(String type, AppLocalizations? l10n) {
+    switch (type.toLowerCase()) {
+      case 'coffee':
+        return l10n?.alertnessBoost ?? 'Alertness Boost';
+      case 'tea':
+        return l10n?.relaxationAndFocus ?? 'Relaxation and focus';
+      case 'juice':
+        return l10n?.morningRoutine ?? 'Morning routine';
+      case 'water':
+      default:
+        return l10n?.refreshment ?? 'Refreshment';
+    }
+  }
 
   List<DateTime> get _dates {
     final today = DateUtils.dateOnly(DateTime.now());
@@ -125,7 +170,7 @@ class _LogHydrationWidgetState extends State<LogHydrationWidget> {
 
   bool _isSaving = false;
 
-  _fetchLogs() async {
+  _fetchLogs({bool forceServerPull = false}) async {
     setState(() {
       _isLoadingLogs = true;
     });
@@ -133,12 +178,11 @@ class _LogHydrationWidgetState extends State<LogHydrationWidget> {
       List<Map<String, dynamic>> logs =
           await DatabaseHelper().getHydrationLogs(date: _selectedDate);
 
-      // If nothing locally for this date, try to pull from server
-      if (logs.isEmpty) {
+      final hasPulled = await SharedPrefsHelper.hasPulledManualLogs();
+      if ((!hasPulled || forceServerPull) && logs.isEmpty) {
         final userId = await SharedPrefsHelper.getUserId();
         final userEmail = await SharedPrefsHelper.getUserEmail();
         if (userId != null && userEmail != "guest_user") {
-          // Pass date filter so server only returns logs for _selectedDate (UTC)
           final dateStr = '${_selectedDate.year.toString().padLeft(4, '0')}-'
               '${_selectedDate.month.toString().padLeft(2, '0')}-'
               '${_selectedDate.day.toString().padLeft(2, '0')}';
@@ -155,8 +199,6 @@ class _LogHydrationWidgetState extends State<LogHydrationWidget> {
                     : 0.0;
                 final serverId = log['_id']?.toString();
 
-                // Parse timestamp from server (always UTC) then convert to
-                // local time — DB stores timestamps in local time.
                 final rawTimestamp = log['timestamp'];
                 final DateTime parsedTs = rawTimestamp is String
                     ? (DateTime.tryParse(rawTimestamp)?.toLocal() ??
@@ -164,7 +206,6 @@ class _LogHydrationWidgetState extends State<LogHydrationWidget> {
                     : DateTime.now();
                 final localTimestampStr = parsedTs.toLocal().toIso8601String();
 
-                // Dedup: prefer server_id match; fall back to local timestamp match
                 List<Map<String, dynamic>> matches = [];
                 if (serverId != null) {
                   matches = await txn.query(
@@ -182,7 +223,6 @@ class _LogHydrationWidgetState extends State<LogHydrationWidget> {
                 }
 
                 if (matches.isEmpty) {
-                  // Insert new record with server_id for future reliable dedup
                   await txn.insert(
                     DatabaseHelper.logHydrationTableName,
                     {
@@ -194,7 +234,6 @@ class _LogHydrationWidgetState extends State<LogHydrationWidget> {
                   );
                 } else if (serverId != null &&
                     matches.first['server_id'] == null) {
-                  // Back-fill server_id on existing record that lacked it
                   await txn.update(
                     DatabaseHelper.logHydrationTableName,
                     {'server_id': serverId},
@@ -206,12 +245,11 @@ class _LogHydrationWidgetState extends State<LogHydrationWidget> {
             });
 
             await SharedPrefsHelper.setHasPulledManualLogs(true);
-
-            // Re-fetch locally now that server logs are saved
             logs = await DatabaseHelper().getHydrationLogs(date: _selectedDate);
           }
         }
       }
+
       if (mounted) {
         setState(() {
           _recentLogs = List<Map<String, dynamic>>.from(logs);
@@ -291,17 +329,32 @@ class _LogHydrationWidgetState extends State<LogHydrationWidget> {
         DatabaseHelper.hydrationCoefficients[type] ?? 1.0;
     final double effectiveWater = amount * coefficient;
 
+    // Look up server_id from DB if not present in UI model
+    String? finalServerId = serverId;
+    if (finalServerId == null) {
+      final db = await DatabaseHelper().database;
+      final dbRecord = await db.query(
+        DatabaseHelper.logHydrationTableName,
+        where: 'id = ?',
+        whereArgs: [localId],
+        limit: 1,
+      );
+      if (dbRecord.isNotEmpty) {
+        finalServerId = dbRecord.first['server_id']?.toString();
+      }
+    }
+
     // 1. Optimistic UI update: Remove item from local list instantly
     setState(() {
       _recentLogs.removeWhere((l) => l['id'] == localId);
     });
 
-    Fluttertoast.showToast(msg: "Log deleted");
+    Fluttertoast.showToast(msg: AppLocalizations.of(context)?.logDeleted ?? "Log deleted");
 
     // Queue negative delta for BLE 000A
     await SharedPrefsHelper.addPendingManualDelta(-effectiveWater.toInt());
 
-    // 2. Delete from local SQLite
+    // 2. Delete from local SQLite and update daily summary (clamped to >= 0)
     await DatabaseHelper().deleteHydrationLog(localId, amount, type);
     await DatabaseHelper().updateHydrationDaySummary(-effectiveWater);
 
@@ -322,22 +375,19 @@ class _LogHydrationWidgetState extends State<LogHydrationWidget> {
       final localDateStr =
           '${parsedTime.year.toString().padLeft(4, '0')}-${parsedTime.month.toString().padLeft(2, '0')}-${parsedTime.day.toString().padLeft(2, '0')}';
 
-      // Fire and forget server delete in background
       ApiService()
           .deleteManualLog(
         userId,
         type,
         amount,
         utcTimestamp,
-        serverId: serverId,
+        serverId: finalServerId,
         localDate: localDateStr,
       )
           .then((_) {
-        // Refresh analytics, bottle cubit and notify sync complete in background once server responds
         if (mounted) {
           context.read<BottleDataCubit>().getCurrentDayHistory();
           context.read<DataAnalyticsCubit>().fetchAnalytics();
-          SyncBus.instance.notifySyncComplete();
         }
       }).catchError((e) {
         debugPrint("Background deleteManualLog error: $e");
@@ -349,7 +399,7 @@ class _LogHydrationWidgetState extends State<LogHydrationWidget> {
     if (_isSaving) return;
 
     if (_currentAmount <= 0) {
-      Fluttertoast.showToast(msg: "Please select an amount");
+      Fluttertoast.showToast(msg: AppLocalizations.of(context)?.pleaseSelectAnAmount ?? "Please select an amount");
       return;
     }
 
@@ -398,9 +448,12 @@ class _LogHydrationWidgetState extends State<LogHydrationWidget> {
     }
 
     // 4. Instant Visual & Haptic Feedback to User
+    final l10n = AppLocalizations.of(context);
+    final localizedDrink = _getDrinkName(drinkType, l10n);
+    final loggedPrefix = l10n?.logged ?? "Logged";
     Fluttertoast.showToast(
       msg:
-          "Logged ${HydrationHelper.formatVolume(drinkAmount, _selectedUnit, showUnit: true)} of $drinkType",
+          "$loggedPrefix ${HydrationHelper.formatVolume(drinkAmount, _selectedUnit, showUnit: true)} of $localizedDrink",
     );
 
     // 5. Trigger instant Cubit, Chart & Widget refreshes
@@ -482,6 +535,8 @@ class _LogHydrationWidgetState extends State<LogHydrationWidget> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+
     return Container(
       margin: EdgeInsets.symmetric(horizontal: 0.w),
       padding: EdgeInsets.all(18.w),
@@ -500,7 +555,7 @@ class _LogHydrationWidgetState extends State<LogHydrationWidget> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            "LOG HYDRATION",
+            (l10n?.logHydration ?? "LOG HYDRATION").toUpperCase(),
             style: TextStyle(
               color: AppColors.bluegray,
               fontSize: 16.sp,
@@ -511,7 +566,7 @@ class _LogHydrationWidgetState extends State<LogHydrationWidget> {
           ),
           SizedBox(height: 8.h),
           Text(
-            "Log every sip from your morning coffee to your workout water to optimize your daily intake.",
+            l10n?.logHydrationSubtitle ?? "Log every sip from your morning coffee to your workout water to optimize your daily intake.",
             style: TextStyle(
               color: AppColors.darkgray,
               fontSize: 12.sp,
@@ -538,7 +593,7 @@ class _LogHydrationWidgetState extends State<LogHydrationWidget> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          "SELECTED DRINK",
+                          (l10n?.selectedDrink ?? "SELECTED DRINK").toUpperCase(),
                           style: TextStyle(
                             color: AppColors.blueWaterIntake,
                             fontSize: 10.sp,
@@ -547,7 +602,7 @@ class _LogHydrationWidgetState extends State<LogHydrationWidget> {
                           ),
                         ),
                         Text(
-                          _selectedDrink,
+                          _getDrinkName(_selectedDrink, l10n),
                           style: TextStyle(
                             color: Colors.black,
                             fontSize: 18.sp,
@@ -804,7 +859,7 @@ class _LogHydrationWidgetState extends State<LogHydrationWidget> {
                                 ),
                               ),
                               Text(
-                                " ${drink['drinkItemName']}",
+                                " ${_getDrinkItemName(drink['drinkItemName'], l10n)}",
                                 style: textStyle,
                               ),
                             ],
@@ -860,7 +915,7 @@ class _LogHydrationWidgetState extends State<LogHydrationWidget> {
                                   crossAxisAlignment: CrossAxisAlignment.center,
                                   children: [
                                     Text(
-                                      drink['name'],
+                                      _getDrinkName(drink['name'], l10n),
                                       style: TextStyle(
                                         fontSize: 17.sp,
                                         color: AppColors.bluegray,
@@ -872,7 +927,7 @@ class _LogHydrationWidgetState extends State<LogHydrationWidget> {
                                       ),
                                     ),
                                     Text(
-                                      "${HydrationHelper.formatVolume(drink['glassPerMl'].toDouble(), _selectedUnit, showUnit: true)}/${drink['drinkItemName']}",
+                                      "${HydrationHelper.formatVolume(drink['glassPerMl'].toDouble(), _selectedUnit, showUnit: true)}/${_getDrinkItemName(drink['drinkItemName'], l10n)}",
                                       style: TextStyle(
                                         fontSize: 12.sp,
                                         color: isSelected
@@ -904,7 +959,7 @@ class _LogHydrationWidgetState extends State<LogHydrationWidget> {
           ),
           SizedBox(height: 30.h),
           Text(
-            "Quick Presets",
+            l10n?.quickPresets ?? "Quick Presets",
             style: TextStyle(
               fontSize: 18.sp,
               fontFamily: AppFontStyles.urbanistFontFamily,
@@ -965,7 +1020,7 @@ class _LogHydrationWidgetState extends State<LogHydrationWidget> {
                     color: Colors.white, size: 25.sp),
                 SizedBox(width: 8.w),
                 Text(
-                  "Add to Progress",
+                  l10n?.addToProgress ?? "Add to Progress",
                   style: TextStyle(
                     color: Colors.white,
                     fontSize: 18.sp,
@@ -991,10 +1046,10 @@ class _LogHydrationWidgetState extends State<LogHydrationWidget> {
 
                 String label;
                 if (DateUtils.isSameDay(date, now)) {
-                  label = "Today";
+                  label = l10n?.todayText ?? "Today";
                 } else if (DateUtils.isSameDay(
                     date, now.subtract(const Duration(days: 1)))) {
-                  label = "Yesterday";
+                  label = l10n?.yesterday ?? "Yesterday";
                 } else {
                   label = DateFormat('EEE, MMM d').format(date);
                 }
@@ -1062,7 +1117,7 @@ class _LogHydrationWidgetState extends State<LogHydrationWidget> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  "Recent Logs",
+                  l10n?.recentLogs ?? "Recent Logs",
                   style: TextStyle(
                     fontSize: 18.sp,
                     fontFamily: AppFontStyles.urbanistFontFamily,
@@ -1087,7 +1142,7 @@ class _LogHydrationWidgetState extends State<LogHydrationWidget> {
                 : _recentLogs.isEmpty
                     ? Center(
                         child: Text(
-                          "No logs yet",
+                          l10n?.noLogsYet ?? "No logs yet",
                           style: TextStyle(
                             color: Colors.grey,
                             fontSize: 14.sp,
@@ -1135,25 +1190,23 @@ class _LogHydrationWidgetState extends State<LogHydrationWidget> {
                             Color color = const Color(0xFF369FFF);
                             String icon = AssetsPath.awWater;
 
-                            String desc = "";
+                            String desc = _getDrinkDesc(type, l10n);
                             if (type == 'Coffee') {
                               color = const Color(0xFFEA966F);
                               icon = AssetsPath.awCoffee;
-                              desc = "Alertness Boost";
                             } else if (type == 'Tea') {
                               color = const Color(0xFF4D758B);
                               icon = AssetsPath.awTea;
-                              desc = "Relaxation and focus";
                             } else if (type == 'Juice') {
                               color = const Color(0xFF22C55E);
                               icon = AssetsPath.awJuice;
-                              desc = "Morning routine";
-                            } else if (type == 'Water') {
-                              desc = "Refreshment";
+                            } else if (type == 'Milk') {
+                              color = const Color(0xFFB3B3B3);
+                              icon = AssetsPath.awMilk;
                             }
 
                             return _buildRecentLog(
-                              title: type,
+                              title: _getDrinkName(type, l10n),
                               time: timeStr,
                               desc: desc,
                               ml: amount.toInt(),

@@ -52,6 +52,7 @@ class _LogTabScreenState extends State<LogTabScreen> {
   @override
   void initState() {
     super.initState();
+    SyncBus.instance.addListener(_onSyncComplete);
     _loadFoodLogs();
     SharedPrefsHelper.getSelectedUnit().then((unit) {
       if (mounted) {
@@ -72,14 +73,21 @@ class _LogTabScreenState extends State<LogTabScreen> {
     });
   }
 
+  void _onSyncComplete() {
+    if (mounted) {
+      _loadFoodLogs();
+    }
+  }
+
   @override
   void dispose() {
+    SyncBus.instance.removeListener(_onSyncComplete);
     _configSubscription?.cancel();
     _scrollController.dispose();
     super.dispose();
   }
 
-  Future<void> _loadFoodLogs() async {
+  Future<void> _loadFoodLogs({bool selectLatestIfToday = false}) async {
     if (!mounted) return;
     setState(() {
       _isLoadingLogs = true;
@@ -87,26 +95,66 @@ class _LogTabScreenState extends State<LogTabScreen> {
     try {
       final userEmail = await SharedPrefsHelper.getUserEmail();
       final userId = await SharedPrefsHelper.getUserId();
-      List<Map<String, dynamic>> rawScans = [];
+
+      // 1. ALWAYS load local scans from SQLite first
+      final localScans = await DatabaseHelper().getAllFoodScans();
+      final List<FoodScanData> localList =
+          localScans.map((s) => FoodScanData.fromMap(s)).toList();
+
+      // 2. If user is logged in, fetch from API and merge without overwriting new local scans
       if (userEmail != "guest_user" && userId != null) {
-        // Fetch logs starting from 7 days ago to cover the 7-day selector scope
         final startDate = _dates.last;
         final apiScans =
             await ApiService().getFoodScans(userId, startDate: startDate);
         if (apiScans != null) {
-          rawScans = apiScans;
-        } else {
-          // Fallback to local DB
-          rawScans = await DatabaseHelper().getAllFoodScans();
+          for (final s in apiScans) {
+            final serverItem = FoodScanData.fromMap(s);
+            // Check if server item matches any local scan strictly by scanId
+            final matchIndex = localList.indexWhere((loc) {
+              if (serverItem.scanId != null &&
+                  serverItem.scanId!.isNotEmpty &&
+                  loc.scanId != null &&
+                  loc.scanId == serverItem.scanId) {
+                return true;
+              }
+              return false;
+            });
+
+            if (matchIndex != -1) {
+              final local = localList[matchIndex];
+              final updatedMap = local.toMap();
+              if (serverItem.imagePath != null &&
+                  (serverItem.imagePath!.startsWith('http') ||
+                   serverItem.imagePath!.startsWith('/uploads/'))) {
+                updatedMap['image_path'] = serverItem.imagePath;
+              }
+              localList[matchIndex] = FoodScanData.fromMap(updatedMap);
+            } else {
+              // Genuinely new scan from another device
+              localList.add(serverItem);
+              await DatabaseHelper().upsertFoodScan(serverItem.toMap());
+            }
+          }
         }
-      } else {
-        // Guest user, use local SQLite
-        rawScans = await DatabaseHelper().getAllFoodScans();
       }
+
+      final sortedList = localList
+        ..sort((a, b) => b.timestamp.compareTo(a.timestamp));
+
       if (mounted) {
         setState(() {
-          _allFoodLogs = rawScans.map((m) => FoodScanData.fromMap(m)).toList();
+          _allFoodLogs = sortedList;
           _filterFoodLogsForSelectedDate();
+          if (selectLatestIfToday && _foodLogs.isNotEmpty) {
+            _selectedFoodLog = _foodLogs.first;
+          } else if (_selectedFoodLog != null) {
+            final exists = _allFoodLogs.any((l) =>
+                (l.id != null && l.id == _selectedFoodLog!.id) ||
+                (l.scanId != null && l.scanId == _selectedFoodLog!.scanId));
+            if (!exists) {
+              _selectedFoodLog = null;
+            }
+          }
         });
       }
     } catch (e) {
@@ -132,7 +180,7 @@ class _LogTabScreenState extends State<LogTabScreen> {
     final userEmail = await SharedPrefsHelper.getUserEmail();
 
     // 1. Queue negative delta for BLE / live hydration value
-    await SharedPrefsHelper.addPendingManualDelta(-log.waterContentMl.toInt());
+    await SharedPrefsHelper.addPendingManualDelta(-log.waterContentMl.round());
 
     // 2. Delete locally from SQLite user_food_scanner
     await DatabaseHelper().deleteFoodScanById(
@@ -168,15 +216,9 @@ class _LogTabScreenState extends State<LogTabScreen> {
 
     // 4. Delete food scan on backend server
     if (userId != null && userEmail != "guest_user") {
-      final String? validServerId = (log.serverId != null &&
-              log.serverId!.isNotEmpty &&
-              log.serverId!.length == 24)
-          ? log.serverId
-          : null;
-
       await ApiService().deleteFoodScan(
         userId,
-        scanId: validServerId,
+        scanId: log.scanId,
         dishName: log.dishName,
         timestamp: log.timestamp.toUtc().toIso8601String(),
         localTimestamp: log.timestamp.toIso8601String(),
@@ -462,14 +504,13 @@ class _LogTabScreenState extends State<LogTabScreen> {
       children: [
         FoodScannerWidget(
           key: ValueKey(
-              '${_selectedFoodLog?.id}_${_selectedFoodLog?.serverId}_${_selectedFoodLog?.dishName}_${_selectedFoodLog?.foodKey}_${_selectedFoodLog?.weightG}'),
+              '${_selectedFoodLog?.id}_${_selectedFoodLog?.scanId}_${_selectedFoodLog?.dishName}_${_selectedFoodLog?.foodKey}_${_selectedFoodLog?.weightG}'),
           selectedScan: _selectedFoodLog,
-          onScanCompleted: () {
+          onScanCompleted: () async {
             setState(() {
               _selectedDate = DateUtils.dateOnly(DateTime.now());
-              _selectedFoodLog = null;
             });
-            _loadFoodLogs();
+            await _loadFoodLogs(selectLatestIfToday: true);
           },
         ),
         SizedBox(height: AppDimensions.dim20.h),

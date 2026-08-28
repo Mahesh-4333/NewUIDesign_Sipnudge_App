@@ -13,6 +13,7 @@ import 'package:flutter_timezone/flutter_timezone.dart';
 import 'package:health/health.dart';
 import 'package:hydrify/services/pedometer_service.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:hydrify/models/food_scan_data.dart';
 import 'dart:io';
 
 class DatabaseHelper {
@@ -339,6 +340,7 @@ CREATE TABLE IF NOT EXISTS $appMetadataTableName (
         await db.execute('''
             CREATE TABLE IF NOT EXISTS $foodScannerTableName (
               id INTEGER PRIMARY KEY AUTOINCREMENT,
+              scan_id TEXT,
               dish_name TEXT,
               food_key TEXT,
               image_path TEXT,
@@ -414,6 +416,10 @@ CREATE TABLE IF NOT EXISTS $appMetadataTableName (
           GROUP BY date
         )
       ''');
+    } catch (_) {}
+
+    try {
+      await db.execute('ALTER TABLE $foodScannerTableName ADD COLUMN scan_id TEXT');
     } catch (_) {}
 
     return db;
@@ -890,6 +896,17 @@ CREATE TABLE IF NOT EXISTS $appMetadataTableName (
     return await db.query(logHydrationTableName, orderBy: 'timestamp DESC');
   }
 
+  Future<Map<String, dynamic>?> getHydrationLogById(int id) async {
+    final db = await database;
+    final res = await db.query(
+      logHydrationTableName,
+      where: 'id = ?',
+      whereArgs: [id],
+      limit: 1,
+    );
+    return res.isNotEmpty ? res.first : null;
+  }
+
   Future<void> deleteHydrationLog(int id, double amount, String type) async {
     final db = await database;
     await db.delete(
@@ -1318,7 +1335,7 @@ CREATE TABLE IF NOT EXISTS $appMetadataTableName (
       // 2. Update existing
       final currentConsumed = (result.first['consumed'] as num).toDouble();
       final target = (result.first['target'] as num).toDouble();
-      final newConsumed = currentConsumed + consumedDelta;
+      final newConsumed = (currentConsumed + consumedDelta).clamp(0.0, double.infinity);
       final isPerfect = newConsumed >= target ? 1 : 0;
       await db.update(
         hydrationSummaryTableName,
@@ -1338,19 +1355,20 @@ CREATE TABLE IF NOT EXISTS $appMetadataTableName (
     } else {
       // 3. Create new if missing (should normally be handled by sync/init)
       final waterGoal = await SharedPrefsHelper.getWaterGoal() ?? 2500;
+      final safeConsumed = consumedDelta.clamp(0.0, double.infinity);
       final newSummary = HydrationDaySummary(
         date: DateTime(now.year, now.month, now.day),
         dayIndex: 0,
         target: waterGoal.toDouble(),
-        consumed: consumedDelta,
-        isPerfect: consumedDelta >= waterGoal.toDouble(),
+        consumed: safeConsumed,
+        isPerfect: safeConsumed >= waterGoal.toDouble(),
         createdAt: DateTime.now(),
       );
       await db.insert(hydrationSummaryTableName, newSummary.toMap());
-      Console.log(tag: "mappedHistory_consumed_Curent", value: consumedDelta);
+      Console.log(tag: "mappedHistory_consumed_Curent", value: safeConsumed);
       Console.log(
           tag: "APP",
-          value: "[DB] Created new daily summary with: $consumedDelta");
+          value: "[DB] Created new daily summary with: $safeConsumed");
     }
   }
 
@@ -1492,43 +1510,80 @@ CREATE TABLE IF NOT EXISTS $appMetadataTableName (
 
   Future<int> insertFoodScan(Map<String, dynamic> data) async {
     final db = await database;
+    final normalized = (data.containsKey('_id') || data.containsKey('dishName'))
+        ? FoodScanData.fromMap(data).toMap()
+        : data;
     final id = await db.insert(
       foodScannerTableName,
-      data,
+      normalized,
       conflictAlgorithm: ConflictAlgorithm.replace,
     );
     Console.log(
         tag: "APP",
         value:
-            "[DB] Inserted food scan data for ${data['dish_name']} with id $id");
+            "[DB] Inserted food scan data for ${normalized['dish_name']} with id $id");
     return id;
   }
 
   Future<int> upsertFoodScan(Map<String, dynamic> data) async {
     final db = await database;
-    final id = data['id'] as int?;
-    final timestamp = data['timestamp'] as String?;
-    final dishName = data['dish_name'] as String?;
+    final normalized = (data.containsKey('_id') || data.containsKey('dishName'))
+        ? FoodScanData.fromMap(data).toMap()
+        : Map<String, dynamic>.from(data);
+    final scanId = normalized['scan_id'] as String?;
+    final id = normalized['id'] as int?;
 
+    // 1. Check by integer primary key id
     if (id != null && id > 0) {
-      return await db.insert(
-        foodScannerTableName,
-        data,
-        conflictAlgorithm: ConflictAlgorithm.replace,
-      );
-    } else if (timestamp != null && dishName != null) {
-      final tsPrefix =
-          timestamp.length >= 10 ? timestamp.substring(0, 10) : timestamp;
       final existing = await db.query(
         foodScannerTableName,
-        where: 'dish_name = ? AND timestamp LIKE ?',
-        whereArgs: [dishName, '$tsPrefix%'],
+        where: 'id = ?',
+        whereArgs: [id],
+        limit: 1,
+      );
+      if (existing.isNotEmpty) {
+        final existingBase64 = existing.first['image_base64'] as String?;
+        final updatedData = Map<String, dynamic>.from(normalized);
+        if ((updatedData['image_base64'] == null ||
+                updatedData['image_base64'].toString().isEmpty) &&
+            existingBase64 != null &&
+            existingBase64.isNotEmpty) {
+          updatedData['image_base64'] = existingBase64;
+        }
+        await db.update(
+          foodScannerTableName,
+          updatedData,
+          where: 'id = ?',
+          whereArgs: [id],
+        );
+        return id;
+      }
+      return await db.insert(
+        foodScannerTableName,
+        normalized,
+        conflictAlgorithm: ConflictAlgorithm.replace,
+      );
+    }
+
+    // 2. Check by unique string scan_id
+    if (scanId != null && scanId.isNotEmpty) {
+      final existing = await db.query(
+        foodScannerTableName,
+        where: 'scan_id = ?',
+        whereArgs: [scanId],
         limit: 1,
       );
       if (existing.isNotEmpty) {
         final existingId = existing.first['id'] as int;
-        final updatedData = Map<String, dynamic>.from(data);
+        final existingBase64 = existing.first['image_base64'] as String?;
+        final updatedData = Map<String, dynamic>.from(normalized);
         updatedData['id'] = existingId;
+        if ((updatedData['image_base64'] == null ||
+                updatedData['image_base64'].toString().isEmpty) &&
+            existingBase64 != null &&
+            existingBase64.isNotEmpty) {
+          updatedData['image_base64'] = existingBase64;
+        }
         await db.update(
           foodScannerTableName,
           updatedData,
@@ -1538,29 +1593,56 @@ CREATE TABLE IF NOT EXISTS $appMetadataTableName (
         return existingId;
       }
     }
+
+    // 3. Otherwise insert as brand new meal scan
     return await db.insert(
       foodScannerTableName,
-      data,
+      normalized,
       conflictAlgorithm: ConflictAlgorithm.replace,
     );
   }
 
   Future<List<Map<String, dynamic>>> getAllFoodScans({DateTime? date}) async {
     final db = await database;
+    List<Map<String, dynamic>> rawList;
     if (date != null) {
       final startOfDay =
           DateTime(date.year, date.month, date.day).toIso8601String();
       final endOfDay =
           DateTime(date.year, date.month, date.day, 23, 59, 59, 999)
               .toIso8601String();
-      return await db.query(
+      rawList = await db.query(
         foodScannerTableName,
         where: 'timestamp >= ? AND timestamp <= ?',
         whereArgs: [startOfDay, endOfDay],
         orderBy: 'timestamp DESC',
       );
+    } else {
+      rawList =
+          await db.query(foodScannerTableName, orderBy: 'timestamp DESC');
     }
-    return await db.query(foodScannerTableName, orderBy: 'timestamp DESC');
+
+    // Deduplicate only when the exact same scan_id appears multiple times
+    final Map<String, Map<String, dynamic>> deduplicated = {};
+    for (final scan in rawList) {
+      final sId = scan['scan_id']?.toString();
+      final key = (sId != null && sId.isNotEmpty)
+          ? sId
+          : (scan['id']?.toString() ?? UniqueKey().toString());
+      if (!deduplicated.containsKey(key)) {
+        deduplicated[key] = scan;
+      } else {
+        // Keep the one with image_base64 if current duplicate has it
+        final existing = deduplicated[key]!;
+        if ((existing['image_base64'] == null ||
+                existing['image_base64'].toString().isEmpty) &&
+            scan['image_base64'] != null &&
+            scan['image_base64'].toString().isNotEmpty) {
+          deduplicated[key] = scan;
+        }
+      }
+    }
+    return deduplicated.values.toList();
   }
 
   /// Insert or replace the AI hydration calculation log for a given date.

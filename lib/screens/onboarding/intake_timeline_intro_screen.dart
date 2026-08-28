@@ -3,6 +3,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:video_player/video_player.dart';
 import 'package:hydrify/constants/app_colors.dart';
 import 'package:hydrify/constants/app_font_styles.dart';
+import 'package:hydrify/l10n/app_localizations.dart';
 import 'package:hydrify/screens/bottom_nav_screen_new.dart';
 import 'package:hydrify/screens/home_screen.dart';
 
@@ -100,6 +101,8 @@ class _IntakeTimelineIntroScreenState extends State<IntakeTimelineIntroScreen>
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+
     return Scaffold(
       body: Container(
         width: double.infinity,
@@ -126,7 +129,7 @@ class _IntakeTimelineIntroScreenState extends State<IntakeTimelineIntroScreen>
 
                       // Title
                       Text(
-                        "Water Intake Timeline",
+                        l10n?.waterintaketimeline ?? "Water Intake Timeline",
                         textAlign: TextAlign.center,
                         style: TextStyle(
                           fontSize: 26.sp,
@@ -154,7 +157,7 @@ class _IntakeTimelineIntroScreenState extends State<IntakeTimelineIntroScreen>
               ),
               // Title
               Text(
-                "Let's Schedule your timeline",
+                l10n?.letsScheduleYourTimeline ?? "Let's Schedule your timeline",
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 26.sp,
@@ -167,7 +170,8 @@ class _IntakeTimelineIntroScreenState extends State<IntakeTimelineIntroScreen>
 
               // // Subtitle
               Text(
-                "Set your schedule to complete the 7 micro goals.Sipnudge \nwill keep you on track with reminders and smart snoozes.",
+                l10n?.scheduleTimelineSubtitle ??
+                    "Set your schedule to complete the 7 micro goals. Sipnudge \nwill keep you on track with reminders and smart snoozes.",
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 12.sp,
@@ -235,7 +239,7 @@ class _IntakeTimelineIntroScreenState extends State<IntakeTimelineIntroScreen>
             ),
             SizedBox(height: 12.h),
             Text(
-              "Demo video",
+              AppLocalizations.of(context)?.demoVideo ?? "Demo video",
               style: TextStyle(
                 fontSize: 14.sp,
                 color: const Color(0xFF94A3B8),
@@ -291,6 +295,8 @@ class _IntakeTimelineIntroScreenState extends State<IntakeTimelineIntroScreen>
   }
 
   Widget _buildBottomButtons() {
+    final l10n = AppLocalizations.of(context);
+
     return Padding(
       padding: EdgeInsets.fromLTRB(24.w, 8.h, 24.w, 20.h),
       child: Row(
@@ -308,7 +314,7 @@ class _IntakeTimelineIntroScreenState extends State<IntakeTimelineIntroScreen>
                 ),
                 alignment: Alignment.center,
                 child: Text(
-                  "Skip",
+                  l10n?.skip ?? "Skip",
                   style: TextStyle(
                     fontSize: 15.sp,
                     color: const Color(0xFF475569),
@@ -346,7 +352,7 @@ class _IntakeTimelineIntroScreenState extends State<IntakeTimelineIntroScreen>
                 ),
                 alignment: Alignment.center,
                 child: Text(
-                  "Schedule now",
+                  l10n?.scheduleNow ?? "Schedule now",
                   style: TextStyle(
                     fontSize: 15.sp,
                     color: Colors.white,

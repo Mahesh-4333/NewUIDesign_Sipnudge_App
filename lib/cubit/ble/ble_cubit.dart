@@ -14,6 +14,7 @@ import 'package:hydrify/helpers/logger.dart';
 import 'package:hydrify/helpers/shared_pref_helper.dart';
 import 'package:hydrify/helpers/water_consumption_data_helper.dart';
 import 'package:hydrify/models/bottle_data.dart';
+import 'package:hydrify/models/device_other_data.dart';
 import 'package:hydrify/models/hydration_entry.dart';
 import 'package:hydrify/models/hydration_summary.dart';
 import 'package:hydrify/services/database_sync_service.dart';
@@ -143,6 +144,7 @@ class BleCubit extends Cubit<BleState>
   final Guid wifiProvUUID = Guid("6E400009-B5A3-F393-E0A9-E50E24DCCA9E");
   final Guid wifiNotifUUID = Guid("6E40000B-B5A3-F393-E0A9-E50E24DCCA9E");
   final Guid consumedUpdate = Guid("6E40000A-B5A3-F393-E0A9-E50E24DCCA9E");
+  final Guid otherDataUUID = Guid("6E40000C-B5A3-F393-E0A9-E50E24DCCA9E");
 
   BluetoothCharacteristic? _dataChar;
   BluetoothCharacteristic? _ackChar;
@@ -155,6 +157,7 @@ class BleCubit extends Cubit<BleState>
   BluetoothCharacteristic? _wifiProvChar;
   BluetoothCharacteristic? _wifiNotifChar;
   BluetoothCharacteristic? _consumedUpdateChar;
+  BluetoothCharacteristic? _otherDataChar;
 
   StreamSubscription<List<ScanResult>>? _scanSub;
   StreamSubscription<BluetoothConnectionState>? _connectionSub;
@@ -169,6 +172,8 @@ class BleCubit extends Cubit<BleState>
   StreamSubscription? _hydrationSlotsSub;
   StreamSubscription? _hydration30DaysSub;
   StreamSubscription? _wifiNotifSub;
+  StreamSubscription? _otherDataSub;
+  String _otherDataBuffer = '';
 
   Completer<WifiProvResponse>? _wifiProvCompleter;
 
@@ -333,7 +338,8 @@ class BleCubit extends Cubit<BleState>
     }
 
     Console.log(
-        tag: '[BLE_Cubit] New day detected or initial setup. Resetting daily hydration progress.\n'
+        tag:
+            '[BLE_Cubit] New day detected or initial setup. Resetting daily hydration progress.\n'
             'Last=$lastDate | Today=$today',
         value: 'BLE_Cubit');
 
@@ -994,6 +1000,11 @@ class BleCubit extends Cubit<BleState>
                   tag: 'BLE_Cubit',
                   value: "Consumed update cha: ${_consumedUpdateChar}");
             }
+            if (c.uuid == otherDataUUID) {
+              _otherDataChar = c;
+              Console.log(
+                  tag: 'BLE_Cubit', value: "Other data cha: ${_otherDataChar}");
+            }
           }
 
           // Setup notifications and log characteristic status
@@ -1025,7 +1036,9 @@ class BleCubit extends Cubit<BleState>
                 charName = " [Reset]";
               else if (c.uuid == wifiProvUUID)
                 charName = " [WifiProv]";
-              else if (c.uuid == wifiNotifUUID) charName = " [WifiNotif]";
+              else if (c.uuid == wifiNotifUUID)
+                charName = " [WifiNotif]";
+              else if (c.uuid == otherDataUUID) charName = " [OtherData]";
             }
 
             final logTag = supported.contains("Notify") ? "✅" : "✍️";
@@ -1169,6 +1182,17 @@ class BleCubit extends Cubit<BleState>
         });
       }
 
+      Console.log(tag: 'BLE_Cubit', value: "Other data cha: ${_otherDataChar}");
+      if (_otherDataChar != null) {
+        _otherDataSub = _otherDataChar!.onValueReceived.listen((value) {
+          final data = String.fromCharCodes(value);
+          Console.log(
+              tag: "⬇️ [OTHER_DATA_CHAR] Raw Data: $data", value: 'BLE_Cubit');
+          _parseOtherData(data);
+          _sendAck(device);
+        });
+      }
+
       // ✅ 3. Perform an initial manual read of _dataChar to get status immediately
       if (_dataChar != null && _dataChar!.properties.read) {
         try {
@@ -1183,6 +1207,24 @@ class BleCubit extends Cubit<BleState>
         } catch (e) {
           Console.log(
               tag: "[BLE_Cubit] Initial read failed: $e", value: 'BLE_Cubit');
+        }
+      }
+
+      // Perform an initial manual read of _otherDataChar if available
+      if (_otherDataChar != null && _otherDataChar!.properties.read) {
+        try {
+          final val = await _otherDataChar!.read();
+          if (val.isNotEmpty) {
+            final data = String.fromCharCodes(val);
+            Console.log(
+                tag: "⬇️ [OTHER_DATA_CHAR] Initial Read Result: $data",
+                value: 'BLE_Cubit');
+            _parseOtherData(data);
+          }
+        } catch (e) {
+          Console.log(
+              tag: "[BLE_Cubit] Other data initial read failed: $e",
+              value: 'BLE_Cubit');
         }
       }
 
@@ -1337,9 +1379,88 @@ class BleCubit extends Cubit<BleState>
     }
   }
 
+  void _parseOtherData(String data) {
+    Console.log(
+        tag: "⬇️ [OTHER_DATA_CHAR] Received: $data", value: 'BLE_Cubit');
+
+    _otherDataBuffer += data;
+    String candidate = _otherDataBuffer.trim();
+
+    final firstBrace = candidate.indexOf('{');
+    final lastBrace = candidate.lastIndexOf('}');
+
+    if (firstBrace != -1 && lastBrace != -1 && lastBrace > firstBrace) {
+      final jsonStr = candidate.substring(firstBrace, lastBrace + 1);
+      try {
+        final dynamic decoded = jsonDecode(jsonStr);
+        if (decoded is Map<String, dynamic>) {
+          final parsed = DeviceOtherData.fromJson(decoded, rawData: jsonStr);
+          Console.log(
+              tag:
+                  "✅ [OTHER_DATA_CHAR] Successfully parsed JSON (${parsed.slots.length} slots)",
+              value: 'BLE_Cubit');
+          _otherDataBuffer = '';
+          emit(state.copyWith(
+            otherData: jsonStr,
+            parsedOtherData: parsed,
+          ));
+          return;
+        }
+      } catch (e) {
+        Console.log(
+            tag: "Buffer contains '{'...'}' but jsonDecode failed: $e",
+            value: 'BLE_Cubit');
+      }
+    }
+
+    String singleCleaned = data.trim();
+    final sFirst = singleCleaned.indexOf('{');
+    final sLast = singleCleaned.lastIndexOf('}');
+    if (sFirst != -1 && sLast != -1 && sLast > sFirst) {
+      try {
+        final dynamic decoded =
+            jsonDecode(singleCleaned.substring(sFirst, sLast + 1));
+        if (decoded is Map<String, dynamic>) {
+          final parsed =
+              DeviceOtherData.fromJson(decoded, rawData: singleCleaned);
+          _otherDataBuffer = '';
+          emit(state.copyWith(
+            otherData: singleCleaned,
+            parsedOtherData: parsed,
+          ));
+          return;
+        }
+      } catch (_) {}
+    }
+
+    emit(state.copyWith(
+        otherData: _otherDataBuffer.isNotEmpty ? _otherDataBuffer : data));
+  }
+
+  Future<void> readOtherData() async {
+    final char = await _getFreshCharacteristic(otherDataUUID);
+    if (char != null) {
+      try {
+        final val = await char.read();
+        if (val.isNotEmpty) {
+          final data = String.fromCharCodes(val);
+          Console.log(
+              tag: "⬇️ [OTHER_DATA_CHAR] Manual Read Result: $data",
+              value: 'BLE_Cubit');
+          _parseOtherData(data);
+        }
+      } catch (e) {
+        Console.log(
+            tag: "[BLE_Cubit] Manual read of otherData failed: $e",
+            value: 'BLE_Cubit');
+      }
+    }
+  }
+
   /// Saves today's intake to local SQLite and updates server with force: true
   /// whenever DATA_CHAR sends daily_total_ml.
-  Future<void> _syncDailyTotalFromDataChar(int dailyTotalMl, {int? battery}) async {
+  Future<void> _syncDailyTotalFromDataChar(int dailyTotalMl,
+      {int? battery}) async {
     try {
       final now = DateTime.now();
       final target = await SharedPrefsHelper.getWaterGoal() ?? 2500;
@@ -1381,10 +1502,13 @@ class BleCubit extends Cubit<BleState>
 
       // 5. Debounced home widget update (at most once per 30 seconds)
       final lastUpdate = _lastWidgetUpdateFromDataChar;
-      if (lastUpdate == null || now.difference(lastUpdate).inSeconds >= 30) {
-        _lastWidgetUpdateFromDataChar = now;
+      // if (lastUpdate == null || now.difference(lastUpdate).inSeconds >= 30) {
+      //   _lastWidgetUpdateFromDataChar = now;
+
+      // }
+      Future.delayed(Duration(seconds: 5), () async {
         await HomeWidgetService.updateWidgetData();
-      }
+      });
     } catch (e) {
       Console.log(
           tag: "[BLE_Cubit]",
@@ -2128,12 +2252,15 @@ class BleCubit extends Cubit<BleState>
     _hydrationSlotsSub?.cancel();
     _hydration30DaysSub?.cancel();
     _wifiNotifSub?.cancel();
+    _otherDataSub?.cancel();
 
     _dataSub = null;
     _hydrationGoalDataSub = null;
     _hydrationSlotsSub = null;
     _hydration30DaysSub = null;
     _wifiNotifSub = null;
+    _otherDataSub = null;
+    _otherDataBuffer = '';
   }
 
   void _clearCharacteristicReferences() {
@@ -2148,6 +2275,7 @@ class BleCubit extends Cubit<BleState>
     _wifiProvChar = null;
     _wifiNotifChar = null;
     _consumedUpdateChar = null;
+    _otherDataChar = null;
   }
 
   @override
@@ -2582,6 +2710,9 @@ class BleCubit extends Cubit<BleState>
             if (c.uuid == consumedUpdate) {
               _consumedUpdateChar = c;
             }
+            if (c.uuid == otherDataUUID) {
+              _otherDataChar = c;
+            }
           }
           if (c.uuid == charUuid) {
             return c;
@@ -2609,6 +2740,7 @@ class BleCubit extends Cubit<BleState>
     if (uuid == wifiProvUUID) return _wifiProvChar;
     if (uuid == wifiNotifUUID) return _wifiNotifChar;
     if (uuid == consumedUpdate) return _consumedUpdateChar;
+    if (uuid == otherDataUUID) return _otherDataChar;
     return null;
   }
 }

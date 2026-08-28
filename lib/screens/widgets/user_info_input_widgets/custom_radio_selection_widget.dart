@@ -1,5 +1,3 @@
-import 'package:hydrify/helpers/logger.dart';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -256,81 +254,95 @@ class CustomRadioSelectionWidget extends StatelessWidget {
         onTap();
       },
       splashColor: AppColors.selectedPurpleToggle,
+      borderRadius: BorderRadius.circular(AppDimensions.radius_16.w),
       child: Container(
         width: width,
-        height: type == 1 ? AppDimensions.dim82.h : AppDimensions.dim85.h,
+        height: type == 1
+            ? AppDimensions.dim82.h
+            : (description != null ? 88.h : AppDimensions.dim85.h),
         decoration: BoxDecoration(
           color: isSelected ? AppColors.offwhiteblue : AppColors.white,
           border: Border.all(
             color: isSelected ? AppColors.bluegray : AppColors.greywith80,
             width: isSelected ? AppDimensions.dim3.w : AppDimensions.dim1.w,
           ),
-          borderRadius: BorderRadius.circular(AppDimensions.radius_15.w),
+          borderRadius: BorderRadius.circular(AppDimensions.radius_16.w),
           boxShadow: [
             BoxShadow(
-              blurRadius: AppDimensions.dim4,
-              color: Colors.black.withOpacity(.4),
-              offset: Offset(AppDimensions.dim2.w, AppDimensions.dim2.h),
+              blurRadius: 8,
+              color: Colors.black.withValues(alpha: 0.04),
+              offset: const Offset(0, 4),
             ),
           ],
         ),
-        padding: EdgeInsets.only(
-          left: AppDimensions.dim12.w,
-          top: AppDimensions.dim12.w,
-          bottom: AppDimensions.dim6.h,
-          right: AppDimensions.dim10.w,
+        padding: EdgeInsets.symmetric(
+          horizontal: 12.w,
+          vertical: 10.h,
         ),
-        child: Stack(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisAlignment: description != null
+              ? MainAxisAlignment.spaceBetween
+              : MainAxisAlignment.center,
           children: [
-            // ▣ TEXT CONTENT
-            Column(
+            // ▣ TOP ROW: NAME + ICON
+            Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  name,
-                  style: TextStyle(
-                    fontFamily: AppFontStyles.urbanistFontFamily,
-                    fontSize: AppFontStyles.fontSize_16,
-                    color:
-                        isSelected ? AppColors.bluegray : AppColors.lightgray,
-                    fontVariations: [AppFontStyles.boldFontVariation],
-                  ),
-                ),
-                if (description != null) ...[
-                  SizedBox(height: AppDimensions.dim10.h),
-                  Text(
-                    description,
+                Expanded(
+                  child: Text(
+                    name,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
                     style: TextStyle(
                       fontFamily: AppFontStyles.urbanistFontFamily,
-                      fontSize: AppFontStyles.fontSize_14,
+                      fontSize: AppFontStyles.fontSize_15,
                       color:
                           isSelected ? AppColors.bluegray : AppColors.lightgray,
-                      fontVariations: [AppFontStyles.semiBoldFontVariation],
+                      fontVariations: [AppFontStyles.boldFontVariation],
+                      height: 1.15,
                     ),
                   ),
-                ],
-                if (subDescription != null) ...[
-                  SizedBox(height: AppDimensions.dim5.h),
-                  Text(
-                    subDescription,
-                    style: TextStyle(
-                      fontFamily: AppFontStyles.urbanistFontFamily,
-                      fontSize: AppFontStyles.fontSize_14,
-                      color:
-                          isSelected ? AppColors.bluegray : AppColors.lightgray,
-                      fontVariations: [AppFontStyles.semiBoldFontVariation],
+                ),
+                if (icon.isNotEmpty) ...[
+                  SizedBox(width: 4.w),
+                  SizedBox(
+                    width: 26.w,
+                    height: 26.h,
+                    child: SvgPicture.asset(
+                      displayIcon,
+                      fit: BoxFit.contain,
                     ),
                   ),
                 ],
               ],
             ),
 
-            // ▣ ICON WITH CONDITIONAL ALIGNMENT
-            if (icon.isNotEmpty)
-              Align(
-                alignment:
-                    type == 1 ? Alignment.bottomRight : Alignment.topRight,
-                child: SvgPicture.asset(displayIcon),
+            // ▣ SUBTEXT / DESCRIPTION
+            if (description != null)
+              Text(
+                description,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontFamily: AppFontStyles.urbanistFontFamily,
+                  fontSize: AppFontStyles.fontSize_13,
+                  color: isSelected ? AppColors.bluegray : AppColors.lightgray,
+                  fontVariations: [AppFontStyles.semiBoldFontVariation],
+                ),
+              ),
+
+            if (subDescription != null)
+              Text(
+                subDescription,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontFamily: AppFontStyles.urbanistFontFamily,
+                  fontSize: AppFontStyles.fontSize_12,
+                  color: isSelected ? AppColors.bluegray : AppColors.lightgray,
+                  fontVariations: [AppFontStyles.semiBoldFontVariation],
+                ),
               ),
           ],
         ),
@@ -338,220 +350,3 @@ class CustomRadioSelectionWidget extends StatelessWidget {
     );
   }
 }
-
-
-  //=======================================================================
-
-  // List<Widget> getRadioOptionsBasedOnType(
-  //     BuildContext context, UserInfoState state, double tileWidth) {
-  //   final cubit = context.read<UserInfoCubit>();
-
-  //   if (type == 1) {
-  //     // 🔹 Gender selection
-  //     return [
-  //       buildTile(
-  //         name: AppStrings.male,
-  //         icon: "assets/images/male_ic_11_selected.svg",
-  //         isSelected: state.gender == Gender.male,
-  //         onTap: () => cubit.setGender(Gender.male),
-  //         width: tileWidth,
-  //       ),
-  //       buildTile(
-  //         name: AppStrings.female,
-  //         icon: "assets/images/female_unselected.svg",
-  //         isSelected: state.gender == Gender.female,
-  //         onTap: () => cubit.setGender(Gender.female),
-  //         width: tileWidth,
-  //       ),
-  //       buildTile(
-  //         name: AppStrings.preferNotToSay,
-  //         icon: "",
-  //         isSelected: state.gender == Gender.preferNotToSay,
-  //         onTap: () => cubit.setGender(Gender.preferNotToSay),
-  //         width: tileWidth,
-  //       ),
-  //     ];
-  //   } else if (type == 2) {
-  //     // 🔹 Activity Level
-  //     return [
-  //       buildTile(
-  //         name: AppStrings.sedentary,
-  //         icon: "assets/images/sedentary_selected.svg",
-  //         description: AppStrings.sedentaryDes,
-  //         subDescription: "less than 5000 steps",
-  //         isSelected: state.activityLevel == ActivityLevel.sedentary,
-  //         onTap: () => cubit.setActivityLevel(ActivityLevel.sedentary),
-  //         width: tileWidth,
-  //       ),
-  //       buildTile(
-  //         name: AppStrings.lightlyActive,
-  //         icon: "assets/images/lightly_active_selected.svg",
-  //         description: AppStrings.lightActivityDes,
-  //         subDescription: "5,000 - 7,500 steps",
-  //         isSelected: state.activityLevel == ActivityLevel.lightActivity,
-  //         onTap: () => cubit.setActivityLevel(ActivityLevel.lightActivity),
-  //         width: tileWidth,
-  //       ),
-  //       buildTile(
-  //         name: AppStrings.moderatelyActive,
-  //         icon: "assets/images/moderately_active_selected.svg",
-  //         description: AppStrings.midActivityDes,
-  //         subDescription: "7,500 - 10,000 steps",
-  //         isSelected: state.activityLevel == ActivityLevel.midActive,
-  //         onTap: () => cubit.setActivityLevel(ActivityLevel.midActive),
-  //         width: tileWidth,
-  //       ),
-  //       buildTile(
-  //         name: AppStrings.veryActive,
-  //         icon: "assets/images/very_active1_selected.svg",
-  //         description: AppStrings.veryActivityDes,
-  //         subDescription: "More than 10,000 steps",
-  //         isSelected: state.activityLevel == ActivityLevel.veryActive,
-  //         onTap: () => cubit.setActivityLevel(ActivityLevel.veryActive),
-  //         width: tileWidth,
-  //       ),
-  //     ];
-  //   } else if (type == 3) {
-  //     // 🔹 Diet Type
-  //     return [
-  //       buildTile(
-  //         name: AppStrings.balanced,
-  //         icon: "assets/images/standard_balanced_diet_selected.svg",
-  //         isSelected: state.dietType == DietType.balanced,
-  //         onTap: () => cubit.setDietType(DietType.balanced),
-  //         width: tileWidth,
-  //       ),
-  //       buildTile(
-  //         name: AppStrings.veg,
-  //         icon: "assets/images/veg_diet_selected.svg",
-  //         isSelected: state.dietType == DietType.vegetarian,
-  //         onTap: () => cubit.setDietType(DietType.vegetarian),
-  //         width: tileWidth,
-  //       ),
-  //       buildTile(
-  //         name: AppStrings.processedDiet,
-  //         icon: "assets/images/processed_diet_selected.svg",
-  //         isSelected: state.dietType == DietType.processed,
-  //         onTap: () => cubit.setDietType(DietType.processed),
-  //         width: tileWidth,
-  //       ),
-  //       buildTile(
-  //         name: AppStrings.highProtein,
-  //         icon: "assets/images/high_protein_diet_selected.svg",
-  //         isSelected: state.dietType == DietType.highProtein,
-  //         onTap: () => cubit.setDietType(DietType.highProtein),
-  //         width: tileWidth,
-  //       ),
-  //     ];
-  //   }
-
-  //   return [];
-  // }
-
-  //=======================================================================
-
-  // Widget buildTile({
-  //   required String name,
-  //   String? description,
-  //   String? subDescription,
-  //   required String icon,
-  //   required bool isSelected,
-  //   required Function() onTap,
-  //   required double width,
-  // }) {
-  //   // Determine which icon to show based on selection
-  //   String displayIcon = isSelected
-  //       ? icon // selected icon
-  //       : icon.replaceFirst('.svg', '_unselected.svg'); // unselected version
-
-  //   return InkWell(
-  //     onTap: onTap,
-  //     splashColor: AppColors.selectedPurpleToggle,
-  //     child: Container(
-  //       width: width,
-  //       height: type == 1 ? AppDimensions.dim92.h : AppDimensions.dim122.h,
-  //       decoration: BoxDecoration(
-  //         color: isSelected ? AppColors.offwhiteblue : AppColors.white,
-  //         border: Border.all(
-  //           color: isSelected ? AppColors.bluegray : AppColors.greywith80,
-  //           width: isSelected ? AppDimensions.dim3.w : AppDimensions.dim1.w,
-  //         ),
-  //         borderRadius: BorderRadius.circular(AppDimensions.radius_15.w),
-  //         boxShadow: [
-  //           BoxShadow(
-  //             blurRadius: AppDimensions.dim4,
-  //             color: Colors.black.withOpacity(.4),
-  //             offset: Offset(AppDimensions.dim2.w, AppDimensions.dim2.h),
-  //           ),
-  //         ],
-  //       ),
-  //       padding: EdgeInsets.only(
-  //         left: AppDimensions.dim12.w,
-  //         top: AppDimensions.dim12.w,
-  //         bottom: AppDimensions.dim6.h,
-  //         right: AppDimensions.dim10.w,
-  //       ),
-  //       child: Stack(
-  //         children: [
-  //           // Main content column
-  //           Column(
-  //             crossAxisAlignment: CrossAxisAlignment.start,
-  //             children: [
-  //               // 🔹 Name
-  //               Text(
-  //                 name,
-  //                 style: TextStyle(
-  //                   fontFamily: AppFontStyles.urbanistFontFamily,
-  //                   fontSize: AppFontStyles.fontSize_16,
-  //                   color:
-  //                       isSelected ? AppColors.bluegray : AppColors.lightgray,
-  //                   fontVariations: [AppFontStyles.boldFontVariation],
-  //                 ),
-  //               ),
-
-  //               if (description != null) ...[
-  //                 SizedBox(height: AppDimensions.dim4.h),
-  //                 Text(
-  //                   description,
-  //                   style: TextStyle(
-  //                     fontFamily: AppFontStyles.urbanistFontFamily,
-  //                     fontSize: AppFontStyles.fontSize_14,
-  //                     color: AppColors.white.withAlpha(160),
-  //                     fontVariations: [AppFontStyles.semiBoldFontVariation],
-  //                   ),
-  //                 ),
-  //               ],
-
-  //               if (subDescription != null) ...[
-  //                 SizedBox(height: AppDimensions.dim3.h),
-  //                 Text(
-  //                   subDescription!,
-  //                   style: TextStyle(
-  //                     fontFamily: AppFontStyles.urbanistFontFamily,
-  //                     fontSize: AppFontStyles.fontSize_14,
-  //                     color: AppColors.white.withOpacity(0.8),
-  //                     fontVariations: [AppFontStyles.semiBoldFontVariation],
-  //                   ),
-  //                 ),
-  //               ],
-  //             ],
-  //           ),
-
-  //           // 🔹 Icon alignment depends on type
-  //           if (icon.isNotEmpty)
-  //             Align(
-  //               alignment:
-  //                   type == 1 ? Alignment.bottomRight : Alignment.topRight,
-  //               child: SvgPicture.asset(
-  //                 displayIcon,
-  //                 // height:
-  //                 //     type == 1 ? AppDimensions.dim40.h : AppDimensions.dim50.h,
-  //                 // width:
-  //                 //     type == 1 ? AppDimensions.dim40.w : AppDimensions.dim50.w,
-  //               ),
-  //             ),
-  //         ],
-  //       ),
-  //     ),
-  //   );
-  // }

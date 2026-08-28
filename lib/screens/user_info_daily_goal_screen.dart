@@ -551,7 +551,8 @@ class _UserInfoDailyGoalScreenNewState extends State<UserInfoDailyGoalScreen> {
           mainAxisAlignment: MainAxisAlignment.start,
           children: [
             AuthButton(
-              text: AppStrings.letsHitHydrationGoals,
+              text: AppLocalizations.of(context)?.letsHitHydrationGoals ??
+                  AppStrings.letsHitHydrationGoals,
               color: AppColors.blueGradient,
               areTwoItems: false,
               onTap: () async {
