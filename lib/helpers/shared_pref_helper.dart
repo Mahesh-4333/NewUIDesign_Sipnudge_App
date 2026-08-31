@@ -367,17 +367,19 @@ class SharedPrefsHelper {
   static Future<void> setWaterGoal(int goal) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setInt(_keyWaterGoal, goal);
+    await prefs.setInt(_keyUserGoal, goal);
     // configUpdateStream.add(null);
   }
 
   static Future<void> setUserGoal(int goal) async {
     final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt(_keyWaterGoal, goal);
     await prefs.setInt(_keyUserGoal, goal);
   }
 
   static Future<int?> getWaterGoal() async {
     final prefs = await SharedPreferences.getInstance();
-    return prefs.getInt(_keyWaterGoal);
+    return prefs.getInt(_keyWaterGoal) ?? prefs.getInt(_keyUserGoal);
   }
 
   static Future<String?> getUserEmail() async {
@@ -387,12 +389,12 @@ class SharedPrefsHelper {
 
   static Future<int?> getUserGoal() async {
     final prefs = await SharedPreferences.getInstance();
-    return prefs.getInt(_keyWaterGoal);
+    return prefs.getInt(_keyWaterGoal) ?? prefs.getInt(_keyUserGoal);
   }
 
   static Future<int?> getUserGoals() async {
     final prefs = await SharedPreferences.getInstance();
-    return prefs.getInt(_keyUserGoal);
+    return prefs.getInt(_keyUserGoal) ?? prefs.getInt(_keyWaterGoal);
   }
 
   // Personal info submitted
@@ -922,4 +924,65 @@ class SharedPrefsHelper {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getBool(_keyFirebaseNotificationEnabled) ?? true;
   }
+
+  // Device Other Data (Firmware version, HW version, Programmed At)
+  static const String _keyDeviceFirmwareVersion = 'device_firmware_version';
+  static const String _keyDeviceHardwareVersion = 'device_hardware_version';
+  static const String _keyDeviceProgrammedAt = 'device_programmed_at';
+  static const String _keyDeviceOtherDataRaw = 'device_other_data_raw';
+  static const String _keyLastKnownBattery = 'last_known_battery';
+
+  static Future<void> setLastKnownBattery(int battery) async {
+    if (battery <= 0) return;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt(_keyLastKnownBattery, battery);
+  }
+
+  static Future<int?> getLastKnownBattery() async {
+    final prefs = await SharedPreferences.getInstance();
+    final val = prefs.getInt(_keyLastKnownBattery);
+    return (val != null && val > 0) ? val : null;
+  }
+
+  static Future<void> saveDeviceOtherData({
+    required String? version,
+    required int? hwVersion,
+    required int? programmedAt,
+    String? rawJson,
+  }) async {
+    final prefs = await SharedPreferences.getInstance();
+    if (version != null && version.trim().isNotEmpty) {
+      await prefs.setString(_keyDeviceFirmwareVersion, version.trim());
+    }
+    if (hwVersion != null) {
+      await prefs.setInt(_keyDeviceHardwareVersion, hwVersion);
+    }
+    if (programmedAt != null && programmedAt > 0) {
+      await prefs.setInt(_keyDeviceProgrammedAt, programmedAt);
+    }
+    if (rawJson != null && rawJson.trim().isNotEmpty) {
+      await prefs.setString(_keyDeviceOtherDataRaw, rawJson.trim());
+    }
+  }
+
+  static Future<String?> getDeviceFirmwareVersion() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_keyDeviceFirmwareVersion);
+  }
+
+  static Future<int?> getDeviceHardwareVersion() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getInt(_keyDeviceHardwareVersion);
+  }
+
+  static Future<int?> getDeviceProgrammedAt() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getInt(_keyDeviceProgrammedAt);
+  }
+
+  static Future<String?> getDeviceOtherDataRaw() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_keyDeviceOtherDataRaw);
+  }
 }
+

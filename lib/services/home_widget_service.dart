@@ -211,12 +211,13 @@ class HomeWidgetService {
     try {
       final dbHelper = DatabaseHelper();
       
-      // 1. Fetch battery from local database
+      // 1. Fetch battery from local database / cached state
       int battery = 0;
       try {
         final db = await dbHelper.database;
         final List<Map<String, dynamic>> maps = await db.query(
           'bottle_data',
+          where: 'battery > 0',
           orderBy: 'timestamp DESC',
           limit: 1,
         );
@@ -226,7 +227,15 @@ class HomeWidgetService {
       } catch (e) {
         Console.log(tag: "HomeWidget", value: "Error fetching battery from database: $e");
       }
-      await HomeWidget.saveWidgetData<int>('battery', battery);
+
+      if (battery <= 0) {
+        battery = (await SharedPrefsHelper.getLastKnownBattery()) ?? 0;
+      }
+
+      if (battery > 0) {
+        await SharedPrefsHelper.setLastKnownBattery(battery);
+        await HomeWidget.saveWidgetData<int>('battery', battery);
+      }
 
       var slots = await dbHelper.getAllSlots();
       if (slots.isEmpty) {

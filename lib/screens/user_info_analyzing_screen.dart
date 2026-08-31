@@ -27,14 +27,15 @@ class _UserInfoAnalyzingScreenState extends State<UserInfoAnalyzingScreen>
     with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _animation;
-  int _lastVibratedValue = 0;
+  final List<int> _vibrationMilestones = [25, 50, 75, 100];
+  int _lastMilestoneIndex = 0;
 
   @override
   void initState() {
     super.initState();
 
     _controller = AnimationController(
-      duration: Duration(milliseconds: 1500),
+      duration: const Duration(milliseconds: 1500),
       vsync: this,
     );
 
@@ -42,11 +43,12 @@ class _UserInfoAnalyzingScreenState extends State<UserInfoAnalyzingScreen>
       CurvedAnimation(
           parent: _controller, curve: Curves.fastEaseInToSlowEaseOut),
     );
-    _controller.addListener(() async {
-      int currentValue = _animation.value.toInt();
-      if (currentValue > _lastVibratedValue) {
-        _lastVibratedValue = currentValue;
-        await VibrationHelper.vibrate(duration: 20, amplitude: 120);
+    _controller.addListener(() {
+      final double currentValue = _animation.value;
+      if (_lastMilestoneIndex < _vibrationMilestones.length &&
+          currentValue >= _vibrationMilestones[_lastMilestoneIndex]) {
+        _lastMilestoneIndex++;
+        VibrationHelper.vibrate(duration: 25, amplitude: 120);
       }
     });
 

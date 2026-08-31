@@ -10,6 +10,9 @@ import 'package:hydrify/helpers/database_helper.dart';
 import 'package:hydrify/helpers/shared_pref_helper.dart';
 import 'package:glassmorphism/glassmorphism.dart';
 import 'package:hydrify/helpers/logger.dart';
+import 'package:hydrify/services/api_service.dart';
+import 'package:hydrify/services/database_sync_service.dart';
+import 'package:hydrify/services/home_widget_service.dart';
 
 class AiHydrationGoalDialog extends StatelessWidget {
   final AiHydrationResult result;
@@ -248,11 +251,56 @@ class AiHydrationGoalDialog extends StatelessWidget {
                                   await SharedPrefsHelper
                                       .setAiHydrationGoalShown(false);
                                   await SharedPrefsHelper.setWaterGoal(goal);
+                                  await SharedPrefsHelper.setUserGoal(goal);
                                   await DatabaseHelper()
                                       .saveDailyWaterGoal(DateTime.now(), goal);
                                   await SharedPrefsHelper
                                       .updateAndSaveDeviceConfig(
                                           waterGoal: goal);
+
+                                  final userId = await SharedPrefsHelper.getUserId();
+                                  final today = DateTime.now();
+                                  final todayStr =
+                                      "${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}";
+                                  final dateUtc = "${todayStr}T00:00:00.000Z";
+
+                                  if (userId != null &&
+                                      userId.isNotEmpty &&
+                                      userId != "guest_user") {
+                                    try {
+                                      // 1. Direct push to server DailyGoal collection
+                                      await ApiService().syncDailyGoals(userId, [
+                                        {
+                                          'date': todayStr,
+                                          'goal': goal,
+                                        }
+                                      ]);
+
+                                      // 2. Direct update to server DailySummary target
+                                      final dbHelper = DatabaseHelper();
+                                      final todaySummary =
+                                          await dbHelper.getSummaryForDate(today);
+                                      final consumed =
+                                          todaySummary?.consumed ?? 0.0;
+                                      final isPerfect = consumed >= goal;
+                                      await ApiService().updateTodayConsumed(
+                                        userId,
+                                        dateUtc,
+                                        consumed,
+                                        isPerfect,
+                                        target: goal.toDouble(),
+                                        force: true,
+                                      );
+                                    } catch (e) {
+                                      Console.log(
+                                          tag: "AI_GOAL_DIALOG",
+                                          value:
+                                              "Error syncing AI goal to server: $e");
+                                    }
+                                  }
+
+                                  await HomeWidgetService.updateWidgetData();
+                                  DatabaseSyncService().syncAll(force: true);
                                 } catch (e) {
                                   Console.log(
                                       tag: "AI_GOAL_DIALOG",

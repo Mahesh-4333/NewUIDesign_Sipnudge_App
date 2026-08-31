@@ -154,12 +154,8 @@ class _FlColumnChartWidgetState extends State<FlColumnChartWidget> {
             ? AppDimensions.dim365.w
             : rawChartWidth);
 
-    // Adjust bar width for weekly to fit 7 bars
-    if (isWeekly) {
-      final availableWidth = AppDimensions.dim365.w;
-      barWidth = (availableWidth - (6 * 10.w)) / 7; // 7 bars + 6 spaces
-      barSpacing = 10.w;
-    }
+    barWidth = AppDimensions.dim35.w;
+    barSpacing = 16.w;
 
     return Container(
       color: Colors.transparent,

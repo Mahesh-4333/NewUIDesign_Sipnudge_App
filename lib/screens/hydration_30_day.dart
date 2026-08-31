@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:hydrify/cubit/ble/ble_cubit.dart';
 import 'package:hydrify/helpers/shared_pref_helper.dart';
+import 'package:hydrify/models/device_other_data.dart';
 import 'package:hydrify/models/hydration_summary.dart';
 import 'package:intl/intl.dart';
 
@@ -21,7 +22,7 @@ class _Hydration30DayPageState extends State<Hydration30DayPage> {
   final DatabaseHelper _dbHelper = DatabaseHelper();
   final DateFormat _dateFmt = DateFormat('yyyy-MM-dd');
   final DateFormat _dateTimeFmt = DateFormat('yyyy-MM-dd HH:mm:ss');
-  final DateFormat _timeFmt = DateFormat('HH:mm:ss');
+  final DateFormat _timeFmt = DateFormat('hh:mm a');
 
   bool _loading = true;
   List<HydrationDaySummary> _rows = [];
@@ -83,6 +84,12 @@ class _Hydration30DayPageState extends State<Hydration30DayPage> {
               ? state.parsed30DaysList
               : _rows;
 
+          final otherData = state.parsedOtherData ??
+              (state.otherData != null &&
+                      state.otherData.toString().trim().isNotEmpty
+                  ? DeviceOtherData.fromString(state.otherData.toString())
+                  : null);
+
           return Scaffold(
             backgroundColor: Colors.white,
             appBar: AppBar(
@@ -108,7 +115,7 @@ class _Hydration30DayPageState extends State<Hydration30DayPage> {
                       physics: const AlwaysScrollableScrollPhysics(),
                       padding: const EdgeInsets.all(12),
                       child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
                           Card(
                             elevation: 2,
@@ -147,19 +154,15 @@ class _Hydration30DayPageState extends State<Hydration30DayPage> {
                                         fontWeight: FontWeight.w600),
                                   ),
                                   const SizedBox(height: 8),
-                                  OutlinedButton.icon(
-                                    onPressed: () => context
-                                        .read<BleCubit>()
-                                        .readOtherData(),
-                                    icon: const Icon(Icons.download, size: 18),
-                                    label: const Text(
-                                        'Read Other Data (6E40000C)'),
-                                  ),
                                 ],
                               ),
                             ),
                           ),
-                          if (state.parsedOtherData != null) ...[
+                          if (otherData != null &&
+                              (otherData.version != null ||
+                                  otherData.hwVersion != null ||
+                                  otherData.programmedAt != null ||
+                                  otherData.slots.isNotEmpty)) ...[
                             const SizedBox(height: 12),
                             Card(
                               elevation: 2,
@@ -189,7 +192,12 @@ class _Hydration30DayPageState extends State<Hydration30DayPage> {
                                                 BorderRadius.circular(12),
                                           ),
                                           child: Text(
-                                            'v${state.parsedOtherData!.version ?? "1.0.0"}',
+                                            otherData.version != null
+                                                ? (otherData.version!
+                                                        .startsWith('v')
+                                                    ? otherData.version!
+                                                    : 'v${otherData.version}')
+                                                : 'v1.0.0',
                                             style: TextStyle(
                                               fontWeight: FontWeight.w600,
                                               fontSize: 12,
@@ -201,11 +209,11 @@ class _Hydration30DayPageState extends State<Hydration30DayPage> {
                                     ),
                                     const SizedBox(height: 8),
                                     Text(
-                                      'HW Version: ${state.parsedOtherData!.hwVersion ?? "--"}',
+                                      'HW Version: ${otherData.hwVersion != null ? "HW ${otherData.hwVersion}" : "--"}',
                                       style: const TextStyle(fontSize: 13),
                                     ),
                                     Text(
-                                      'Programmed At: ${state.parsedOtherData!.programmedAtDateTime != null ? _dateTimeFmt.format(state.parsedOtherData!.programmedAtDateTime!) : (state.parsedOtherData!.programmedAt?.toString() ?? "--")}',
+                                      'Programmed At: ${otherData.programmedAtDateTime != null ? DateFormat('dd MMM yyyy, hh:mm a').format(otherData.programmedAtDateTime!) : (otherData.programmedAt?.toString() ?? "--")}',
                                       style: const TextStyle(fontSize: 13),
                                     ),
                                     const SizedBox(height: 12),
@@ -217,10 +225,21 @@ class _Hydration30DayPageState extends State<Hydration30DayPage> {
                                       ),
                                     ),
                                     const SizedBox(height: 6),
-                                    if (state.parsedOtherData!.slots.isEmpty)
-                                      const Text('No slots in payload')
-                                    else
-                                      Table(
+                                    () {
+                                      final displaySlots =
+                                          otherData.slots.isNotEmpty
+                                              ? otherData.slots
+                                              : (state.otherData != null
+                                                  ? DeviceOtherData.fromString(
+                                                          state.otherData
+                                                              .toString())
+                                                      .slots
+                                                  : <DeviceSlotSchedule>[]);
+                                      if (displaySlots.isEmpty) {
+                                        return const Text(
+                                            'No slots in payload');
+                                      }
+                                      return Table(
                                         columnWidths: const {
                                           0: FlexColumnWidth(0.6),
                                           1: FlexColumnWidth(1.8),
@@ -271,17 +290,20 @@ class _Hydration30DayPageState extends State<Hydration30DayPage> {
                                               ),
                                             ],
                                           ),
-                                          ...state.parsedOtherData!.slots
-                                              .map((s) {
+                                          ...displaySlots.map((s) {
                                             final startStr = s.startDateTime !=
                                                     null
                                                 ? _timeFmt
                                                     .format(s.startDateTime!)
-                                                : s.start.toString();
+                                                : (s.start > 0
+                                                    ? s.start.toString()
+                                                    : '--');
                                             final endStr = s.endDateTime != null
                                                 ? _timeFmt
                                                     .format(s.endDateTime!)
-                                                : s.end.toString();
+                                                : (s.end > 0
+                                                    ? s.end.toString()
+                                                    : '--');
                                             return TableRow(
                                               children: [
                                                 Padding(
@@ -318,7 +340,8 @@ class _Hydration30DayPageState extends State<Hydration30DayPage> {
                                             );
                                           }),
                                         ],
-                                      ),
+                                      );
+                                    }(),
                                   ],
                                 ),
                               ),
@@ -399,14 +422,14 @@ class _Hydration30DayPageState extends State<Hydration30DayPage> {
                                             Padding(
                                               padding:
                                                   const EdgeInsets.all(8.0),
-                                              child: Text(
-                                                  _dateFmt.format(r.date)),
+                                              child:
+                                                  Text(_dateFmt.format(r.date)),
                                             ),
                                             Padding(
                                               padding:
                                                   const EdgeInsets.all(8.0),
-                                              child: Text(r.target
-                                                  .toStringAsFixed(0)),
+                                              child: Text(
+                                                  r.target.toStringAsFixed(0)),
                                             ),
                                             Padding(
                                               padding:

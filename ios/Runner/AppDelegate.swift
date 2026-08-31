@@ -330,16 +330,7 @@ class BackgroundSessionManager: NSObject, URLSessionDelegate, URLSessionTaskDele
     }
 
     override func applicationWillTerminate(_ application: UIApplication) {
-        let content = UNMutableNotificationContent()
-        content.title = "Sipnudge is closed"
-        content.body = "Background sync paused. Reopen the app to resume."
-        content.sound = .default
-        let req = UNNotificationRequest(
-            identifier: "app_terminated",
-            content: content,
-            trigger: UNTimeIntervalNotificationTrigger(timeInterval: 1, repeats: false)
-        )
-        UNUserNotificationCenter.current().add(req, withCompletionHandler: nil)
+        super.applicationWillTerminate(application)
     }
 
     override func userNotificationCenter(
@@ -686,6 +677,13 @@ class SipnudgeBackgroundBLE: NSObject, CBCentralManagerDelegate, CBPeripheralDel
                 }
             }
 
+            if let pct = batteryPct, pct > 0 {
+                if let appDefaults = UserDefaults(suiteName: kAppGroupId) {
+                    appDefaults.set(pct, forKey: "battery")
+                    appDefaults.synchronize()
+                }
+            }
+
             if let consumed = dailyTotalMl {
                 NSLog("[BG-BLE] DATA_CHAR reported daily_total_ml=\(consumed)ml (battery=\(batteryPct ?? -1)%)")
 
@@ -712,6 +710,9 @@ class SipnudgeBackgroundBLE: NSObject, CBCentralManagerDelegate, CBPeripheralDel
                             appDefaults.set(consumed, forKey: "current_intake")
                             NSLog("[BG-BLE] Updated App Group current_intake to \(consumed)ml")
                         }
+                    }
+                    if let pct = batteryPct, pct > 0 {
+                        appDefaults.set(pct, forKey: "battery")
                     }
                     appDefaults.set(goal, forKey: "daily_goal")
                     appDefaults.set(todayStr, forKey: "last_update_date")

@@ -36,6 +36,7 @@ class BleCubit extends Cubit<BleState>
   BleCubit() : super(const BleState()) {
     SyncBus.instance.addListener(_onSyncComplete);
     WidgetsBinding.instance.addObserver(this);
+    _loadSavedOtherData();
     // Listen for native → Dart events (e.g. when native CBCentralManager
     // connects after a BT toggle or after the 30-second FBP scan times out).
     if (Platform.isIOS) {
@@ -1315,6 +1316,9 @@ class BleCubit extends Cubit<BleState>
 
       if (key == 'battery') {
         battery = int.tryParse(value);
+        if (battery != null && battery > 0) {
+          SharedPrefsHelper.setLastKnownBattery(battery);
+        }
       } else if (key == 'volume') {
         volume = double.tryParse(value);
       } else if (key == 'percent') {
@@ -1379,15 +1383,58 @@ class BleCubit extends Cubit<BleState>
     }
   }
 
+  Future<void> _loadSavedOtherData() async {
+    try {
+      final raw = await SharedPrefsHelper.getDeviceOtherDataRaw();
+      if (raw != null && raw.isNotEmpty) {
+        final dynamic decoded = jsonDecode(raw);
+        if (decoded is Map<String, dynamic>) {
+          final parsed = DeviceOtherData.fromJson(decoded, rawData: raw);
+          emit(state.copyWith(
+            otherData: raw,
+            parsedOtherData: parsed,
+          ));
+          return;
+        }
+      }
+
+      final version = await SharedPrefsHelper.getDeviceFirmwareVersion();
+      final hwVersion = await SharedPrefsHelper.getDeviceHardwareVersion();
+      final programmedAt = await SharedPrefsHelper.getDeviceProgrammedAt();
+      if (version != null || hwVersion != null || programmedAt != null) {
+        emit(state.copyWith(
+          parsedOtherData: DeviceOtherData(
+            version: version,
+            hwVersion: hwVersion,
+            programmedAt: programmedAt,
+          ),
+        ));
+      }
+    } catch (e) {
+      Console.log(tag: "[BLE_Cubit] Error loading cached otherData: $e", value: 'BLE_Cubit');
+    }
+  }
+
   void _parseOtherData(String data) {
     Console.log(
-        tag: "⬇️ [OTHER_DATA_CHAR] Received: $data", value: 'BLE_Cubit');
+        tag: "⬇️ [OTHER_DATA_CHAR] Received chunk: $data", value: 'BLE_Cubit');
+
+    // If new transmission starts with '{' and previous buffer was already balanced/complete, reset buffer
+    if (data.trim().startsWith('{') && _otherDataBuffer.isNotEmpty) {
+      final openCount = '{'.allMatches(_otherDataBuffer).length;
+      final closeCount = '}'.allMatches(_otherDataBuffer).length;
+      if (openCount == closeCount && openCount > 0) {
+        _otherDataBuffer = '';
+      }
+    }
 
     _otherDataBuffer += data;
     String candidate = _otherDataBuffer.trim();
 
     final firstBrace = candidate.indexOf('{');
     final lastBrace = candidate.lastIndexOf('}');
+
+    final partial = DeviceOtherData.fromString(candidate.isNotEmpty ? candidate : data);
 
     if (firstBrace != -1 && lastBrace != -1 && lastBrace > firstBrace) {
       final jsonStr = candidate.substring(firstBrace, lastBrace + 1);
@@ -1397,35 +1444,19 @@ class BleCubit extends Cubit<BleState>
           final parsed = DeviceOtherData.fromJson(decoded, rawData: jsonStr);
           Console.log(
               tag:
-                  "✅ [OTHER_DATA_CHAR] Successfully parsed JSON (${parsed.slots.length} slots)",
+                  "✅ [OTHER_DATA_CHAR] Successfully parsed JSON (${parsed.slots.length} slots, progAt: ${parsed.programmedAt})",
               value: 'BLE_Cubit');
           _otherDataBuffer = '';
+
+          unawaited(SharedPrefsHelper.saveDeviceOtherData(
+            version: parsed.version,
+            hwVersion: parsed.hwVersion,
+            programmedAt: parsed.programmedAt,
+            rawJson: jsonStr,
+          ));
+
           emit(state.copyWith(
             otherData: jsonStr,
-            parsedOtherData: parsed,
-          ));
-          return;
-        }
-      } catch (e) {
-        Console.log(
-            tag: "Buffer contains '{'...'}' but jsonDecode failed: $e",
-            value: 'BLE_Cubit');
-      }
-    }
-
-    String singleCleaned = data.trim();
-    final sFirst = singleCleaned.indexOf('{');
-    final sLast = singleCleaned.lastIndexOf('}');
-    if (sFirst != -1 && sLast != -1 && sLast > sFirst) {
-      try {
-        final dynamic decoded =
-            jsonDecode(singleCleaned.substring(sFirst, sLast + 1));
-        if (decoded is Map<String, dynamic>) {
-          final parsed =
-              DeviceOtherData.fromJson(decoded, rawData: singleCleaned);
-          _otherDataBuffer = '';
-          emit(state.copyWith(
-            otherData: singleCleaned,
             parsedOtherData: parsed,
           ));
           return;
@@ -1434,7 +1465,13 @@ class BleCubit extends Cubit<BleState>
     }
 
     emit(state.copyWith(
-        otherData: _otherDataBuffer.isNotEmpty ? _otherDataBuffer : data));
+      otherData: _otherDataBuffer.isNotEmpty ? _otherDataBuffer : data,
+      parsedOtherData: (partial.programmedAt != null ||
+              partial.version != null ||
+              partial.slots.isNotEmpty)
+          ? partial
+          : state.parsedOtherData,
+    ));
   }
 
   Future<void> readOtherData() async {
@@ -1807,6 +1844,10 @@ class BleCubit extends Cubit<BleState>
           break;
       }
     });
+  }
+
+  Future<void> flushPendingConfigurations() async {
+    await _flushPendingSlots();
   }
 
   Future<void> _flushPendingSlots() async {

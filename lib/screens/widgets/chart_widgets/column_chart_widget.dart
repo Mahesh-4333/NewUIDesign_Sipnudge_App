@@ -172,11 +172,7 @@ class _FlColumnChartWidgetState extends State<FlColumnChartWidget> {
   }
 
   double _getItemColumnWidth() {
-    final isWeekly = widget.interval == FilterInterval.weekly;
-    final isMonthly = widget.interval == FilterInterval.monthly;
-    if (isWeekly) return barWidth + 8.w;
-    if (isMonthly) return barWidth + 8.w;
-    return barWidth + 10.w;
+    return barWidth + 8.w;
   }
 
   void _scrollToToday({bool animated = true}) {
@@ -572,19 +568,9 @@ class _FlColumnChartWidgetState extends State<FlColumnChartWidget> {
   @override
   Widget build(BuildContext context) {
     final isWeekly = widget.interval == FilterInterval.weekly;
-    final isMonthly = widget.interval == FilterInterval.monthly;
 
-    if (isWeekly) {
-      final availableWidth = AppDimensions.dim365.w;
-      barWidth = (availableWidth - (6 * 10.w)) / 7;
-      barSpacing = 10.w;
-    } else if (isMonthly) {
-      barWidth = AppDimensions.dim35.w;
-      barSpacing = 16.w;
-    } else {
-      barWidth = 24.w;
-      barSpacing = 16.w;
-    }
+    barWidth = AppDimensions.dim35.w;
+    barSpacing = 16.w;
 
     return Column(
       mainAxisSize: MainAxisSize.min,

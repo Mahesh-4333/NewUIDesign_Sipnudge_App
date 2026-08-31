@@ -194,7 +194,8 @@ struct Provider: TimelineProvider {
         var upcomingSlotTarget = userDefaults?.integer(forKey: "upcoming_slot_target") ?? 0
         var upcomingSlotTime = userDefaults?.string(forKey: "upcoming_slot_time") ?? "--:--"
         
-        let battery = userDefaults?.integer(forKey: "battery") ?? 72
+        let storedBattery = userDefaults?.object(forKey: "battery") as? Int ?? userDefaults?.integer(forKey: "battery") ?? 0
+        let battery = storedBattery > 0 ? storedBattery : 72
         
         // Dynamically compute the upcoming slot and cumulative target if slots JSON is available
         var expectedCumulative: Double = 0.0
@@ -353,7 +354,7 @@ struct Provider: TimelineProvider {
                 userDefaults?.set(latestDrinkAmount, forKey: "latest_drink_amount")
                 
                 // Battery comes from HydrationLog (latest bottle sync) — not DailySummary
-                if let batteryFromServer = summary["battery"] as? Int {
+                if let batteryFromServer = summary["battery"] as? Int, batteryFromServer > 0 {
                     userDefaults?.set(batteryFromServer, forKey: "battery")
                 }
                 
@@ -583,32 +584,34 @@ struct SipnudgeWidgetEntryView : View {
             // Right Side: Details (Battery progress, status, Next sip & Coffee/Water quick actions)
             VStack(alignment: .leading, spacing: 5) {
                 // Battery indicator
-                VStack(alignment: .leading, spacing: 2) {
-                    HStack(spacing: 4) {
-                        Image(systemName: batteryIconName)
-                            .font(.system(size: 10))
-                            .foregroundColor(batteryColor)
-                        Text("BATTERY")
-                            .font(.system(size: 8, weight: .bold, design: .rounded))
-                            .foregroundColor(Color(red: 0.40, green: 0.45, blue: 0.55))
-                        Spacer()
-                        Text("\(entry.battery)%")
-                            .font(.system(size: 9, weight: .bold, design: .rounded))
-                            .foregroundColor(Color(red: 0.09, green: 0.15, blue: 0.27))
-                    }
-                    
-                    // Green battery bar
-                    GeometryReader { geo in
-                        ZStack(alignment: .leading) {
-                            RoundedRectangle(cornerRadius: 2)
-                                .fill(Color(red: 0.92, green: 0.93, blue: 0.95))
-                                .frame(height: 4)
-                            RoundedRectangle(cornerRadius: 2)
-                                .fill(batteryColor)
-                                .frame(width: geo.size.width * CGFloat(Double(entry.battery) / 100.0), height: 4)
+                if entry.battery > 0 {
+                    VStack(alignment: .leading, spacing: 2) {
+                        HStack(spacing: 4) {
+                            Image(systemName: batteryIconName)
+                                .font(.system(size: 10))
+                                .foregroundColor(batteryColor)
+                            Text("BATTERY")
+                                .font(.system(size: 8, weight: .bold, design: .rounded))
+                                .foregroundColor(Color(red: 0.40, green: 0.45, blue: 0.55))
+                            Spacer()
+                            Text("\(entry.battery)%")
+                                .font(.system(size: 9, weight: .bold, design: .rounded))
+                                .foregroundColor(Color(red: 0.09, green: 0.15, blue: 0.27))
                         }
+                        
+                        // Green battery bar
+                        GeometryReader { geo in
+                            ZStack(alignment: .leading) {
+                                RoundedRectangle(cornerRadius: 2)
+                                    .fill(Color(red: 0.92, green: 0.93, blue: 0.95))
+                                    .frame(height: 4)
+                                RoundedRectangle(cornerRadius: 2)
+                                    .fill(batteryColor)
+                                    .frame(width: geo.size.width * CGFloat(min(Double(entry.battery), 100.0) / 100.0), height: 4)
+                            }
+                        }
+                        .frame(height: 4)
                     }
-                    .frame(height: 4)
                 }
                 
                 // Heading (Dynamic color depending on "on-track" state)

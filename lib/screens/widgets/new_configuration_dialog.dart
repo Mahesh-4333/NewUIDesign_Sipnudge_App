@@ -8,8 +8,13 @@ import 'package:hydrify/constants/assets_path.dart';
 import 'package:hydrify/cubit/ble/ble_cubit.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:hydrify/cubit/bottle/bottle_data_cubit.dart';
+import 'package:hydrify/helpers/database_helper.dart';
+import 'package:hydrify/helpers/logger.dart';
 import 'package:hydrify/helpers/shared_pref_helper.dart';
 import 'package:hydrify/models/bottle_info.dart';
+import 'package:hydrify/services/api_service.dart';
+import 'package:hydrify/services/database_sync_service.dart';
+import 'package:hydrify/services/home_widget_service.dart';
 
 class NewConfigurationDialog extends StatelessWidget {
   const NewConfigurationDialog({super.key});
@@ -255,6 +260,7 @@ class NewConfigurationDialogContent extends StatelessWidget {
                 borderRadius: BorderRadius.circular(27.h),
                 onTap: () {
                   Navigator.of(context).pop();
+                  _syncConfigurationAndGoal(context, sendToBle: true);
                 },
                 child: Center(
                   child: Row(
@@ -299,6 +305,7 @@ class NewConfigurationDialogContent extends StatelessWidget {
                   child: InkWell(
                     onTap: () {
                       Navigator.of(context).pop();
+                      _syncConfigurationAndGoal(context, sendToBle: false);
                     },
                     child: Center(
                       child: Text(
@@ -319,5 +326,63 @@ class NewConfigurationDialogContent extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  static Future<void> _syncConfigurationAndGoal(BuildContext context,
+      {required bool sendToBle}) async {
+    try {
+      final bleCubit = context.read<BleCubit>();
+      final waterGoal = await SharedPrefsHelper.getWaterGoal();
+      final userId = await SharedPrefsHelper.getUserId();
+      final today = DateTime.now();
+      final todayStr =
+          "${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}";
+      final dateUtc = "${todayStr}T00:00:00.000Z";
+
+      if (waterGoal != null && waterGoal > 0) {
+        if (userId != null && userId.isNotEmpty && userId != "guest_user") {
+          try {
+            // 1. Direct push to server DailyGoal collection
+            await ApiService().syncDailyGoals(userId, [
+              {
+                'date': todayStr,
+                'goal': waterGoal,
+              }
+            ]);
+
+            // 2. Direct update to server DailySummary target
+            final dbHelper = DatabaseHelper();
+            final todaySummary = await dbHelper.getSummaryForDate(today);
+            final consumed = todaySummary?.consumed ?? 0.0;
+            final isPerfect = consumed >= waterGoal;
+            await ApiService().updateTodayConsumed(
+              userId,
+              dateUtc,
+              consumed,
+              isPerfect,
+              target: waterGoal.toDouble(),
+              force: true,
+            );
+          } catch (e) {
+            Console.log(
+                tag: "CONFIG_DIALOG",
+                value: "Error updating server daily goal: $e");
+          }
+        }
+
+        // 3. Immediately refresh widget
+        await HomeWidgetService.updateWidgetData();
+      }
+
+      if (sendToBle) {
+        await bleCubit.flushPendingConfigurations();
+      }
+
+      DatabaseSyncService().syncAll(force: true);
+    } catch (e) {
+      Console.log(
+          tag: "CONFIG_DIALOG",
+          value: "Error in _syncConfigurationAndGoal: $e");
+    }
   }
 }

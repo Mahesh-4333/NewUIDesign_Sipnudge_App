@@ -137,8 +137,10 @@ class _SigninSignupScreenState extends State<SigninSignupScreen> {
       children: [
         Text(
           widget.isSigninFlow
-              ? (AppLocalizations.of(context)?.gladToSeeYou ?? AppStrings.gladToSeeYou)
-              : (AppLocalizations.of(context)?.getStartedWithSipnudge ?? AppStrings.getStartedWithSipnudge),
+              ? (AppLocalizations.of(context)?.gladToSeeYou ??
+                  AppStrings.gladToSeeYou)
+              : (AppLocalizations.of(context)?.getStartedWithSipnudge ??
+                  AppStrings.getStartedWithSipnudge),
           style: TextStyle(
             color: AppColors.bluegray,
             height:
@@ -154,8 +156,10 @@ class _SigninSignupScreenState extends State<SigninSignupScreen> {
         ),
         Text(
           widget.isSigninFlow
-              ? (AppLocalizations.of(context)?.signinToYourAccount ?? AppStrings.signinToYourAccount)
-              : (AppLocalizations.of(context)?.createAnAccount ?? AppStrings.createAnAccount),
+              ? (AppLocalizations.of(context)?.signinToYourAccount ??
+                  AppStrings.signinToYourAccount)
+              : (AppLocalizations.of(context)?.createAnAccount ??
+                  AppStrings.createAnAccount),
           style: TextStyle(
             color: AppColors.bluegray,
             height: AppFontStyles.getLineHeight(
@@ -248,7 +252,8 @@ class _SigninSignupScreenState extends State<SigninSignupScreen> {
             Visibility(
               visible: widget.isSigninFlow == false,
               replacement: Text(
-                AppLocalizations.of(context)?.rememberMe ?? AppStrings.rememberMe,
+                AppLocalizations.of(context)?.rememberMe ??
+                    AppStrings.rememberMe,
                 style: TextStyle(
                   color: AppColors.black,
                   fontSize: AppFontStyles.fontSize_18.sp,
@@ -262,7 +267,8 @@ class _SigninSignupScreenState extends State<SigninSignupScreen> {
                 onTap: () {},
                 child: RichText(
                   text: TextSpan(
-                    text: AppLocalizations.of(context)?.iAgree ?? AppStrings.iAgree,
+                    text: AppLocalizations.of(context)?.iAgree ??
+                        AppStrings.iAgree,
                     style: TextStyle(
                       color: AppColors.black,
                       fontSize: AppFontStyles.fontSize_17.sp,
@@ -283,7 +289,8 @@ class _SigninSignupScreenState extends State<SigninSignupScreen> {
                             );
                           },
                           child: Text(
-                            AppLocalizations.of(context)?.termsOfService ?? AppStrings.termsAndConditions,
+                            AppLocalizations.of(context)?.termsOfService ??
+                                AppStrings.termsAndConditions,
                             style: TextStyle(
                               color: AppColors.blueGradient,
                               fontSize: AppFontStyles.fontSize_17.sp,
@@ -313,7 +320,8 @@ class _SigninSignupScreenState extends State<SigninSignupScreen> {
                   );
                 },
                 child: Text(
-                  AppLocalizations.of(context)?.forgotPassword ?? AppStrings.forgotPassword,
+                  AppLocalizations.of(context)?.forgotPassword ??
+                      AppStrings.forgotPassword,
                   style: TextStyle(
                     color: AppColors.blueGradient,
                     fontSize: AppFontStyles.fontSize_18,
@@ -358,7 +366,10 @@ class _SigninSignupScreenState extends State<SigninSignupScreen> {
               _emailFieldKey.currentState?.triggerShake();
               _passwordFieldKey.currentState?.triggerShake();
               UiUtilsService.showToast(
-                  context: context, text: AppLocalizations.of(context)?.pleaseEnterEmailAndPassword ?? "Please enter email and password");
+                  context: context,
+                  text: AppLocalizations.of(context)
+                          ?.pleaseEnterEmailAndPassword ??
+                      "Please enter email and password");
               return;
             } else if (_emailController.text.trim().isEmpty) {
               setState(() {
@@ -366,7 +377,9 @@ class _SigninSignupScreenState extends State<SigninSignupScreen> {
               });
               _emailFieldKey.currentState?.triggerShake();
               UiUtilsService.showToast(
-                  context: context, text: AppLocalizations.of(context)?.pleaseEnterEmail ?? "Please enter email");
+                  context: context,
+                  text: AppLocalizations.of(context)?.pleaseEnterEmail ??
+                      "Please enter email");
               return;
             } else if (_passwordController.text.trim().isEmpty) {
               setState(() {
@@ -374,7 +387,9 @@ class _SigninSignupScreenState extends State<SigninSignupScreen> {
               });
               _passwordFieldKey.currentState?.triggerShake();
               UiUtilsService.showToast(
-                  context: context, text: AppLocalizations.of(context)?.pleaseEnterPassword ?? "Please enter password");
+                  context: context,
+                  text: AppLocalizations.of(context)?.pleaseEnterPassword ??
+                      "Please enter password");
               return;
             }
 
@@ -384,22 +399,25 @@ class _SigninSignupScreenState extends State<SigninSignupScreen> {
                   .hasMatch(_emailController.text)) {
                 _emailFieldKey.currentState?.triggerShake();
                 UiUtilsService.showToast(
-                    context: context, text: AppLocalizations.of(context)?.pleaseEnterValidEmail ?? "Please enter a valid email");
+                    context: context,
+                    text: AppLocalizations.of(context)?.pleaseEnterValidEmail ??
+                        "Please enter a valid email");
                 return;
               }
 
-              UiUtilsService.showLoading(context, AppLocalizations.of(context)?.signIn ?? "Sign in");
+              UiUtilsService.showLoading(
+                  context, AppLocalizations.of(context)?.signIn ?? "Sign in");
               try {
-                final responseSigninResponse =
-                    await ApiService().signIn(
-                        _emailController.text, _passwordController.text);
+                final responseSigninResponse = await ApiService()
+                    .signIn(_emailController.text, _passwordController.text);
                 if (!mounted) return;
                 UiUtilsService.dismissLoading(context);
 
                 if (responseSigninResponse.status == "success" &&
                     responseSigninResponse.statusCode == 200) {
-                  
-                  final bool shutdownApp = responseSigninResponse.data?.userDetails?.shutdownApp ?? false;
+                  final bool shutdownApp =
+                      responseSigninResponse.data?.userDetails?.shutdownApp ??
+                          false;
                   if (shutdownApp) {
                     await SharedPrefsHelper.setAppShutdownStatus(true);
                     if (!mounted) return;
@@ -414,7 +432,7 @@ class _SigninSignupScreenState extends State<SigninSignupScreen> {
                       await SharedPrefsHelper.getUserGoal();
 
                   if (!mounted) return;
-                  
+
                   if (hasUserFilledInPersonalInfo &&
                       hasUserSelectedPersonalGoal != null) {
                     Navigator.pushAndRemoveUntil(
@@ -511,7 +529,8 @@ class _SigninSignupScreenState extends State<SigninSignupScreen> {
               if (!isCheckBoxChecked) {
                 UiUtilsService.showToast(
                     context: context,
-                    text: AppLocalizations.of(context)?.pleaseAcceptTerms ?? "Please accept the terms and conditions");
+                    text: AppLocalizations.of(context)?.pleaseAcceptTerms ??
+                        "Please accept the terms and conditions");
                 return;
               }
 
@@ -519,15 +538,17 @@ class _SigninSignupScreenState extends State<SigninSignupScreen> {
                   .hasMatch(_emailController.text)) {
                 _emailFieldKey.currentState?.triggerShake();
                 UiUtilsService.showToast(
-                    context: context, text: AppLocalizations.of(context)?.pleaseEnterValidEmail ?? "Please enter a valid email");
+                    context: context,
+                    text: AppLocalizations.of(context)?.pleaseEnterValidEmail ??
+                        "Please enter a valid email");
                 return;
               }
 
-              UiUtilsService.showLoading(context, AppLocalizations.of(context)?.sendingOtp ?? "Sending OTP");
+              UiUtilsService.showLoading(context,
+                  AppLocalizations.of(context)?.sendingOtp ?? "Sending OTP");
               try {
-                var sendOtpResponse =
-                    await ApiService().requestSignupOTP(
-                        _emailController.text, _passwordController.text);
+                var sendOtpResponse = await ApiService().requestSignupOTP(
+                    _emailController.text, _passwordController.text);
                 if (!mounted) return;
                 UiUtilsService.dismissLoading(context);
 
@@ -539,8 +560,8 @@ class _SigninSignupScreenState extends State<SigninSignupScreen> {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) =>
-                          OtpVerificationScreen(userEmail: _emailController.text),
+                      builder: (context) => OtpVerificationScreen(
+                          userEmail: _emailController.text),
                     ),
                   );
                 } else {
@@ -589,7 +610,8 @@ class _SigninSignupScreenState extends State<SigninSignupScreen> {
         children: [
           RichText(
             text: TextSpan(
-              text: AppLocalizations.of(context)?.alreadyHaveAnAccount ?? AppStrings.alreadyHaveAnAccount,
+              text: AppLocalizations.of(context)?.alreadyHaveAnAccount ??
+                  AppStrings.alreadyHaveAnAccount,
               style: TextStyle(
                 color: AppColors.raisinblack,
                 fontSize: AppFontStyles.fontSize_18.sp,
@@ -598,7 +620,8 @@ class _SigninSignupScreenState extends State<SigninSignupScreen> {
               ),
               children: [
                 TextSpan(
-                  text: AppLocalizations.of(context)?.signIn ?? AppStrings.signIn,
+                  text:
+                      AppLocalizations.of(context)?.signIn ?? AppStrings.signIn,
                   style: TextStyle(
                     color: AppColors.blueGradient,
                     fontSize: AppFontStyles.fontSize_18.sp,
@@ -660,11 +683,14 @@ class _SigninSignupScreenState extends State<SigninSignupScreen> {
             children: [
               AuthButton(
                 iconPath: "assets/apple_icon_1.svg",
-                text: AppLocalizations.of(context)?.continueWithApple ?? AppStrings.continueWithApple,
+                text: AppLocalizations.of(context)?.continueWithApple ??
+                    AppStrings.continueWithApple,
                 color: AppColors.white,
                 onTap: () async {
                   UiUtilsService.showLoading(
-                      context, AppLocalizations.of(context)?.signingInApple ?? "Signing you in via Apple");
+                      context,
+                      AppLocalizations.of(context)?.signingInApple ??
+                          "Signing you in via Apple");
 
                   var signInWithAppleRes =
                       await FirebaseFunctionsService.signInWithApple();
@@ -692,7 +718,9 @@ class _SigninSignupScreenState extends State<SigninSignupScreen> {
                     if (!mounted) return;
 
                     UiUtilsService.showToast(
-                        context: context, text: AppLocalizations.of(context)?.signinSuccessful ?? "Signin Successful");
+                        context: context,
+                        text: AppLocalizations.of(context)?.signinSuccessful ??
+                            "Signin Successful");
 
                     Navigator.pushAndRemoveUntil(
                       context,
@@ -715,10 +743,14 @@ class _SigninSignupScreenState extends State<SigninSignupScreen> {
         ),
         AuthButton(
           iconPath: "assets/images/google_ic.svg",
-          text: AppLocalizations.of(context)?.continueWithGoogle ?? AppStrings.continueWithGoogle,
+          text: AppLocalizations.of(context)?.continueWithGoogle ??
+              AppStrings.continueWithGoogle,
           color: AppColors.white,
           onTap: () async {
-            UiUtilsService.showLoading(context, AppLocalizations.of(context)?.signingInGoogle ?? "Signing you in via Google");
+            UiUtilsService.showLoading(
+                context,
+                AppLocalizations.of(context)?.signingInGoogle ??
+                    "Signing you in via Google");
             var signInWithGoogleRes =
                 await FirebaseFunctionsService.signInWithGoogle();
             if (!mounted) return;
@@ -740,7 +772,9 @@ class _SigninSignupScreenState extends State<SigninSignupScreen> {
               if (!mounted) return;
 
               UiUtilsService.showToast(
-                  context: context, text: AppLocalizations.of(context)?.signinSuccessful ?? "Signin Successful");
+                  context: context,
+                  text: AppLocalizations.of(context)?.signinSuccessful ??
+                      "Signin Successful");
               Navigator.pushAndRemoveUntil(
                 context,
                 MaterialPageRoute(

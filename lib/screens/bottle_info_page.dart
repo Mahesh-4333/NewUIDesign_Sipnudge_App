@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -12,8 +13,10 @@ import 'package:hydrify/helpers/shared_pref_helper.dart';
 import 'package:hydrify/helpers/water_consumption_data_helper.dart';
 import 'package:hydrify/l10n/app_localizations.dart';
 import 'package:hydrify/models/bottle_info.dart';
+import 'package:hydrify/models/device_other_data.dart';
 import 'package:hydrify/providers/weather_provider.dart';
 import 'package:provider/provider.dart';
+import 'package:intl/intl.dart';
 
 class BottleInfoScreen extends StatefulWidget {
   final BottleInfo bottleInfo;
@@ -31,11 +34,59 @@ class _BottleInfoScreenState extends State<BottleInfoScreen> {
   bool _isGeneralExpanded = true;
   bool _isHardwareExpanded = true;
   int _selectedIndex = 1; // Default: Midnight Black (index 1)
+  String? _savedFwVersion;
+  int? _savedHwVersion;
+  int? _savedProgrammedAt;
 
   @override
   void initState() {
     super.initState();
     _loadSavedBottleColor();
+    _loadSavedDeviceData();
+    try {
+      context.read<BleCubit>().readOtherData();
+    } catch (_) {}
+  }
+
+  String _calculateEstimatedBatteryDays(int? batteryPercentage) {
+    final int pct = batteryPercentage ?? 0;
+    if (pct <= 0) return '0 Days Left';
+    final double days = (pct * 20) / 100.0;
+    final int roundedDays = days.round();
+    if (roundedDays <= 0) return '< 1 Day Left';
+    if (roundedDays == 1) return '1 Day Left';
+    return '$roundedDays Days Left';
+  }
+
+  Future<void> _loadSavedDeviceData() async {
+    final raw = await SharedPrefsHelper.getDeviceOtherDataRaw();
+    if (raw != null && raw.isNotEmpty) {
+      try {
+        final dynamic decoded = jsonDecode(raw);
+        if (decoded is Map<String, dynamic>) {
+          final parsed = DeviceOtherData.fromJson(decoded, rawData: raw);
+          if (mounted) {
+            setState(() {
+              _savedFwVersion = parsed.version;
+              _savedHwVersion = parsed.hwVersion;
+              _savedProgrammedAt = parsed.programmedAt;
+            });
+            return;
+          }
+        }
+      } catch (_) {}
+    }
+
+    final fw = await SharedPrefsHelper.getDeviceFirmwareVersion();
+    final hw = await SharedPrefsHelper.getDeviceHardwareVersion();
+    final prog = await SharedPrefsHelper.getDeviceProgrammedAt();
+    if (mounted) {
+      setState(() {
+        _savedFwVersion = fw;
+        _savedHwVersion = hw;
+        _savedProgrammedAt = prog;
+      });
+    }
   }
 
   Future<void> _loadSavedBottleColor() async {
@@ -66,7 +117,10 @@ class _BottleInfoScreenState extends State<BottleInfoScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      bottomNavigationBar: SizedBox(height: 0, width: 0,),
+      bottomNavigationBar: SizedBox(
+        height: 0,
+        width: 0,
+      ),
       body: Container(
         width: double.infinity,
         height: double.infinity,
@@ -145,7 +199,9 @@ class _BottleInfoScreenState extends State<BottleInfoScreen> {
                 'Sipnudge Bottle',
                 style: TextStyle(
                   fontSize: 22.sp,
-                  fontVariations: [AppFontStyles.boldFontVariation,],
+                  fontVariations: [
+                    AppFontStyles.boldFontVariation,
+                  ],
                   fontFamily: AppFontStyles.urbanistFontFamily,
                   color: Color(0xFF5D7B91),
                   letterSpacing: 0.5,
@@ -278,33 +334,75 @@ class _BottleInfoScreenState extends State<BottleInfoScreen> {
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(24.r),
                     boxShadow: AppStyle.boxShadowVariation2),
-                child: Column(
-                  children: [
-                    _buildHardwareInfoRow('Product Name', 'Sipnudge'),
-                    // Divider(
-                    //     height: 1, color: Color(0xFFF1F5F9)),
-                    _buildHardwareInfoRow('Model', 'SN-MB1'),
-                    // Divider(
-                    //     height: 1, color: Color(0xFFF1F5F9)),
-                    _buildHardwareInfoRow('Materials', 'SS 304',
-                        subtitle: 'BPA-free & Food-grade'),
-                    // Divider(
-                    //     height: 1, color: Color(0xFFF1F5F9)),
-                    _buildHardwareInfoRow('Cleaning', 'UV Purification'),
-                    // Divider(
-                    //     height: 1, color: Color(0xFFF1F5F9)),
-                    _buildHardwareInfoRow('Connectivity', 'Bluetooth 5.0 LE'),
-                    // Divider(
-                    //     height: 1, color: Color(0xFFF1F5F9)),
-                    _buildHardwareInfoRow('Charging', 'USB-C (~2h Full)'),
-                    // Divider(
-                    //     height: 1, color: Color(0xFFF1F5F9)),
-                    _buildHardwareInfoRow(
-                        'Estimated Battery \nLife Remaining', '25 Days Left'),
-                    // Divider(
-                    //     height: 1, color: Color(0xFFF1F5F9)),
-                    _buildHardwareInfoRow('Weight', '~250g'),
-                  ],
+                child: BlocBuilder<BleCubit, BleState>(
+                  builder: (context, bleState) {
+                    final parsed = bleState.parsedOtherData;
+                    final parsedFromOther = (parsed?.version != null ||
+                            parsed?.hwVersion != null ||
+                            parsed?.programmedAt != null)
+                        ? parsed
+                        : (bleState.otherData != null
+                            ? DeviceOtherData.fromString(
+                                bleState.otherData.toString())
+                            : null);
+
+                    final fwVersion = parsedFromOther?.version != null
+                        ? (parsedFromOther!.version!.startsWith('v')
+                            ? parsedFromOther.version!
+                            : 'v${parsedFromOther.version}')
+                        : (_savedFwVersion != null
+                            ? (_savedFwVersion!.startsWith('v')
+                                ? _savedFwVersion!
+                                : 'v$_savedFwVersion')
+                            : 'v1.0.0');
+                    final hwVersion = parsedFromOther?.hwVersion != null
+                        ? 'HW ${parsedFromOther!.hwVersion}'
+                        : (_savedHwVersion != null
+                            ? 'HW $_savedHwVersion'
+                            : 'HW 2.0');
+
+                    DateTime? progTime = parsedFromOther?.programmedAtDateTime;
+                    if (progTime == null &&
+                        _savedProgrammedAt != null &&
+                        _savedProgrammedAt! > 0) {
+                      final int ms = _savedProgrammedAt! < 10000000000
+                          ? (_savedProgrammedAt! * 1000)
+                          : _savedProgrammedAt!;
+                      progTime = DateTime.fromMillisecondsSinceEpoch(ms);
+                    }
+
+                    String programmedAtStr = '—';
+                    if (progTime != null) {
+                      programmedAtStr =
+                          DateFormat('dd MMM yyyy, hh:mm a').format(progTime);
+                    }
+
+                    final currentBattery = bleState.battery ??
+                        context.read<BottleDataCubit>().state.battery;
+                    final estimatedBatteryStr =
+                        _calculateEstimatedBatteryDays(currentBattery);
+
+                    return Column(
+                      children: [
+                        _buildHardwareInfoRow('Product Name', 'Sipnudge'),
+                        _buildHardwareInfoRow('Model', 'SN-MB1'),
+                        _buildHardwareInfoRow('Firmware Version', fwVersion),
+                        _buildHardwareInfoRow('Hardware Version', hwVersion),
+                        _buildHardwareInfoRow(
+                            'Programmed At', programmedAtStr.trim()),
+                        _buildHardwareInfoRow('Materials', 'SS 304',
+                            subtitle: 'BPA-free & Food-grade'),
+                        _buildHardwareInfoRow('Cleaning', 'UV Purification'),
+                        _buildHardwareInfoRow(
+                            'Connectivity', 'Bluetooth 5.0 LE'),
+                        _buildHardwareInfoRow('Charging', 'USB-C (~2h Full)'),
+                        _buildHardwareInfoRow(
+                            'Estimated Battery \nLife Remaining',
+                            estimatedBatteryStr),
+                        _buildHardwareInfoRow('Weight', '~250g'),
+                      ],
+                    );
+                  },
                 ),
               ),
             ),
@@ -392,17 +490,23 @@ class _BottleInfoScreenState extends State<BottleInfoScreen> {
                   _buildSpecCard('VOLUME', '${BottleInfo.capacity.toInt()}',
                       'ml', AssetsPath.sVolume),
                   // Using Capacity as per screenshot example 650
-                  _buildSpecCard('BATTERY', context
-                      .read<BottleDataCubit>()
-                      .state
-                      .battery
-                      .toString(), '%', AssetsPath.sBattery,
-                      subtitle: '30 days Left'),
+                  BlocBuilder<BottleDataCubit, BottleDataState>(
+                    builder: (context, bottleState) {
+                      final battery = bottleState.battery;
+                      return _buildSpecCard(
+                        'BATTERY',
+                        battery.toString(),
+                        '%',
+                        AssetsPath.sBattery,
+                        subtitle: _calculateEstimatedBatteryDays(battery),
+                      );
+                    },
+                  ),
                   BlocBuilder<BottleDataCubit, BottleDataState>(
                     builder: (context, state) {
                       // Display actual temperature or fallback to "--" if null
                       final tempDisplay =
-                      state.bqTemp != 0 ? "${state.bqTemp}" : "--";
+                          state.bqTemp != 0 ? "${state.bqTemp}" : "--";
                       return _buildSpecCard(
                           'TEMP', tempDisplay, '°C', AssetsPath.sTemperature,
                           subtitle: 'Range: 0-50°C');
@@ -441,20 +545,21 @@ class _BottleInfoScreenState extends State<BottleInfoScreen> {
             return false;
           }, builder: (context, state) {
             return FutureBuilder<(double, double)>(future: () async {
-              final history = await context
-                  .read<BottleDataCubit>()
-                  .getCurrentDayHistory();
+              final history =
+                  await context.read<BottleDataCubit>().getCurrentDayHistory();
 
               double waterVolumeConsumed = history;
-              double remainingIntakeWater = await WaterConsumptionCalculator
-                  .calculateRemainingPercentage(waterVolumeConsumed);
+              double remainingIntakeWater =
+                  await WaterConsumptionCalculator.calculateRemainingPercentage(
+                      waterVolumeConsumed);
 
               return (remainingIntakeWater, waterVolumeConsumed);
             }(), builder: (context, snapshot) {
               final (remainingIntakeWater, waterVolumeConsumed) =
                   snapshot.data ?? (0.0, 0.0);
 
-              return _buildTopInfoItem('REMAINING',
+              return _buildTopInfoItem(
+                  'REMAINING',
                   '${remainingIntakeWater.toStringAsFixed(0)}ml',
                   Color(0xFF5D7B91));
             });
@@ -469,7 +574,7 @@ class _BottleInfoScreenState extends State<BottleInfoScreen> {
           }, builder: (context, state) {
             return FutureBuilder<(double, double)>(future: () async {
               final history =
-              await context.read<BottleDataCubit>().getCurrentDayHistory();
+                  await context.read<BottleDataCubit>().getCurrentDayHistory();
 
               double waterVolumeConsumed = history;
               double completionPercent = await WaterConsumptionCalculator
@@ -488,7 +593,8 @@ class _BottleInfoScreenState extends State<BottleInfoScreen> {
                 mainAxisSize: MainAxisSize.max,
                 children: [
                   _buildTopInfoItem(
-                      'CONSUMED', '${completionPercent.toStringAsFixed(0)}%',
+                      'CONSUMED',
+                      '${completionPercent.toStringAsFixed(0)}%',
                       Color(0xFF5D7B91)),
                 ],
               );
@@ -649,12 +755,12 @@ class _BottleInfoScreenState extends State<BottleInfoScreen> {
 
   Widget _buildHardwareInfoRow(String label, String value, {String? subtitle}) {
     return Padding(
-      padding: EdgeInsets.symmetric(vertical: 12.h, horizontal: 8.w),
+      padding: EdgeInsets.symmetric(vertical: 10.h, horizontal: 8.w),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Expanded(
-            flex: 5,
+            flex: 9,
             child: Text(
               label,
               style: TextStyle(
@@ -665,14 +771,14 @@ class _BottleInfoScreenState extends State<BottleInfoScreen> {
               ),
             ),
           ),
+          SizedBox(width: 8.w),
           Expanded(
-            flex: 3,
+            flex: 11,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   value,
-                  textAlign: TextAlign.right,
                   style: TextStyle(
                       fontSize: 14.sp,
                       fontVariations: [AppFontStyles.boldFontVariation],
@@ -683,7 +789,6 @@ class _BottleInfoScreenState extends State<BottleInfoScreen> {
                   SizedBox(height: 2.h),
                   Text(
                     subtitle,
-                    textAlign: TextAlign.right,
                     style: TextStyle(
                       fontSize: 10.sp,
                       fontVariations: [AppFontStyles.semiBoldFontVariation],

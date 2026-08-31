@@ -22,6 +22,8 @@ import 'package:hydrify/screens/bottom_nav_screen_new.dart';
 import 'package:hydrify/screens/onboarding/environmental_harmony_location_screen.dart';
 import 'package:hydrify/screens/widgets/auth_button_widget.dart';
 import 'package:hydrify/helpers/hydration_helper.dart';
+import 'package:hydrify/services/api_service.dart';
+import 'package:hydrify/services/home_widget_service.dart';
 import 'package:hydrify/services/database_sync_service.dart';
 import 'package:hydrify/services/notification/notification_service.dart';
 import 'package:hydrify/services/ui_utils_service.dart';
@@ -571,15 +573,16 @@ class _UserInfoDailyGoalScreenNewState extends State<UserInfoDailyGoalScreen> {
                 final navigator = Navigator.of(context, rootNavigator: true);
 
                 UiUtilsService.showLoading(context, AppLocalizations.of(context)?.pleaseWait ?? "Please wait");
+                final goalInt = convertedWaterGoal.toInt();
                 await userInfoCubit.saveUser(userInfoCubit.state);
                 await SharedPrefsHelper.setPersonalInfoSubmitted(true);
-                await SharedPrefsHelper.setWaterGoal(
-                    convertedWaterGoal.toInt());
+                await SharedPrefsHelper.setWaterGoal(goalInt);
+                await SharedPrefsHelper.setUserGoal(goalInt);
                 await DatabaseHelper().saveDailyWaterGoal(
-                    DateTime.now(), convertedWaterGoal.toInt());
+                    DateTime.now(), goalInt);
                 context
                     .read<HydrationCubit>()
-                    .setGoal(convertedWaterGoal.toInt());
+                    .setGoal(goalInt);
 
                 final slots =
                     HydrationHelper.generateHydrationSlots(convertedWaterGoal);
@@ -618,15 +621,6 @@ class _UserInfoDailyGoalScreenNewState extends State<UserInfoDailyGoalScreen> {
 
                 await SharedPrefsHelper.setLastLevelUpDate("");
 
-                // Initialize notification service before scheduling, to ensure plugin is ready and permissions are requested on first launch
-                // await NotificationService().init();
-
-                if (!context.mounted) return;
-                UiUtilsService.dismissLoading(context);
-                setState(() {
-                  isButtonClicked = false;
-                });
-
                 // Update entire 30-day historical DB to recalculate 'isPerfect' retroactively
                 final existingSummaries =
                     await dbHelper.getHydrationSummariesForRange();
@@ -645,8 +639,49 @@ class _UserInfoDailyGoalScreenNewState extends State<UserInfoDailyGoalScreen> {
                 }
 
                 await dbHelper.clearHydrationDaySummaries();
-
                 await dbHelper.bulkUpsert30Days(updatedSummaries);
+
+                // Directly update server dailygoals collection and today's summary target
+                final userId = await SharedPrefsHelper.getUserId();
+                final today = DateTime.now();
+                final todayStr = "${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}";
+                final dateUtc = "${todayStr}T00:00:00.000Z";
+
+                if (userId != null && userId.isNotEmpty && userId != "guest_user") {
+                  try {
+                    // 1. Direct push to server DailyGoal collection
+                    await ApiService().syncDailyGoals(userId, [
+                      {
+                        'date': todayStr,
+                        'goal': goalInt,
+                      }
+                    ]);
+
+                    // 2. Direct update to server DailySummary target
+                    final todaySummary = await dbHelper.getSummaryForDate(today);
+                    final consumed = todaySummary?.consumed ?? 0.0;
+                    final isPerfect = consumed >= goalInt;
+                    await ApiService().updateTodayConsumed(
+                      userId,
+                      dateUtc,
+                      consumed,
+                      isPerfect,
+                      target: convertedWaterGoal,
+                      force: true,
+                    );
+                  } catch (e) {
+                    Console.log(tag: "DAILY_GOAL_SUBMIT", value: "Error updating server goal: $e");
+                  }
+                }
+
+                // Immediately update local & native widget so widget target matches the app instantly
+                await HomeWidgetService.updateWidgetData();
+
+                if (!context.mounted) return;
+                UiUtilsService.dismissLoading(context);
+                setState(() {
+                  isButtonClicked = false;
+                });
 
                 await hydrationCubit.refreshAchievementStats(
                     updateUnlock: userInfoCubit.state.hideAchievement);
@@ -655,11 +690,11 @@ class _UserInfoDailyGoalScreenNewState extends State<UserInfoDailyGoalScreen> {
                     await SharedPrefsHelper.hasShownHomeShowcase();
                 if (hasShownShowcase || widget.isViaSettingsScreen) {
                   await SharedPrefsHelper.updateAndSaveDeviceConfig(
-                      waterGoal: convertedWaterGoal.toInt());
+                      waterGoal: goalInt);
                 }
                 bottomNavCubit.showBar();
 
-                DatabaseSyncService().syncAll();
+                DatabaseSyncService().syncAll(force: true);
                 if (widget.isViaSettingsScreen) {
                   navigator.pushAndRemoveUntil(
                       MaterialPageRoute(

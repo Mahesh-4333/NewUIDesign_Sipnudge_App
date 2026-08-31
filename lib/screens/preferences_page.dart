@@ -296,7 +296,6 @@ class PreferencesPage extends StatelessWidget {
                                               0.0,
                                               false,
                                               target: goal.toDouble(),
-                                              battery: 0,
                                               force: true,
                                             );
                                             await SharedPrefsHelper.clearPendingConsumedUpdate();
@@ -413,7 +412,6 @@ class PreferencesPage extends StatelessWidget {
                                                 0.0,
                                                 false,
                                                 target: goal.toDouble(),
-                                                battery: 0,
                                                 force: true,
                                               );
                                             }

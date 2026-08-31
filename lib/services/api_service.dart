@@ -497,7 +497,7 @@ class ApiService {
           'isPerfect': isPerfect,
           if (target != null) 'target': target,
           if (dayIndex != null) 'dayIndex': dayIndex,
-          if (battery != null) 'battery': battery,
+          if (battery != null && battery > 0) 'battery': battery,
           if (force) 'force': true,
         },
       );

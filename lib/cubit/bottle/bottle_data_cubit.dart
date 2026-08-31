@@ -54,12 +54,30 @@ class BottleDataCubit extends Cubit<BottleDataState> {
                 "📅 New day detected in _restoreLastValues. Resetting refills to 0.");
       }
 
+      int restoredBattery = lastData.battery;
+      if (restoredBattery <= 0) {
+        try {
+          final batteryMaps = await db.query(
+            DatabaseHelper.tableName,
+            where: 'battery > 0',
+            orderBy: 'timestamp DESC',
+            limit: 1,
+          );
+          if (batteryMaps.isNotEmpty) {
+            restoredBattery = batteryMaps.first['battery'] as int? ?? 0;
+          }
+        } catch (_) {}
+      }
+      if (restoredBattery <= 0) {
+        restoredBattery = (await SharedPrefsHelper.getLastKnownBattery()) ?? 0;
+      }
+
       Console.log(
           tag: "BottleDataCubit",
           value: "✅ Restoring from last record: "
               "volume=${lastData.liquidVolume}, "
               "percent=${lastData.liquidPercent}, "
-              "battery=${lastData.battery}, "
+              "battery=$restoredBattery, "
               "refills=$refills, "
               "timestamp=${lastData.timestamp}"
               "temp=${lastData.temp},"
@@ -68,12 +86,17 @@ class BottleDataCubit extends Cubit<BottleDataState> {
       emit(state.copyWith(
         volume: lastData.liquidVolume,
         volumePercent: lastData.liquidPercent,
-        battery: lastData.battery,
+        battery: restoredBattery,
         refills: refills,
         temp: lastData.temp,
         bqTemp: lastData.bqTemp,
       ));
     } else {
+      int restoredBattery =
+          (await SharedPrefsHelper.getLastKnownBattery()) ?? 0;
+      if (restoredBattery > 0) {
+        emit(state.copyWith(battery: restoredBattery));
+      }
       Console.log(
           tag: "BottleDataCubit",
           value: "⚠️ No previous bottle data found in DB.");
@@ -96,7 +119,13 @@ class BottleDataCubit extends Cubit<BottleDataState> {
     // This prevents a null battery/volume from resetting the UI and DB to 0.
     final newVolume = bleState.volume ?? state.volume;
     final newPercent = bleState.percent ?? state.volumePercent;
-    final newBattery = bleState.battery ?? state.battery;
+    int newBattery = bleState.battery ?? state.battery;
+    if (newBattery <= 0) {
+      final cached = await SharedPrefsHelper.getLastKnownBattery();
+      if (cached != null && cached > 0) {
+        newBattery = cached;
+      }
+    }
     final newRefills = bleState.refill ?? state.refills;
     final newTemp = bleState.temp ?? state.temp;
     final newBqTemp = bleState.bqTemp ?? state.bqTemp;
@@ -213,8 +242,8 @@ class BottleDataCubit extends Cubit<BottleDataState> {
             final startDate = DateTime.utc(now.year, now.month, now.day);
             final endDate =
                 DateTime.utc(now.year, now.month, now.day, 23, 59, 59);
-            final summaries =
-                await ApiService().getDailySummaries(userId, startDate, endDate);
+            final summaries = await ApiService()
+                .getDailySummaries(userId, startDate, endDate);
             if (summaries != null && summaries.isNotEmpty) {
               final summaryMap = summaries.first;
               final serverConsumed = (summaryMap['consumed'] as num).toDouble();
@@ -231,8 +260,7 @@ class BottleDataCubit extends Cubit<BottleDataState> {
 
     final localSummary = await _dbHelper.getSummaryForDate(now);
     if (localSummary != null) {
-      Console.log(
-          tag: "consumedThings", value: "${localSummary.toMap()}");
+      Console.log(tag: "consumedThings", value: "${localSummary.toMap()}");
       return localSummary.consumed;
     }
 
@@ -289,9 +317,8 @@ class BottleDataCubit extends Cubit<BottleDataState> {
       final now = DateTime.now();
       final startOfDay =
           DateTime(now.year, now.month, now.day).toIso8601String();
-      final endOfDay =
-          DateTime(now.year, now.month, now.day, 23, 59, 59, 999)
-              .toIso8601String();
+      final endOfDay = DateTime(now.year, now.month, now.day, 23, 59, 59, 999)
+          .toIso8601String();
       final dateStr =
           "${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}";
 

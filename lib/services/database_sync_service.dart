@@ -230,7 +230,9 @@ class DatabaseSyncService {
           }
 
           final pathStr = (serverImageUrl ?? s['image_path'])?.toString();
-          final finalImagePath = (pathStr != null && (pathStr.startsWith('http') || pathStr.startsWith('/uploads/')))
+          final finalImagePath = (pathStr != null &&
+                  (pathStr.startsWith('http') ||
+                      pathStr.startsWith('/uploads/')))
               ? pathStr
               : null;
 
@@ -656,7 +658,8 @@ class DatabaseSyncService {
       }
 
       final pathStr = (serverImageUrl ?? scanData['image_path'])?.toString();
-      final finalImagePath = (pathStr != null && (pathStr.startsWith('http') || pathStr.startsWith('/uploads/')))
+      final finalImagePath = (pathStr != null &&
+              (pathStr.startsWith('http') || pathStr.startsWith('/uploads/')))
           ? pathStr
           : null;
 
@@ -665,8 +668,7 @@ class DatabaseSyncService {
         'dishName': scanData['dish_name'],
         'foodKey': scanData['food_key'] ?? scanData['foodKey'] ?? 'Meal',
         'imagePath': finalImagePath,
-        'imageBase64':
-            finalImagePath != null ? null : scanData['image_base64'],
+        'imageBase64': finalImagePath != null ? null : scanData['image_base64'],
         'weightG': scanData['weight_g'],
         'waterContentMl': scanData['water_content_ml'],
         'waterPercentage': scanData['water_percentage'],

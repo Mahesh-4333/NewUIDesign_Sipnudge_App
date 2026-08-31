@@ -44,6 +44,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:hydrify/helpers/internet_connection_helper.dart';
 import 'package:hydrify/services/database_sync_service.dart';
 import 'package:hydrify/services/home_widget_service.dart';
+import 'package:hydrify/services/sync_bus.dart';
 import 'package:hydrify/services/in_app_update_service.dart';
 import 'package:showcaseview/showcaseview.dart';
 import 'package:hydrify/helpers/showcase_keys.dart';
@@ -103,6 +104,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       _shouldAutoTrigger = true;
       HomeScreen.autoTriggerTimelineDrag = false;
     }
+    SyncBus.instance.addListener(_onSyncComplete);
     WidgetsBinding.instance.addObserver(this);
     SharedPrefsHelper.getWaterGoal().then((e) {
       setState(() {
@@ -150,15 +152,22 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
       hasConnectedBefore = prefs.getBool('ble_connected_once') ?? false;
 
-      final bottleState = context.read<BottleDataCubit>().state;
-      final double currentVolume = bottleState.volume;
-
-      if (hasConnectedBefore) {
+      if (mounted) {
         context.read<BleCubit>().start();
+      }
+
+      // Always trigger full database sync from server to populate local DB on launch
+      DatabaseSyncService().syncAll(force: true);
+
+      // Always fetch current day history (from server & local DB) and update BleCubit + HomeWidget
+      try {
         var history =
             await context.read<BottleDataCubit>().getCurrentDayHistory();
-
-        context.read<BleCubit>().updateCurrentHydrationValue(history);
+        if (mounted) {
+          context.read<BleCubit>().updateCurrentHydrationValue(history);
+          context.read<BleCubit>().triggerRefresh();
+        }
+        await HomeWidgetService.updateWidgetData();
 
         final stopWhenFull = await SharedPrefsHelper.getStopWhenFull();
         if (stopWhenFull) {
@@ -175,11 +184,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             }
           }
         }
-      } else {
-        // await _showStartJourneyDialog(context);
-        if (mounted) {
-          context.read<BleCubit>().start();
-        }
+      } catch (e) {
+        Console.log(tag: "HOME", value: "Error during initial data load: $e");
       }
 
       await _checkAndScheduleHydrationReminders();
@@ -234,7 +240,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           Provider.of<WeatherProvider>(context, listen: false)
               .fetchWeatherForCurrentLocation();
           // Sync database data
-          DatabaseSyncService().syncAll();
+          DatabaseSyncService().syncAll(force: true);
         }
       });
 
@@ -250,8 +256,24 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     });
   }
 
+  void _onSyncComplete() async {
+    if (!mounted) return;
+    try {
+      final history =
+          await context.read<BottleDataCubit>().getCurrentDayHistory();
+      if (!mounted) return;
+      context.read<BleCubit>().updateCurrentHydrationValue(history);
+      context.read<BleCubit>().triggerRefresh();
+      await HomeWidgetService.updateWidgetData();
+      if (mounted) setState(() {});
+    } catch (e) {
+      Console.log(tag: "HOME", value: "Error in _onSyncComplete: $e");
+    }
+  }
+
   @override
   void dispose() {
+    SyncBus.instance.removeListener(_onSyncComplete);
     WidgetsBinding.instance.removeObserver(this);
     _timezoneTimer?.cancel();
     _statsToggleTimer?.cancel();
@@ -289,7 +311,19 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     if (state == AppLifecycleState.resumed) {
       Console.log(
           tag: "HOME",
-          value: "App resumed, refreshing weather and syncing data...");
+          value: "App resumed, clearing stale image cache, refreshing weather and syncing data...");
+
+      // 1. Clear stale iOS Metal / GPU texture cache purged during long background sleep
+      PaintingBinding.instance.imageCache.clear();
+      PaintingBinding.instance.imageCache.clearLiveImages();
+
+      // 2. Reset timeline drag progress so dimming/blur overlay is removed
+      _timelineDragProgress.value = 0.0;
+
+      // 3. Reload bottle info & graphics
+      _loadBottle();
+
+      // 4. Refresh weather and database sync
       Provider.of<WeatherProvider>(context, listen: false)
           .fetchWeatherForCurrentLocation();
       DatabaseSyncService().syncAll();
@@ -302,6 +336,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             context.read<HydrationCubit>().loadSlotsFromDb();
             context.read<HydrationCubit>().refreshAchievementStats();
             context.read<BottleDataCubit>().getCurrentDayHistory();
+            setState(() {});
           }
         } catch (e) {
           Console.log(
@@ -2001,49 +2036,54 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       return AutoScrollGoalText(text: goalText);
     }
 
-    return SizedBox(
-      width: AppDimensions.dim350.w,
-      child: RichText(
-        textAlign: TextAlign.center,
-        text: TextSpan(
-          style: TextStyle(
-              fontSize: AppFontStyles.fontSize_19.sp,
-              color: AppColors.bluegray,
-              fontFamily: AppFontStyles.museoModernoFontFamily,
-              fontVariations: [AppFontStyles.semiBoldFontVariation]),
-          children: [
-            TextSpan(
-                text: AppLocalizations.of(context)?.youHaveReachedGoal(
-                        todayConsumptionPercentage.toStringAsFixed(0)) ??
-                    "You have reached  ${todayConsumptionPercentage.toStringAsFixed(0)}% of today's goal"),
-            TextSpan(
-              text: "\n(",
-              style: TextStyle(
-                letterSpacing: 0,
+    final splitValues = value.split("/");
+    final consumedPart = splitValues.isNotEmpty ? splitValues[0] : "";
+    final goalPart = splitValues.length > 1 ? splitValues[1] : "";
+
+    return Padding(
+      padding: EdgeInsets.symmetric(horizontal: AppDimensions.dim20.w),
+      child: FittedBox(
+        fit: BoxFit.scaleDown,
+        child: RichText(
+          textAlign: TextAlign.center,
+          text: TextSpan(
+            style: TextStyle(
+                fontSize: AppFontStyles.fontSize_18.sp,
                 color: AppColors.bluegray,
-                fontVariations: [AppFontStyles.semiBoldFontVariation],
-              ),
-            ),
-            TextSpan(
-                text: value.split("/")[0],
+                fontFamily: AppFontStyles.museoModernoFontFamily,
+                fontVariations: [AppFontStyles.semiBoldFontVariation]),
+            children: [
+              TextSpan(
+                  text: AppLocalizations.of(context)?.youHaveReachedGoal(
+                          todayConsumptionPercentage.toStringAsFixed(0)) ??
+                      "You have reached ${todayConsumptionPercentage.toStringAsFixed(0)}% of today's goal"),
+              TextSpan(
+                text: "\n(",
                 style: TextStyle(
                   letterSpacing: 0,
-                  color: AppColors.lightBlue400,
+                  color: AppColors.bluegray,
                   fontVariations: [AppFontStyles.semiBoldFontVariation],
                 ),
-                children: [
-                  TextSpan(
-                    text: "/${value.split("/")[1]})",
-                    style: TextStyle(
-                      letterSpacing: 0,
-                      color: AppColors.bluegray,
-                      fontVariations: [AppFontStyles.semiBoldFontVariation],
-                    ),
+              ),
+              TextSpan(
+                  text: consumedPart,
+                  style: TextStyle(
+                    letterSpacing: 0,
+                    color: AppColors.lightBlue400,
+                    fontVariations: [AppFontStyles.semiBoldFontVariation],
                   ),
-                ]),
-            // const TextSpan(
-            //     text: " of today's \ngoal, keep focusing on your health!"),
-          ],
+                  children: [
+                    TextSpan(
+                      text: "/$goalPart)",
+                      style: TextStyle(
+                        letterSpacing: 0,
+                        color: AppColors.bluegray,
+                        fontVariations: [AppFontStyles.semiBoldFontVariation],
+                      ),
+                    ),
+                  ]),
+            ],
+          ),
         ),
       ),
     );
