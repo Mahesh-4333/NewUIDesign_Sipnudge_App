@@ -16,7 +16,7 @@ class DailyWaterConsumptionWidget extends StatelessWidget {
     return BlocBuilder<UserInfoCubit, UserInfoState>(
       builder: (context, state) {
         final typicalIntake = state.typicalWaterIntake ?? 2.0;
-        final unit = state.waterUnit ?? "L";
+        final unit = state.waterUnit ?? "mL";
 
         return Container(
           width: double.maxFinite,

@@ -37,7 +37,23 @@ struct LogDrinkIntent: AppIntent {
     
     func perform() async throws -> some IntentResult {
         let userDefaults = UserDefaults(suiteName: "group.com.sipnudge.sipnudge")
-        let currentIntake = userDefaults?.integer(forKey: "current_intake") ?? 0
+        let now = Date()
+        
+        let localDateFormatter = DateFormatter()
+        localDateFormatter.dateFormat = "yyyy-MM-dd"
+        localDateFormatter.timeZone = TimeZone.current
+        let todayStr = localDateFormatter.string(from: now)
+        
+        let lastUpdateDateStr = userDefaults?.string(forKey: "last_update_date") ?? ""
+        var currentIntake = userDefaults?.integer(forKey: "current_intake") ?? 0
+        var currentCoffee = userDefaults?.integer(forKey: "coffee_intake") ?? 0
+        var currentWater = userDefaults?.integer(forKey: "water_intake") ?? 0
+        
+        if lastUpdateDateStr != todayStr && !lastUpdateDateStr.isEmpty {
+            currentIntake = 0
+            currentCoffee = 0
+            currentWater = 0
+        }
         
         let isCoffee = drinkType.lowercased() == "coffee"
         let coefficient: Double = isCoffee ? 0.8 : 1.0
@@ -47,29 +63,24 @@ struct LogDrinkIntent: AppIntent {
         userDefaults?.set(newIntake, forKey: "current_intake")
         
         if isCoffee {
-            let currentCoffee = userDefaults?.integer(forKey: "coffee_intake") ?? 0
             userDefaults?.set(currentCoffee + amount, forKey: "coffee_intake")
         } else {
-            let currentWater = userDefaults?.integer(forKey: "water_intake") ?? 0
             userDefaults?.set(currentWater + amount, forKey: "water_intake")
         }
         
         userDefaults?.set(drinkType, forKey: "latest_drink_type")
         userDefaults?.set(amount, forKey: "latest_drink_amount")
+        userDefaults?.set(todayStr, forKey: "last_update_date")
         
         // Save latest added indication for the circular indicator (+ 250 ml / + 150 ml)
         userDefaults?.set(amount, forKey: "recent_added_amount")
         userDefaults?.set(Date().timeIntervalSince1970, forKey: "recent_added_time")
         
-        let now = Date()
         let isoFormatter = ISO8601DateFormatter()
         isoFormatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
         let utcTimestamp = isoFormatter.string(from: now)
         
-        let localDateFormatter = DateFormatter()
-        localDateFormatter.dateFormat = "yyyy-MM-dd"
-        localDateFormatter.timeZone = TimeZone.current
-        let localDate = localDateFormatter.string(from: now)
+        let localDate = todayStr
         
         // Asynchronously post to backend server directly so data is saved even if the app is never opened
         var serverId: String? = nil
@@ -141,8 +152,8 @@ struct LogDrinkIntent: AppIntent {
 
 struct Provider: TimelineProvider {
     func placeholder(in context: Context) -> SimpleEntry {
-        SimpleEntry(date: Date(), intake: 0, goal: 2000, coffeeIntake: 200, waterIntake: 0, latestDrinkType: "Coffee", latestDrinkAmount: 200, recentAddedAmount: nil, upcomingSlotName: "Wakeup Time", upcomingSlotTarget: 500, upcomingSlotTime: "07:00 AM", streak: 7,
-                    battery: 72, expectedPercent: 30.0,
+        SimpleEntry(date: Date(), intake: 0, goal: 2500, coffeeIntake: 0, waterIntake: 0, latestDrinkType: "", latestDrinkAmount: 0, recentAddedAmount: nil, upcomingSlotName: "Wakeup Time", upcomingSlotTarget: 500, upcomingSlotTime: "07:00 AM", streak: 7,
+                    battery: 72, expectedPercent: 0.0,
                     dbgUUID: "-", dbgConnected: "-", dbgSubscribed: "-", dbgBleRx: "-")
     }
 
@@ -160,6 +171,7 @@ struct Provider: TimelineProvider {
         formatter.dateFormat = "yyyy-MM-dd"
         formatter.timeZone = TimeZone.current
         let todayStr = formatter.string(from: date)
+        let isNewDay = lastUpdateDateStr != todayStr && !lastUpdateDateStr.isEmpty
         
         var intake = userDefaults?.integer(forKey: "current_intake") ?? 0
         var coffeeIntake = userDefaults?.integer(forKey: "coffee_intake") ?? 0
@@ -167,7 +179,7 @@ struct Provider: TimelineProvider {
         var latestDrinkType = userDefaults?.string(forKey: "latest_drink_type") ?? ""
         var latestDrinkAmount = userDefaults?.integer(forKey: "latest_drink_amount") ?? 0
 
-        if lastUpdateDateStr != todayStr && !lastUpdateDateStr.isEmpty {
+        if isNewDay {
             intake = 0
             coffeeIntake = 0
             waterIntake = 0
@@ -176,7 +188,7 @@ struct Provider: TimelineProvider {
         }
         
         var recentAddedAmount: Int? = nil
-        if let recentTime = userDefaults?.double(forKey: "recent_added_time"), recentTime > 0 {
+        if !isNewDay, let recentTime = userDefaults?.double(forKey: "recent_added_time"), recentTime > 0 {
             let elapsed = date.timeIntervalSince1970 - recentTime
             // Show + xxx ml indicator if added recently (within 5 seconds)
             if elapsed >= 0 && elapsed < 5.0 {
@@ -187,10 +199,13 @@ struct Provider: TimelineProvider {
             }
         }
         
-        let goal = userDefaults?.integer(forKey: "daily_goal") ?? 2000
+        let storedGoal = (userDefaults?.object(forKey: "daily_goal") as? NSNumber)?.intValue
+            ?? userDefaults?.integer(forKey: "daily_goal")
+            ?? 0
+        let goal = storedGoal > 0 ? storedGoal : 2500
         let streak = userDefaults?.integer(forKey: "streak") ?? 0
         
-        var upcomingSlotName = userDefaults?.string(forKey: "upcoming_slot_name") ?? "Next Slot"
+        var upcomingSlotName = userDefaults?.string(forKey: "upcoming_slot_name") ?? "Wakeup Time"
         var upcomingSlotTarget = userDefaults?.integer(forKey: "upcoming_slot_target") ?? 0
         var upcomingSlotTime = userDefaults?.string(forKey: "upcoming_slot_time") ?? "--:--"
         
@@ -199,10 +214,13 @@ struct Provider: TimelineProvider {
         
         // Dynamically compute the upcoming slot and cumulative target if slots JSON is available
         var expectedCumulative: Double = 0.0
+        var expectedPercent: Double = 0.0
+        var hasDynamicSlots = false
         if let slotsJsonString = userDefaults?.string(forKey: "all_slots_json"),
            let data = slotsJsonString.data(using: .utf8) {
             let decoder = JSONDecoder()
             if let slots = try? decoder.decode([SlotItem].self, from: data), !slots.isEmpty {
+                hasDynamicSlots = true
                 let calendar = Calendar.current
                 let nowHour = calendar.component(.hour, from: date)
                 let nowMinute = calendar.component(.minute, from: date)
@@ -225,7 +243,7 @@ struct Provider: TimelineProvider {
                     }
                 }
                 
-                // Fallback to first slot of the next day
+                // Fallback to first slot of the day
                 let upcomingSlot = foundSlot ?? sortedSlots.first!
                 
                 upcomingSlotName = upcomingSlot.label
@@ -238,6 +256,7 @@ struct Provider: TimelineProvider {
                 upcomingSlotTime = "\(hour12):\(minStr) \(period)"
 
                 // Calculate cumulative expected targets at current date/time (Slot-by-slot)
+                let totalSlotsTarget: Double = sortedSlots.reduce(0.0) { $0 + Double($1.target) }
                 for slot in sortedSlots {
                     let startMin = slot.hour * 60 + slot.minute
                     let endMin = slot.endHour * 60 + slot.endMinute
@@ -258,12 +277,18 @@ struct Provider: TimelineProvider {
                         break
                     }
                 }
+                
+                let baseTotal = totalSlotsTarget > 0 ? totalSlotsTarget : Double(goal)
+                expectedPercent = baseTotal > 0 ? min(max((expectedCumulative / baseTotal) * 100.0, 0.0), 100.0) : 0.0
             }
         }
         
-        var expectedPercent = goal > 0 ? (expectedCumulative / Double(goal)) * 100.0 : 0.0
-        if expectedPercent == 0.0 {
-            expectedPercent = userDefaults?.double(forKey: "expected_percent") ?? 0.0
+        if !hasDynamicSlots {
+            if !isNewDay {
+                expectedPercent = userDefaults?.double(forKey: "expected_percent") ?? 0.0
+            } else {
+                expectedPercent = 0.0
+            }
         }
         
         return SimpleEntry(date: date, intake: intake, goal: goal, coffeeIntake: coffeeIntake, waterIntake: waterIntake, latestDrinkType: latestDrinkType, latestDrinkAmount: latestDrinkAmount, recentAddedAmount: recentAddedAmount, upcomingSlotName: upcomingSlotName, upcomingSlotTarget: upcomingSlotTarget, upcomingSlotTime: upcomingSlotTime, streak: streak,
@@ -347,7 +372,10 @@ struct Provider: TimelineProvider {
                 let latestDrinkAmount = summary["latestDrinkAmount"] as? Int ?? 0
                 
                 userDefaults?.set(Int(consumed), forKey: "current_intake")
-                userDefaults?.set(Int(target), forKey: "daily_goal")
+                let currentStoredGoal = userDefaults?.integer(forKey: "daily_goal") ?? 0
+                if currentStoredGoal <= 0 && target > 0 {
+                    userDefaults?.set(Int(target), forKey: "daily_goal")
+                }
                 userDefaults?.set(coffeeIntake, forKey: "coffee_intake")
                 userDefaults?.set(waterIntake, forKey: "water_intake")
                 userDefaults?.set(latestDrinkType, forKey: "latest_drink_type")

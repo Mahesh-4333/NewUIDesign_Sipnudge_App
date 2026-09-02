@@ -101,7 +101,9 @@ class DatabaseSyncService {
               'coffeeIntake': userInfo.coffeeIntake?.toString().split('.').last,
               'teaIntake': userInfo.teaIntake?.toString().split('.').last,
               'typicalWaterIntake': userInfo.typicalWaterIntake,
-              'waterUnit': userInfo.waterUnit,
+              'waterUnit': (userInfo.waterUnit != null && userInfo.waterUnit!.isNotEmpty)
+                  ? userInfo.waterUnit
+                  : (await SharedPrefsHelper.getSelectedUnit()),
               'user_type': "regular",
               'shutdown_app': false
             });
@@ -132,6 +134,10 @@ class DatabaseSyncService {
     try {
       // 1. Sync User Info
       final userInfo = await _dbHelper.getUserInfo();
+      final selectedUnit = await SharedPrefsHelper.getSelectedUnit();
+      final effectiveWaterUnit = (userInfo?.waterUnit != null && userInfo!.waterUnit!.isNotEmpty)
+          ? userInfo.waterUnit
+          : selectedUnit;
       if (userInfo != null) {
         await _apiService.syncUserInfo(userId, {
           'gender': userInfo.gender?.toString().split('.').last,
@@ -152,7 +158,7 @@ class DatabaseSyncService {
           'coffeeIntake': userInfo.coffeeIntake?.toString().split('.').last,
           'teaIntake': userInfo.teaIntake?.toString().split('.').last,
           'typicalWaterIntake': userInfo.typicalWaterIntake,
-          'waterUnit': userInfo.waterUnit,
+          'waterUnit': effectiveWaterUnit,
           'userName': userInfo.name,
         });
       }
@@ -590,7 +596,9 @@ class DatabaseSyncService {
                     userInfo.coffeeIntake?.toString().split('.').last,
                 'teaIntake': userInfo.teaIntake?.toString().split('.').last,
                 'typicalWaterIntake': userInfo.typicalWaterIntake,
-                'waterUnit': userInfo.waterUnit,
+                'waterUnit': (userInfo.waterUnit != null && userInfo.waterUnit!.isNotEmpty)
+                    ? userInfo.waterUnit
+                    : (await SharedPrefsHelper.getSelectedUnit()),
               });
             }
             Console.log(

@@ -12,6 +12,7 @@
   "vibrationHapticIntensity": "Vibration: Haptic Intensity",
   "ledNotificationLight": "LED: Notification Light",
   "uvCleaning": "UV Cleaning",
+  "off": "Off",
   "low": "Low",
   "medium": "Medium",
   "high": "High",

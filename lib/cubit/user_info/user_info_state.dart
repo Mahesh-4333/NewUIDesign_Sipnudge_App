@@ -53,7 +53,7 @@ class UserInfoState extends Equatable {
       this.teaIntake = BeverageIntake.none,
       this.stepGoal = 7000,
       this.typicalWaterIntake = 2.0,
-      this.waterUnit = "L",
+      this.waterUnit = "mL",
       this.hideAchievement = false,
       this.name});
 

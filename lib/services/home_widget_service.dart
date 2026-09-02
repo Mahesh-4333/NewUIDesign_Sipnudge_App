@@ -125,30 +125,22 @@ class HomeWidgetService {
 
   static Future<void> updateWidgetData() async {
     int currentIntake = 0;
-    int dailyGoal = 2500;
+    int dailyGoal = (await SharedPrefsHelper.getWaterGoal()) ?? 2500;
+    if (dailyGoal <= 0) {
+      dailyGoal = 2500;
+    }
 
     final dbHelper = DatabaseHelper();
     final today = DateTime.now();
 
-    // Fetch initial dailyGoal and currentIntake from local database if available
+    // Fetch initial currentIntake from local database if available
     try {
-      final localGoal = await dbHelper.getDailyWaterGoal(today);
-      if (localGoal != null) {
-        dailyGoal = localGoal;
-      } else {
-        final prefGoal = await SharedPrefsHelper.getWaterGoal();
-        if (prefGoal != null) {
-          dailyGoal = prefGoal;
-        }
-      }
-      
       final todaySummary = await dbHelper.getSummaryForDate(today);
       if (todaySummary != null) {
         currentIntake = todaySummary.consumed.round();
-        dailyGoal = todaySummary.target.round();
       }
     } catch (e) {
-      Console.log(tag: "HomeWidget", value: "Error fetching dailyGoal from local database: $e");
+      Console.log(tag: "HomeWidget", value: "Error fetching data from local database: $e");
     }
 
     // Try fetching from API exclusively
@@ -185,7 +177,6 @@ class HomeWidgetService {
           todaySummary ??= summaries.last;
 
           currentIntake = (todaySummary['consumed'] as num?)?.round() ?? currentIntake;
-          dailyGoal = (todaySummary['target'] as num?)?.round() ?? dailyGoal;
         }
       }
     } catch (e) {
@@ -240,6 +231,11 @@ class HomeWidgetService {
       var slots = await dbHelper.getAllSlots();
       if (slots.isEmpty) {
         slots = HydrationHelper.generateHydrationSlots(dailyGoal.toDouble());
+      } else {
+        final totalTarget = slots.fold<double>(0.0, (sum, s) => sum + s.amount);
+        if ((totalTarget - dailyGoal).abs() > 1) {
+          slots = await dbHelper.updateSlotTargetsForGoal(dailyGoal.toDouble());
+        }
       }
       if (slots.isNotEmpty) {
         // Save all slots as a JSON string for dynamic calculations in widget when app is closed

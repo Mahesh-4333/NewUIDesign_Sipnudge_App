@@ -174,6 +174,12 @@ abstract class AppLocalizations {
   /// **'UV Cleaning'**
   String get uvCleaning;
 
+  /// No description provided for @off.
+  ///
+  /// In en, this message translates to:
+  /// **'Off'**
+  String get off;
+
   /// No description provided for @low.
   ///
   /// In en, this message translates to:

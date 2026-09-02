@@ -23,6 +23,7 @@ import 'package:hydrify/screens/onboarding/environmental_harmony_location_screen
 import 'package:hydrify/screens/widgets/auth_button_widget.dart';
 import 'package:hydrify/helpers/hydration_helper.dart';
 import 'package:hydrify/services/api_service.dart';
+import 'package:home_widget/home_widget.dart';
 import 'package:hydrify/services/home_widget_service.dart';
 import 'package:hydrify/services/database_sync_service.dart';
 import 'package:hydrify/services/notification/notification_service.dart';
@@ -574,7 +575,13 @@ class _UserInfoDailyGoalScreenNewState extends State<UserInfoDailyGoalScreen> {
 
                 UiUtilsService.showLoading(context, AppLocalizations.of(context)?.pleaseWait ?? "Please wait");
                 final goalInt = convertedWaterGoal.toInt();
-                await userInfoCubit.saveUser(userInfoCubit.state);
+                final updatedUserInfo = userInfoCubit.state.copyWith(
+                  typicalWaterIntake: convertedWaterGoal / 1000.0,
+                  waterUnit: unit,
+                );
+                userInfoCubit.setTypicalWaterIntake(convertedWaterGoal / 1000.0);
+                userInfoCubit.setWaterUnit(unit);
+                await userInfoCubit.saveUser(updatedUserInfo);
                 await SharedPrefsHelper.setPersonalInfoSubmitted(true);
                 await SharedPrefsHelper.setWaterGoal(goalInt);
                 await SharedPrefsHelper.setUserGoal(goalInt);
@@ -657,6 +664,12 @@ class _UserInfoDailyGoalScreenNewState extends State<UserInfoDailyGoalScreen> {
                       }
                     ]);
 
+                    // Sync updated typicalWaterIntake and waterUnit on user profile
+                    await ApiService().syncUserInfo(userId, {
+                      'typicalWaterIntake': convertedWaterGoal / 1000.0,
+                      'waterUnit': unit,
+                    });
+
                     // 2. Direct update to server DailySummary target
                     final todaySummary = await dbHelper.getSummaryForDate(today);
                     final consumed = todaySummary?.consumed ?? 0.0;
@@ -667,7 +680,7 @@ class _UserInfoDailyGoalScreenNewState extends State<UserInfoDailyGoalScreen> {
                       consumed,
                       isPerfect,
                       target: convertedWaterGoal,
-                      force: true,
+                      force: false,
                     );
                   } catch (e) {
                     Console.log(tag: "DAILY_GOAL_SUBMIT", value: "Error updating server goal: $e");
@@ -675,6 +688,7 @@ class _UserInfoDailyGoalScreenNewState extends State<UserInfoDailyGoalScreen> {
                 }
 
                 // Immediately update local & native widget so widget target matches the app instantly
+                await HomeWidget.saveWidgetData<int>('daily_goal', goalInt);
                 await HomeWidgetService.updateWidgetData();
 
                 if (!context.mounted) return;
@@ -801,6 +815,7 @@ class _UserInfoDailyGoalScreenNewState extends State<UserInfoDailyGoalScreen> {
               unit = u;
             });
             SharedPrefsHelper.setSelectedUnit(u);
+            context.read<UserInfoCubit>().setWaterUnit(u);
             HapticFeedback.selectionClick();
           },
           child: Container(

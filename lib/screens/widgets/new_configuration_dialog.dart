@@ -361,7 +361,7 @@ class NewConfigurationDialogContent extends StatelessWidget {
               consumed,
               isPerfect,
               target: waterGoal.toDouble(),
-              force: true,
+              force: false,
             );
           } catch (e) {
             Console.log(

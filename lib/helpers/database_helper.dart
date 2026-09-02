@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:hydrify/helpers/hydration_helper.dart';
 import 'package:hydrify/helpers/logger.dart';
 
 import 'package:flutter/material.dart';
@@ -419,7 +420,8 @@ CREATE TABLE IF NOT EXISTS $appMetadataTableName (
     } catch (_) {}
 
     try {
-      await db.execute('ALTER TABLE $foodScannerTableName ADD COLUMN scan_id TEXT');
+      await db
+          .execute('ALTER TABLE $foodScannerTableName ADD COLUMN scan_id TEXT');
     } catch (_) {}
 
     return db;
@@ -531,7 +533,8 @@ CREATE TABLE IF NOT EXISTS $appMetadataTableName (
             foodTimestamp.day == now.day) {
           final foodTime = TimeOfDay.fromDateTime(foodTimestamp);
           final foodMinutes = foodTime.hour * 60 + foodTime.minute;
-          final foodWater = (food['water_content_ml'] as num?)?.toDouble() ?? 0.0;
+          final foodWater =
+              (food['water_content_ml'] as num?)?.toDouble() ?? 0.0;
 
           bool isWithin;
           if (startMinutes <= endMinutes) {
@@ -637,8 +640,36 @@ CREATE TABLE IF NOT EXISTS $appMetadataTableName (
               "[DB] resetSlotProgressForNewDay: Updated $count slots to waterDrank=0 and status=pending");
     } catch (e) {
       Console.log(
-          tag: "APP",
-          value: "[DB] Error in resetSlotProgressForNewDay: $e");
+          tag: "APP", value: "[DB] Error in resetSlotProgressForNewDay: $e");
+    }
+  }
+
+  /// Updates slot targets to match a new daily goal while preserving custom start/end times and waterDrank.
+  Future<List<HydrationEntry>> updateSlotTargetsForGoal(double newGoal) async {
+    try {
+      final existingSlotsInDb = await getAllSlots();
+      final newSlots = HydrationHelper.generateHydrationSlots(newGoal);
+      final existingSlotMap = {for (var s in existingSlotsInDb) s.slot: s};
+
+      await clearHydrationSlots();
+      final List<HydrationEntry> updatedSlots = [];
+      for (var newSlot in newSlots) {
+        final existing = existingSlotMap[newSlot.slot];
+        final slotToSave = existing != null
+            ? existing.copyWith(
+                amount: newSlot.amount,
+                startTime: existing.startTime,
+                endTime: existing.endTime,
+              )
+            : newSlot;
+        await insertOrUpdateSlot(slotToSave);
+        updatedSlots.add(slotToSave);
+      }
+      return updatedSlots;
+    } catch (e) {
+      Console.log(
+          tag: "APP", value: "[DB] Error updating slot targets for goal: $e");
+      return await getAllSlots();
     }
   }
 
@@ -1335,7 +1366,8 @@ CREATE TABLE IF NOT EXISTS $appMetadataTableName (
       // 2. Update existing
       final currentConsumed = (result.first['consumed'] as num).toDouble();
       final target = (result.first['target'] as num).toDouble();
-      final newConsumed = (currentConsumed + consumedDelta).clamp(0.0, double.infinity);
+      final newConsumed =
+          (currentConsumed + consumedDelta).clamp(0.0, double.infinity);
       final isPerfect = newConsumed >= target ? 1 : 0;
       await db.update(
         hydrationSummaryTableName,
@@ -1618,8 +1650,7 @@ CREATE TABLE IF NOT EXISTS $appMetadataTableName (
         orderBy: 'timestamp DESC',
       );
     } else {
-      rawList =
-          await db.query(foodScannerTableName, orderBy: 'timestamp DESC');
+      rawList = await db.query(foodScannerTableName, orderBy: 'timestamp DESC');
     }
 
     // Deduplicate only when the exact same scan_id appears multiple times
@@ -1700,6 +1731,24 @@ CREATE TABLE IF NOT EXISTS $appMetadataTableName (
     if (result.isNotEmpty) {
       return result.first['goal'] as int;
     }
+
+    // Direct user goal from SharedPrefs has highest accuracy for the active goal
+    final prefGoal = await SharedPrefsHelper.getWaterGoal();
+    if (prefGoal != null && prefGoal > 0) {
+      return prefGoal;
+    }
+
+    // Fallback: If no record for this specific date, return the most recently set goal
+    final latest = await db.query(
+      dailyWaterGoalsTableName,
+      where: 'goal > 0',
+      orderBy: 'date DESC',
+      limit: 1,
+    );
+    if (latest.isNotEmpty) {
+      return latest.first['goal'] as int;
+    }
+
     return null;
   }
 

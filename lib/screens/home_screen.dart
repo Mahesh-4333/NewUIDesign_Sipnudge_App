@@ -378,24 +378,28 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           .where((s) => !existingSlotMap.containsKey(s.slot))
           .toList();
 
-      if (missingSlots.isEmpty) {
+      if (missingSlots.isNotEmpty) {
         Console.log(
             tag: "HOME",
             value:
-                "[SlotCheck] All ${expectedSlots.length} slots present in DB. ✅");
-        return;
+                "[SlotCheck] ${missingSlots.length} missing slot(s) detected. Inserting...");
+
+        for (var slot in missingSlots) {
+          await dbHelper.insertOrUpdateSlot(slot);
+          Console.log(
+              tag: "HOME",
+              value: "[SlotCheck] Inserted missing slot: ${slot.slot.label}");
+        }
       }
 
-      Console.log(
-          tag: "HOME",
-          value:
-              "[SlotCheck] ${missingSlots.length} missing slot(s) detected. Inserting...");
-
-      for (var slot in missingSlots) {
-        await dbHelper.insertOrUpdateSlot(slot);
+      final allSlots = await dbHelper.getAllSlots();
+      final totalTarget = allSlots.fold<double>(0.0, (sum, s) => sum + s.amount);
+      if ((totalTarget - waterGoal).abs() > 1) {
         Console.log(
             tag: "HOME",
-            value: "[SlotCheck] Inserted missing slot: ${slot.slot.label}");
+            value:
+                "[SlotCheck] Goal mismatch (slots: $totalTarget mL, goal: $waterGoal mL). Updating slot targets...");
+        await dbHelper.updateSlotTargetsForGoal(waterGoal.toDouble());
       }
 
       Console.log(tag: "HOME", value: "[SlotCheck] Slot integrity restored. ✅");

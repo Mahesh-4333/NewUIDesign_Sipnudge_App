@@ -99,12 +99,19 @@ class FirebaseFunctionsService {
 
   static Future<UserCredential?> signInWithGoogle() async {
     try {
-      final GoogleSignInAccount? googleUser = await GoogleSignIn(
+      final GoogleSignIn googleSignIn = GoogleSignIn(
         scopes: [
           'https://www.googleapis.com/auth/calendar.readonly',
           'https://www.googleapis.com/auth/calendar.events.readonly',
         ],
-      ).signIn();
+      );
+
+      // Clear any stale cached AppAuth session to prevent "ID Token expired" error
+      try {
+        await googleSignIn.signOut();
+      } catch (_) {}
+
+      final GoogleSignInAccount? googleUser = await googleSignIn.signIn();
 
       if (googleUser == null) return null; // Cancelled
 

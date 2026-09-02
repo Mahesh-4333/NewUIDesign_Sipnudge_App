@@ -132,6 +132,12 @@ class _UserInfoInputScreenState extends State<UserInfoInputScreen> {
             tag: "USER_INFO",
             value: "Fetched user profile from server: $serverData");
         if (serverData != null && serverData['exists'] == true) {
+          if (serverData['_id'] != null) {
+            await SharedPrefsHelper.setUserId(serverData['_id']);
+            Console.log(
+                tag: "USER_INFO",
+                value: "Saved userId from server profile: ${serverData['_id']}");
+          }
           final genderStr = serverData['gender']?.toString().toLowerCase();
           Gender gender = Gender.male;
           if (genderStr == 'female')
@@ -210,7 +216,7 @@ class _UserInfoInputScreenState extends State<UserInfoInputScreen> {
             typicalWaterIntake: serverData['typicalWaterIntake'] != null
                 ? (serverData['typicalWaterIntake'] as num).toDouble()
                 : null,
-            waterUnit: serverData['waterUnit'] ?? 'L',
+            waterUnit: serverData['waterUnit'] ?? 'mL',
           );
 
           cubit.emit(newState);

@@ -45,6 +45,9 @@ class AppLocalizationsHi extends AppLocalizations {
   String get uvCleaning => 'UV सफाई';
 
   @override
+  String get off => 'Off';
+
+  @override
   String get low => 'कम';
 
   @override

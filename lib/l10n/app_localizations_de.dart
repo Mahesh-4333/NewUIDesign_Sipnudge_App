@@ -46,6 +46,9 @@ class AppLocalizationsDe extends AppLocalizations {
   String get uvCleaning => 'UV-Reinigung';
 
   @override
+  String get off => 'Off';
+
+  @override
   String get low => 'Niedrig';
 
   @override

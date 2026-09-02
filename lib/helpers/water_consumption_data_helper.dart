@@ -33,6 +33,7 @@ class WaterConsumptionCalculator {
       return aMin.compareTo(bMin);
     });
 
+    final totalSlotsTarget = sortedSlots.fold<double>(0.0, (sum, s) => sum + s.amount);
     double expectedCumulative = 0.0;
 
     for (int i = 0; i < sortedSlots.length; i++) {
@@ -57,7 +58,8 @@ class WaterConsumptionCalculator {
       }
     }
 
-    return ((expectedCumulative / dailyGoalMl) * 100.0).clamp(0.0, 100.0);
+    final baseDenominator = totalSlotsTarget > 0 ? totalSlotsTarget : dailyGoalMl;
+    return ((expectedCumulative / baseDenominator) * 100.0).clamp(0.0, 100.0);
   }
 
   // Calculate consumption for a single day from bottle readings

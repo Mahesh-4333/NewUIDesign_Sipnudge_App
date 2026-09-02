@@ -252,8 +252,10 @@ class AiHydrationGoalDialog extends StatelessWidget {
                                       .setAiHydrationGoalShown(false);
                                   await SharedPrefsHelper.setWaterGoal(goal);
                                   await SharedPrefsHelper.setUserGoal(goal);
-                                  await DatabaseHelper()
+                                  final dbHelper = DatabaseHelper();
+                                  await dbHelper
                                       .saveDailyWaterGoal(DateTime.now(), goal);
+                                  await dbHelper.updateSlotTargetsForGoal(goal.toDouble());
                                   await SharedPrefsHelper
                                       .updateAndSaveDeviceConfig(
                                           waterGoal: goal);
@@ -289,7 +291,7 @@ class AiHydrationGoalDialog extends StatelessWidget {
                                         consumed,
                                         isPerfect,
                                         target: goal.toDouble(),
-                                        force: true,
+                                        force: false,
                                       );
                                     } catch (e) {
                                       Console.log(

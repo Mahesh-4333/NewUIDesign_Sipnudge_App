@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:home_widget/home_widget.dart';
 import 'package:hydrify/helpers/database_helper.dart';
 import 'package:hydrify/helpers/logger.dart';
 import 'package:hydrify/services/user_manager.dart';
@@ -368,6 +369,9 @@ class SharedPrefsHelper {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setInt(_keyWaterGoal, goal);
     await prefs.setInt(_keyUserGoal, goal);
+    try {
+      await HomeWidget.saveWidgetData<int>('daily_goal', goal);
+    } catch (_) {}
     // configUpdateStream.add(null);
   }
 
@@ -375,6 +379,9 @@ class SharedPrefsHelper {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setInt(_keyWaterGoal, goal);
     await prefs.setInt(_keyUserGoal, goal);
+    try {
+      await HomeWidget.saveWidgetData<int>('daily_goal', goal);
+    } catch (_) {}
   }
 
   static Future<int?> getWaterGoal() async {

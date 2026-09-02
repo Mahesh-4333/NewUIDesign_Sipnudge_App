@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/svg.dart';
@@ -7,11 +8,13 @@ import 'package:hydrify/constants/app_colors.dart';
 import 'package:hydrify/constants/app_dimensions.dart';
 import 'package:hydrify/constants/app_font_styles.dart';
 import 'package:hydrify/constants/app_strings.dart';
+import 'package:hydrify/helpers/logger.dart';
 import 'package:hydrify/l10n/app_localizations.dart';
 import 'package:hydrify/helpers/shared_pref_helper.dart';
 import 'package:hydrify/screens/auth/signin_signup_screen.dart';
 import 'package:hydrify/screens/user_personal_info_input_screen..dart';
 import 'package:hydrify/screens/widgets/auth_button_widget.dart';
+import 'package:hydrify/services/api_service.dart';
 import 'package:hydrify/services/firebase_functions_service.dart';
 import 'package:hydrify/services/google_calendar_manager.dart';
 import 'package:hydrify/services/ui_utils_service.dart';
@@ -89,7 +92,8 @@ class _AuthOptionsScreenState extends State<AuthOptionsScreen> {
                 height: AppDimensions.dim25.h,
               ),
               Text(
-                AppLocalizations.of(context)?.beginYourJourney ?? AppStrings.beginYourJourney,
+                AppLocalizations.of(context)?.beginYourJourney ??
+                    AppStrings.beginYourJourney,
                 style: TextStyle(
                   color: AppColors.bluegray,
                   fontSize: AppFontStyles.fontSize_20.sp,
@@ -138,25 +142,53 @@ class _AuthOptionsScreenState extends State<AuthOptionsScreen> {
                 opacity: _isTermsAccepted ? 1.0 : 0.6,
                 child: AuthButton(
                   iconPath: "assets/images/google_ic.svg",
-                  text: AppLocalizations.of(context)?.continueWithGoogle ?? AppStrings.continueWithGoogle,
+                  text: AppLocalizations.of(context)?.continueWithGoogle ??
+                      AppStrings.continueWithGoogle,
                   color: AppColors.white,
                   onTap: () async {
                     if (!_isTermsAccepted) {
                       UiUtilsService.showToast(
                           context: context,
-                          text: AppLocalizations.of(context)?.pleaseAcceptTerms ?? "Please accept the terms and conditions");
+                          text:
+                              AppLocalizations.of(context)?.pleaseAcceptTerms ??
+                                  "Please accept the terms and conditions");
                       return;
                     }
                     UiUtilsService.showLoading(
-                        context, AppLocalizations.of(context)?.signingInGoogle ?? "Signing you in via Google");
+                        context,
+                        AppLocalizations.of(context)?.signingInGoogle ??
+                            "Signing you in via Google");
                     var signInWithGoogleRes =
                         await FirebaseFunctionsService.signInWithGoogle();
                     UiUtilsService.dismissLoading(context);
                     if (signInWithGoogleRes != null) {
-                      await SharedPrefsHelper.setUserEmail(
-                          signInWithGoogleRes.user?.email ?? "");
+                      final email = signInWithGoogleRes.user?.email ?? "";
+                      await SharedPrefsHelper.setUserEmail(email);
+
+                      if (email.isNotEmpty) {
+                        try {
+                          final userData =
+                              await ApiService().getUserByEmail(email);
+                          if (userData != null && userData['_id'] != null) {
+                            await SharedPrefsHelper.setUserId(userData['_id']);
+                            Console.log(
+                                tag: "AUTH",
+                                value:
+                                    "Google Login: UserId saved: ${userData['_id']}");
+                          }
+                        } catch (e) {
+                          Console.log(
+                              tag: "AUTH",
+                              value:
+                                  "Failed to fetch user by email on Google login: $e");
+                        }
+                      }
+
                       UiUtilsService.showToast(
-                          context: context, text: AppLocalizations.of(context)?.signinSuccessful ?? "Signin Successful");
+                          context: context,
+                          text:
+                              AppLocalizations.of(context)?.signinSuccessful ??
+                                  "Signin Successful");
 
                       Navigator.pushAndRemoveUntil(
                         context,
@@ -186,19 +218,6 @@ class _AuthOptionsScreenState extends State<AuthOptionsScreen> {
               //     borderColor: AppColors.bluegray,
               //     onTap: () {
               //       SharedPrefsHelper.setUserEmail("guest_user");
-
-              //       UiUtilsService.showToast(
-              //         context: context,
-              //         text: "Continuing as Guest",
-              //       );
-
-              //       Navigator.pushAndRemoveUntil(
-              //         context,
-              //         MaterialPageRoute(
-              //           builder: (context) => UserInfoInputScreen(),
-              //         ),
-              //         (route) => false,
-              //       );
               //     },
               //   ),
               // Divider for Android only
@@ -248,24 +267,58 @@ class _AuthOptionsScreenState extends State<AuthOptionsScreen> {
                       opacity: _isTermsAccepted ? 1.0 : 0.6,
                       child: AuthButton(
                         iconPath: "assets/images/apple_icon.svg",
-                        text: AppLocalizations.of(context)?.continueWithApple ?? AppStrings.continueWithApple,
+                        text: AppLocalizations.of(context)?.continueWithApple ??
+                            AppStrings.continueWithApple,
                         color: AppColors.white,
                         onTap: () async {
                           if (!_isTermsAccepted) {
                             UiUtilsService.showToast(
                                 context: context,
-                                text: AppLocalizations.of(context)?.pleaseAcceptTerms ?? "Please accept the terms and conditions");
+                                text: AppLocalizations.of(context)
+                                        ?.pleaseAcceptTerms ??
+                                    "Please accept the terms and conditions");
                             return;
                           }
                           UiUtilsService.showLoading(
-                              context, AppLocalizations.of(context)?.signingInApple ?? "Signing you in via Apple");
+                              context,
+                              AppLocalizations.of(context)?.signingInApple ??
+                                  "Signing you in via Apple");
                           var signInWithAppleRes =
                               await FirebaseFunctionsService.signInWithApple();
 
                           UiUtilsService.dismissLoading(context);
                           if (signInWithAppleRes['success'] == true) {
+                            final userCredential =
+                                signInWithAppleRes['userCredential']
+                                    as UserCredential?;
+                            final email = userCredential?.user?.email;
+                            if (email != null && email.isNotEmpty) {
+                              await SharedPrefsHelper.setUserEmail(email);
+                              try {
+                                final userData =
+                                    await ApiService().getUserByEmail(email);
+                                if (userData != null &&
+                                    userData['_id'] != null) {
+                                  await SharedPrefsHelper.setUserId(
+                                      userData['_id']);
+                                  Console.log(
+                                      tag: "AUTH",
+                                      value:
+                                          "Apple Login: UserId saved: ${userData['_id']}");
+                                }
+                              } catch (e) {
+                                Console.log(
+                                    tag: "AUTH",
+                                    value:
+                                        "Failed to fetch user by email on Apple login: $e");
+                              }
+                            }
+
                             UiUtilsService.showToast(
-                                context: context, text: AppLocalizations.of(context)?.signinSuccessful ?? "Signin Successful");
+                                context: context,
+                                text: AppLocalizations.of(context)
+                                        ?.signinSuccessful ??
+                                    "Signin Successful");
 
                             Navigator.pushAndRemoveUntil(
                               context,
@@ -352,14 +405,17 @@ class _AuthOptionsScreenState extends State<AuthOptionsScreen> {
               Opacity(
                 opacity: _isTermsAccepted ? 1.0 : 0.6,
                 child: AuthButton(
-                  text: AppLocalizations.of(context)?.signUp ?? AppStrings.signUp,
+                  text:
+                      AppLocalizations.of(context)?.signUp ?? AppStrings.signUp,
                   color: AppColors.blueGradient,
                   areTwoItems: false,
                   onTap: () {
                     if (!_isTermsAccepted) {
                       UiUtilsService.showToast(
                           context: context,
-                          text: AppLocalizations.of(context)?.pleaseAcceptTerms ?? "Please accept the terms and conditions");
+                          text:
+                              AppLocalizations.of(context)?.pleaseAcceptTerms ??
+                                  "Please accept the terms and conditions");
                       return;
                     }
                     Navigator.push(
@@ -377,7 +433,8 @@ class _AuthOptionsScreenState extends State<AuthOptionsScreen> {
               Opacity(
                 opacity: _isTermsAccepted ? 1.0 : 0.6,
                 child: AuthButton(
-                  text: AppLocalizations.of(context)?.signIn ?? AppStrings.signIn,
+                  text:
+                      AppLocalizations.of(context)?.signIn ?? AppStrings.signIn,
                   color: AppColors.blueSecondary,
                   textColor: AppColors.buttonTextPurpleColor,
                   areTwoItems: false,
@@ -385,7 +442,9 @@ class _AuthOptionsScreenState extends State<AuthOptionsScreen> {
                     if (!_isTermsAccepted) {
                       UiUtilsService.showToast(
                           context: context,
-                          text: AppLocalizations.of(context)?.pleaseAcceptTerms ?? "Please accept the terms and conditions");
+                          text:
+                              AppLocalizations.of(context)?.pleaseAcceptTerms ??
+                                  "Please accept the terms and conditions");
                       return;
                     }
                     Navigator.push(
@@ -436,7 +495,8 @@ class _AuthOptionsScreenState extends State<AuthOptionsScreen> {
                     child: RichText(
                       textAlign: TextAlign.start,
                       text: TextSpan(
-                        text: AppLocalizations.of(context)?.iAgreeToThe ?? "I agree to the ",
+                        text: AppLocalizations.of(context)?.iAgreeToThe ??
+                            "I agree to the ",
                         style: TextStyle(
                           color: AppColors.black,
                           fontSize: AppFontStyles.fontSize_15.sp,
@@ -452,7 +512,8 @@ class _AuthOptionsScreenState extends State<AuthOptionsScreen> {
                               onTap: () =>
                                   _launchURL("https://sipnudge.com/terms"),
                               child: Text(
-                                AppLocalizations.of(context)?.termsOfService ?? "Terms of Service",
+                                AppLocalizations.of(context)?.termsOfService ??
+                                    "Terms of Service",
                                 style: TextStyle(
                                   color: AppColors.blueGradient,
                                   fontSize: AppFontStyles.fontSize_15.sp,
@@ -471,7 +532,8 @@ class _AuthOptionsScreenState extends State<AuthOptionsScreen> {
                               onTap: () =>
                                   _launchURL("https://sipnudge.com/privacy"),
                               child: Text(
-                                AppLocalizations.of(context)?.privacyPolicy ?? "Privacy Policy",
+                                AppLocalizations.of(context)?.privacyPolicy ??
+                                    "Privacy Policy",
                                 style: TextStyle(
                                   color: AppColors.blueGradient,
                                   fontSize: AppFontStyles.fontSize_15.sp,
@@ -512,7 +574,8 @@ class _AuthOptionsScreenState extends State<AuthOptionsScreen> {
                           fontFamily: AppFontStyles.urbanistFontFamily),
                       children: [
                         TextSpan(
-                          text: AppLocalizations.of(context)?.privacyPolicy ?? 'Privacy Policy',
+                          text: AppLocalizations.of(context)?.privacyPolicy ??
+                              'Privacy Policy',
                           style: TextStyle(
                             color: AppColors.black,
                             fontSize: AppFontStyles.fontSize_13,
@@ -530,7 +593,8 @@ class _AuthOptionsScreenState extends State<AuthOptionsScreen> {
                           style: TextStyle(color: Colors.black),
                         ),
                         TextSpan(
-                          text: AppLocalizations.of(context)?.termsOfService ?? 'Terms of Service',
+                          text: AppLocalizations.of(context)?.termsOfService ??
+                              'Terms of Service',
                           style: TextStyle(
                             color: AppColors.black,
                             fontSize: AppFontStyles.fontSize_13,
@@ -560,7 +624,8 @@ class _AuthOptionsScreenState extends State<AuthOptionsScreen> {
             GestureDetector(
               onTap: () => _launchURL("https://sipnudge.com/privacy"),
               child: Text(
-                AppLocalizations.of(context)?.privacyPolicy ?? AppStrings.privacyPolicy,
+                AppLocalizations.of(context)?.privacyPolicy ??
+                    AppStrings.privacyPolicy,
                 style: TextStyle(
                     fontFamily: AppFontStyles.urbanistFontFamily,
                     color: AppColors.white,
@@ -576,7 +641,8 @@ class _AuthOptionsScreenState extends State<AuthOptionsScreen> {
             GestureDetector(
               onTap: () => _launchURL("https://sipnudge.com/terms"),
               child: Text(
-                AppLocalizations.of(context)?.termsOfService ?? AppStrings.termsOfService,
+                AppLocalizations.of(context)?.termsOfService ??
+                    AppStrings.termsOfService,
                 style: TextStyle(
                     fontFamily: AppFontStyles.urbanistFontFamily,
                     color: AppColors.white,
@@ -599,7 +665,9 @@ class _AuthOptionsScreenState extends State<AuthOptionsScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(AppLocalizations.of(context)?.couldNotOpenWebpage ?? "Could not open the webpage")),
+          SnackBar(
+              content: Text(AppLocalizations.of(context)?.couldNotOpenWebpage ??
+                  "Could not open the webpage")),
         );
       }
     }

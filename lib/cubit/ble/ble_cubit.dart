@@ -1411,7 +1411,9 @@ class BleCubit extends Cubit<BleState>
         ));
       }
     } catch (e) {
-      Console.log(tag: "[BLE_Cubit] Error loading cached otherData: $e", value: 'BLE_Cubit');
+      Console.log(
+          tag: "[BLE_Cubit] Error loading cached otherData: $e",
+          value: 'BLE_Cubit');
     }
   }
 
@@ -1434,7 +1436,8 @@ class BleCubit extends Cubit<BleState>
     final firstBrace = candidate.indexOf('{');
     final lastBrace = candidate.lastIndexOf('}');
 
-    final partial = DeviceOtherData.fromString(candidate.isNotEmpty ? candidate : data);
+    final partial =
+        DeviceOtherData.fromString(candidate.isNotEmpty ? candidate : data);
 
     if (firstBrace != -1 && lastBrace != -1 && lastBrace > firstBrace) {
       final jsonStr = candidate.substring(firstBrace, lastBrace + 1);

@@ -173,14 +173,14 @@ class PreferencesPage extends StatelessWidget {
                                   AppStrings.hapticsAndVisuals),
                       PreferenceCard(
                         children: [
-                          // Vibration: Haptic Intensity — segmented (Green)
+                          // Vibration: Haptic Intensity — segmented (Green) [ Off | Medium | High ]
                           SegmentedChoiceTile(
                             title: AppLocalizations.of(context)
                                     ?.vibrationHapticIntensity ??
                                 AppStrings.vibrationHapticIntensity,
                             options: [
-                              AppLocalizations.of(context)?.low ??
-                                  AppStrings.low,
+                              AppLocalizations.of(context)?.off ??
+                                  AppStrings.off,
                               AppLocalizations.of(context)?.medium ??
                                   AppStrings.medium,
                               AppLocalizations.of(context)?.high ??

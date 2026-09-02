@@ -271,7 +271,20 @@ class FirebaseMessagingService {
       final actualToken = token ?? await _firebaseMessaging.getToken();
       if (actualToken == null) return;
 
-      final userId = await SharedPrefsHelper.getUserId();
+      var userId = await SharedPrefsHelper.getUserId();
+      if (userId == null || userId.isEmpty) {
+        final email = await SharedPrefsHelper.getUserEmail();
+        if (email != null && email.isNotEmpty && email != "guest_user") {
+          try {
+            final userData = await _apiService.getUserByEmail(email);
+            if (userData != null && userData['_id'] != null) {
+              userId = userData['_id'];
+              await SharedPrefsHelper.setUserId(userId!);
+            }
+          } catch (_) {}
+        }
+      }
+
       if (userId != null && userId.isNotEmpty) {
         final success =
             await _apiService.syncUserInfo(userId, {'fcmToken': actualToken});

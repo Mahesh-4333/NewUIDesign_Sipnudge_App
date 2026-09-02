@@ -265,6 +265,7 @@ class AppStrings {
   // Preferences & Haptics Strings
   static const vibrationHapticIntensity = "Vibration: Haptic Intensity";
   static const ledNotificationLight = "LED: Notification Light";
+  static const off = "Off";
   static const low = "Low";
   static const medium = "Medium";
   static const high = "High";

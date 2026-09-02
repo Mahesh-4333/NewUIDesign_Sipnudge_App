@@ -29,9 +29,25 @@ class PreferencesCubit extends Cubit<PreferencesState> {
         await SharedPrefsHelper.getStopWhenFull(); // Assuming this for now
     final DateTime? resetDate = await DatabaseHelper().getLastResetDate();
 
+    final bool isHapticOn = vibStrength > 0.0;
+    final String hapticLabel = switch (vibStrength) {
+      <= 0.0 => 'Off',
+      >= 0.85 => 'High',
+      _ => 'Medium',
+    };
+
+    final String ledLabel = switch (ledIntens) {
+      <= 0.2 => 'Dim',
+      >= 0.85 => 'Bright',
+      _ => 'Medium',
+    };
+
     emit(state.copyWith(
       ringtoneFeedback: ringtoneStatus,
       vibrationStrength: vibStrength,
+      hapticFeedback: isHapticOn,
+      hapticIntensity: hapticLabel,
+      ledBrightness: ledLabel,
       ledIntensity: ledIntens,
       ledHue: lHue,
       uvCleaning: uvClean,
@@ -46,8 +62,13 @@ class PreferencesCubit extends Cubit<PreferencesState> {
     emit(state.copyWith(lastResetDate: now));
   }
 
-  void toggleHapticFeedback(bool value) =>
-      emit(state.copyWith(hapticFeedback: value));
+  void toggleHapticFeedback(bool value) {
+    if (value) {
+      setHapticIntensity('Medium');
+    } else {
+      setHapticIntensity('Off');
+    }
+  }
 
   void toggleWakeUpAlarm(bool value) =>
       emit(state.copyWith(wakeUpAlarm: value));
@@ -84,14 +105,17 @@ class PreferencesCubit extends Cubit<PreferencesState> {
   }
 
   /// Map haptic intensity label → float and persist
+  /// Off: 0.0 (0%), Medium: 0.75 (75%), High: 1.0 (100%)
   void setHapticIntensity(String label) {
     final double strength = switch (label) {
-      'Low' => 0.25,
+      'Off' => 0.0,
       'High' => 1.0,
       _ => 0.75, // Medium
     };
+    final bool isHapticOn = strength > 0.0;
     SharedPrefsHelper.updateAndSaveDeviceConfig(vibrationStrength: strength);
     emit(state.copyWith(
+      hapticFeedback: isHapticOn,
       hapticIntensity: label,
       vibrationStrength: strength,
     ));
