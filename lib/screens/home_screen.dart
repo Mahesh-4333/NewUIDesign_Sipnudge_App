@@ -311,7 +311,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     if (state == AppLifecycleState.resumed) {
       Console.log(
           tag: "HOME",
-          value: "App resumed, clearing stale image cache, refreshing weather and syncing data...");
+          value:
+              "App resumed, clearing stale image cache, refreshing weather and syncing data...");
 
       // 1. Clear stale iOS Metal / GPU texture cache purged during long background sleep
       PaintingBinding.instance.imageCache.clear();
@@ -393,7 +394,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       }
 
       final allSlots = await dbHelper.getAllSlots();
-      final totalTarget = allSlots.fold<double>(0.0, (sum, s) => sum + s.amount);
+      final totalTarget =
+          allSlots.fold<double>(0.0, (sum, s) => sum + s.amount);
       if ((totalTarget - waterGoal).abs() > 1) {
         Console.log(
             tag: "HOME",
@@ -1575,7 +1577,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                               2500;
                       var slots = await dbHelper.getAllSlots();
                       if (slots.isEmpty) {
-                        slots = HydrationHelper.generateHydrationSlots(goalMl.toDouble());
+                        slots = HydrationHelper.generateHydrationSlots(
+                            goalMl.toDouble());
                       }
                       expectedPercent = WaterConsumptionCalculator
                           .calculateExpectedPercentage(

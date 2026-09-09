@@ -101,9 +101,10 @@ class DatabaseSyncService {
               'coffeeIntake': userInfo.coffeeIntake?.toString().split('.').last,
               'teaIntake': userInfo.teaIntake?.toString().split('.').last,
               'typicalWaterIntake': userInfo.typicalWaterIntake,
-              'waterUnit': (userInfo.waterUnit != null && userInfo.waterUnit!.isNotEmpty)
-                  ? userInfo.waterUnit
-                  : (await SharedPrefsHelper.getSelectedUnit()),
+              'waterUnit':
+                  (userInfo.waterUnit != null && userInfo.waterUnit!.isNotEmpty)
+                      ? userInfo.waterUnit
+                      : (await SharedPrefsHelper.getSelectedUnit()),
               'user_type': "regular",
               'shutdown_app': false
             });
@@ -135,9 +136,10 @@ class DatabaseSyncService {
       // 1. Sync User Info
       final userInfo = await _dbHelper.getUserInfo();
       final selectedUnit = await SharedPrefsHelper.getSelectedUnit();
-      final effectiveWaterUnit = (userInfo?.waterUnit != null && userInfo!.waterUnit!.isNotEmpty)
-          ? userInfo.waterUnit
-          : selectedUnit;
+      final effectiveWaterUnit =
+          (userInfo?.waterUnit != null && userInfo!.waterUnit!.isNotEmpty)
+              ? userInfo.waterUnit
+              : selectedUnit;
       if (userInfo != null) {
         await _apiService.syncUserInfo(userId, {
           'gender': userInfo.gender?.toString().split('.').last,
@@ -463,26 +465,7 @@ class DatabaseSyncService {
         ]);
       }
 
-      // // 7. Sync Today History
-      // final todayHistory = await _dbHelper.getTodayHydrationHistory();
-      // if (todayHistory.isNotEmpty) {
-      //   final mappedHistory = todayHistory
-      //       .map((h) => {
-      //             'timestamp': h['timestamp'],
-      //             'consumed': h['consumed'],
-      //             'timezone': h['timezone'],
-      //             'percentage': h['percentage'],
-      //             'remaining': h['remaining'],
-      //             'totalAtTime': h['total_at_time'],
-      //           })
-      //       .toList();
-      //   await _syncInChunks<Map<String, dynamic>>(mappedHistory, 500,
-      //       (chunk) async {
-      //     await _apiService.syncTodayHistory(userId!, chunk);
-      //   });
-      // }
-
-      // 8. Sync Slots
+      // 7. Sync Slots
       final slots = await _dbHelper.getAllSlots();
       if (slots.isNotEmpty) {
         final mappedSlots = slots
@@ -504,7 +487,7 @@ class DatabaseSyncService {
         });
       }
 
-      // 9. Sync Daily Goals
+      // 8. Sync Daily Goals
       final goals = await _dbHelper.getAllDailyWaterGoals();
       if (goals.isNotEmpty) {
         await _syncInChunks<Map<String, dynamic>>(goals, 500, (chunk) async {
@@ -512,7 +495,7 @@ class DatabaseSyncService {
         });
       }
 
-      // 10. Sync Daily Steps
+      // 9. Sync Daily Steps
       final steps = await _dbHelper.getAllDailySteps();
       if (steps.isNotEmpty) {
         await _syncInChunks<Map<String, dynamic>>(steps, 500, (chunk) async {
@@ -520,7 +503,7 @@ class DatabaseSyncService {
         });
       }
 
-      // 11. Sync Metadata
+      // 10. Sync Metadata
       final metadata = await _dbHelper.getAllMetadata();
       if (metadata.isNotEmpty) {
         await _syncInChunks<Map<String, dynamic>>(metadata, 500, (chunk) async {
@@ -596,7 +579,8 @@ class DatabaseSyncService {
                     userInfo.coffeeIntake?.toString().split('.').last,
                 'teaIntake': userInfo.teaIntake?.toString().split('.').last,
                 'typicalWaterIntake': userInfo.typicalWaterIntake,
-                'waterUnit': (userInfo.waterUnit != null && userInfo.waterUnit!.isNotEmpty)
+                'waterUnit': (userInfo.waterUnit != null &&
+                        userInfo.waterUnit!.isNotEmpty)
                     ? userInfo.waterUnit
                     : (await SharedPrefsHelper.getSelectedUnit()),
               });

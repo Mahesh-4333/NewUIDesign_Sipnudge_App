@@ -349,7 +349,8 @@ class _LogHydrationWidgetState extends State<LogHydrationWidget> {
       _recentLogs.removeWhere((l) => l['id'] == localId);
     });
 
-    Fluttertoast.showToast(msg: AppLocalizations.of(context)?.logDeleted ?? "Log deleted");
+    Fluttertoast.showToast(
+        msg: AppLocalizations.of(context)?.logDeleted ?? "Log deleted");
 
     // Queue negative delta for BLE 000A
     await SharedPrefsHelper.addPendingManualDelta(-effectiveWater.toInt());
@@ -399,7 +400,9 @@ class _LogHydrationWidgetState extends State<LogHydrationWidget> {
     if (_isSaving) return;
 
     if (_currentAmount <= 0) {
-      Fluttertoast.showToast(msg: AppLocalizations.of(context)?.pleaseSelectAnAmount ?? "Please select an amount");
+      Fluttertoast.showToast(
+          msg: AppLocalizations.of(context)?.pleaseSelectAnAmount ??
+              "Please select an amount");
       return;
     }
 
@@ -433,6 +436,9 @@ class _LogHydrationWidgetState extends State<LogHydrationWidget> {
 
     // 2.5. Update local today summary
     await DatabaseHelper().updateHydrationDaySummary(effectiveWater);
+
+    // 2.6. Insert today hydration (saves to DB and syncs today's history to server)
+    await DatabaseHelper().insertTodayHydration(effectiveWater, now);
 
     // 3. Optimistic UI update: Insert directly into recent logs list if today is selected
     if (DateUtils.isSameDay(_selectedDate, now)) {
@@ -566,7 +572,8 @@ class _LogHydrationWidgetState extends State<LogHydrationWidget> {
           ),
           SizedBox(height: 8.h),
           Text(
-            l10n?.logHydrationSubtitle ?? "Log every sip from your morning coffee to your workout water to optimize your daily intake.",
+            l10n?.logHydrationSubtitle ??
+                "Log every sip from your morning coffee to your workout water to optimize your daily intake.",
             style: TextStyle(
               color: AppColors.darkgray,
               fontSize: 12.sp,
@@ -593,7 +600,8 @@ class _LogHydrationWidgetState extends State<LogHydrationWidget> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          (l10n?.selectedDrink ?? "SELECTED DRINK").toUpperCase(),
+                          (l10n?.selectedDrink ?? "SELECTED DRINK")
+                              .toUpperCase(),
                           style: TextStyle(
                             color: AppColors.blueWaterIntake,
                             fontSize: 10.sp,

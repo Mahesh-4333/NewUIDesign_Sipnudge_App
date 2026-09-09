@@ -283,4 +283,12 @@ class AssetsPath {
   static const String logHydrationMilk = "assets/log_hydration/milk.png";
   static const String logHydrationTea = "assets/log_hydration/tea.png";
   static const String logHydrationBottle = "assets/log_hydration/bottle.png";
+
+  static const String appleHealthIcon =
+      "assets/onboarding/apple_health_icon.png";
+  static const String appleHealthHeight = "assets/onboarding/apple_height.png";
+  static const String appleHealthWeight = "assets/onboarding/apple_weight.png";
+  static const String appleHealthWater = "assets/onboarding/apple_water.png";
+  static const String appleHealthSteps = "assets/onboarding/apple_steps.png";
+  static const String applePermission = "assets/onboarding/apple_permision.png";
 }

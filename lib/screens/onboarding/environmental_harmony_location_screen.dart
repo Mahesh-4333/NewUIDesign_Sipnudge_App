@@ -175,7 +175,7 @@ class _EnvironmentalHarmonyLocationScreenState
                     ),
                   ),
                   SizedBox(height: 24.h),
-                  // Enable Location Button
+                  // Continue Button
                   SizedBox(
                     width: double.infinity,
                     height: 52.h,
@@ -192,7 +192,7 @@ class _EnvironmentalHarmonyLocationScreenState
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Text(
-                            AppLocalizations.of(context)?.enableLocation ?? 'Enable Location',
+                            AppLocalizations.of(context)?.continueBtn ?? 'Continue',
                             style: TextStyle(
                               color: Colors.white,
                               fontSize: 16.sp,
@@ -207,30 +207,6 @@ class _EnvironmentalHarmonyLocationScreenState
                             size: 20.sp,
                           ),
                         ],
-                      ),
-                    ),
-                  ),
-                  SizedBox(height: 16.h),
-
-                  // I'll do it later Button
-                  InkWell(
-                    onTap: _navigateToNext,
-                    borderRadius: BorderRadius.circular(20.r),
-                    child: Padding(
-                      padding: EdgeInsets.symmetric(
-                        horizontal: 16.w,
-                        vertical: 8.h,
-                      ),
-                      child: Text(
-                        AppLocalizations.of(context)?.illDoItLater ?? "I'll do it later",
-                        style: TextStyle(
-                          color: const Color(0xFF1E293B),
-                          fontSize: 15.sp,
-                          fontFamily: AppFontStyles.urbanistFontFamily,
-                          fontVariations: [
-                            AppFontStyles.boldFontVariation,
-                          ],
-                        ),
                       ),
                     ),
                   ),

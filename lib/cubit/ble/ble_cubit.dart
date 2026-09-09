@@ -1507,7 +1507,13 @@ class BleCubit extends Cubit<BleState>
       final consumed = dailyTotalMl.toDouble();
       final isPerfect = target > 0 && consumed >= target;
 
-      // 1. Save today's record to SQLite
+      // 1. Purani value pehle capture karein (taaki diff sahi calculate ho)
+      final previousTotal = state.currentHydrationValue ?? 0.0;
+
+      // 2. Diff calculate karke today_hydration_history DB aur Health me sync karein
+      await _syncWithLocalConsumption(consumed, previousTotal);
+
+      // 3. Save today's record to SQLite summary
       final todaySummary = HydrationDaySummary(
         date: DateTime(now.year, now.month, now.day),
         dayIndex: 0,
@@ -1517,7 +1523,7 @@ class BleCubit extends Cubit<BleState>
       );
       await dbHelper.bulkUpsert30Days([todaySummary]);
 
-      // 2. Push today's record to server with force: true
+      // 4. Push today's record to server with force: true
       final userId = await SharedPrefsHelper.getUserId();
       if (userId != null && userId.isNotEmpty) {
         final dateUtc =
@@ -1534,18 +1540,13 @@ class BleCubit extends Cubit<BleState>
         );
       }
 
-      // 3. Update BleCubit state so Home Screen UI refreshes instantly
+      // 5. Update BleCubit state so Home Screen UI refreshes instantly
       emit(state.copyWith(currentHydrationValue: consumed));
 
-      // 4. Notify SyncBus for UI listeners (BottleDataCubit, charts, timeline)
+      // 6. Notify SyncBus for UI listeners (BottleDataCubit, charts, timeline)
       SyncBus.instance.notifySyncComplete();
 
-      // 5. Debounced home widget update (at most once per 30 seconds)
-      final lastUpdate = _lastWidgetUpdateFromDataChar;
-      // if (lastUpdate == null || now.difference(lastUpdate).inSeconds >= 30) {
-      //   _lastWidgetUpdateFromDataChar = now;
-
-      // }
+      // 7. Debounced home widget update
       Future.delayed(Duration(seconds: 5), () async {
         await HomeWidgetService.updateWidgetData();
       });

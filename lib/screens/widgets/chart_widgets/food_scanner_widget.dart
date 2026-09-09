@@ -545,6 +545,9 @@ class _FoodScannerWidgetState extends State<FoodScannerWidget> {
         await SharedPrefsHelper.addPendingManualDelta(delta.round());
         await DatabaseHelper().updateHydrationDaySummary(delta);
         await DatabaseSyncService().pushTodayConsumed();
+        if (delta > 0) {
+          await DatabaseHelper().insertTodayHydration(delta, DateTime.now());
+        }
       }
 
       widget.onScanCompleted?.call();

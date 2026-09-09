@@ -15,6 +15,7 @@ import 'package:health/health.dart';
 import 'package:hydrify/services/pedometer_service.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:hydrify/models/food_scan_data.dart';
+import 'package:hydrify/services/api_service.dart';
 import 'dart:io';
 
 class DatabaseHelper {
@@ -840,12 +841,48 @@ CREATE TABLE IF NOT EXISTS $appMetadataTableName (
         tag: "APP",
         value:
             "[DB] Inserted today history: $consumed mL at $timestamp [Timezone: $timezone] [Percentage: $percentage] [Remaining: $remaining] [TotalAtTime: $totalAtTime]");
+
+    try {
+      final userId = await SharedPrefsHelper.getUserId();
+      if (userId != null && userId.isNotEmpty) {
+        final todayHistory = await getTodayHydrationHistory();
+        Console.log(tag: "todayhistoryCheck", value: todayHistory.isNotEmpty);
+        if (todayHistory.isNotEmpty) {
+          final mappedHistory = todayHistory
+              .map((h) => {
+                    'timestamp': h['timestamp'],
+                    'consumed': h['consumed'],
+                    'timezone': h['timezone'],
+                    'percentage': h['percentage'],
+                    'remaining': h['remaining'],
+                    'totalAtTime': h['total_at_time'],
+                  })
+              .toList();
+
+          await ApiService().syncTodayHistory(userId, mappedHistory);
+        }
+      }
+    } catch (e) {
+      Console.log(
+          tag: "APP",
+          value: "[DB] Error syncing today history in insertTodayHydration: $e");
+    }
   }
 
-  Future<List<Map<String, dynamic>>> getTodayHydrationHistory() async {
+  Future<List<Map<String, dynamic>>> getTodayHydrationHistory({DateTime? date}) async {
     final db = await database;
-    return await db.query(todayHydrationHistoryTableName,
-        orderBy: 'timestamp DESC');
+    final target = date ?? DateTime.now();
+    final startOfDay =
+        DateTime(target.year, target.month, target.day).toIso8601String();
+    final endOfDay =
+        DateTime(target.year, target.month, target.day, 23, 59, 59, 999)
+            .toIso8601String();
+    return await db.query(
+      todayHydrationHistoryTableName,
+      where: 'timestamp >= ? AND timestamp <= ?',
+      whereArgs: [startOfDay, endOfDay],
+      orderBy: 'timestamp DESC',
+    );
   }
 
   Future<void> clearTodayHydrationHistory() async {

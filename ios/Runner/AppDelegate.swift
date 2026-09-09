@@ -694,6 +694,8 @@ class SipnudgeBackgroundBLE: NSObject, CBCentralManagerDelegate, CBPeripheralDel
                 formatter.timeZone = .current
                 let todayStr = formatter.string(from: Date())
 
+                var sipDiff: Int = 0
+
                 if let appDefaults = UserDefaults(suiteName: kAppGroupId) {
                     let storedGoal = UserDefaults.standard.object(forKey: "flutter.water_goal") as? Int
                         ?? appDefaults.object(forKey: "daily_goal") as? Int
@@ -707,8 +709,9 @@ class SipnudgeBackgroundBLE: NSObject, CBCentralManagerDelegate, CBPeripheralDel
                             existingIntake = 0
                         }
                         if consumed > existingIntake {
+                            sipDiff = consumed - existingIntake
                             appDefaults.set(consumed, forKey: "current_intake")
-                            NSLog("[BG-BLE] Updated App Group current_intake to \(consumed)ml")
+                            NSLog("[BG-BLE] Updated App Group current_intake to \(consumed)ml (diff: \(sipDiff)ml)")
                         }
                     }
                     if let pct = batteryPct, pct > 0 {
@@ -743,6 +746,14 @@ class SipnudgeBackgroundBLE: NSObject, CBCentralManagerDelegate, CBPeripheralDel
                             sendNotification: consumed > 0,
                             battery: batteryPct
                         )
+
+                        if sipDiff >= 40 {
+                            uploadTodayHistoryViaBackgroundSession(
+                                sipAmount: Double(sipDiff),
+                                totalAtTime: Double(consumed),
+                                battery: batteryPct
+                            )
+                        }
                     } else {
                         NSLog("[BG-BLE] ℹ️ Skipping duplicate background upload for \(consumed)ml (uploaded \(Int(now.timeIntervalSince(lastUploadTime!)))s ago)")
                     }
@@ -827,6 +838,60 @@ class SipnudgeBackgroundBLE: NSObject, CBCentralManagerDelegate, CBPeripheralDel
         } catch {
             NSLog("[BG-BLE] ❌ JSON serialization error: \(error.localizedDescription)")
             writeDebug("api_tx", "JSON_ERR")
+        }
+    }
+
+    private func uploadTodayHistoryViaBackgroundSession(
+        sipAmount: Double,
+        totalAtTime: Double,
+        battery: Int? = nil
+    ) {
+        guard let userId = UserDefaults.standard.string(forKey: "flutter.user_id")
+                ?? UserDefaults(suiteName: kAppGroupId)?.string(forKey: "flutter.user_id")
+                ?? UserDefaults.standard.string(forKey: "user_id")
+                ?? UserDefaults(suiteName: kAppGroupId)?.string(forKey: "user_id") else {
+            NSLog("[BG-BLE] ❌ Cannot upload history: No userId found")
+            return
+        }
+
+        let isoFormatter = ISO8601DateFormatter()
+        isoFormatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        let timestampStr = isoFormatter.string(from: Date())
+        let timezoneStr = TimeZone.current.identifier
+
+        var historyItem: [String: Any] = [
+            "timestamp": timestampStr,
+            "consumed": sipAmount,
+            "timezone": timezoneStr,
+            "totalAtTime": totalAtTime
+        ]
+        if let batteryPct = battery {
+            historyItem["percentage"] = Double(batteryPct)
+        }
+
+        let body: [String: Any] = [
+            "userId": userId,
+            "history": [historyItem]
+        ]
+
+        guard let uploadURL = URL(string: "https://api.sipnudge.com/api/database/sync-today-history") else {
+            NSLog("[BG-BLE] ❌ Invalid URL for sync-today-history")
+            return
+        }
+
+        do {
+            let jsonData = try JSONSerialization.data(withJSONObject: body, options: [])
+
+            NSLog("[BG-BLE] 📤 Scheduling background sync-today-history for user \(userId) (sip: \(sipAmount)ml, totalAtTime: \(totalAtTime)ml)")
+
+            BackgroundSessionManager.shared.scheduleUpload(
+                url: uploadURL,
+                method: "POST",
+                headers: ["Content-Type": "application/json"],
+                body: jsonData
+            )
+        } catch {
+            NSLog("[BG-BLE] ❌ JSON serialization error in sync-today-history: \(error.localizedDescription)")
         }
     }
 

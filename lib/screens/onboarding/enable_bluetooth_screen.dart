@@ -456,7 +456,7 @@ class EnableBluetoothScreen extends StatelessWidget {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    // Enable Bluetooth Button
+                    // Continue Button
                     SizedBox(
                       width: double.infinity,
                       height: 52.h,
@@ -473,14 +473,9 @@ class EnableBluetoothScreen extends StatelessWidget {
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Icon(
-                              Icons.bluetooth_rounded,
-                              size: 20.sp,
-                            ),
-                            SizedBox(width: 8.w),
                             Text(
-                              AppLocalizations.of(context)?.enableBluetooth ??
-                                  'Enable Bluetooth',
+                              AppLocalizations.of(context)?.continueBtn ??
+                                  'Continue',
                               style: TextStyle(
                                 fontSize: 16.sp,
                                 fontFamily: AppFontStyles.urbanistFontFamily,
@@ -488,6 +483,11 @@ class EnableBluetoothScreen extends StatelessWidget {
                                   AppFontStyles.boldFontVariation,
                                 ],
                               ),
+                            ),
+                            SizedBox(width: 8.w),
+                            Icon(
+                              Icons.arrow_forward_rounded,
+                              size: 20.sp,
                             ),
                           ],
                         ),

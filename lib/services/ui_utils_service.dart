@@ -85,7 +85,13 @@ class UiUtilsService {
   static dismissLoading(BuildContext context) {
     if (isLoadingDisplaying) {
       isLoadingDisplaying = false;
-      Navigator.of(context, rootNavigator: true).pop();
+      try {
+        if (context.mounted) {
+          Navigator.of(context, rootNavigator: true).pop();
+        }
+      } catch (e) {
+        debugPrint("Error dismissing loading: $e");
+      }
     }
   }
 

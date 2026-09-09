@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:firebase_auth/firebase_auth.dart';
@@ -15,6 +16,7 @@ import 'package:hydrify/screens/auth/forgot_password_screen.dart';
 import 'package:hydrify/screens/auth/otp_verification_screen.dart';
 import 'package:hydrify/screens/bottom_nav_screen_new.dart';
 import 'package:hydrify/screens/info/terms_of_service.dart';
+import 'package:hydrify/screens/onboarding/apple_health_onboarding_screen.dart';
 import 'package:hydrify/screens/user_personal_info_input_screen..dart';
 import 'package:hydrify/screens/widgets/auth_button_widget.dart';
 import 'package:hydrify/screens/widgets/custom_textfield.dart';
@@ -700,19 +702,25 @@ class _SigninSignupScreenState extends State<SigninSignupScreen> {
                   UiUtilsService.dismissLoading(context);
 
                   if (signInWithAppleRes['success'] == true) {
-                    // Fetch userId from backend using email
+                    // Fetch userId from backend using email in background
                     final userCredential =
                         signInWithAppleRes['userCredential'] as UserCredential?;
                     final email = userCredential?.user?.email;
-                    if (email != null) {
-                      final userData = await ApiService().getUserByEmail(email);
-                      if (userData != null && userData['_id'] != null) {
-                        await SharedPrefsHelper.setUserId(userData['_id']);
+                    if (email != null && email.isNotEmpty) {
+                      await SharedPrefsHelper.setUserEmail(email);
+                      unawaited(ApiService().getUserByEmail(email).then((userData) async {
+                        if (userData != null && userData['_id'] != null) {
+                          await SharedPrefsHelper.setUserId(userData['_id']);
+                          Console.log(
+                              tag: "AUTH",
+                              value:
+                                  "Social Login (Apple): UserId saved: ${userData['_id']}");
+                        }
+                      }).catchError((e) {
                         Console.log(
                             tag: "AUTH",
-                            value:
-                                "Social Login (Apple): UserId saved: ${userData['_id']}");
-                      }
+                            value: "Failed to fetch user by email on Apple login: $e");
+                      }));
                     }
 
                     if (!mounted) return;
@@ -725,7 +733,8 @@ class _SigninSignupScreenState extends State<SigninSignupScreen> {
                     Navigator.pushAndRemoveUntil(
                       context,
                       MaterialPageRoute(
-                        builder: (context) => UserInfoInputScreen(),
+                        builder: (context) =>
+                            const AppleHealthOnboardingScreen(),
                       ),
                       (route) => false,
                     );

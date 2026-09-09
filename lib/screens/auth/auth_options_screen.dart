@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/gestures.dart';
@@ -12,6 +13,7 @@ import 'package:hydrify/helpers/logger.dart';
 import 'package:hydrify/l10n/app_localizations.dart';
 import 'package:hydrify/helpers/shared_pref_helper.dart';
 import 'package:hydrify/screens/auth/signin_signup_screen.dart';
+import 'package:hydrify/screens/onboarding/apple_health_onboarding_screen.dart';
 import 'package:hydrify/screens/user_personal_info_input_screen..dart';
 import 'package:hydrify/screens/widgets/auth_button_widget.dart';
 import 'package:hydrify/services/api_service.dart';
@@ -294,25 +296,22 @@ class _AuthOptionsScreenState extends State<AuthOptionsScreen> {
                             final email = userCredential?.user?.email;
                             if (email != null && email.isNotEmpty) {
                               await SharedPrefsHelper.setUserEmail(email);
-                              try {
-                                final userData =
-                                    await ApiService().getUserByEmail(email);
-                                if (userData != null &&
-                                    userData['_id'] != null) {
-                                  await SharedPrefsHelper.setUserId(
-                                      userData['_id']);
+                              // Fetch userId in background without blocking UI navigation
+                              unawaited(ApiService().getUserByEmail(email).then((userData) async {
+                                if (userData != null && userData['_id'] != null) {
+                                  await SharedPrefsHelper.setUserId(userData['_id']);
                                   Console.log(
                                       tag: "AUTH",
-                                      value:
-                                          "Apple Login: UserId saved: ${userData['_id']}");
+                                      value: "Apple Login: UserId saved: ${userData['_id']}");
                                 }
-                              } catch (e) {
+                              }).catchError((e) {
                                 Console.log(
                                     tag: "AUTH",
-                                    value:
-                                        "Failed to fetch user by email on Apple login: $e");
-                              }
+                                    value: "Failed to fetch user by email on Apple login: $e");
+                              }));
                             }
+
+                            if (!mounted) return;
 
                             UiUtilsService.showToast(
                                 context: context,
@@ -323,7 +322,8 @@ class _AuthOptionsScreenState extends State<AuthOptionsScreen> {
                             Navigator.pushAndRemoveUntil(
                               context,
                               MaterialPageRoute(
-                                builder: (context) => UserInfoInputScreen(),
+                                builder: (context) =>
+                                    const AppleHealthOnboardingScreen(),
                               ),
                               (route) => false,
                             );
