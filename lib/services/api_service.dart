@@ -684,6 +684,7 @@ class ApiService {
     }
   }
 
+
   Future<bool> syncSlots(
       String userId, List<Map<String, dynamic>> slots) async {
     try {

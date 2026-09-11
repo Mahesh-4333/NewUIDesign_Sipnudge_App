@@ -24,6 +24,7 @@ import 'package:hydrify/services/home_widget_service.dart';
 import 'package:http/http.dart' as http;
 import 'package:permission_handler/permission_handler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_timezone/flutter_timezone.dart';
 import 'package:hydrify/helpers/internet_connection_helper.dart';
 import 'package:hydrify/services/api_service.dart';
 import 'package:hydrify/services/sync_bus.dart';
@@ -165,6 +166,7 @@ class BleCubit extends Cubit<BleState>
   StreamSubscription<BluetoothAdapterState>? _adapterStateSub;
   Timer? _watchdogTimer;
   Timer? _scanRestartTimer;
+  Timer? _midnightCheckTimer;
   DateTime? _stuckScanningSince;
 
   // Track characteristic value notifications to avoid duplicate listeners
@@ -283,8 +285,8 @@ class BleCubit extends Cubit<BleState>
   // new bottle 1 day before
   // tap bottle 0 day before
 
-  Future<void> start() async {
-    if (_isInitialized) {
+  Future<void> start({bool forceScan = false}) async {
+    if (_isInitialized && !forceScan) {
       Console.log(
           tag: '[BLE_Cubit] start() already called, ignoring duplicate call',
           value: 'BLE_Cubit');
@@ -293,12 +295,31 @@ class BleCubit extends Cubit<BleState>
 
     await checkAndResetForNewDay();
 
-    // await _fetchInvestorDayIncrement();
-
     emit(state.copyWith(
       status: BleStatus.initializing,
       message: "Initializing...",
     ));
+
+    final prefs = await SharedPreferences.getInstance();
+    savedDeviceName = prefs.getString('last_device_name');
+    savedDeviceId = prefs.getString('last_device_id');
+    final hasSkippedBle = prefs.getBool('has_skipped_bluetooth') ?? false;
+
+    // If user skipped Bluetooth during onboarding and has no paired bottle,
+    // do not request Bluetooth permissions or start background scanning unless forced.
+    if (hasSkippedBle && savedDeviceId == null && !forceScan) {
+      _isInitialized = true;
+      emit(state.copyWith(
+        status: BleStatus.disconnected,
+        message: "No bottle paired",
+        isFirstConnection: true,
+      ));
+      Console.log(
+          tag:
+              '[BLE_Cubit] User skipped Bluetooth onboarding & no bottle paired — skipping permission prompts',
+          value: 'BLE_Cubit');
+      return;
+    }
 
     // Request ALL permissions sequentially: Bluetooth → Location → Notification
     await requestAllPermissionsSequentially();
@@ -307,10 +328,6 @@ class BleCubit extends Cubit<BleState>
 
     await _waitForBluetoothOn(() async {
       _startWatchdog(); // ✅ Start the watchdog to ensure scanning recovery
-      final prefs = await SharedPreferences.getInstance();
-      savedDeviceName = prefs.getString('last_device_name');
-      savedDeviceId = prefs.getString('last_device_id');
-
       final bool isFirst = (savedDeviceName == null || savedDeviceId == null);
       emit(state.copyWith(
         status: BleStatus.initializing,
@@ -334,7 +351,11 @@ class BleCubit extends Cubit<BleState>
     final dbHelper = DatabaseHelper();
 
     // Same day → do nothing
-    if (lastDate != null && lastDate.isAtSameMomentAs(today)) {
+    final isSameDay = lastDate != null &&
+        lastDate.year == today.year &&
+        lastDate.month == today.month &&
+        lastDate.day == today.day;
+    if (isSameDay) {
       return;
     }
 
@@ -375,6 +396,12 @@ class BleCubit extends Cubit<BleState>
       currentHydrationValue: 0,
       message: "New day started. Hydration and refills reset.",
     ));
+
+    // 6️⃣ Notify all UI listeners & update widgets
+    SyncBus.instance.notifySyncComplete();
+    try {
+      await HomeWidgetService.updateWidgetData();
+    } catch (_) {}
   }
 
   Future<void> _waitForBluetoothOn(Future<void> Function() onReady) async {
@@ -687,6 +714,12 @@ class BleCubit extends Cubit<BleState>
         _scanForAllDevices();
       }
     });
+
+    _midnightCheckTimer?.cancel();
+    _midnightCheckTimer =
+        Timer.periodic(const Duration(minutes: 1), (timer) async {
+      await checkAndResetForNewDay();
+    });
   }
 
   @override
@@ -695,6 +728,7 @@ class BleCubit extends Cubit<BleState>
     WidgetsBinding.instance.removeObserver(this);
     _watchdogTimer?.cancel();
     _scanRestartTimer?.cancel();
+    _midnightCheckTimer?.cancel();
     _scanSub?.cancel();
     _connectionSub?.cancel();
     _adapterStateSub?.cancel();
@@ -709,7 +743,9 @@ class BleCubit extends Cubit<BleState>
     if (lifecycleState == AppLifecycleState.resumed) {
       Console.log(
           tag: "BLE_Cubit",
-          value: "App resumed. Verifying BLE connection status...");
+          value:
+              "App resumed. Checking day rollover & verifying BLE connection status...");
+      checkAndResetForNewDay();
       _verifyConnectionStatus();
     }
   }
@@ -879,7 +915,6 @@ class BleCubit extends Cubit<BleState>
     emit(state.copyWith(
       status: BleStatus.connecting,
       message: "Connecting to ${device.platformName}...",
-      scannedDevices: [],
     ));
 
     try {
@@ -905,6 +940,7 @@ class BleCubit extends Cubit<BleState>
           value: 'BLE_Cubit');
       await prefs.setString('last_device_id', device.remoteId.str);
       await prefs.setString('last_device_name', device.advName);
+      await prefs.setBool('has_skipped_bluetooth', false);
 
       savedDeviceId = device.remoteId.str;
       savedDeviceName = device.platformName;
@@ -1379,7 +1415,17 @@ class BleCubit extends Cubit<BleState>
 
     // When DATA_CHAR reports daily_total_ml, sync today's intake directly
     if (dailyTotalMl != null && dailyTotalMl >= 0) {
-      _syncDailyTotalFromDataChar(dailyTotalMl, battery: battery);
+      _syncDailyTotalFromDataChar(
+        dailyTotalMl,
+        battery: battery,
+        volume: volume,
+        refill: refill?.toDouble(),
+        percent: percent,
+        temp: temp,
+        bqTemp: bqTemp,
+        ts: ts,
+        bottleData: data,
+      );
     }
   }
 
@@ -1500,18 +1546,43 @@ class BleCubit extends Cubit<BleState>
   /// Saves today's intake to local SQLite and updates server with force: true
   /// whenever DATA_CHAR sends daily_total_ml.
   Future<void> _syncDailyTotalFromDataChar(int dailyTotalMl,
-      {int? battery}) async {
+      {int? battery,
+      double? volume,
+      double? refill,
+      int? percent,
+      double? temp,
+      double? bqTemp,
+      DateTime? ts,
+      dynamic bottleData}) async {
     try {
+      await checkAndResetForNewDay();
       final now = DateTime.now();
       final target = await SharedPrefsHelper.getWaterGoal() ?? 2500;
       final consumed = dailyTotalMl.toDouble();
       final isPerfect = target > 0 && consumed >= target;
 
       // 1. Purani value pehle capture karein (taaki diff sahi calculate ho)
-      final previousTotal = state.currentHydrationValue ?? 0.0;
+      double previousTotal = state.currentHydrationValue ?? 0.0;
+      if (previousTotal == 0.0) {
+        final history = await getCurrentDayHistory();
+        if (history > 0) {
+          previousTotal = history;
+        }
+      }
 
       // 2. Diff calculate karke today_hydration_history DB aur Health me sync karein
-      await _syncWithLocalConsumption(consumed, previousTotal);
+      await _syncWithLocalConsumption(
+        consumed,
+        previousTotal,
+        battery: battery,
+        volume: volume,
+        refill: refill,
+        percent: percent,
+        temp: temp,
+        bqTemp: bqTemp,
+        ts: ts,
+        bottleData: bottleData,
+      );
 
       // 3. Save today's record to SQLite summary
       final todaySummary = HydrationDaySummary(
@@ -1523,7 +1594,7 @@ class BleCubit extends Cubit<BleState>
       );
       await dbHelper.bulkUpsert30Days([todaySummary]);
 
-      // 4. Push today's record to server with force: true
+      // 4. Push today's record to server with force: true & sync real-time telemetry
       final userId = await SharedPrefsHelper.getUserId();
       if (userId != null && userId.isNotEmpty) {
         final dateUtc =
@@ -2452,7 +2523,15 @@ class BleCubit extends Cubit<BleState>
   // }
 
   Future<void> _syncWithLocalConsumption(
-      double currentTotalMl, double previousTotal) async {
+      double currentTotalMl, double previousTotal,
+      {int? battery,
+      double? volume,
+      double? refill,
+      int? percent,
+      double? temp,
+      double? bqTemp,
+      DateTime? ts,
+      dynamic bottleData}) async {
     try {
       final now = DateTime.now();
 
@@ -2468,16 +2547,47 @@ class BleCubit extends Cubit<BleState>
               "[LocalSync] Sync log: Bottle=$currentTotal ml, AppState=$previousTotal ml, Diff=$diff ml",
           value: "BLE_Cubit");
 
+      // If previousTotal was 0 and currentTotal is large (> 1000), it is an initial baseline establishment
+      if (previousTotal <= 0 && currentTotal > 1000) {
+        Console.log(
+            tag:
+                "[LocalSync] Initial baseline established at $currentTotal ml without inserting fake sip",
+            value: "BLE_Cubit");
+        return;
+      }
+
       // Sync if more than 40ml
       if (diff >= 40.0) {
         Console.log(
             tag: "[LocalSync] Syncing $diffL L to Health and Database",
             value: "BLE_Cubit");
 
-        await dbHelper.insertTodayHydration(diff, now,
-            percentage: state.battery?.toDouble(),
-            remaining: state.volume,
-            totalAtTime: currentTotal);
+        final effBattery = battery ?? state.battery;
+        final effVolume = volume ?? state.volume;
+        final effRefill = refill ?? state.refill?.toDouble();
+        final effPercent = percent ?? state.percent;
+        final effTemp = temp ?? state.temp;
+        final effBqTemp = bqTemp ?? state.bqTemp;
+        final effTs = ts ?? state.ts;
+        final effBottleData = bottleData ?? state.bottleData;
+
+        await dbHelper.insertTodayHydration(
+          diff,
+          now,
+          percentage: effPercent != null
+              ? effPercent.toDouble()
+              : effBattery?.toDouble(),
+          remaining: effVolume,
+          totalAtTime: currentTotal,
+          battery: effBattery,
+          volume: effVolume,
+          refill: effRefill,
+          percent: effPercent,
+          temp: effTemp,
+          bqTemp: effBqTemp,
+          ts: effTs,
+          bottleData: effBottleData,
+        );
 
         // Only sync to HealthKit/Health Connect if the user has already been
         // asked for health permission. If onboarding is still in progress,

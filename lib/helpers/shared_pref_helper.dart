@@ -910,7 +910,18 @@ class SharedPrefsHelper {
   }
 
   static const String _keyOnboardingFlowCompleted = 'onboarding_flow_completed';
+  static const String _keyHasSkippedBluetooth = 'has_skipped_bluetooth';
   static const String _keyFirebaseNotificationEnabled = 'firebase_notification_enabled';
+
+  static Future<bool> hasSkippedBluetooth() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool(_keyHasSkippedBluetooth) ?? false;
+  }
+
+  static Future<void> setHasSkippedBluetooth(bool value) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_keyHasSkippedBluetooth, value);
+  }
 
   static Future<bool> isOnboardingFlowCompleted() async {
     final prefs = await SharedPreferences.getInstance();

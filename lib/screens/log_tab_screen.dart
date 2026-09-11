@@ -125,7 +125,7 @@ class _LogTabScreenState extends State<LogTabScreen> {
               final updatedMap = local.toMap();
               if (serverItem.imagePath != null &&
                   (serverItem.imagePath!.startsWith('http') ||
-                   serverItem.imagePath!.startsWith('/uploads/'))) {
+                      serverItem.imagePath!.startsWith('/uploads/'))) {
                 updatedMap['image_path'] = serverItem.imagePath;
               }
               localList[matchIndex] = FoodScanData.fromMap(updatedMap);
@@ -204,12 +204,12 @@ class _LogTabScreenState extends State<LogTabScreen> {
             '${log.timestamp.year.toString().padLeft(4, '0')}-${log.timestamp.month.toString().padLeft(2, '0')}-${log.timestamp.day.toString().padLeft(2, '0')}';
         ApiService()
             .deleteManualLog(
-          userId,
-          drinkType,
-          log.waterContentMl,
-          log.timestamp.toIso8601String(),
-          localDate: localDateStr,
-        )
+              userId,
+              drinkType,
+              log.waterContentMl,
+              log.timestamp.toIso8601String(),
+              localDate: localDateStr,
+            )
             .catchError((_) => false);
       }
     }
@@ -543,7 +543,8 @@ class _LogTabScreenState extends State<LogTabScreen> {
                   setState(() {
                     _selectedDate = date;
                     _selectedFoodLog = null;
-                    _foodLogs = []; // clear immediately so old data doesn't flash
+                    _foodLogs =
+                        []; // clear immediately so old data doesn't flash
                   });
                   _loadFoodLogs();
                 },
@@ -701,63 +702,67 @@ class _LogTabScreenState extends State<LogTabScreen> {
                     ],
                   ),
                   child: Row(
-                  children: [
-                    _buildFoodIcon(log),
-                    SizedBox(width: 12.w),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            log.dishName,
-                            style: TextStyle(
-                              color: AppColors.bluegray,
-                              fontSize: 15.sp,
-                              fontFamily: AppFontStyles.urbanistFontFamily,
-                              fontVariations: [AppFontStyles.boldFontVariation],
+                    children: [
+                      _buildFoodIcon(log),
+                      SizedBox(width: 12.w),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              log.dishName,
+                              style: TextStyle(
+                                color: AppColors.bluegray,
+                                fontSize: 15.sp,
+                                fontFamily: AppFontStyles.urbanistFontFamily,
+                                fontVariations: [
+                                  AppFontStyles.boldFontVariation
+                                ],
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                             ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          SizedBox(height: 4.h),
-                          Text(
-                            "${isToday ? 'Today' : DateFormat('dd MMM').format(log.timestamp)} • $formattedTime • ${log.caloriesKcal.toInt()} kcal",
-                            style: TextStyle(
-                              color: AppColors.greyColorText1,
-                              fontSize: 12.sp,
-                              fontFamily: AppFontStyles.urbanistFontFamily,
+                            SizedBox(height: 4.h),
+                            Text(
+                              "${isToday ? 'Today' : DateFormat('dd MMM').format(log.timestamp)} • $formattedTime • ${log.caloriesKcal.toInt()} kcal",
+                              style: TextStyle(
+                                color: AppColors.greyColorText1,
+                                fontSize: 12.sp,
+                                fontFamily: AppFontStyles.urbanistFontFamily,
+                              ),
                             ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    SizedBox(width: 8.w),
-                    Text(
-                      HydrationHelper.formatVolume(log.waterContentMl, _selectedUnit, showUnit: true),
-                      style: TextStyle(
-                        color: const Color(0xFF00A2FF),
-                        fontSize: 16.sp,
-                        fontFamily: AppFontStyles.urbanistFontFamily,
-                        fontVariations: [AppFontStyles.boldFontVariation],
-                      ),
-                    ),
-                    SizedBox(width: 4.w),
-                    GestureDetector(
-                      onTap: () => _deleteFoodLog(log),
-                      child: Padding(
-                        padding: EdgeInsets.all(4.w),
-                        child: Icon(
-                          Icons.delete_outline_rounded,
-                          color: Colors.grey.shade400,
-                          size: 20.sp,
+                          ],
                         ),
                       ),
-                    ),
-                  ],
+                      SizedBox(width: 8.w),
+                      Text(
+                        HydrationHelper.formatVolume(
+                            log.waterContentMl, _selectedUnit,
+                            showUnit: true),
+                        style: TextStyle(
+                          color: const Color(0xFF00A2FF),
+                          fontSize: 16.sp,
+                          fontFamily: AppFontStyles.urbanistFontFamily,
+                          fontVariations: [AppFontStyles.boldFontVariation],
+                        ),
+                      ),
+                      SizedBox(width: 4.w),
+                      GestureDetector(
+                        onTap: () => _deleteFoodLog(log),
+                        child: Padding(
+                          padding: EdgeInsets.all(4.w),
+                          child: Icon(
+                            Icons.delete_outline_rounded,
+                            color: Colors.grey.shade400,
+                            size: 20.sp,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-            );
-          },
+              );
+            },
           ),
       ],
     );

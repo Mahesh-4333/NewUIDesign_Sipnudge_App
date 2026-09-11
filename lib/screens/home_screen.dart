@@ -324,13 +324,16 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       // 3. Reload bottle info & graphics
       _loadBottle();
 
-      // 4. Refresh weather and database sync
+      // 4. Refresh weather, verify day rollover & trigger database sync
       Provider.of<WeatherProvider>(context, listen: false)
           .fetchWeatherForCurrentLocation();
-      DatabaseSyncService().syncAll();
 
       () async {
         try {
+          if (mounted) {
+            await context.read<BleCubit>().checkAndResetForNewDay();
+          }
+          await DatabaseSyncService().syncAll();
           await HomeWidgetService.processPendingWidgetLogs();
           await HomeWidgetService.updateWidgetData();
           if (mounted) {

@@ -17,7 +17,7 @@ class HomeWidgetService {
   static const String androidWidgetName = 'HomeWidgetProvider';
   static const String iOSWidgetName = 'SipnudgeWidget';
   // This needs to match the App Group ID created in Apple Developer Portal and Xcode
-  static const String appGroupId = 'group.com.sipnudge.sipnudge'; 
+  static const String appGroupId = 'group.com.sipnudge.sipnudge';
 
   static Future<void> initialize() async {
     // Set the App Group ID for iOS
@@ -101,7 +101,8 @@ class HomeWidgetService {
     }
   }
 
-  static Future<void> quickLogDrink(String drinkType, {double amount = 250}) async {
+  static Future<void> quickLogDrink(String drinkType,
+      {double amount = 250}) async {
     try {
       final dbHelper = DatabaseHelper();
       final double coefficient =
@@ -140,7 +141,9 @@ class HomeWidgetService {
         currentIntake = todaySummary.consumed.round();
       }
     } catch (e) {
-      Console.log(tag: "HomeWidget", value: "Error fetching data from local database: $e");
+      Console.log(
+          tag: "HomeWidget",
+          value: "Error fetching data from local database: $e");
     }
 
     // Try fetching from API exclusively
@@ -150,8 +153,10 @@ class HomeWidgetService {
         // Save user_id to the App Group so the native widget extension can read it in the background
         await HomeWidget.saveWidgetData<String>('user_id', userId);
         final rangeStart = DateTime.utc(today.year, today.month, today.day);
-        final rangeEnd = DateTime.utc(today.year, today.month, today.day, 23, 59, 59);
-        final summaries = await ApiService().getDailySummaries(userId, rangeStart, rangeEnd);
+        final rangeEnd =
+            DateTime.utc(today.year, today.month, today.day, 23, 59, 59);
+        final summaries =
+            await ApiService().getDailySummaries(userId, rangeStart, rangeEnd);
         if (summaries != null && summaries.isNotEmpty) {
           // Find today's summary by matching the year, month, and day in local time
           Map<String, dynamic>? todaySummary;
@@ -160,7 +165,8 @@ class HomeWidgetService {
             if (dateStr != null) {
               DateTime? parsedDate;
               try {
-                final datePart = dateStr.length >= 10 ? dateStr.substring(0, 10) : dateStr;
+                final datePart =
+                    dateStr.length >= 10 ? dateStr.substring(0, 10) : dateStr;
                 parsedDate = DateTime.parse(datePart);
               } catch (_) {}
               if (parsedDate != null &&
@@ -176,11 +182,13 @@ class HomeWidgetService {
           // Fallback to the latest summary in the range if no exact match is found
           todaySummary ??= summaries.last;
 
-          currentIntake = (todaySummary['consumed'] as num?)?.round() ?? currentIntake;
+          currentIntake =
+              (todaySummary['consumed'] as num?)?.round() ?? currentIntake;
         }
       }
     } catch (e) {
-      Console.log(tag: "HomeWidget", value: "Error fetching summaries from API: $e");
+      Console.log(
+          tag: "HomeWidget", value: "Error fetching summaries from API: $e");
     }
 
     int coffeeIntake = 0;
@@ -201,7 +209,7 @@ class HomeWidgetService {
     // Calculate and save upcoming slot data and battery
     try {
       final dbHelper = DatabaseHelper();
-      
+
       // 1. Fetch battery from local database / cached state
       int battery = 0;
       try {
@@ -216,7 +224,9 @@ class HomeWidgetService {
           battery = maps.first['battery'] as int? ?? 0;
         }
       } catch (e) {
-        Console.log(tag: "HomeWidget", value: "Error fetching battery from database: $e");
+        Console.log(
+            tag: "HomeWidget",
+            value: "Error fetching battery from database: $e");
       }
 
       if (battery <= 0) {
@@ -268,8 +278,10 @@ class HomeWidgetService {
         );
         final double expectedCumulative =
             (expectedPercent / 100.0) * dailyGoal.toDouble();
-        await HomeWidget.saveWidgetData<int>('expected_cumulative_target', expectedCumulative.round());
-        await HomeWidget.saveWidgetData<double>('expected_percent', expectedPercent);
+        await HomeWidget.saveWidgetData<int>(
+            'expected_cumulative_target', expectedCumulative.round());
+        await HomeWidget.saveWidgetData<double>(
+            'expected_percent', expectedPercent);
 
         HydrationEntry? upcomingEntry;
         for (final entry in slots) {
@@ -288,17 +300,20 @@ class HomeWidgetService {
         final period = tod.period == DayPeriod.am ? 'AM' : 'PM';
         final timeStr = "$hour:$minute $period";
 
-        await HomeWidget.saveWidgetData<String>('upcoming_slot_name', upcomingEntry.slot.label);
-        await HomeWidget.saveWidgetData<int>('upcoming_slot_target', upcomingEntry.amount.round());
+        await HomeWidget.saveWidgetData<String>(
+            'upcoming_slot_name', upcomingEntry.slot.label);
+        await HomeWidget.saveWidgetData<int>(
+            'upcoming_slot_target', upcomingEntry.amount.round());
         await HomeWidget.saveWidgetData<String>('upcoming_slot_time', timeStr);
         Console.log(
             tag: "HomeWidget",
-            value: "Widget upcoming slot: ${upcomingEntry.slot.label} at $timeStr, target: ${upcomingEntry.amount.round()} ml, expectedCumulative: $expectedCumulative ml, expectedPercent: $expectedPercent%");
+            value:
+                "Widget upcoming slot: ${upcomingEntry.slot.label} at $timeStr, target: ${upcomingEntry.amount.round()} ml, expectedCumulative: $expectedCumulative ml, expectedPercent: $expectedPercent%");
       }
     } catch (e) {
       Console.log(tag: "HomeWidget", value: "Error updating widget data: $e");
     }
-    
+
     // Trigger an update for both platforms
     await HomeWidget.updateWidget(
       name: androidWidgetName,

@@ -331,6 +331,38 @@ class BackgroundSessionManager: NSObject, URLSessionDelegate, URLSessionTaskDele
 
     override func applicationWillTerminate(_ application: UIApplication) {
         super.applicationWillTerminate(application)
+
+        let hasDevice = UserDefaults.standard.string(forKey: "flutter.last_device_id") != nil
+        let onboardingCompleted = UserDefaults.standard.bool(forKey: "flutter.onboarding_flow_completed")
+
+        // 6-hour cooldown (21,600s) to avoid spamming the user during repeated background OS kills / app switches
+        let lastNotifTime = UserDefaults.standard.double(forKey: "last_termination_notif_time")
+        let now = Date().timeIntervalSince1970
+        let cooldownSeconds: Double = 6 * 3600
+
+        if (hasDevice || onboardingCompleted) && (now - lastNotifTime >= cooldownSeconds) {
+            UserDefaults.standard.set(now, forKey: "last_termination_notif_time")
+
+            let content = UNMutableNotificationContent()
+            content.title = "Background Sync Paused"
+            content.body = "Sipnudge was closed. Keep the app open in the background to continue automatic water tracking."
+            content.sound = .default
+            let req = UNNotificationRequest(
+                identifier: "app_terminated_sync_paused",
+                content: content,
+                trigger: UNTimeIntervalNotificationTrigger(timeInterval: 1, repeats: false)
+            )
+            let semaphore = DispatchSemaphore(value: 0)
+            UNUserNotificationCenter.current().add(req) { error in
+                if let error = error {
+                    NSLog("[AppDelegate] Failed to schedule termination notification: \(error.localizedDescription)")
+                } else {
+                    NSLog("[AppDelegate] Successfully scheduled termination notification")
+                }
+                semaphore.signal()
+            }
+            _ = semaphore.wait(timeout: .now() + 1.0)
+        }
     }
 
     override func userNotificationCenter(
@@ -436,17 +468,25 @@ class SipnudgeBackgroundBLE: NSObject, CBCentralManagerDelegate, CBPeripheralDel
         writeDebug("lpm", isActive ? "ON — uploads may be deferred" : "OFF — uploads resuming")
         
         if isActive {
-            let content = UNMutableNotificationContent()
-            content.title = "Low Power Mode Detected"
-            content.body = "Background sync paused. Turn off Low Power Mode to resume background tracking."
-            content.sound = .default
-            let req = UNNotificationRequest(
-                identifier: "lpm_detected",
-                content: content,
-                trigger: UNTimeIntervalNotificationTrigger(timeInterval: 1, repeats: false)
-            )
-            UNUserNotificationCenter.current().add(req, withCompletionHandler: nil)
-            NSLog("[BG-BLE] Low Power Mode local notification triggered")
+            let lastLpmNotifTime = UserDefaults.standard.double(forKey: "last_lpm_notif_time")
+            let now = Date().timeIntervalSince1970
+            let cooldownSeconds: Double = 6 * 3600 // 6 hours
+
+            if now - lastLpmNotifTime >= cooldownSeconds {
+                UserDefaults.standard.set(now, forKey: "last_lpm_notif_time")
+
+                let content = UNMutableNotificationContent()
+                content.title = "Low Power Mode Detected"
+                content.body = "Background sync paused. Turn off Low Power Mode to resume background tracking."
+                content.sound = .default
+                let req = UNNotificationRequest(
+                    identifier: "lpm_detected",
+                    content: content,
+                    trigger: UNTimeIntervalNotificationTrigger(timeInterval: 1, repeats: false)
+                )
+                UNUserNotificationCenter.current().add(req, withCompletionHandler: nil)
+                NSLog("[BG-BLE] Low Power Mode local notification triggered")
+            }
         }
         
         onLowPowerModeChanged?(isActive)
@@ -702,14 +742,18 @@ class SipnudgeBackgroundBLE: NSObject, CBCentralManagerDelegate, CBPeripheralDel
                         ?? 2500
                     let goal = storedGoal > 0 ? storedGoal : 2500
 
-                    if consumed > 0 {
-                        let lastUpdateDateStr = appDefaults.string(forKey: "last_update_date") ?? ""
-                        var existingIntake = appDefaults.integer(forKey: "current_intake")
-                        if lastUpdateDateStr != todayStr {
-                            existingIntake = 0
-                        }
-                        if consumed > existingIntake {
-                            sipDiff = consumed - existingIntake
+                    let lastUpdateDateStr = appDefaults.string(forKey: "last_update_date") ?? ""
+                    var existingIntake = appDefaults.integer(forKey: "current_intake")
+                    if lastUpdateDateStr != todayStr {
+                        existingIntake = 0
+                        appDefaults.set(0, forKey: "current_intake")
+                        appDefaults.set(0, forKey: "coffee_intake")
+                        appDefaults.set(0, forKey: "water_intake")
+                    }
+
+                    if consumed >= 0 {
+                        if consumed > existingIntake || lastUpdateDateStr != todayStr {
+                            sipDiff = max(0, consumed - existingIntake)
                             appDefaults.set(consumed, forKey: "current_intake")
                             NSLog("[BG-BLE] Updated App Group current_intake to \(consumed)ml (diff: \(sipDiff)ml)")
                         }

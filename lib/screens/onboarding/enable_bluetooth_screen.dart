@@ -9,6 +9,7 @@ import 'package:hydrify/constants/app_colors.dart';
 import 'package:hydrify/constants/app_font_styles.dart';
 import 'package:hydrify/constants/assets_path.dart';
 import 'package:hydrify/cubit/ble/ble_cubit.dart';
+import 'package:hydrify/helpers/shared_pref_helper.dart';
 import 'package:hydrify/l10n/app_localizations.dart';
 
 class EnableBluetoothScreen extends StatelessWidget {
@@ -122,7 +123,9 @@ class EnableBluetoothScreen extends StatelessWidget {
         if (!context.mounted) return;
 
         if (isGranted) {
-          context.read<BleCubit>().start();
+          await SharedPrefsHelper.setHasSkippedBluetooth(false);
+          if (!context.mounted) return;
+          context.read<BleCubit>().start(forceScan: true);
           onEnableBluetooth();
         } else if (connectStatus?.isPermanentlyDenied == true ||
             scanStatus?.isPermanentlyDenied == true ||
@@ -149,8 +152,9 @@ class EnableBluetoothScreen extends StatelessWidget {
 
         if (adapterState == BluetoothAdapterState.on ||
             adapterState == BluetoothAdapterState.off) {
+          await SharedPrefsHelper.setHasSkippedBluetooth(false);
           if (!context.mounted) return;
-          context.read<BleCubit>().start();
+          context.read<BleCubit>().start(forceScan: true);
           onEnableBluetooth();
           return;
         }
@@ -167,8 +171,9 @@ class EnableBluetoothScreen extends StatelessWidget {
         }
 
         // If unknown (first time launch), start BleCubit to trigger iOS native Bluetooth authorization prompt
+        await SharedPrefsHelper.setHasSkippedBluetooth(false);
         if (!context.mounted) return;
-        context.read<BleCubit>().start();
+        context.read<BleCubit>().start(forceScan: true);
 
         final updatedState = await FlutterBluePlus.adapterState
             .firstWhere((state) => state != BluetoothAdapterState.unknown)
@@ -497,7 +502,10 @@ class EnableBluetoothScreen extends StatelessWidget {
 
                     // Skip Button
                     GestureDetector(
-                      onTap: onSkip,
+                      onTap: () async {
+                        await SharedPrefsHelper.setHasSkippedBluetooth(true);
+                        onSkip();
+                      },
                       child: Text(
                         AppLocalizations.of(context)?.skipNoBottle ??
                             "Skip: I don't have a bottle",

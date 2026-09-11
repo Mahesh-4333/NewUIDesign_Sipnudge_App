@@ -9,7 +9,6 @@ import 'package:hydrify/screens/data_n_analytics/data_n_analytics_screen.dart';
 import 'package:hydrify/screens/language_selection_settings_screen.dart';
 import 'package:hydrify/screens/onboarding/intake_timeline_intro_screen.dart';
 import 'package:hydrify/screens/onboarding/onboarding_flow_screen.dart';
-import 'package:hydrify/screens/onboarding/onboarding_walkthrough_screen.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
@@ -283,8 +282,40 @@ class _SettingScreenState extends State<SettingScreen> {
         // 🔥 NEW: Sipnudge Bottle Navigation
         case 'Sipnudge Bottle':
           _navigateToBottleInfo(context);
-
           break;
+
+        case 'Connect Bottle':
+        case 'Pair Bottle':
+          {
+            context.read<BottomNavCubit>().hideBar();
+            SharedPrefsHelper.getBottle().then((savedColor) {
+              int bottleIndex = 1; // default black
+              if (savedColor == 'red') {
+                bottleIndex = 0;
+              } else if (savedColor == 'black') {
+                bottleIndex = 1;
+              } else if (savedColor == 'purple') {
+                bottleIndex = 2;
+              }
+              if (context.mounted) {
+                navigator
+                    .push(
+                  MaterialPageRoute(
+                    builder: (_) => OnboardingFlowScreen(
+                      initialPage: 1,
+                      initialBottleIndex: bottleIndex,
+                    ),
+                  ),
+                )
+                    .then((value) {
+                  if (context.mounted) {
+                    context.read<BottomNavCubit>().showBar();
+                  }
+                });
+              }
+            });
+            break;
+          }
 
         case 'Connect Wi-Fi':
           navigator.push(
@@ -325,7 +356,6 @@ class _SettingScreenState extends State<SettingScreen> {
           break;
 
         case "Account & Security":
-        case AppStrings.accountandsecurity:
           navigator.push(
             MaterialPageRoute(
               builder: (_) => const AccountAndSecurityPage(),
@@ -903,6 +933,9 @@ class _SettingScreenState extends State<SettingScreen> {
         return l10n.sipnudgeBottle;
       case "Connect Wi-Fi":
         return l10n.connectWifi;
+      case "Connect Bottle":
+      case "Pair Bottle":
+        return "Connect Bottle";
       case "Data & Analytics":
         return l10n.dataAnalytics;
       default:

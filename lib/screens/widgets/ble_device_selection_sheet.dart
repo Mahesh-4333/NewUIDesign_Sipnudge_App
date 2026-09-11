@@ -15,20 +15,47 @@ class BleDeviceSelectionSheet extends StatelessWidget {
   Widget build(BuildContext context) {
     return SafeArea(
       child: BlocBuilder<BleCubit, BleState>(
-        buildWhen: (prev, curr) => prev.scannedDevices != curr.scannedDevices,
         builder: (context, state) {
-          final filtered = state.scannedDevices
-              .where((r) => r.device.name.isNotEmpty)
-              .toList();
+          if (state.status == BleStatus.connecting) {
+            return Container(
+              height: 180.h,
+              padding: EdgeInsets.all(AppDimensions.defaultPadding),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const CircularProgressIndicator(color: Color(0xFF00D0FF)),
+                  SizedBox(height: 16.h),
+                  Text(
+                    'Connecting to bottle...',
+                    style: TextStyle(
+                      fontSize: AppFontStyles.fontSize_16,
+                      fontFamily: AppFontStyles.urbanistFontFamily,
+                      color: AppColors.white,
+                      fontVariations: [
+                        AppFontStyles.fontWeightVariation600
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }
 
-          return Container(
-            height: MediaQuery.of(context).size.height * 0.8,
-            padding: EdgeInsets.all(AppDimensions.defaultPadding),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                if (filtered.isEmpty)
+          final filtered = state.scannedDevices.where((r) {
+            final name = r.device.platformName.isNotEmpty
+                ? r.device.platformName
+                : r.advertisementData.advName;
+            return name.isNotEmpty;
+          }).toList();
+
+          if (filtered.isEmpty) {
+            return Container(
+              padding: EdgeInsets.all(AppDimensions.defaultPadding),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.center,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
                   Padding(
                     padding: const EdgeInsets.all(24.0),
                     child: Column(
@@ -45,7 +72,7 @@ class BleDeviceSelectionSheet extends StatelessWidget {
                             ],
                           ),
                         ),
-                        const SizedBox(height: 8),
+                        const SizedBox(height: 12),
                         ElevatedButton(
                           onPressed: () {
                             Navigator.of(context).pop();
@@ -73,30 +100,46 @@ class BleDeviceSelectionSheet extends StatelessWidget {
                         ),
                       ],
                     ),
-                  )
-                else
-                  Flexible(
-                    child: ListView.separated(
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      itemCount: filtered.length,
-                      itemBuilder: (context, index) {
-                        final r = filtered[index];
-                        return DeviceListItem(
-                          name: r.device.name,
-                          onTap: () {
-                            Navigator.of(context).pop();
-                            context
-                                .read<BleCubit>()
-                                .connectToSelectedDevice(r.device);
-                          },
-                        );
-                      },
-                      separatorBuilder: (context, index) => SizedBox(
-                        height: 10.h,
-                      ),
+                  ),
+                ],
+              ),
+            );
+          }
+
+          return Container(
+            height: MediaQuery.of(context).size.height * 0.8,
+            padding: EdgeInsets.all(AppDimensions.defaultPadding),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Flexible(
+                  child: ListView.separated(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    itemCount: filtered.length,
+                    itemBuilder: (context, index) {
+                      final r = filtered[index];
+                      final name = r.device.platformName.isNotEmpty
+                          ? r.device.platformName
+                          : (r.advertisementData.advName.isNotEmpty
+                              ? r.advertisementData.advName
+                              : 'Sipnudge Bottle');
+                      return DeviceListItem(
+                        name: name,
+                        onTap: () {
+                          Navigator.of(context).pop();
+                          context
+                              .read<BleCubit>()
+                              .connectToSelectedDevice(r.device);
+                        },
+                      );
+                    },
+                    separatorBuilder: (context, index) => SizedBox(
+                      height: 10.h,
                     ),
                   ),
+                ),
               ],
             ),
           );

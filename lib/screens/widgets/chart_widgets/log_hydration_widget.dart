@@ -361,6 +361,9 @@ class _LogHydrationWidgetState extends State<LogHydrationWidget> {
 
     // 3. Immediately trigger Cubit & BLE UI updates and notify all chart/graph listeners
     if (mounted) {
+      final currentVal = bleCubit.state.currentHydrationValue;
+      bleCubit.updateCurrentHydrationValue(
+          (currentVal - effectiveWater).clamp(0.0, double.infinity));
       bleCubit.triggerRefresh();
       bleCubit.syncPendingManualDelta();
       hydrationCubit.refreshAchievementStats();
@@ -437,9 +440,6 @@ class _LogHydrationWidgetState extends State<LogHydrationWidget> {
     // 2.5. Update local today summary
     await DatabaseHelper().updateHydrationDaySummary(effectiveWater);
 
-    // 2.6. Insert today hydration (saves to DB and syncs today's history to server)
-    await DatabaseHelper().insertTodayHydration(effectiveWater, now);
-
     // 3. Optimistic UI update: Insert directly into recent logs list if today is selected
     if (DateUtils.isSameDay(_selectedDate, now)) {
       setState(() {
@@ -464,6 +464,8 @@ class _LogHydrationWidgetState extends State<LogHydrationWidget> {
 
     // 5. Trigger instant Cubit, Chart & Widget refreshes
     if (mounted) {
+      final currentVal = bleCubit.state.currentHydrationValue;
+      bleCubit.updateCurrentHydrationValue(currentVal + effectiveWater);
       bleCubit.triggerRefresh();
       bleCubit.syncPendingManualDelta();
       hydrationCubit.refreshAchievementStats();

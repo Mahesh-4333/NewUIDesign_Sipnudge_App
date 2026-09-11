@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:hydrify/helpers/shared_pref_helper.dart';
 import 'package:hydrify/screens/onboarding/choose_finish_screen.dart';
 import 'package:hydrify/screens/onboarding/enable_bluetooth_screen.dart';
 import 'package:hydrify/screens/onboarding/bottle_activation_screen.dart';
@@ -9,11 +10,15 @@ import 'package:hydrify/screens/onboarding/intake_timeline_intro_screen.dart';
 class OnboardingFlowScreen extends StatefulWidget {
   final VoidCallback? onFlowCompleted;
   final VoidCallback? onFlowSkipped;
+  final int initialPage;
+  final int initialBottleIndex;
 
   const OnboardingFlowScreen({
     super.key,
     this.onFlowCompleted,
     this.onFlowSkipped,
+    this.initialPage = 0,
+    this.initialBottleIndex = 1,
   });
 
   @override
@@ -21,9 +26,17 @@ class OnboardingFlowScreen extends StatefulWidget {
 }
 
 class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
-  final PageController _pageController = PageController();
-  int _selectedBottleIndex = 1; // Default Candy Red
-  int _currentPage = 0;
+  late final PageController _pageController;
+  late int _selectedBottleIndex;
+  late int _currentPage;
+
+  @override
+  void initState() {
+    super.initState();
+    _currentPage = widget.initialPage;
+    _selectedBottleIndex = widget.initialBottleIndex;
+    _pageController = PageController(initialPage: widget.initialPage);
+  }
 
   void _nextPage() {
     _pageController.nextPage(
@@ -33,6 +46,12 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
   }
 
   void _previousPage() {
+    if (_currentPage == widget.initialPage) {
+      if (Navigator.canPop(context)) {
+        Navigator.pop(context);
+      }
+      return;
+    }
     _pageController.previousPage(
       duration: const Duration(milliseconds: 350),
       curve: Curves.easeInOut,
@@ -78,11 +97,20 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
             _nextPage();
           },
           onSkip: () {
-            _pageController.animateToPage(
-              4,
-              duration: const Duration(milliseconds: 350),
-              curve: Curves.easeInOut,
-            );
+            SharedPrefsHelper.setHasSkippedBluetooth(true);
+            if (widget.initialPage > 0) {
+              if (widget.onFlowSkipped != null) {
+                widget.onFlowSkipped!();
+              } else if (Navigator.canPop(context)) {
+                Navigator.pop(context);
+              }
+            } else {
+              _pageController.animateToPage(
+                4,
+                duration: const Duration(milliseconds: 350),
+                curve: Curves.easeInOut,
+              );
+            }
           },
           onBack: _previousPage,
         ),
@@ -99,7 +127,17 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
         FreshStartCalibrationScreen(
           selectedBottleIndex: _selectedBottleIndex,
           onBack: _previousPage,
-          onFinalize: _nextPage,
+          onFinalize: () {
+            if (widget.initialPage > 0) {
+              if (widget.onFlowCompleted != null) {
+                widget.onFlowCompleted!();
+              } else if (Navigator.canPop(context)) {
+                Navigator.pop(context);
+              }
+            } else {
+              _nextPage();
+            }
+          },
         ),
 
         // Page 5: Introduction Walkthrough Slides

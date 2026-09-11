@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'package:hydrify/helpers/hydration_helper.dart';
 import 'package:hydrify/helpers/logger.dart';
 
@@ -76,7 +77,7 @@ class DatabaseHelper {
     String finalPath = path.join(await getDatabasesPath(), 'bottle_history.db');
     final db = await openDatabase(
       finalPath,
-      version: 22,
+      version: 23,
       onUpgrade: (db, oldVersion, newVersion) async {
         if (oldVersion < 2) {
           await db.execute('ALTER TABLE user ADD COLUMN stepGoal INTEGER');
@@ -252,6 +253,28 @@ class DatabaseHelper {
             // Already exists — safe to ignore.
           }
         }
+        if (oldVersion < 23) {
+          try {
+            await db.execute(
+                'ALTER TABLE $todayHydrationHistoryTableName ADD COLUMN battery INTEGER');
+            await db.execute(
+                'ALTER TABLE $todayHydrationHistoryTableName ADD COLUMN volume REAL');
+            await db.execute(
+                'ALTER TABLE $todayHydrationHistoryTableName ADD COLUMN refill REAL');
+            await db.execute(
+                'ALTER TABLE $todayHydrationHistoryTableName ADD COLUMN percent INTEGER');
+            await db.execute(
+                'ALTER TABLE $todayHydrationHistoryTableName ADD COLUMN temp REAL');
+            await db.execute(
+                'ALTER TABLE $todayHydrationHistoryTableName ADD COLUMN bqTemp REAL');
+            await db.execute(
+                'ALTER TABLE $todayHydrationHistoryTableName ADD COLUMN ts TEXT');
+            await db.execute(
+                'ALTER TABLE $todayHydrationHistoryTableName ADD COLUMN bottle_data TEXT');
+          } catch (_) {
+            // Safe to ignore if columns already exist
+          }
+        }
       },
       onCreate: (Database db, int version) async {
         await db.execute('''
@@ -335,7 +358,15 @@ CREATE TABLE IF NOT EXISTS $appMetadataTableName (
               timezone TEXT,
               percentage REAL,
               remaining REAL,
-              total_at_time REAL
+              total_at_time REAL,
+              battery INTEGER,
+              volume REAL,
+              refill REAL,
+              percent INTEGER,
+              temp REAL,
+              bqTemp REAL,
+              ts TEXT,
+              bottle_data TEXT
             )
           ''');
 
@@ -822,7 +853,25 @@ CREATE TABLE IF NOT EXISTS $appMetadataTableName (
   }
 
   Future<void> insertTodayHydration(double consumed, DateTime timestamp,
-      {double? percentage, double? remaining, double? totalAtTime}) async {
+      {double? percentage,
+      double? remaining,
+      double? totalAtTime,
+      int? battery,
+      double? volume,
+      double? refill,
+      int? percent,
+      double? temp,
+      double? bqTemp,
+      DateTime? ts,
+      dynamic bottleData}) async {
+    if (consumed < 40.0) {
+      Console.log(
+          tag: "APP",
+          value:
+              "[DB] Skipping insertTodayHydration — consumed amount $consumed mL is below minimum threshold (40ml)");
+      return;
+    }
+
     final db = await database;
     final timezone = (await FlutterTimezone.getLocalTimezone()).identifier;
     await db.insert(
@@ -834,13 +883,24 @@ CREATE TABLE IF NOT EXISTS $appMetadataTableName (
         if (percentage != null) 'percentage': percentage,
         if (remaining != null) 'remaining': remaining,
         if (totalAtTime != null) 'total_at_time': totalAtTime,
+        if (battery != null) 'battery': battery,
+        if (volume != null) 'volume': volume,
+        if (refill != null) 'refill': refill,
+        if (percent != null) 'percent': percent,
+        if (temp != null) 'temp': temp,
+        if (bqTemp != null) 'bqTemp': bqTemp,
+        if (ts != null) 'ts': ts.toIso8601String(),
+        if (bottleData != null)
+          'bottle_data': bottleData is String
+              ? bottleData
+              : jsonEncode(bottleData),
       },
     );
 
     Console.log(
         tag: "APP",
         value:
-            "[DB] Inserted today history: $consumed mL at $timestamp [Timezone: $timezone] [Percentage: $percentage] [Remaining: $remaining] [TotalAtTime: $totalAtTime]");
+            "[DB] Inserted today history: $consumed mL at $timestamp [Timezone: $timezone] [Percentage: $percentage] [Remaining: $remaining] [TotalAtTime: $totalAtTime] [Battery: $battery] [Volume: $volume] [Refill: $refill] [Percent: $percent] [Temp: $temp] [BqTemp: $bqTemp]");
 
     try {
       final userId = await SharedPrefsHelper.getUserId();
@@ -853,9 +913,25 @@ CREATE TABLE IF NOT EXISTS $appMetadataTableName (
                     'timestamp': h['timestamp'],
                     'consumed': h['consumed'],
                     'timezone': h['timezone'],
-                    'percentage': h['percentage'],
-                    'remaining': h['remaining'],
-                    'totalAtTime': h['total_at_time'],
+                    if (h['percentage'] != null) 'percentage': h['percentage'],
+                    if (h['remaining'] != null) 'remaining': h['remaining'],
+                    if (h['total_at_time'] != null)
+                      'totalAtTime': h['total_at_time'],
+                    if (h['battery'] != null) 'battery': h['battery'],
+                    if (h['volume'] != null) 'volume': h['volume'],
+                    if (h['refill'] != null) 'refill': h['refill'],
+                    if (h['percent'] != null) 'percent': h['percent'],
+                    if (h['temp'] != null) 'temp': h['temp'],
+                    if (h['bqTemp'] != null) 'bqTemp': h['bqTemp'],
+                    if (h['ts'] != null) 'ts': h['ts'],
+                    if (h['bottle_data'] != null)
+                      'bottleData': () {
+                        try {
+                          return jsonDecode(h['bottle_data']);
+                        } catch (_) {
+                          return h['bottle_data'];
+                        }
+                      }(),
                   })
               .toList();
 

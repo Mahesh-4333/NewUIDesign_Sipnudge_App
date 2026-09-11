@@ -49,6 +49,11 @@ class ProfileCubit extends Cubit<ProfileState> {
                 groupLabel: "CONNECTED HARDWARE",
               ),
               ProfileMenuItem(
+                iconPath: AssetsPath.onboardingBluetooth,
+                title: "Connect Bottle",
+                groupLabel: "CONNECTED HARDWARE",
+              ),
+              ProfileMenuItem(
                 iconPath: AssetsPath.wify,
                 title: "Connect Wi-Fi",
                 groupLabel: "CONNECTED HARDWARE",
