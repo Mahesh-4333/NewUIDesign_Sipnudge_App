@@ -1887,7 +1887,7 @@ abstract class AppLocalizations {
   /// No description provided for @calibrating.
   ///
   /// In en, this message translates to:
-  /// **'Caliberating..'**
+  /// **'Calibrating..'**
   String get calibrating;
 
   /// No description provided for @finalizeCalibration.

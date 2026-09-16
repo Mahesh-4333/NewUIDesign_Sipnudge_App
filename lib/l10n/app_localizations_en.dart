@@ -936,7 +936,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get sealDescription => 'Prevents leaks \nand pressure \nbuild-up.';
 
   @override
-  String get calibrating => 'Caliberating..';
+  String get calibrating => 'Calibrating..';
 
   @override
   String get finalizeCalibration => 'Finalize Calibration';

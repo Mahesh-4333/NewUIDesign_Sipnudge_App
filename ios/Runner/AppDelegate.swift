@@ -329,41 +329,41 @@ class BackgroundSessionManager: NSObject, URLSessionDelegate, URLSessionTaskDele
         bleManager?.enterForeground()
     }
 
-    override func applicationWillTerminate(_ application: UIApplication) {
-        super.applicationWillTerminate(application)
+    // override func applicationWillTerminate(_ application: UIApplication) {
+    //     super.applicationWillTerminate(application)
 
-        let hasDevice = UserDefaults.standard.string(forKey: "flutter.last_device_id") != nil
-        let onboardingCompleted = UserDefaults.standard.bool(forKey: "flutter.onboarding_flow_completed")
+    //     let hasDevice = UserDefaults.standard.string(forKey: "flutter.last_device_id") != nil
+    //     let onboardingCompleted = UserDefaults.standard.bool(forKey: "flutter.onboarding_flow_completed")
 
-        // 6-hour cooldown (21,600s) to avoid spamming the user during repeated background OS kills / app switches
-        let lastNotifTime = UserDefaults.standard.double(forKey: "last_termination_notif_time")
-        let now = Date().timeIntervalSince1970
-        let cooldownSeconds: Double = 6 * 3600
+    //     // 6-hour cooldown (21,600s) to avoid spamming the user during repeated background OS kills / app switches
+    //     let lastNotifTime = UserDefaults.standard.double(forKey: "last_termination_notif_time")
+    //     let now = Date().timeIntervalSince1970
+    //     let cooldownSeconds: Double = 6 * 3600
 
-        if (hasDevice || onboardingCompleted) && (now - lastNotifTime >= cooldownSeconds) {
-            UserDefaults.standard.set(now, forKey: "last_termination_notif_time")
+    //     if (hasDevice || onboardingCompleted) && (now - lastNotifTime >= cooldownSeconds) {
+    //         UserDefaults.standard.set(now, forKey: "last_termination_notif_time")
 
-            let content = UNMutableNotificationContent()
-            content.title = "Background Sync Paused"
-            content.body = "Sipnudge was closed. Keep the app open in the background to continue automatic water tracking."
-            content.sound = .default
-            let req = UNNotificationRequest(
-                identifier: "app_terminated_sync_paused",
-                content: content,
-                trigger: UNTimeIntervalNotificationTrigger(timeInterval: 1, repeats: false)
-            )
-            let semaphore = DispatchSemaphore(value: 0)
-            UNUserNotificationCenter.current().add(req) { error in
-                if let error = error {
-                    NSLog("[AppDelegate] Failed to schedule termination notification: \(error.localizedDescription)")
-                } else {
-                    NSLog("[AppDelegate] Successfully scheduled termination notification")
-                }
-                semaphore.signal()
-            }
-            _ = semaphore.wait(timeout: .now() + 1.0)
-        }
-    }
+    //         let content = UNMutableNotificationContent()
+    //         content.title = "Background Sync Paused"
+    //         content.body = "Sipnudge was closed. Keep the app open in the background to continue automatic water tracking."
+    //         content.sound = .default
+    //         let req = UNNotificationRequest(
+    //             identifier: "app_terminated_sync_paused",
+    //             content: content,
+    //             trigger: UNTimeIntervalNotificationTrigger(timeInterval: 1, repeats: false)
+    //         )
+    //         let semaphore = DispatchSemaphore(value: 0)
+    //         UNUserNotificationCenter.current().add(req) { error in
+    //             if let error = error {
+    //                 NSLog("[AppDelegate] Failed to schedule termination notification: \(error.localizedDescription)")
+    //             } else {
+    //                 NSLog("[AppDelegate] Successfully scheduled termination notification")
+    //             }
+    //             semaphore.signal()
+    //         }
+    //         _ = semaphore.wait(timeout: .now() + 1.0)
+    //     }
+    // }
 
     override func userNotificationCenter(
         _ center: UNUserNotificationCenter,
@@ -735,6 +735,7 @@ class SipnudgeBackgroundBLE: NSObject, CBCentralManagerDelegate, CBPeripheralDel
                 let todayStr = formatter.string(from: Date())
 
                 var sipDiff: Int = 0
+                var currentTodayIntake: Int = 0
 
                 if let appDefaults = UserDefaults(suiteName: kAppGroupId) {
                     let storedGoal = UserDefaults.standard.object(forKey: "flutter.water_goal") as? Int
@@ -743,21 +744,93 @@ class SipnudgeBackgroundBLE: NSObject, CBCentralManagerDelegate, CBPeripheralDel
                     let goal = storedGoal > 0 ? storedGoal : 2500
 
                     let lastUpdateDateStr = appDefaults.string(forKey: "last_update_date") ?? ""
-                    var existingIntake = appDefaults.integer(forKey: "current_intake")
-                    if lastUpdateDateStr != todayStr {
-                        existingIntake = 0
-                        appDefaults.set(0, forKey: "current_intake")
+                    let isNewDay = lastUpdateDateStr != todayStr
+
+                    var baseline = appDefaults.integer(forKey: "bottle_baseline")
+                    let lastBottleReading = appDefaults.integer(forKey: "last_bottle_reading")
+                    currentTodayIntake = appDefaults.integer(forKey: "current_intake")
+
+                    if isNewDay {
+                        // Reset sub-counters for new day
                         appDefaults.set(0, forKey: "coffee_intake")
                         appDefaults.set(0, forKey: "water_intake")
-                    }
 
-                    if consumed >= 0 {
-                        if consumed > existingIntake || lastUpdateDateStr != todayStr {
-                            sipDiff = max(0, consumed - existingIntake)
-                            appDefaults.set(consumed, forKey: "current_intake")
-                            NSLog("[BG-BLE] Updated App Group current_intake to \(consumed)ml (diff: \(sipDiff)ml)")
+                        // Check if bottle hardware reset to 0 at midnight
+                        if consumed == 0 {
+                            baseline = 0
+                            currentTodayIntake = 0
+                            sipDiff = 0
+                            NSLog("[BG-BLE] New day rollover: Bottle was reset to 0ml")
+                        } else if consumed >= lastBottleReading && lastBottleReading > 0 {
+                            // Bottle did NOT reset overnight: it still holds yesterday's cumulative total (e.g. 300ml or 1240ml).
+                            // Establish yesterday's last known value as today's baseline offset.
+                            baseline = lastBottleReading
+                            let newWaterThisMorning = consumed - baseline
+                            if newWaterThisMorning >= 40 && newWaterThisMorning <= 600 {
+                                sipDiff = newWaterThisMorning
+                                currentTodayIntake = newWaterThisMorning
+                                NSLog("[BG-BLE] New day rollover: Bottle un-reset (\(consumed)ml, baseline=\(baseline)ml). Morning sip=\(sipDiff)ml")
+                            } else {
+                                sipDiff = 0
+                                currentTodayIntake = 0
+                                NSLog("[BG-BLE] New day rollover: Bottle un-reset (\(consumed)ml, baseline=\(baseline)ml). Baseline established, no fake sip.")
+                            }
+                        } else {
+                            // consumed > 0 but lastBottleReading <= 0 or consumed < lastBottleReading
+                            if consumed > 600 {
+                                // Large un-reset hardware total: establish as baseline offset so it is not treated as today's consumption
+                                baseline = consumed
+                                sipDiff = 0
+                                currentTodayIntake = 0
+                                NSLog("[BG-BLE] New day rollover: Large initial bottle reading (\(consumed)ml > 600ml). Set as baseline offset to prevent fake intake.")
+                            } else if consumed >= 40 {
+                                baseline = 0
+                                sipDiff = consumed
+                                currentTodayIntake = consumed
+                                NSLog("[BG-BLE] New day rollover: Bottle reset, today first sip=\(sipDiff)ml")
+                            } else {
+                                baseline = 0
+                                sipDiff = 0
+                                currentTodayIntake = consumed
+                            }
+                        }
+
+                        appDefaults.set(baseline, forKey: "bottle_baseline")
+                    } else {
+                        // Same day:
+                        if consumed == 0 {
+                            // Bottle hardware was reset to 0 at midnight or during the day
+                            baseline = 0
+                            currentTodayIntake = 0
+                            sipDiff = 0
+                            appDefaults.set(0, forKey: "bottle_baseline")
+                            NSLog("[BG-BLE] Bottle hardware reset to 0ml during the day")
+                        } else {
+                            if consumed < baseline {
+                                baseline = 0
+                                appDefaults.set(0, forKey: "bottle_baseline")
+                            }
+
+                            let calculatedTodayIntake = max(0, consumed - baseline)
+                            if calculatedTodayIntake > currentTodayIntake {
+                                let diff = calculatedTodayIntake - currentTodayIntake
+                                if diff <= 600 {
+                                    sipDiff = diff
+                                    currentTodayIntake = calculatedTodayIntake
+                                    NSLog("[BG-BLE] Updated App Group current_intake to \(currentTodayIntake)ml (diff: \(sipDiff)ml)")
+                                } else {
+                                    // Large anomalous jump (> 600ml): re-anchor baseline instead of assigning bogus total
+                                    baseline = consumed - currentTodayIntake
+                                    appDefaults.set(baseline, forKey: "bottle_baseline")
+                                    sipDiff = 0
+                                    NSLog("[BG-BLE] ⚠️ Anomalous diff of \(diff)ml ignored — re-anchored baseline to \(baseline)ml, intake remains \(currentTodayIntake)ml")
+                                }
+                            }
                         }
                     }
+
+                    appDefaults.set(consumed, forKey: "last_bottle_reading")
+                    appDefaults.set(currentTodayIntake, forKey: "current_intake")
                     if let pct = batteryPct, pct > 0 {
                         appDefaults.set(pct, forKey: "battery")
                     }
@@ -783,18 +856,18 @@ class SipnudgeBackgroundBLE: NSObject, CBCentralManagerDelegate, CBPeripheralDel
                         lastUploadedConsumed = consumed
                         lastUploadTime = now
                         uploadTodayDataViaBackgroundSession(
-                            consumed: Double(consumed),
+                            consumed: Double(currentTodayIntake),
                             date: todayDate,
                             dayIndex: 0,
                             deviceId: peripheral.identifier.uuidString,
-                            sendNotification: consumed > 0,
+                            sendNotification: sipDiff >= 40,
                             battery: batteryPct
                         )
 
-                        if sipDiff >= 40 {
+                        if sipDiff >= 40 && sipDiff <= 600 {
                             uploadTodayHistoryViaBackgroundSession(
                                 sipAmount: Double(sipDiff),
-                                totalAtTime: Double(consumed),
+                                totalAtTime: Double(currentTodayIntake),
                                 battery: batteryPct
                             )
                         }

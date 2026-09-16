@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -150,16 +151,19 @@ class _EnvironmentalHarmonyLocationScreenState
             ),
 
             // Bottom Action Buttons
-            Padding(
-              padding: EdgeInsets.only(
-                left: 24.w,
-                right: 24.w,
-                bottom: 24.h,
-                top: 8.h,
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
+            SafeArea(
+              top: false,
+              bottom: Platform.isAndroid,
+              child: Padding(
+                padding: EdgeInsets.only(
+                  left: 24.w,
+                  right: 24.w,
+                  bottom: Platform.isAndroid ? 16.h : 24.h,
+                  top: 8.h,
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
                   // Disclaimer / Footnote Text
                   Padding(
                     padding: EdgeInsets.symmetric(horizontal: 8.w),
@@ -210,7 +214,8 @@ class _EnvironmentalHarmonyLocationScreenState
                       ),
                     ),
                   ),
-                ],
+                  ],
+                ),
               ),
             ),
           ],

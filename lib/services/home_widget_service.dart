@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:home_widget/home_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:hydrify/helpers/database_helper.dart';
@@ -20,15 +21,21 @@ class HomeWidgetService {
   static const String appGroupId = 'group.com.sipnudge.sipnudge';
 
   static Future<void> initialize() async {
-    // Set the App Group ID for iOS
-    await HomeWidget.setAppGroupId(appGroupId);
+    try {
+      // Set the App Group ID for iOS
+      if (Platform.isIOS) {
+        await HomeWidget.setAppGroupId(appGroupId);
+      }
 
-    // Process any background clicks recorded in the iOS widget App Group
-    await processPendingWidgetLogs();
+      // Process any background clicks recorded in the iOS/Android widget
+      await processPendingWidgetLogs();
 
-    // Register widget click listener for deep links (e.g. sipnudge://quick-add?type=coffee&amount=150)
-    HomeWidget.initiallyLaunchedFromHomeWidget().then(_handleWidgetUri);
-    HomeWidget.widgetClicked.listen(_handleWidgetUri);
+      // Register widget click listener for deep links (e.g. sipnudge://quick-add?type=coffee&amount=150)
+      HomeWidget.initiallyLaunchedFromHomeWidget().then(_handleWidgetUri);
+      HomeWidget.widgetClicked.listen(_handleWidgetUri);
+    } catch (e) {
+      Console.log(tag: "HomeWidget", value: "Error in initialize: $e");
+    }
   }
 
   /// Processes logs added interactively in the iOS Widget background
@@ -179,11 +186,11 @@ class HomeWidgetService {
             }
           }
 
-          // Fallback to the latest summary in the range if no exact match is found
-          todaySummary ??= summaries.last;
-
-          currentIntake =
-              (todaySummary['consumed'] as num?)?.round() ?? currentIntake;
+          // Only update currentIntake if today's summary specifically was found
+          if (todaySummary != null) {
+            currentIntake =
+                (todaySummary['consumed'] as num?)?.round() ?? currentIntake;
+          }
         }
       }
     } catch (e) {
@@ -317,7 +324,9 @@ class HomeWidgetService {
     // Trigger an update for both platforms
     await HomeWidget.updateWidget(
       name: androidWidgetName,
+      androidName: androidWidgetName,
       iOSName: iOSWidgetName,
+      qualifiedAndroidName: 'com.sipnudge.sipnudge.HomeWidgetProvider',
     );
   }
 }

@@ -605,7 +605,6 @@ CREATE TABLE IF NOT EXISTS $appMetadataTableName (
     final db = await database;
     final startEpoch = _timeOfDayToEpoch(entry.startTime);
     final endEpoch = _timeOfDayToEpoch(entry.endTime);
-    await Future.delayed(Duration(milliseconds: 300));
 
     if (clearTable == true) {
       Console.log(tag: "APP", value: "[DB] Clearing hydration_slots table...");
@@ -640,6 +639,43 @@ CREATE TABLE IF NOT EXISTS $appMetadataTableName (
         tag: "APP",
         value:
             "  ${entry.slot.label} - waterGoal: ${entry.amount}, bottleDrank: $bottleDrank, manualDrank: $manualWaterDrank, status: ${(bottleDrank + manualWaterDrank) >= entry.amount}");
+  }
+
+  /// Bulk upserts slots atomically in a single batch without empty table gaps.
+  Future<void> bulkUpsertSlots(List<HydrationEntry> slots) async {
+    final db = await database;
+    final batch = db.batch();
+
+    for (final entry in slots) {
+      final startEpoch = _timeOfDayToEpoch(entry.startTime);
+      final endEpoch = _timeOfDayToEpoch(entry.endTime);
+      final manualWaterDrank =
+          await getManualWaterDrankForRange(entry.startTime, entry.endTime);
+
+      final double bottleDrank =
+          (entry.waterDrank - manualWaterDrank).clamp(0, entry.waterDrank);
+
+      batch.insert(
+        'hydration_slots',
+        {
+          'slotName': entry.slot.label,
+          'slotIndex': entry.slot.index,
+          'startEpoch': startEpoch,
+          'endEpoch': endEpoch,
+          'waterGoal': entry.amount,
+          'waterDrank': bottleDrank,
+          'status': (bottleDrank + manualWaterDrank) >= entry.amount
+              ? 'completed'
+              : 'pending',
+        },
+        conflictAlgorithm: ConflictAlgorithm.replace,
+      );
+    }
+
+    await batch.commit(noResult: true);
+    Console.log(
+        tag: "APP",
+        value: "[DB] bulkUpsertSlots: Successfully upserted ${slots.length} slots atomically.");
   }
 
   Future<void> clearHydrationSlots() async {
@@ -683,7 +719,6 @@ CREATE TABLE IF NOT EXISTS $appMetadataTableName (
       final newSlots = HydrationHelper.generateHydrationSlots(newGoal);
       final existingSlotMap = {for (var s in existingSlotsInDb) s.slot: s};
 
-      await clearHydrationSlots();
       final List<HydrationEntry> updatedSlots = [];
       for (var newSlot in newSlots) {
         final existing = existingSlotMap[newSlot.slot];
@@ -692,11 +727,16 @@ CREATE TABLE IF NOT EXISTS $appMetadataTableName (
                 amount: newSlot.amount,
                 startTime: existing.startTime,
                 endTime: existing.endTime,
+                waterDrank: existing.waterDrank,
+                status: existing.waterDrank >= newSlot.amount
+                    ? HydrationStatus.completed
+                    : HydrationStatus.pending,
               )
             : newSlot;
-        await insertOrUpdateSlot(slotToSave);
         updatedSlots.add(slotToSave);
       }
+
+      await bulkUpsertSlots(updatedSlots);
       return updatedSlots;
     } catch (e) {
       Console.log(

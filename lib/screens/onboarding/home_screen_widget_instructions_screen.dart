@@ -331,29 +331,6 @@ class _HomeScreenWidgetInstructionsScreenState
                     height: 52.h,
                     child: ElevatedButton(
                       onPressed: () {
-                        // Block navigation if smart reminders are not enabled
-                        if (!_smartRemindersEnabled) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text(
-                                'Please enable Smart Reminders to continue.',
-                                style: TextStyle(
-                                  fontFamily: AppFontStyles.urbanistFontFamily,
-                                  fontSize: 14.sp,
-                                ),
-                              ),
-                              backgroundColor: const Color(0xFF0F172A),
-                              behavior: SnackBarBehavior.floating,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12.r),
-                              ),
-                              margin: EdgeInsets.symmetric(
-                                  horizontal: 24.w, vertical: 12.h),
-                              duration: const Duration(seconds: 3),
-                            ),
-                          );
-                          return;
-                        }
                         if (widget.isFromOnboarding) {
                           Navigator.pushReplacement(
                             context,
@@ -395,9 +372,7 @@ class _HomeScreenWidgetInstructionsScreenState
                         }
                       },
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: _smartRemindersEnabled
-                            ? const Color(0xFF00A2FF)
-                            : const Color(0xFFCBD5E1),
+                        backgroundColor: const Color(0xFF00A2FF),
                         elevation: 0,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(30.r),

@@ -8,6 +8,7 @@ import 'package:hydrify/cubit/ble/ble_cubit.dart';
 import 'package:hydrify/cubit/hydration/hydration_state.dart';
 import 'package:hydrify/cubit/hydration/hydration_sync.dart';
 import 'package:hydrify/helpers/database_helper.dart';
+import 'package:hydrify/helpers/hydration_helper.dart';
 import 'package:hydrify/helpers/logger.dart';
 import 'package:hydrify/helpers/shared_pref_helper.dart';
 import 'package:hydrify/helpers/water_consumption_data_helper.dart';
@@ -124,7 +125,22 @@ class HydrationCubit extends Cubit<HydrationState> {
       final slotsFromDb = await _dbHelper.getAllSlots();
 
       if (slotsFromDb.isEmpty) {
-        emit(state.copyWith(entries: []));
+        // If state already has entries, do NOT wipe them out with an empty list!
+        if (state.entries.isNotEmpty) {
+          log("[Cubit] DB returned empty slots, but state already has entries. Preserving existing entries.",
+              name: "CUBIT_DEBUG");
+          return;
+        }
+
+        // Auto-heal: If both DB and state are empty, generate defaults from user goal and save
+        final userGoal = await SharedPrefsHelper.getUserGoal() ?? 2000;
+        if (userGoal > 0) {
+          final defaultSlots =
+              HydrationHelper.generateHydrationSlots(userGoal.toDouble());
+          await _dbHelper.bulkUpsertSlots(defaultSlots);
+          emit(state.copyWith(entries: defaultSlots, goal: userGoal));
+          _calculateCurrentSlotStatus();
+        }
       } else {
         final total = slotsFromDb
             .where((e) => e.status == HydrationStatus.completed)

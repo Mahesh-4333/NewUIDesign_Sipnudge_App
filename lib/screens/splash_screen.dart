@@ -50,8 +50,8 @@ class _SplashScreenState extends State<SplashScreen> {
       _handleNavigation();
     });
 
-    // Safety fallback: if video stalls or takes too long, navigate after 5s
-    Future.delayed(const Duration(seconds: 5), () {
+    // Safety fallback: if video stalls or takes too long, navigate after 3.5s max
+    Future.delayed(const Duration(milliseconds: 3500), () {
       if (mounted && !_hasNavigated) {
         _handleNavigation();
       }
@@ -84,8 +84,14 @@ class _SplashScreenState extends State<SplashScreen> {
     if (_hasNavigated || !mounted) return;
     _hasNavigated = true;
 
-    // Ensure background sync/trial status check is completed
-    final result = await _initFuture;
+    _SplashInitResult result;
+    try {
+      result = await _initFuture.timeout(const Duration(milliseconds: 1500));
+    } catch (_) {
+      final isShutdown = await SharedPrefsHelper.isAppShutdown();
+      final isFirstTime = await SharedPrefsHelper.isFirstTimeLaunch();
+      result = _SplashInitResult(isShutdown: isShutdown, isFirstTime: isFirstTime);
+    }
 
     if (!mounted) return;
 
@@ -121,21 +127,35 @@ class _SplashScreenState extends State<SplashScreen> {
     DatabaseSyncService().syncAll();
 
     bool isShutdown = false;
-    final email = await SharedPrefsHelper.getUserEmail();
-    if (email != null && email.isNotEmpty) {
-      try {
-        final trialResponse = await ApiService().checkTrialStatus(email);
-        if (trialResponse != null) {
-          isShutdown = trialResponse["shutdown_app"] ?? false;
-          await SharedPrefsHelper.setAppShutdownStatus(isShutdown);
+    try {
+      final email = await SharedPrefsHelper.getUserEmail();
+      if (email != null && email.isNotEmpty) {
+        try {
+          final trialResponse = await ApiService()
+              .checkTrialStatus(email)
+              .timeout(const Duration(milliseconds: 1500));
+          if (trialResponse != null) {
+            isShutdown = trialResponse["shutdown_app"] ?? false;
+            await SharedPrefsHelper.setAppShutdownStatus(isShutdown);
+          }
+        } catch (e) {
+          Console.log(tag: "AUTH", value: "Trial check failed: $e");
+          isShutdown = await SharedPrefsHelper.isAppShutdown();
         }
-      } catch (e) {
-        Console.log(tag: "AUTH", value: "Trial check failed: $e");
+      } else {
         isShutdown = await SharedPrefsHelper.isAppShutdown();
       }
+    } catch (_) {
+      isShutdown = false;
     }
 
-    final isFirstTime = await SharedPrefsHelper.isFirstTimeLaunch();
+    bool isFirstTime = false;
+    try {
+      isFirstTime = await SharedPrefsHelper.isFirstTimeLaunch();
+    } catch (_) {
+      isFirstTime = false;
+    }
+
     return _SplashInitResult(isShutdown: isShutdown, isFirstTime: isFirstTime);
   }
 

@@ -596,7 +596,7 @@ class _FreshStartCalibrationScreenState
                                 SizedBox(width: 12.w),
                                 Text(
                                   AppLocalizations.of(context)?.calibrating ??
-                                      "Caliberating..",
+                                      "Calibrating..",
                                   style: TextStyle(
                                     fontSize: 16.sp,
                                     fontFamily:

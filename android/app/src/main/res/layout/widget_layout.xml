@@ -1,28 +1,298 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/widget_root"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@android:color/white"
-    android:gravity="center"
-    android:orientation="vertical"
-    android:padding="16dp">
+    android:background="@drawable/widget_card_bg"
+    android:orientation="horizontal"
+    android:paddingLeft="12dp"
+    android:paddingRight="12dp"
+    android:paddingTop="7dp"
+    android:paddingBottom="7dp"
+    android:gravity="center_vertical">
 
-    <TextView
-        android:id="@+id/widget_title"
+    <!-- LEFT COLUMN: Circular Gauge & Intake Numbers -->
+    <LinearLayout
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Hydration Progress"
-        android:textColor="@android:color/black"
-        android:textSize="14sp"
-        android:textStyle="bold" />
+        android:orientation="vertical"
+        android:gravity="center_horizontal">
 
-    <TextView
-        android:id="@+id/widget_intake"
-        android:layout_width="wrap_content"
+        <ImageView
+            android:id="@+id/widget_gauge_image"
+            android:layout_width="80dp"
+            android:layout_height="80dp"
+            android:scaleType="fitCenter" />
+
+        <TextView
+            android:id="@+id/widget_intake_text"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="2.5dp"
+            android:text="0 / 2,500 ml"
+            android:textColor="#172645"
+            android:textSize="12sp"
+            android:fontFamily="sans-serif-medium"
+            android:letterSpacing="-0.01"
+            android:gravity="center"
+            android:includeFontPadding="false"
+            android:maxLines="1" />
+    </LinearLayout>
+
+    <!-- RIGHT COLUMN: Battery, Status Heading, Next Sip / Only Left, and Action Buttons -->
+    <LinearLayout
+        android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
-        android:text="0 ml / 2000 ml"
-        android:textColor="#42A5F5"
-        android:textSize="18sp"
-        android:textStyle="bold" />
+        android:layout_weight="1"
+        android:layout_marginStart="10dp"
+        android:layout_marginLeft="10dp"
+        android:orientation="vertical"
+        android:gravity="center_vertical">
+
+        <!-- 1. Battery Row: Icon + BATTERY + Bar + 67% (Single line) -->
+        <LinearLayout
+            android:id="@+id/widget_battery_container"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+
+            <ImageView
+                android:id="@+id/widget_battery_icon"
+                android:layout_width="14dp"
+                android:layout_height="14dp"
+                android:src="@drawable/ic_widget_battery" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="4dp"
+                android:layout_marginLeft="4dp"
+                android:text="BATTERY"
+                android:textColor="#66738C"
+                android:textSize="8sp"
+                android:fontFamily="sans-serif-medium"
+                android:textStyle="bold"
+                android:includeFontPadding="false" />
+
+            <ProgressBar
+                android:id="@+id/widget_battery_bar"
+                style="?android:attr/progressBarStyleHorizontal"
+                android:layout_width="0dp"
+                android:layout_height="4dp"
+                android:layout_weight="1"
+                android:layout_marginStart="6dp"
+                android:layout_marginEnd="6dp"
+                android:layout_marginLeft="6dp"
+                android:layout_marginRight="6dp"
+                android:max="100"
+                android:progress="67"
+                android:progressDrawable="@drawable/widget_battery_progress" />
+
+            <TextView
+                android:id="@+id/widget_battery_text"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="67%"
+                android:textColor="#172645"
+                android:textSize="9.5sp"
+                android:fontFamily="sans-serif-medium"
+                android:textStyle="bold"
+                android:includeFontPadding="false" />
+        </LinearLayout>
+
+        <!-- 2. Status Heading (e.g. "You’re not on track" / "You’re on track") -->
+        <TextView
+            android:id="@+id/widget_heading_text"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="2.5dp"
+            android:layout_marginBottom="1dp"
+            android:text="You’re not on track"
+            android:textColor="#EF4444"
+            android:textSize="17.5sp"
+            android:fontFamily="sans-serif-medium"
+            android:textStyle="bold"
+            android:letterSpacing="-0.02"
+            android:includeFontPadding="false"
+            android:maxLines="1" />
+
+        <!-- 3. Stat Badges Row: Next Sip & Only Left with Spacer -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="2.5dp"
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+
+            <!-- Next Sip -->
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical">
+
+                <ImageView
+                    android:layout_width="22dp"
+                    android:layout_height="22dp"
+                    android:background="@drawable/widget_stat_card_bg"
+                    android:padding="4dp"
+                    android:src="@drawable/ic_widget_clock" />
+
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="5dp"
+                    android:layout_marginLeft="5dp"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Next Sip"
+                        android:textColor="#78879B"
+                        android:textSize="8.5sp"
+                        android:fontFamily="sans-serif"
+                        android:includeFontPadding="false" />
+
+                    <TextView
+                        android:id="@+id/widget_next_sip_time"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="6:00 PM"
+                        android:textColor="#172645"
+                        android:textSize="11.5sp"
+                        android:fontFamily="sans-serif-medium"
+                        android:textStyle="bold"
+                        android:includeFontPadding="false"
+                        android:maxLines="1" />
+                </LinearLayout>
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="1dp"
+                android:layout_weight="1" />
+
+            <!-- Only Left -->
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical">
+
+                <ImageView
+                    android:layout_width="22dp"
+                    android:layout_height="22dp"
+                    android:background="@drawable/widget_stat_card_bg"
+                    android:padding="4dp"
+                    android:src="@drawable/ic_widget_drop" />
+
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="5dp"
+                    android:layout_marginLeft="5dp"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Only Left"
+                        android:textColor="#78879B"
+                        android:textSize="8.5sp"
+                        android:fontFamily="sans-serif"
+                        android:includeFontPadding="false" />
+
+                    <TextView
+                        android:id="@+id/widget_only_left_text"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="2,014 ml"
+                        android:textColor="#172645"
+                        android:textSize="11.5sp"
+                        android:fontFamily="sans-serif-medium"
+                        android:textStyle="bold"
+                        android:includeFontPadding="false"
+                        android:maxLines="1" />
+                </LinearLayout>
+            </LinearLayout>
+        </LinearLayout>
+
+        <!-- 4. Quick Action Buttons Row: Compact Pills (Coffee & Water) -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="5dp"
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+
+            <!-- Coffee Button (+150ml) -->
+            <LinearLayout
+                android:id="@+id/btn_quick_coffee"
+                android:layout_width="wrap_content"
+                android:layout_height="27dp"
+                android:background="@drawable/widget_btn_coffee_bg"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:paddingStart="10dp"
+                android:paddingEnd="4dp"
+                android:paddingLeft="10dp"
+                android:paddingRight="4dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginEnd="6dp"
+                    android:layout_marginRight="6dp"
+                    android:text="Coffee"
+                    android:textColor="#3D352F"
+                    android:textSize="11.5sp"
+                    android:fontFamily="sans-serif-medium"
+                    android:textStyle="bold"
+                    android:includeFontPadding="false" />
+
+                <ImageView
+                    android:layout_width="19dp"
+                    android:layout_height="19dp"
+                    android:src="@drawable/ic_widget_coffee_circle" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="1dp"
+                android:layout_weight="1" />
+
+            <!-- Water Button (+250ml) -->
+            <LinearLayout
+                android:id="@+id/btn_quick_water"
+                android:layout_width="wrap_content"
+                android:layout_height="27dp"
+                android:background="@drawable/widget_btn_water_bg"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:paddingStart="10dp"
+                android:paddingEnd="4dp"
+                android:paddingLeft="10dp"
+                android:paddingRight="4dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginEnd="6dp"
+                    android:layout_marginRight="6dp"
+                    android:text="Water"
+                    android:textColor="#3D352F"
+                    android:textSize="11.5sp"
+                    android:fontFamily="sans-serif-medium"
+                    android:textStyle="bold"
+                    android:includeFontPadding="false" />
+
+                <ImageView
+                    android:layout_width="19dp"
+                    android:layout_height="19dp"
+                    android:src="@drawable/ic_widget_water_circle" />
+            </LinearLayout>
+        </LinearLayout>
+    </LinearLayout>
 </LinearLayout>

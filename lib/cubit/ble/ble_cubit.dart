@@ -963,6 +963,21 @@ class BleCubit extends Cubit<BleState>
                   '[BLE_Cubit] Native BLE connect trigger failed (non-fatal): $e',
               value: 'BLE_Cubit');
         }
+      } else if (Platform.isAndroid) {
+        try {
+          await const MethodChannel('com.sipnudge.sipnudge/ble_service')
+              .invokeMethod('startBleService', {
+            'deviceAddress': device.remoteId.str,
+          });
+          Console.log(
+              tag: '[BLE_Cubit] Android Native BottleBleService started successfully',
+              value: 'BLE_Cubit');
+        } catch (e) {
+          Console.log(
+              tag:
+                  '[BLE_Cubit] Android Native BottleBleService start failed: $e',
+              value: 'BLE_Cubit');
+        }
       }
 
       Console.log(
@@ -1568,6 +1583,16 @@ class BleCubit extends Cubit<BleState>
         if (history > 0) {
           previousTotal = history;
         }
+      }
+
+      // If previousTotal is 0 and incoming reading is > 1000 ml, it is a stale
+      // hardware total from a previous day. Do not treat as today's consumption!
+      if (previousTotal <= 0 && consumed > 1000) {
+        Console.log(
+            tag: "BLE_Cubit",
+            value:
+                "[SyncDailyTotal] Stale/anomalous reading ($consumed ml > 1000 ml with 0 prior intake). Skipping to avoid fake daily total.");
+        return;
       }
 
       // 2. Diff calculate karke today_hydration_history DB aur Health me sync karein

@@ -957,12 +957,18 @@ class _WaterIntakeTimelineState extends State<WaterIntakeTimelineScreen> {
           ),
           Divider(height: 1, color: AppColors.bluegray.withValues(alpha: 0.1)),
           Expanded(
-            child: ListView.separated(
-              controller: _scrollController,
-              padding: EdgeInsets.symmetric(
-                  vertical: 10.h, horizontal: AppDimensions.dim5),
-              itemCount: state.entries.length,
-              itemBuilder: (context, index) {
+            child: state.entries.isEmpty
+                ? const Center(
+                    child: CircularProgressIndicator(
+                      color: Color(0xFF00A3FF),
+                    ),
+                  )
+                : ListView.separated(
+                    controller: _scrollController,
+                    padding: EdgeInsets.symmetric(
+                        vertical: 10.h, horizontal: AppDimensions.dim5),
+                    itemCount: state.entries.length,
+                    itemBuilder: (context, index) {
                 final entry = state.entries[index];
                 bool isExpanded = _expandedIndex == index;
                 final key = _itemKeys.putIfAbsent(index, () => GlobalKey());

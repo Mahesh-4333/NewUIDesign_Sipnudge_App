@@ -387,12 +387,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             tag: "HOME",
             value:
                 "[SlotCheck] ${missingSlots.length} missing slot(s) detected. Inserting...");
-
-        for (var slot in missingSlots) {
-          await dbHelper.insertOrUpdateSlot(slot);
-          Console.log(
-              tag: "HOME",
-              value: "[SlotCheck] Inserted missing slot: ${slot.slot.label}");
+        await dbHelper.bulkUpsertSlots(missingSlots);
+        if (mounted) {
+          context.read<HydrationCubit>().loadSlotsFromDb();
         }
       }
 
@@ -405,6 +402,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             value:
                 "[SlotCheck] Goal mismatch (slots: $totalTarget mL, goal: $waterGoal mL). Updating slot targets...");
         await dbHelper.updateSlotTargetsForGoal(waterGoal.toDouble());
+        if (mounted) {
+          context.read<HydrationCubit>().loadSlotsFromDb();
+        }
       }
 
       Console.log(tag: "HOME", value: "[SlotCheck] Slot integrity restored. ✅");

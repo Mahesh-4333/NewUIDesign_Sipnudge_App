@@ -608,8 +608,6 @@ class _UserInfoDailyGoalScreenNewState extends State<UserInfoDailyGoalScreen> {
                   for (var s in existingSlotsInDb) s.slot: s
                 };
 
-                // Always clear and re-insert all 7 slots to avoid partial saves
-                await dbHelper.clearHydrationSlots();
                 final List<HydrationEntry> updatedSlots = [];
                 for (var newSlot in slots) {
                   final existing = existingSlotMap[newSlot.slot];
@@ -619,11 +617,16 @@ class _UserInfoDailyGoalScreenNewState extends State<UserInfoDailyGoalScreen> {
                           amount: newSlot.amount,
                           startTime: existing.startTime,
                           endTime: existing.endTime,
+                          waterDrank: existing.waterDrank,
+                          status: existing.waterDrank >= newSlot.amount
+                              ? HydrationStatus.completed
+                              : HydrationStatus.pending,
                         )
                       : newSlot;
-                  await dbHelper.insertOrUpdateSlot(slotToSave);
                   updatedSlots.add(slotToSave);
                 }
+                await dbHelper.bulkUpsertSlots(updatedSlots);
+                await hydrationCubit.loadSlotsFromDb();
                 await bleCubit.queueHydrationSlots(updatedSlots);
 
                 await SharedPrefsHelper.setLastLevelUpDate("");
