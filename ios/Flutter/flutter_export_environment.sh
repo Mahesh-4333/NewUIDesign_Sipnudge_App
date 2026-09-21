@@ -1,9 +1,9 @@
 #!/bin/sh
 # This is a generated file; do not edit or check into version control.
-export "FLUTTER_ROOT=/Volumes/Vipul_disk/flutter_version/flutter"
-export "FLUTTER_APPLICATION_PATH=/Volumes/Vipul_disk/flutter_project/sipnudge/sipnudge_app"
+export "FLUTTER_ROOT=/Volumes/Sipnudge/flutter_version/flutter"
+export "FLUTTER_APPLICATION_PATH=/Volumes/Sipnudge/sipnudge/sipnudge_app"
 export "COCOAPODS_PARALLEL_CODE_SIGN=true"
-export "FLUTTER_TARGET=/Volumes/Vipul_disk/flutter_project/sipnudge/sipnudge_app/lib/main.dart"
+export "FLUTTER_TARGET=/Volumes/Sipnudge/sipnudge/sipnudge_app/lib/main.dart"
 export "FLUTTER_BUILD_DIR=build"
 export "FLUTTER_BUILD_NAME=1.1.8"
 export "FLUTTER_BUILD_NUMBER=47"
@@ -11,4 +11,4 @@ export "DART_DEFINES=RkxVVFRFUl9WRVJTSU9OPTMuMzUuNQ==,RkxVVFRFUl9DSEFOTkVMPXN0YW
 export "DART_OBFUSCATION=false"
 export "TRACK_WIDGET_CREATION=true"
 export "TREE_SHAKE_ICONS=false"
-export "PACKAGE_CONFIG=/Volumes/Vipul_disk/flutter_project/sipnudge/sipnudge_app/.dart_tool/package_config.json"
+export "PACKAGE_CONFIG=/Volumes/Sipnudge/sipnudge/sipnudge_app/.dart_tool/package_config.json"

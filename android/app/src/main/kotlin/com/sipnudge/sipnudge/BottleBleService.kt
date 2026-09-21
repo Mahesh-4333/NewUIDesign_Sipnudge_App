@@ -19,7 +19,9 @@ import android.content.Intent
 import android.content.SharedPreferences
 import android.content.pm.ServiceInfo
 import android.os.Build
+import android.os.Handler
 import android.os.IBinder
+import android.os.Looper
 import android.util.Log
 import androidx.core.app.NotificationCompat
 import org.json.JSONArray
@@ -55,32 +57,70 @@ class BottleBleService : Service() {
         var isFlutterEngineAlive: Boolean = false
         private var serviceInstance: BottleBleService? = null
 
-        fun setFlutterAlive(alive: Boolean) {
-            isFlutterEngineAlive = alive
-            if (alive) {
+        fun setFlutterForeground(isForeground: Boolean) {
+            isFlutterEngineAlive = isForeground
+            if (isForeground) {
+                Log.d(TAG, "Flutter entered foreground — releasing native GATT for Flutter BleCubit")
                 serviceInstance?.disconnectGatt()
+            } else {
+                Log.d(TAG, "Flutter entered background — activating native BottleBleService GATT connection")
+                serviceInstance?.connectToDevice()
             }
         }
 
+        fun setFlutterAlive(alive: Boolean) {
+            setFlutterForeground(alive)
+        }
+
         fun startService(context: Context, deviceAddress: String? = null) {
-            val intent = Intent(context, BottleBleService::class.java).apply {
-                action = ACTION_START_SERVICE
-                if (deviceAddress != null) {
-                    putExtra(EXTRA_DEVICE_ADDRESS, deviceAddress)
+            try {
+                val current = serviceInstance
+                if (current != null) {
+                    if (!deviceAddress.isNullOrEmpty()) {
+                        current.targetDeviceAddress = deviceAddress
+                        current.saveTargetAddress(deviceAddress)
+                    }
+                    if (!isFlutterEngineAlive) {
+                        current.connectToDevice()
+                    }
+                    return
                 }
-            }
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                context.startForegroundService(intent)
-            } else {
-                context.startService(intent)
+
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                    val hasBt = androidx.core.content.ContextCompat.checkSelfPermission(
+                        context,
+                        android.Manifest.permission.BLUETOOTH_CONNECT
+                    ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+                    if (!hasBt) {
+                        Log.w(TAG, "Cannot start BottleBleService: BLUETOOTH_CONNECT permission not granted")
+                        return
+                    }
+                }
+                val intent = Intent(context, BottleBleService::class.java).apply {
+                    action = ACTION_START_SERVICE
+                    if (deviceAddress != null) {
+                        putExtra(EXTRA_DEVICE_ADDRESS, deviceAddress)
+                    }
+                }
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    context.startForegroundService(intent)
+                } else {
+                    context.startService(intent)
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Error starting BottleBleService: ${e.message}")
             }
         }
 
         fun stopService(context: Context) {
-            val intent = Intent(context, BottleBleService::class.java).apply {
-                action = ACTION_STOP_SERVICE
+            try {
+                val intent = Intent(context, BottleBleService::class.java).apply {
+                    action = ACTION_STOP_SERVICE
+                }
+                context.stopService(intent)
+            } catch (e: Exception) {
+                Log.e(TAG, "Error stopping BottleBleService: ${e.message}")
             }
-            context.stopService(intent)
         }
     }
 
@@ -112,11 +152,21 @@ class BottleBleService : Service() {
             targetDeviceAddress = getSavedTargetAddress()
         }
 
-        val notification = createForegroundNotification("SipNudge Smart Bottle Connected")
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            startForeground(NOTIFICATION_ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE)
-        } else {
-            startForeground(NOTIFICATION_ID, notification)
+        try {
+            val notification = createForegroundNotification("SipNudge Smart Bottle Connected")
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                startForeground(NOTIFICATION_ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE)
+            } else {
+                startForeground(NOTIFICATION_ID, notification)
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "startForeground error: ${e.message}")
+            try {
+                val notification = createForegroundNotification("SipNudge Smart Bottle Connected")
+                startForeground(NOTIFICATION_ID, notification)
+            } catch (e2: Exception) {
+                Log.e(TAG, "Fallback startForeground error: ${e2.message}")
+            }
         }
 
         // Only connect native GATT if Flutter engine is NOT alive (e.g. standalone background / boot)
@@ -198,9 +248,13 @@ class BottleBleService : Service() {
 
         try {
             val device = adapter.getRemoteDevice(address)
-            Log.d(TAG, "Connecting to bottle GATT in background at $address with autoConnect=true")
+            Log.d(TAG, "Connecting to bottle GATT in background at $address")
             disconnectGatt()
-            bluetoothGatt = device.connectGatt(this, true, gattCallback)
+            bluetoothGatt = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                device.connectGatt(this, false, gattCallback, BluetoothDevice.TRANSPORT_LE)
+            } else {
+                device.connectGatt(this, false, gattCallback)
+            }
         } catch (e: Exception) {
             Log.e(TAG, "Error connecting GATT: ${e.message}")
         }
@@ -224,11 +278,29 @@ class BottleBleService : Service() {
             if (newState == BluetoothProfile.STATE_CONNECTED) {
                 Log.i(TAG, "Connected to bottle GATT in background successfully")
                 updateNotification("Connected to Smart Bottle • Auto-syncing")
-                gatt.discoverServices()
+                // Request MTU 512 so packets are received in full rather than 20-byte fragments
+                val requested = gatt.requestMtu(512)
+                if (!requested) {
+                    gatt.discoverServices()
+                }
             } else if (newState == BluetoothProfile.STATE_DISCONNECTED) {
-                Log.w(TAG, "Disconnected from bottle GATT. autoConnect will reconnect when in range.")
+                Log.w(TAG, "Disconnected from bottle GATT. Scheduling background reconnect...")
                 updateNotification("Searching for Smart Bottle...")
+                disconnectGatt()
+                if (!isFlutterEngineAlive) {
+                    Handler(Looper.getMainLooper()).postDelayed({
+                        if (!isFlutterEngineAlive) {
+                            connectToDevice()
+                        }
+                    }, 5000)
+                }
             }
+        }
+
+        @SuppressLint("MissingPermission")
+        override fun onMtuChanged(gatt: BluetoothGatt, mtu: Int, status: Int) {
+            Log.d(TAG, "Background GATT MTU changed to: $mtu (status=$status)")
+            gatt.discoverServices()
         }
 
         @SuppressLint("MissingPermission")
@@ -244,12 +316,22 @@ class BottleBleService : Service() {
                         descriptor.value = BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE
                         gatt.writeDescriptor(descriptor)
                         Log.i(TAG, "Subscribed to DATA_CHAR notifications in background")
+                        return
                     }
                 }
+            }
+        }
 
-                val rtcChar = service.getCharacteristic(RTC_CHAR_UUID)
-                if (rtcChar != null) {
-                    syncRtcTime(gatt, rtcChar)
+        @SuppressLint("MissingPermission")
+        override fun onDescriptorWrite(gatt: BluetoothGatt, descriptor: BluetoothGattDescriptor, status: Int) {
+            if (status == BluetoothGatt.GATT_SUCCESS) {
+                Log.i(TAG, "CCCD descriptor written successfully. Now sending RTC time sync...")
+                for (service in gatt.services) {
+                    val rtcChar = service.getCharacteristic(RTC_CHAR_UUID)
+                    if (rtcChar != null) {
+                        syncRtcTime(gatt, rtcChar)
+                        break
+                    }
                 }
             }
         }
@@ -276,19 +358,71 @@ class BottleBleService : Service() {
             }
         }
 
+        @Deprecated("Deprecated in Java")
         override fun onCharacteristicChanged(gatt: BluetoothGatt, characteristic: BluetoothGattCharacteristic) {
             if (characteristic.uuid == DATA_CHAR_UUID) {
                 val payload = characteristic.value?.let { String(it, Charsets.UTF_8) } ?: return
-                handleDataCharPacket(payload)
+                appendAndProcessDataChunk(payload)
+            }
+        }
+
+        override fun onCharacteristicChanged(gatt: BluetoothGatt, characteristic: BluetoothGattCharacteristic, value: ByteArray) {
+            if (characteristic.uuid == DATA_CHAR_UUID) {
+                val payload = String(value, Charsets.UTF_8)
+                appendAndProcessDataChunk(payload)
             }
         }
     }
 
+    private val dataCharBuffer = StringBuilder()
+    private val bufferHandler = Handler(Looper.getMainLooper())
+    private var parseBufferRunnable: Runnable? = null
+
+    private fun appendAndProcessDataChunk(chunk: String) {
+        synchronized(dataCharBuffer) {
+            dataCharBuffer.append(chunk)
+            val accumulated = dataCharBuffer.toString()
+
+            // Check if full packet has arrived (contains ts= and (bq_temp= or temp=) and daily_total_ml=)
+            val isComplete = accumulated.contains("ts=") &&
+                    accumulated.contains("daily_total_ml=") &&
+                    (accumulated.contains("bq_temp=") || accumulated.contains("temp=") || accumulated.endsWith("\n"))
+
+            if (isComplete) {
+                parseBufferRunnable?.let { bufferHandler.removeCallbacks(it) }
+                val fullPayload = accumulated
+                dataCharBuffer.setLength(0)
+                handleDataCharPacket(fullPayload)
+                return
+            }
+
+            // Debounce fallback timer: if remaining chunks are delayed, process after 350ms
+            parseBufferRunnable?.let { bufferHandler.removeCallbacks(it) }
+            parseBufferRunnable = Runnable {
+                synchronized(dataCharBuffer) {
+                    if (dataCharBuffer.isNotEmpty()) {
+                        val fullPayload = dataCharBuffer.toString()
+                        dataCharBuffer.setLength(0)
+                        handleDataCharPacket(fullPayload)
+                    }
+                }
+            }
+            bufferHandler.postDelayed(parseBufferRunnable!!, 350L)
+        }
+    }
+
     private fun handleDataCharPacket(payload: String) {
+        Log.i(TAG, "[BG-BLE] Raw packet received on DATA_CHAR: $payload")
         var batteryPct: Int? = null
         var dailyTotalMl: Int? = null
+        var volumeVal: Double? = null
+        var percentVal: Int? = null
+        var refillVal: Double? = null
+        var tempVal: Double? = null
+        var bqTempVal: Double? = null
+        var tsVal: String? = null
 
-        // Parse key=value pairs: "battery=75;daily_total_ml=1240;..."
+        // Parse key=value pairs: "battery=75;daily_total_ml=1240;volume=450;..."
         for (pair in payload.split(";")) {
             val parts = pair.trim().split("=")
             if (parts.size == 2) {
@@ -298,6 +432,18 @@ class BottleBleService : Service() {
                     batteryPct = value.toIntOrNull()
                 } else if (key == "daily_total_ml") {
                     dailyTotalMl = value.toIntOrNull()
+                } else if (key == "volume") {
+                    volumeVal = value.toDoubleOrNull()
+                } else if (key == "percent") {
+                    percentVal = value.toIntOrNull()
+                } else if (key == "refill" || key == "refills") {
+                    refillVal = value.toDoubleOrNull()
+                } else if (key == "temp") {
+                    tempVal = value.toDoubleOrNull()
+                } else if (key == "bq_temp" || key == "bqTemp") {
+                    bqTempVal = value.toDoubleOrNull()
+                } else if (key == "ts") {
+                    tsVal = value
                 }
             }
         }
@@ -314,9 +460,9 @@ class BottleBleService : Service() {
 
         val isNewDay = lastUpdateDateStr != todayStr && !lastUpdateDateStr.isNullOrEmpty()
 
-        var baseline = prefs.getInt("flutter.bottle_baseline", 0)
-        val lastBottleReading = prefs.getInt("flutter.last_bottle_reading", 0)
-        var currentTodayIntake = prefs.getInt("flutter.current_intake", 0)
+        var baseline = prefs.getInt("flutter.bottle_baseline", 0).let { if (it > 0) it else prefs.getInt("bottle_baseline", 0) }
+        val lastBottleReading = prefs.getInt("flutter.last_bottle_reading", 0).let { if (it > 0) it else prefs.getInt("last_bottle_reading", 0) }
+        var currentTodayIntake = prefs.getInt("flutter.current_intake", 0).let { if (it > 0) it else prefs.getInt("current_intake", 0) }
         var sipDiff = 0
 
         if (isNewDay) {
@@ -338,31 +484,52 @@ class BottleBleService : Service() {
                     currentTodayIntake = 0
                 }
             } else {
-                baseline = 0
-                if (consumed in 40..600) {
+                if (consumed > 600) {
+                    baseline = consumed
+                    sipDiff = 0
+                    currentTodayIntake = 0
+                } else if (consumed >= 40) {
+                    baseline = 0
                     sipDiff = consumed
                     currentTodayIntake = consumed
                 } else {
+                    baseline = 0
                     sipDiff = 0
-                    currentTodayIntake = if (consumed <= 600) consumed else 0
+                    currentTodayIntake = consumed
                 }
             }
             prefs.edit().putInt("flutter.bottle_baseline", baseline).putInt("bottle_baseline", baseline).apply()
         } else {
-            if (consumed < baseline) {
-                baseline = 0
-                prefs.edit().putInt("flutter.bottle_baseline", 0).putInt("bottle_baseline", 0).apply()
-            }
-
-            val calculatedTodayIntake = Math.max(0, consumed - baseline)
-            if (calculatedTodayIntake > currentTodayIntake) {
-                val diff = calculatedTodayIntake - currentTodayIntake
-                if (diff in 1..600) {
-                    sipDiff = diff
-                } else {
-                    sipDiff = 0
+            // Same day:
+            if (consumed == 0) {
+                // Bottle hardware temporarily reported 0 or reconnected during the day.
+                sipDiff = 0
+                Log.i(TAG, "[BG-BLE] Bottle hardware reported 0ml during the day — preserving currentTodayIntake ($currentTodayIntake ml)")
+            } else {
+                // Compare directly with lastBottleReading to accurately detect sips even if currentTodayIntake includes manual drinks
+                if (lastBottleReading > 0 && consumed > lastBottleReading) {
+                    val diff = consumed - lastBottleReading
+                    if (diff in 40..600) {
+                        sipDiff = diff
+                        currentTodayIntake = if (currentTodayIntake >= lastBottleReading) currentTodayIntake + diff else consumed
+                        Log.i(TAG, "[BG-BLE] Bottle sip detected: diff=$sipDiff ml, new currentTodayIntake=$currentTodayIntake ml")
+                    } else if (diff > 600) {
+                        Log.w(TAG, "[BG-BLE] Anomalous diff ignored: $diff ml")
+                        sipDiff = 0
+                    }
+                } else if (lastBottleReading == 0) {
+                    val calculatedTodayIntake = Math.max(0, consumed - baseline)
+                    if (calculatedTodayIntake > currentTodayIntake) {
+                        val diff = calculatedTodayIntake - currentTodayIntake
+                        if (diff in 40..600) {
+                            sipDiff = diff
+                            currentTodayIntake = calculatedTodayIntake
+                        }
+                    } else if (currentTodayIntake == 0 && consumed in 40..600) {
+                        sipDiff = consumed
+                        currentTodayIntake = consumed
+                    }
                 }
-                currentTodayIntake = calculatedTodayIntake
             }
         }
 
@@ -379,9 +546,26 @@ class BottleBleService : Service() {
             editor.putInt("flutter.battery", batteryPct)
             editor.putInt("battery", batteryPct)
         }
+        if (volumeVal != null) {
+            editor.putString("flutter.bottle_volume", volumeVal.toString())
+            editor.putString("volume", volumeVal.toString())
+        }
+        if (tempVal != null) {
+            editor.putString("flutter.bottle_temp", tempVal.toString())
+            editor.putString("temp", tempVal.toString())
+        }
+        if (percentVal != null) {
+            editor.putInt("flutter.bottle_percent", percentVal)
+        }
+        if (refillVal != null) {
+            editor.putString("flutter.bottle_refills", refillVal.toString())
+        }
+        if (bqTempVal != null) {
+            editor.putString("flutter.bottle_bq_temp", bqTempVal.toString())
+        }
         editor.apply()
 
-        Log.i(TAG, "[BG-BLE] DATA_CHAR consumed=$consumed ml (baseline=$baseline ml, todayIntake=$currentTodayIntake ml, diff=$sipDiff ml)")
+        Log.i(TAG, "[BG-BLE] DATA_CHAR consumed=$consumed ml (baseline=$baseline ml, todayIntake=$currentTodayIntake ml, diff=$sipDiff ml, vol=$volumeVal ml, temp=$tempVal°C)")
 
         // Update Android Home Widget
         HomeWidgetProvider.updateAllWidgets(this)
@@ -393,9 +577,28 @@ class BottleBleService : Service() {
             uploadTodayConsumed(userId, currentTodayIntake, effBattery, sipDiff >= 40)
 
             if (sipDiff in 40..600) {
-                uploadTodayHistory(userId, sipDiff, currentTodayIntake, effBattery)
+                uploadTodayHistory(
+                    userId = userId,
+                    sipAmount = sipDiff.toDouble(),
+                    totalAtTime = currentTodayIntake.toDouble(),
+                    battery = batteryPct,
+                    volume = volumeVal,
+                    percent = percentVal,
+                    refill = refillVal,
+                    temp = tempVal,
+                    bqTemp = bqTempVal,
+                    ts = tsVal,
+                    bottleData = payload
+                )
             }
+            updateWidgetDelayed(5000L)
         }
+    }
+
+    private fun updateWidgetDelayed(delayMs: Long = 5000L) {
+        Handler(Looper.getMainLooper()).postDelayed({
+            HomeWidgetProvider.updateAllWidgets(this)
+        }, delayMs)
     }
 
     private fun uploadTodayConsumed(userId: String, consumed: Int, battery: Int, sendNotification: Boolean = false) {
@@ -429,7 +632,7 @@ class BottleBleService : Service() {
                 }
 
                 val code = conn.responseCode
-                Log.d(TAG, "uploadTodayConsumed PATCH response: $code")
+                Log.i(TAG, "[BG-BLE] uploadTodayConsumed PATCH response: $code")
                 conn.disconnect()
             } catch (e: Exception) {
                 Log.w(TAG, "Error uploading today consumed: ${e.message}")
@@ -437,7 +640,19 @@ class BottleBleService : Service() {
         }
     }
 
-    private fun uploadTodayHistory(userId: String, sipAmount: Int, totalAtTime: Int, battery: Int) {
+    private fun uploadTodayHistory(
+        userId: String,
+        sipAmount: Double,
+        totalAtTime: Double,
+        battery: Int? = null,
+        volume: Double? = null,
+        percent: Int? = null,
+        refill: Double? = null,
+        temp: Double? = null,
+        bqTemp: Double? = null,
+        ts: String? = null,
+        bottleData: String? = null
+    ) {
         httpExecutor.execute {
             try {
                 val url = URL("https://api.sipnudge.com/api/database/sync-today-history")
@@ -454,10 +669,37 @@ class BottleBleService : Service() {
                 }
 
                 val historyItem = JSONObject().apply {
+                    put("consumed", sipAmount)
+                    put("totalAtTime", totalAtTime)
                     put("timestamp", isoFormat.format(now))
-                    put("consumed", sipAmount.toDouble())
-                    put("totalAtTime", totalAtTime.toDouble())
-                    put("percentage", battery.toDouble())
+                    if (battery != null) {
+                        put("battery", battery)
+                        put("percentage", battery)
+                        put("percent", battery)
+                    }
+                    if (volume != null) {
+                        put("volume", volume)
+                        put("remaining", volume)
+                    }
+                    if (percent != null) {
+                        put("percentage", percent)
+                        put("percent", percent)
+                    }
+                    if (refill != null) {
+                        put("refill", refill)
+                    }
+                    if (temp != null) {
+                        put("temp", temp)
+                    }
+                    if (bqTemp != null) {
+                        put("bqTemp", bqTemp)
+                    }
+                    if (ts != null) {
+                        put("ts", ts)
+                    }
+                    if (bottleData != null) {
+                        put("bottleData", bottleData)
+                    }
                     put("timezone", TimeZone.getDefault().id)
                 }
 
@@ -472,7 +714,7 @@ class BottleBleService : Service() {
                 }
 
                 val code = conn.responseCode
-                Log.d(TAG, "uploadTodayHistory POST response: $code")
+                Log.i(TAG, "[BG-BLE] uploadTodayHistory POST response: $code")
                 conn.disconnect()
             } catch (e: Exception) {
                 Log.w(TAG, "Error uploading today history: ${e.message}")
@@ -489,7 +731,9 @@ class BottleBleService : Service() {
 
     private fun getSavedTargetAddress(): String? {
         val prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        return prefs.getString("flutter.device_mac", null)
+        return prefs.getString("flutter.last_device_id", null)
+            ?: prefs.getString("last_device_id", null)
+            ?: prefs.getString("flutter.device_mac", null)
             ?: prefs.getString("device_mac", null)
             ?: prefs.getString("flutter.device_id", null)
             ?: prefs.getString("device_id", null)

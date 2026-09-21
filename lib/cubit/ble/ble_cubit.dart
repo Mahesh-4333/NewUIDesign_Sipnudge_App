@@ -168,6 +168,7 @@ class BleCubit extends Cubit<BleState>
   Timer? _scanRestartTimer;
   Timer? _midnightCheckTimer;
   DateTime? _stuckScanningSince;
+  DateTime? _lastDiscoveredTime;
 
   // Track characteristic value notifications to avoid duplicate listeners
   StreamSubscription? _dataSub;
@@ -502,13 +503,9 @@ class BleCubit extends Cubit<BleState>
     _scanCancelled = false;
     _scanSub?.cancel();
 
-    // ✅ Use withServices filter so the OS pre-filters ads for our UART service
-    //    (reduces packet drops on Android; iOS still scans all but ranks better).
-    // ✅ Longer timeout (30 s) gives more advertising cycles to be caught.
     try {
       await FlutterBluePlus.startScan(
-        withServices: [serviceUUID],
-        timeout: const Duration(seconds: 30),
+        timeout: const Duration(seconds: 15),
       );
     } catch (e) {
       Console.log(
@@ -523,17 +520,22 @@ class BleCubit extends Cubit<BleState>
 
       for (var r in results) {
         final deviceName = r.device.platformName.toLowerCase();
-        if (!deviceName.contains('sipnudge')) continue;
+        final advName = r.advertisementData.advName.toLowerCase();
+        final remoteIdStr = r.device.remoteId.str;
+
+        final bool isSipnudge =
+            deviceName.contains('sipnudge') || advName.contains('sipnudge');
 
         bool match = false;
         // Prefer ID match; fall back to name only when ID is absent
         if (savedDeviceId != null && savedDeviceId!.isNotEmpty) {
-          match = (r.device.remoteId.str == savedDeviceId);
+          match = (remoteIdStr == savedDeviceId);
         } else if (savedDeviceName != null && savedDeviceName!.isNotEmpty) {
-          match = (r.device.platformName == savedDeviceName);
+          match = (r.device.platformName == savedDeviceName ||
+              r.advertisementData.advName == savedDeviceName);
         }
 
-        if (match) {
+        if (match || (isSipnudge && savedDeviceId == null && savedDeviceName == null)) {
           // ✅ Mark cancelled so the restart timer is a no-op
           _scanCancelled = true;
           _scanRestartTimer?.cancel();
@@ -551,12 +553,12 @@ class BleCubit extends Cubit<BleState>
     });
 
     // ✅ Single cancellable restart timer — only one can ever be pending at a time
-    _scanRestartTimer = Timer(const Duration(seconds: 32), () {
+    _scanRestartTimer = Timer(const Duration(seconds: 16), () {
       _scanRestartTimer = null;
       if (!_scanCancelled && state.status == BleStatus.scanning) {
         Console.log(
             tag:
-                '[BLE_Cubit] Scan timeout (32s) — restarting scan for last device',
+                '[BLE_Cubit] Scan timeout (16s) — restarting scan for last device',
             value: 'BLE_Cubit');
         _scanForLastDevice();
       }
@@ -585,11 +587,9 @@ class BleCubit extends Cubit<BleState>
     _scanCancelled = false;
     _scanSub?.cancel();
 
-    // ✅ Use withServices filter; 30 s gives more ad cycles
     try {
       await FlutterBluePlus.startScan(
-        withServices: [serviceUUID],
-        timeout: const Duration(seconds: 30),
+        timeout: const Duration(seconds: 15),
       );
     } catch (e) {
       Console.log(
@@ -603,7 +603,8 @@ class BleCubit extends Cubit<BleState>
       if (results.isNotEmpty) {
         var filtered = results.where((it) {
           final name = it.device.platformName.toLowerCase();
-          return name.contains('sipnudge');
+          final advName = it.advertisementData.advName.toLowerCase();
+          return name.contains('sipnudge') || advName.contains('sipnudge');
         }).toList();
 
         if (filtered.isNotEmpty) {
@@ -617,7 +618,7 @@ class BleCubit extends Cubit<BleState>
     });
 
     // ✅ Single cancellable restart timer
-    _scanRestartTimer = Timer(const Duration(seconds: 32), () {
+    _scanRestartTimer = Timer(const Duration(seconds: 16), () {
       _scanRestartTimer = null;
       if (!_scanCancelled && state.status == BleStatus.scanning) {
         log('[BLE_Cubit] Scan timeout — restarting all-device scan',
@@ -651,7 +652,7 @@ class BleCubit extends Cubit<BleState>
   /// when the app expects to be connected but isn't.
   void _startWatchdog() {
     _watchdogTimer?.cancel();
-    _watchdogTimer = Timer.periodic(const Duration(seconds: 2), (timer) async {
+    _watchdogTimer = Timer.periodic(const Duration(seconds: 10), (timer) async {
       // 1. Skip if Bluetooth is not supported or not ON
       if (await FlutterBluePlus.isSupported == false) return;
       BluetoothAdapterState adapterState;
@@ -683,33 +684,19 @@ class BleCubit extends Cubit<BleState>
         return;
       }
 
-      // 4. Track stuck state
-      _stuckScanningSince ??= DateTime.now();
-      final stuckDuration = DateTime.now().difference(_stuckScanningSince!);
-
-      if (stuckDuration.inSeconds >= 10) {
-        Console.log(
-            tag:
-                '[BLE_Watchdog] Scanning stuck for > 10s. Automatically recovering BLE service.',
-            value: 'BLE_Cubit');
-        _stuckScanningSince = null;
-        await reinitialize();
-        return;
-      }
-
-      // 5. Trigger recovery scan
+      // 4. Trigger recovery scan if needed
       final hasSavedDevice = (savedDeviceId != null || savedDeviceName != null);
 
       if (hasSavedDevice) {
         Console.log(
             tag:
-                '[BLE_Watchdog] Device disconnected and not scanning. Restarting scan for last device.',
+                '[BLE_Watchdog] Device disconnected and not scanning. Starting scan for last device.',
             value: 'BLE_Cubit');
         _scanForLastDevice();
       } else if (state.status == BleStatus.scanning) {
         Console.log(
             tag:
-                '[BLE_Watchdog] Scanning status active but no scan running. Restarting all-device scan.',
+                '[BLE_Watchdog] Scanning status active but no scan running. Starting all-device scan.',
             value: 'BLE_Cubit');
         _scanForAllDevices();
       }
@@ -918,6 +905,13 @@ class BleCubit extends Cubit<BleState>
     ));
 
     try {
+      if (FlutterBluePlus.isScanningNow) {
+        await FlutterBluePlus.stopScan();
+        if (Platform.isAndroid) {
+          await Future.delayed(const Duration(milliseconds: 150));
+        }
+      }
+
       // ✅ Use autoConnect: false on both iOS and Android.
       //    On iOS, since our native Swift manager handles background reconnection,
       //    we do NOT want FBP's autoConnect: true (which waits for advertisements
@@ -1003,6 +997,9 @@ class BleCubit extends Cubit<BleState>
       await prefs.setBool('ble_connected_once', true);
     } catch (e) {
       Console.log(tag: '[BLE_Cubit] Connection failed: $e', value: 'BLE_Cubit');
+      try {
+        await device.disconnect();
+      } catch (_) {}
       emit(state.copyWith(
           status: BleStatus.error, message: "Connection failed: $e"));
       _rescan(
@@ -1609,17 +1606,22 @@ class BleCubit extends Cubit<BleState>
         bottleData: bottleData,
       );
 
-      // 3. Save today's record to SQLite summary
+      // 3. Add any manual drinks logged today (water, coffee, tea) so they are preserved alongside bottle sensor intake
+      final manualHydration = await dbHelper.getTodayEffectiveManualHydration();
+      final totalTodayConsumed = (consumed + manualHydration).clamp(0.0, double.infinity);
+      final isTotalPerfect = target > 0 && totalTodayConsumed >= target;
+
+      // 4. Save today's combined record to SQLite summary
       final todaySummary = HydrationDaySummary(
         date: DateTime(now.year, now.month, now.day),
         dayIndex: 0,
         target: target.toDouble(),
-        consumed: consumed,
-        isPerfect: isPerfect,
+        consumed: totalTodayConsumed,
+        isPerfect: isTotalPerfect,
       );
       await dbHelper.bulkUpsert30Days([todaySummary]);
 
-      // 4. Push today's record to server with force: true & sync real-time telemetry
+      // 5. Push today's combined record to server & sync real-time telemetry
       final userId = await SharedPrefsHelper.getUserId();
       if (userId != null && userId.isNotEmpty) {
         final dateUtc =
@@ -1628,21 +1630,28 @@ class BleCubit extends Cubit<BleState>
         await ApiService().updateTodayConsumed(
           userId,
           dateUtc,
-          consumed,
-          isPerfect,
+          totalTodayConsumed,
+          isTotalPerfect,
           target: target.toDouble(),
           battery: battery ?? state.battery,
           force: true,
         );
       }
 
-      // 5. Update BleCubit state so Home Screen UI refreshes instantly
-      emit(state.copyWith(currentHydrationValue: consumed));
+      // 6. Update BleCubit state so Home Screen UI refreshes instantly with total consumption
+      emit(state.copyWith(currentHydrationValue: totalTodayConsumed));
 
-      // 6. Notify SyncBus for UI listeners (BottleDataCubit, charts, timeline)
+      // Save last_bottle_reading so native background service has accurate baseline
+      try {
+        final sp = await SharedPreferences.getInstance();
+        await sp.setInt('last_bottle_reading', dailyTotalMl);
+        await sp.setInt('current_intake', totalTodayConsumed.toInt());
+      } catch (_) {}
+
+      // 7. Notify SyncBus for UI listeners (BottleDataCubit, charts, timeline)
       SyncBus.instance.notifySyncComplete();
 
-      // 7. Debounced home widget update
+      // 8. Debounced home widget update
       Future.delayed(Duration(seconds: 5), () async {
         await HomeWidgetService.updateWidgetData();
       });

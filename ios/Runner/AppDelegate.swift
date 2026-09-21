@@ -701,8 +701,14 @@ class SipnudgeBackgroundBLE: NSObject, CBCentralManagerDelegate, CBPeripheralDel
             
             var batteryPct: Int?
             var dailyTotalMl: Int?
+            var volumeVal: Double?
+            var percentVal: Int?
+            var refillVal: Double?
+            var tempVal: Double?
+            var bqTempVal: Double?
+            var tsVal: String?
 
-            // Parse semicolon-delimited key=value pairs: "battery=90;daily_total_ml=577;..."
+            // Parse semicolon-delimited key=value pairs: "battery=90;daily_total_ml=577;volume=450;..."
             for pair in payload.components(separatedBy: ";") {
                 let kv = pair.trimmingCharacters(in: .whitespacesAndNewlines).components(separatedBy: "=")
                 if kv.count == 2 {
@@ -713,6 +719,18 @@ class SipnudgeBackgroundBLE: NSObject, CBCentralManagerDelegate, CBPeripheralDel
                         latestBatteryPercent = pct
                     } else if key == "daily_total_ml", let total = Int(val) {
                         dailyTotalMl = total
+                    } else if key == "volume", let v = Double(val) {
+                        volumeVal = v
+                    } else if key == "percent", let p = Int(val) {
+                        percentVal = p
+                    } else if (key == "refill" || key == "refills"), let r = Double(val) {
+                        refillVal = r
+                    } else if key == "temp", let t = Double(val) {
+                        tempVal = t
+                    } else if (key == "bq_temp" || key == "bqTemp"), let bqt = Double(val) {
+                        bqTempVal = bqt
+                    } else if key == "ts" {
+                        tsVal = val
                     }
                 }
             }
@@ -725,7 +743,7 @@ class SipnudgeBackgroundBLE: NSObject, CBCentralManagerDelegate, CBPeripheralDel
             }
 
             if let consumed = dailyTotalMl {
-                NSLog("[BG-BLE] DATA_CHAR reported daily_total_ml=\(consumed)ml (battery=\(batteryPct ?? -1)%)")
+                NSLog("[BG-BLE] DATA_CHAR reported daily_total_ml=\(consumed)ml (battery=\(batteryPct ?? -1)%, volume=\(volumeVal ?? -1)ml, temp=\(tempVal ?? -1)°C)")
 
                 // Update shared App Group UserDefaults for WidgetKit
                 let todayDate = Calendar.current.startOfDay(for: Date())
@@ -799,12 +817,12 @@ class SipnudgeBackgroundBLE: NSObject, CBCentralManagerDelegate, CBPeripheralDel
                     } else {
                         // Same day:
                         if consumed == 0 {
-                            // Bottle hardware was reset to 0 at midnight or during the day
-                            baseline = 0
-                            currentTodayIntake = 0
+                            // Bottle hardware temporarily reported 0 or reconnected during the day.
+                            // CRITICAL: Do NOT reset currentTodayIntake to 0! Otherwise, when the next
+                            // valid reading (e.g. 40ml) arrives, diff is falsely computed as 40ml again,
+                            // causing duplicate history entries.
                             sipDiff = 0
-                            appDefaults.set(0, forKey: "bottle_baseline")
-                            NSLog("[BG-BLE] Bottle hardware reset to 0ml during the day")
+                            NSLog("[BG-BLE] Bottle hardware reported 0ml during the day — preserving currentTodayIntake (\(currentTodayIntake)ml)")
                         } else {
                             if consumed < baseline {
                                 baseline = 0
@@ -846,7 +864,8 @@ class SipnudgeBackgroundBLE: NSObject, CBCentralManagerDelegate, CBPeripheralDel
                 }
 
                 // If app is in background, schedule upload to backend (debounced to avoid duplicate notifications)
-                if inBackground {
+                let isAppInBackground = inBackground || UIApplication.shared.applicationState != .active
+                if isAppInBackground {
                     let now = Date()
                     let isDuplicate = lastUploadedConsumed == consumed &&
                         lastUploadTime != nil &&
@@ -868,7 +887,14 @@ class SipnudgeBackgroundBLE: NSObject, CBCentralManagerDelegate, CBPeripheralDel
                             uploadTodayHistoryViaBackgroundSession(
                                 sipAmount: Double(sipDiff),
                                 totalAtTime: Double(currentTodayIntake),
-                                battery: batteryPct
+                                battery: batteryPct,
+                                volume: volumeVal,
+                                percent: percentVal,
+                                refill: refillVal,
+                                temp: tempVal,
+                                bqTemp: bqTempVal,
+                                ts: tsVal,
+                                bottleData: payload
                             )
                         }
                     } else {
@@ -961,7 +987,14 @@ class SipnudgeBackgroundBLE: NSObject, CBCentralManagerDelegate, CBPeripheralDel
     private func uploadTodayHistoryViaBackgroundSession(
         sipAmount: Double,
         totalAtTime: Double,
-        battery: Int? = nil
+        battery: Int? = nil,
+        volume: Double? = nil,
+        percent: Int? = nil,
+        refill: Double? = nil,
+        temp: Double? = nil,
+        bqTemp: Double? = nil,
+        ts: String? = nil,
+        bottleData: String? = nil
     ) {
         guard let userId = UserDefaults.standard.string(forKey: "flutter.user_id")
                 ?? UserDefaults(suiteName: kAppGroupId)?.string(forKey: "flutter.user_id")
@@ -984,6 +1017,33 @@ class SipnudgeBackgroundBLE: NSObject, CBCentralManagerDelegate, CBPeripheralDel
         ]
         if let batteryPct = battery {
             historyItem["percentage"] = Double(batteryPct)
+            historyItem["battery"] = batteryPct
+        }
+        if let v = volume {
+            historyItem["volume"] = v
+            historyItem["remaining"] = v
+        }
+        if let p = percent {
+            historyItem["percent"] = p
+            if battery == nil {
+                historyItem["percentage"] = Double(p)
+            }
+        }
+        if let r = refill {
+            historyItem["refill"] = r
+            historyItem["refills"] = r
+        }
+        if let t = temp {
+            historyItem["temp"] = t
+        }
+        if let bqt = bqTemp {
+            historyItem["bqTemp"] = bqt
+        }
+        if let tsVal = ts {
+            historyItem["ts"] = tsVal
+        }
+        if let bd = bottleData {
+            historyItem["bottleData"] = bd
         }
 
         let body: [String: Any] = [
@@ -999,7 +1059,7 @@ class SipnudgeBackgroundBLE: NSObject, CBCentralManagerDelegate, CBPeripheralDel
         do {
             let jsonData = try JSONSerialization.data(withJSONObject: body, options: [])
 
-            NSLog("[BG-BLE] 📤 Scheduling background sync-today-history for user \(userId) (sip: \(sipAmount)ml, totalAtTime: \(totalAtTime)ml)")
+            NSLog("[BG-BLE] 📤 Scheduling background sync-today-history for user \(userId) (sip: \(sipAmount)ml, totalAtTime: \(totalAtTime)ml, vol: \(volume ?? -1)ml, temp: \(temp ?? -1)°C)")
 
             BackgroundSessionManager.shared.scheduleUpload(
                 url: uploadURL,

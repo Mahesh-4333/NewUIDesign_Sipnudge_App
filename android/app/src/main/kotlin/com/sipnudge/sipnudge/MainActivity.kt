@@ -1,43 +1,51 @@
 package com.sipnudge.sipnudge
 
-import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
-import android.content.ServiceConnection
 import android.os.Bundle
-import android.os.IBinder
 import androidx.annotation.NonNull
+import androidx.core.view.WindowCompat
 import io.flutter.embedding.android.FlutterFragmentActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
-import io.flutter.plugins.GeneratedPluginRegistrant
 
 class MainActivity: FlutterFragmentActivity() {
-    private var serviceConnection: ServiceConnection? = null
     private val BLE_CHANNEL = "com.sipnudge.sipnudge/ble_service"
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        WindowCompat.setDecorFitsSystemWindows(window, false)
 
-        val intent = Intent(this, TerminateService::class.java)
-        startService(intent)
+        BottleBleService.setFlutterForeground(true)
 
-        serviceConnection = object : ServiceConnection {
-            override fun onServiceConnected(name: ComponentName?, service: IBinder?) {}
-            override fun onServiceDisconnected(name: ComponentName?) {}
-        }
-        bindService(intent, serviceConnection!!, Context.BIND_AUTO_CREATE)
+        try {
+            BottleBleService.startService(this)
+        } catch (_: Exception) {}
+
+        try {
+            val intent = Intent(this, TerminateService::class.java)
+            startService(intent)
+        } catch (_: Exception) {}
+    }
+
+    override fun onResume() {
+        super.onResume()
+        BottleBleService.setFlutterForeground(true)
+    }
+
+    override fun onStop() {
+        BottleBleService.setFlutterForeground(false)
+        super.onStop()
     }
 
     override fun onDestroy() {
+        BottleBleService.setFlutterForeground(false)
         super.onDestroy()
-        serviceConnection?.let {
-            unbindService(it)
-        }
     }
 
     override fun configureFlutterEngine(@NonNull flutterEngine: FlutterEngine) {
-        GeneratedPluginRegistrant.registerWith(flutterEngine)
+        super.configureFlutterEngine(flutterEngine)
+        BottleBleService.setFlutterForeground(true)
 
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, BLE_CHANNEL).setMethodCallHandler { call, result ->
             when (call.method) {
@@ -47,12 +55,16 @@ class MainActivity: FlutterFragmentActivity() {
                         getSharedPreferences("FlutterSharedPreferences", Context.MODE_PRIVATE).edit()
                             .putString("flutter.device_mac", address)
                             .putString("device_mac", address)
+                            .putString("flutter.last_device_id", address)
+                            .putString("last_device_id", address)
                             .apply()
                     }
+                    BottleBleService.startService(this, address)
                     HomeWidgetProvider.updateAllWidgets(this)
                     result.success(true)
                 }
                 "stopBleService" -> {
+                    BottleBleService.stopService(this)
                     result.success(true)
                 }
                 "updateWidget" -> {

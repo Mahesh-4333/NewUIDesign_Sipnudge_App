@@ -46,9 +46,6 @@ import 'package:hydrify/services/database_sync_service.dart';
 import 'package:hydrify/services/home_widget_service.dart';
 import 'package:hydrify/services/sync_bus.dart';
 import 'package:hydrify/services/in_app_update_service.dart';
-import 'package:showcaseview/showcaseview.dart';
-import 'package:hydrify/helpers/showcase_keys.dart';
-import 'package:hydrify/screens/widgets/custom_showcase.dart';
 
 class HomeScreen extends StatefulWidget {
   static bool autoTriggerTimelineDrag = false;
@@ -87,6 +84,11 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   final ValueNotifier<bool> _showAmbientTemp = ValueNotifier<bool>(false);
   final ValueNotifier<double> _timelineDragProgress =
       ValueNotifier<double>(0.0);
+
+  // Cached values to prevent progress circle flicker
+  double _lastCompletionPercent = 0.0;
+  double _lastWaterVolumeConsumed = 0.0;
+  double _lastExpectedPercent = 0.0;
 
   void _checkGuestStatus() async {
     final email = await SharedPrefsHelper.getUserEmail();
@@ -196,16 +198,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       // ── AI Hydration Engine: runs every 6 s ──────────
       _aiHydrationEngineTimer =
           Timer.periodic(const Duration(seconds: 6), (timer) async {
-        if (_isAiEngineRunning) return;
-
-        if (mounted) {
-          try {
-            if (ShowCaseWidget.of(context).isShowcaseRunning) {
-              return;
-            }
-          } catch (_) {}
-        }
-
         _isAiEngineRunning = true;
         await _runAiHydrationEngine();
         _isAiEngineRunning = false;
@@ -285,27 +277,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     super.dispose();
   }
 
-  void _startShowcaseIfNeeded() async {
-    try {
-      final bool hasShown = await SharedPrefsHelper.hasShownHomeShowcase();
-      if (!hasShown && mounted) {
-        if (mounted) {
-          ShowCaseWidget.of(context).startShowCase([
-            ShowcaseKeys.messageNotificationKey,
-            ShowcaseKeys.batteryIndicatorKey,
-            ShowcaseKeys.weatherInfoKey,
-            ShowcaseKeys.refillsSlotKey,
-            ShowcaseKeys.bottleProgressKey,
-            ShowcaseKeys.bottomNavKey,
-          ]);
-          await SharedPrefsHelper.setHasShownHomeShowcase(true);
-        }
-      }
-    } catch (e) {
-      debugPrint("Error starting showcase: $e");
-    }
-  }
-
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
@@ -333,10 +304,17 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           if (mounted) {
             await context.read<BleCubit>().checkAndResetForNewDay();
           }
-          await DatabaseSyncService().syncAll();
+          // 1. Process pending widget logs first so SQLite DB has latest manual drinks
           await HomeWidgetService.processPendingWidgetLogs();
+          // 2. Perform full database sync with server
+          await DatabaseSyncService().syncAll();
           await HomeWidgetService.updateWidgetData();
           if (mounted) {
+            final todayTotal = await DatabaseHelper().getSummaryForDate(DateTime.now());
+            if (todayTotal != null && todayTotal.consumed > 0) {
+              context.read<BleCubit>().updateCurrentHydrationValue(todayTotal.consumed);
+            }
+            context.read<BleCubit>().syncPendingManualDelta();
             context.read<HydrationCubit>().loadSlotsFromDb();
             context.read<HydrationCubit>().refreshAchievementStats();
             context.read<BottleDataCubit>().getCurrentDayHistory();
@@ -1282,30 +1260,23 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                             return Hydration30DayPage();
                           }));
                         },
-                        child: CustomShowcase(
-                          showcaseKey: ShowcaseKeys.batteryIndicatorKey,
-                          title: 'Bottle Battery Status',
-                          description:
-                              'Indicates your bottle battery percentage. Tap to view 30-day battery stats.',
-                          targetShapeBorder: const CircleBorder(),
-                          child: CustomCircularProgressIndicator(
-                            height: AppDimensions.dim60.w,
-                            width: AppDimensions.dim60.w,
-                            backgroundColor: AppColors.bluegray,
-                            progressBackgroundColor: const Color(0XFFDDECDC),
-                            progressColor: state.battery <= 20
-                                ? const Color(0xFFFF0000)
-                                : const Color(0XFF43E73E),
-                            percentageValue: state.battery.toDouble(),
-                            center: Text(
-                              "${state.battery}%",
-                              style: TextStyle(
-                                color: AppColors.white,
-                                fontSize: AppFontStyles.fontSize_12,
-                                fontVariations: [
-                                  AppFontStyles.fontWeightVariation600,
-                                ],
-                              ),
+                        child: CustomCircularProgressIndicator(
+                          height: AppDimensions.dim60.w,
+                          width: AppDimensions.dim60.w,
+                          backgroundColor: AppColors.bluegray,
+                          progressBackgroundColor: const Color(0XFFDDECDC),
+                          progressColor: state.battery <= 20
+                              ? const Color(0xFFFF0000)
+                              : const Color(0XFF43E73E),
+                          percentageValue: state.battery.toDouble(),
+                          center: Text(
+                            "${state.battery}%",
+                            style: TextStyle(
+                              color: AppColors.white,
+                              fontSize: AppFontStyles.fontSize_12,
+                              fontVariations: [
+                                AppFontStyles.fontWeightVariation600,
+                              ],
                             ),
                           ),
                         ),
@@ -1345,15 +1316,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         }
 
         if (weatherProvider.error != null) {
-          return CustomShowcase(
-            showcaseKey: ShowcaseKeys.weatherInfoKey,
-            title: 'Weather Information',
-            description:
-                'Shows current weather. When you step outside, it guides you to consume extra water based on temperature and humidity.',
-            child: _buildWeatherUnavailableWidget(
-              isPermanentlyDenied: weatherProvider.isLocationPermanentlyDenied,
-              onRefresh: () => weatherProvider.fetchWeatherForCurrentLocation(),
-            ),
+          return _buildWeatherUnavailableWidget(
+            isPermanentlyDenied: weatherProvider.isLocationPermanentlyDenied,
+            onRefresh: () => weatherProvider.fetchWeatherForCurrentLocation(),
           );
         }
 
@@ -1365,15 +1330,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               weatherProvider.fetchWeatherForCurrentLocation();
             });
           }
-          return CustomShowcase(
-            showcaseKey: ShowcaseKeys.weatherInfoKey,
-            title: 'Weather Information',
-            description:
-                'Shows current weather. When you step outside, it guides you to consume extra water based on temperature and humidity.',
-            child: _buildWeatherUnavailableWidget(
-              isPermanentlyDenied: false,
-              onRefresh: () => weatherProvider.fetchWeatherForCurrentLocation(),
-            ),
+          return _buildWeatherUnavailableWidget(
+            isPermanentlyDenied: false,
+            onRefresh: () => weatherProvider.fetchWeatherForCurrentLocation(),
           );
         }
 
@@ -1385,16 +1344,11 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           iconPath = "assets/images/01_sunny_color.svg";
         }
 
-        return CustomShowcase(
-          showcaseKey: ShowcaseKeys.weatherInfoKey,
-          title: 'Weather Information',
-          description:
-              'Shows current weather. When you step outside, it guides you to consume extra water based on temperature and humidity.',
-          child: Padding(
-            padding:
-                EdgeInsets.symmetric(horizontal: AppDimensions.defaultPadding),
-            child: Row(
-              children: [
+        return Padding(
+          padding:
+              EdgeInsets.symmetric(horizontal: AppDimensions.defaultPadding),
+          child: Row(
+            children: [
                 InkWell(
                   onTap: () async {
                     Console.log(
@@ -1508,23 +1462,17 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 ),
               ],
             ),
-          ),
-        );
-      },
-    );
+          );
+        },
+      );
   }
 
   Widget _buildBottleWidget(BuildContext context) {
-    return CustomShowcase(
-      showcaseKey: ShowcaseKeys.bottleProgressKey,
-      title: 'Bottle Status & Intake Progress',
-      description:
-          'The middle of the bottle displays the current water fill level inside the bottle. The outer circle progress indicator tracks your daily water consumption progress.',
-      child: SizedBox(
-        height: AppDimensions.dim456.h,
-        child: Stack(
-          alignment: Alignment.center,
-          children: [
+    return SizedBox(
+      height: AppDimensions.dim456.h,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
             Positioned.fill(
               top: 0,
               bottom: -(AppDimensions.dim1.h),
@@ -1562,6 +1510,11 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                   return false;
                 }, builder: (context, state) {
                   return FutureBuilder<(double, double, double)>(
+                      initialData: (
+                        _lastCompletionPercent,
+                        _lastWaterVolumeConsumed,
+                        _lastExpectedPercent,
+                      ),
                       future: () async {
                     final history = await context
                         .read<BottleDataCubit>()
@@ -1596,17 +1549,17 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                       expectedPercent
                     );
                   }(), builder: (context, snapshot) {
-                    final (
-                      completionPercent,
-                      waterVolumeConsumed,
-                      expectedPercent
-                    ) = snapshot.data ?? (0.0, 0.0, 0.0);
-
-                    if (snapshot.connectionState == ConnectionState.waiting) {
-                      return const Center(child: CircularProgressIndicator());
+                    if (snapshot.hasData && snapshot.data != null) {
+                      _lastCompletionPercent = snapshot.data!.$1;
+                      _lastWaterVolumeConsumed = snapshot.data!.$2;
+                      _lastExpectedPercent = snapshot.data!.$3;
                     }
-                    return _progressCircleWidget(completionPercent,
-                        waterVolumeConsumed, expectedPercent);
+
+                    return _progressCircleWidget(
+                      _lastCompletionPercent,
+                      _lastWaterVolumeConsumed,
+                      _lastExpectedPercent,
+                    );
                   });
                 }),
               ),
@@ -1718,8 +1671,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             ),
           ],
         ),
-      ),
-    );
+      );
   }
 
   Widget _progressCircleWidget(double completionPercent,
@@ -1735,47 +1687,26 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           offset: Offset(AppDimensions.dim2.w, AppDimensions.dim2.h),
         ),
       ],
-      backgroundColor: Color(0xffB8B8B8),
-      progressBackgroundColor: Color(0xffB3FF4A),
+      backgroundColor: const Color(0xffB8B8B8),
+      progressBackgroundColor: const Color(0xffB3FF4A),
       percentageValue: completionPercent,
       expectedPercentage: expectedPercent,
       center: Container(
         width: AppDimensions.dim50.w,
-        decoration: BoxDecoration(
+        decoration: const BoxDecoration(
           shape: BoxShape.circle,
         ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            FutureBuilder<int?>(
-              future: SharedPrefsHelper.getUserGoal(),
-              builder: (context, snapshot) {
-                double userGoalLiters = 0.0;
-
-                if (snapshot.hasData && snapshot.data != null) {
-                  userGoalLiters = snapshot.data! / 1000.0;
-                }
-
-                return TweenAnimationBuilder<double>(
-                  tween: Tween<double>(
-                    begin: 0.0,
-                    end: completionPercent,
-                  ),
-                  duration: Duration(milliseconds: 500),
-                  curve: Curves.fastEaseInToSlowEaseOut,
-                  builder: (context, value, child) {
-                    return Text(
-                      "${(value).toStringAsFixed(0)}%",
-                      style: TextStyle(
-                        color: AppColors.black,
-                        fontSize: value >= 100 ? 13.sp : 15.sp,
-                        fontVariations: [AppFontStyles.boldFontVariation],
-                      ),
-                    );
-                  },
-                );
-              },
-            )
+            Text(
+              "${completionPercent.toStringAsFixed(0)}%",
+              style: TextStyle(
+                color: AppColors.black,
+                fontSize: completionPercent >= 100 ? 13.sp : 15.sp,
+                fontVariations: [AppFontStyles.boldFontVariation],
+              ),
+            ),
           ],
         ),
       ),
@@ -1784,13 +1715,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
   Widget _buildTodayStats(
       double todayConsumptionPercentage, String slotName, String totalRefill) {
-    return CustomShowcase(
-      showcaseKey: ShowcaseKeys.refillsSlotKey,
-      title: 'Refills & Slots Info',
-      description:
-          'Check how many times your bottle was refilled today, current active time slot, and completion percentage.',
-      child: Container(
-        margin: EdgeInsets.symmetric(horizontal: AppDimensions.dim20.w),
+    return Container(
+      margin: EdgeInsets.symmetric(horizontal: AppDimensions.dim20.w),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(AppDimensions.dim90.r),
           border: Border.all(
@@ -2032,8 +1958,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             ),
           ),
         ),
-      ),
-    );
+      );
   }
 
   Widget _buildGoalText(double todayConsumptionPercentage, bool isGuest,
@@ -2442,8 +2367,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                                       await prefs.setBool(
                                           'ble_connected_once', true);
                                     } else {}
-
-                                    _startShowcaseIfNeeded();
                                   },
                                   child: Text(
                                     isGuest ? "OK" : "Start",

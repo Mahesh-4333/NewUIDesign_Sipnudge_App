@@ -12,6 +12,7 @@ import 'package:hydrify/helpers/water_consumption_data_helper.dart';
 import 'package:hydrify/helpers/hydration_helper.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:hydrify/services/database_sync_service.dart';
+import 'package:hydrify/services/sync_bus.dart';
 
 class HomeWidgetService {
   // Constants for widget names and App Group ID
@@ -73,7 +74,8 @@ class HomeWidgetService {
           await HomeWidget.saveWidgetData<String>(
               'pending_widget_logs_json', '[]');
 
-          DatabaseSyncService().syncAll();
+          await DatabaseSyncService().pushTodayConsumed();
+          SyncBus.instance.notifySyncComplete();
           await updateWidgetData();
           Console.log(
               tag: "HomeWidget",

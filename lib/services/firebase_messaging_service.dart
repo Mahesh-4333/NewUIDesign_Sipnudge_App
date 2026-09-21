@@ -32,6 +32,9 @@ class FirebaseMessagingService {
   static final StreamController<void> ticketUpdateStream =
       StreamController<void>.broadcast();
 
+  static final StreamController<void> connectionUpdateStream =
+      StreamController<void>.broadcast();
+
   Future<void> init() async {
     try {
       // 1. Request notification permissions
@@ -179,6 +182,12 @@ class FirebaseMessagingService {
         if (message.data['type'] == 'ticket_reply' ||
             message.data['type'] == 'ticket_closed') {
           ticketUpdateStream.add(null);
+        }
+
+        // Auto-refresh connections screens on invite/accept notifications
+        if (message.data['type'] == 'connection_request' ||
+            message.data['type'] == 'connection_accepted') {
+          connectionUpdateStream.add(null);
         }
       });
     } catch (e) {

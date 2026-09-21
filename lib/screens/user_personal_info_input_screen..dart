@@ -62,7 +62,7 @@ class _UserInfoInputScreenState extends State<UserInfoInputScreen> {
   void _onUsernameChanged(String value) {
     if (_debounce?.isActive ?? false) _debounce!.cancel();
 
-    final name = value.trim();
+    final name = value.replaceAll(' ', '').trim();
     if (name.isEmpty) {
       setState(() {
         _usernameError = null;
@@ -75,8 +75,7 @@ class _UserInfoInputScreenState extends State<UserInfoInputScreen> {
     final regex = RegExp(r'^[a-zA-Z0-9]{3,15}$');
     if (!regex.hasMatch(name)) {
       setState(() {
-        _usernameError = AppLocalizations.of(context)?.usernameRequirements ??
-            "3-15 alphanumeric characters only.";
+        _usernameError = "Username must be 3-15 letters and numbers only.";
         _isUsernameValid = false;
         _isCheckingUsername = false;
       });
@@ -223,11 +222,29 @@ class _UserInfoInputScreenState extends State<UserInfoInputScreen> {
           await cubit.saveUser(newState);
 
           if (name != null && name.isNotEmpty) {
-            setState(() {
-              _isUsernameReadOnly = true;
-            });
-            _nameController.text = name;
-            _onUsernameChanged(name);
+            final isSubmitted =
+                await SharedPrefsHelper.isPersonalInfoSubmitted();
+            final isValidUsername =
+                RegExp(r'^[a-zA-Z0-9]{3,15}$').hasMatch(name);
+
+            if (isSubmitted && isValidUsername) {
+              setState(() {
+                _isUsernameReadOnly = true;
+              });
+              _nameController.text = name;
+              _onUsernameChanged(name);
+            } else {
+              String sanitized =
+                  name.replaceAll(RegExp(r'[^a-zA-Z0-9]'), '');
+              if (sanitized.length > 15) {
+                sanitized = sanitized.substring(0, 15);
+              }
+              setState(() {
+                _isUsernameReadOnly = false;
+              });
+              _nameController.text = sanitized;
+              _onUsernameChanged(sanitized);
+            }
           }
         }
       } catch (e) {
@@ -240,11 +257,28 @@ class _UserInfoInputScreenState extends State<UserInfoInputScreen> {
     if (_nameController.text.isEmpty) {
       final savedName = await SharedPrefsHelper.getUserName();
       if (savedName != null && savedName.isNotEmpty) {
-        setState(() {
-          _isUsernameReadOnly = true;
-        });
-        _nameController.text = savedName;
-        _onUsernameChanged(savedName);
+        final isSubmitted = await SharedPrefsHelper.isPersonalInfoSubmitted();
+        final isValidUsername =
+            RegExp(r'^[a-zA-Z0-9]{3,15}$').hasMatch(savedName);
+
+        if (isSubmitted && isValidUsername) {
+          setState(() {
+            _isUsernameReadOnly = true;
+          });
+          _nameController.text = savedName;
+          _onUsernameChanged(savedName);
+        } else {
+          String sanitized =
+              savedName.replaceAll(RegExp(r'[^a-zA-Z0-9]'), '');
+          if (sanitized.length > 15) {
+            sanitized = sanitized.substring(0, 15);
+          }
+          setState(() {
+            _isUsernameReadOnly = false;
+          });
+          _nameController.text = sanitized;
+          _onUsernameChanged(sanitized);
+        }
       }
     }
 
@@ -343,7 +377,7 @@ class _UserInfoInputScreenState extends State<UserInfoInputScreen> {
                             return;
                           }
 
-                          final name = _nameController.text.trim();
+                          final name = _nameController.text.replaceAll(' ', '').trim();
                           if (name.isEmpty) {
                             UiUtilsService.showToast(
                               context: context,
@@ -355,13 +389,11 @@ class _UserInfoInputScreenState extends State<UserInfoInputScreen> {
                             return;
                           }
 
-                          final regex = RegExp(r'^[a-zA-Z0-9_]{3,15}$');
+                          final regex = RegExp(r'^[a-zA-Z0-9]{3,15}$');
                           if (!regex.hasMatch(name)) {
                             UiUtilsService.showToast(
                               context: context,
-                              text: AppLocalizations.of(context)
-                                      ?.usernameMustBeAlphanumeric ??
-                                  "Username must be 3-15 alphanumeric characters or underscores.",
+                              text: "Username must be 3-15 letters and numbers only with no spaces.",
                               textColor: Colors.red,
                             );
                             return;
@@ -506,6 +538,8 @@ class _UserInfoInputScreenState extends State<UserInfoInputScreen> {
                   enableInteractiveSelection: !_isUsernameReadOnly,
                   inputFormatters: [
                     FilteringTextInputFormatter.allow(RegExp(r'[a-zA-Z0-9]')),
+                    FilteringTextInputFormatter.deny(RegExp(r'\s')),
+                    LengthLimitingTextInputFormatter(15),
                   ],
                   keyboardType: TextInputType.text,
                   textCapitalization: TextCapitalization.none,

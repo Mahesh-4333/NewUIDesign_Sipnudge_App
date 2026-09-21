@@ -28,6 +28,30 @@ class WeatherData {
     this.sunset,
   });
 
+  Map<String, dynamic> toJson() {
+    return {
+      'temperature': temperature,
+      'humidity': humidity,
+      'condition': condition,
+      'description': description,
+      'iconCode': iconCode,
+      'sunrise': sunrise,
+      'sunset': sunset,
+    };
+  }
+
+  factory WeatherData.fromCacheMap(Map<String, dynamic> map) {
+    return WeatherData(
+      temperature: (map['temperature'] ?? 0).toDouble(),
+      humidity: (map['humidity'] ?? 0).toInt(),
+      condition: (map['condition'] ?? '').toString(),
+      description: (map['description'] ?? '').toString(),
+      iconCode: (map['iconCode'] ?? '').toString(),
+      sunrise: map['sunrise'] as int?,
+      sunset: map['sunset'] as int?,
+    );
+  }
+
   factory WeatherData.fromJson(Map<String, dynamic> json) {
     final main = json['main'] ?? {};
     final weatherList = json['weather'] as List<dynamic>? ?? [];

@@ -1130,6 +1130,27 @@ CREATE TABLE IF NOT EXISTS $appMetadataTableName (
     return 0.0;
   }
 
+  /// Calculates total effective water intake from all manual drinks (water, coffee, tea, etc.) logged today
+  Future<double> getTodayEffectiveManualHydration() async {
+    final db = await database;
+    final now = DateTime.now();
+    final startOfDay = DateTime(now.year, now.month, now.day).toIso8601String();
+
+    final result = await db.rawQuery(
+      'SELECT type, consumed FROM $logHydrationTableName WHERE timestamp >= ?',
+      [startOfDay],
+    );
+
+    double total = 0.0;
+    for (final row in result) {
+      final type = row['type'] as String? ?? 'Water';
+      final consumed = (row['consumed'] as num?)?.toDouble() ?? 0.0;
+      final coeff = hydrationCoefficients[type] ?? 1.0;
+      total += (consumed * coeff);
+    }
+    return total;
+  }
+
   Future<int> getTodayCoffeeIntake() async {
     final db = await database;
     final now = DateTime.now();

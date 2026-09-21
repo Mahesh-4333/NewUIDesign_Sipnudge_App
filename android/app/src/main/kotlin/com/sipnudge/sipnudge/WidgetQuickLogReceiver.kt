@@ -133,6 +133,12 @@ class WidgetQuickLogReceiver : BroadcastReceiver() {
         }
         pendingArray.put(logObject)
 
+        // Accumulate pending manual delta for BLE characteristic 000A
+        val currentDelta = getSafeInt(prefs, "pending_manual_liquid_delta", 0)
+        val newDelta = currentDelta + effectiveWater
+        editor.putInt("flutter.pending_manual_liquid_delta", newDelta)
+        editor.putInt("pending_manual_liquid_delta", newDelta)
+
         editor.putString("flutter.pending_widget_logs_json", pendingArray.toString())
         editor.putString("pending_widget_logs_json", pendingArray.toString())
         editor.apply()
@@ -174,6 +180,31 @@ class WidgetQuickLogReceiver : BroadcastReceiver() {
 
                     val responseCode = conn.responseCode
                     Log.d("WidgetQuickLog", "POST manual log response: $responseCode")
+
+                    if (responseCode == 200 || responseCode == 201) {
+                        try {
+                            val responseText = conn.inputStream.bufferedReader().use { it.readText() }
+                            val json = JSONObject(responseText)
+                            if (json.optBoolean("success", false)) {
+                                val serverId = json.optString("serverId", null)
+                                if (!serverId.isNullOrEmpty()) {
+                                    val currPending = getSafeString(prefs, "pending_widget_logs_json", "[]") ?: "[]"
+                                    val arr = JSONArray(currPending)
+                                    for (i in 0 until arr.length()) {
+                                        val item = arr.getJSONObject(i)
+                                        if (item.optString("timestamp") == utcTimestamp) {
+                                            item.put("server_id", serverId)
+                                            break
+                                        }
+                                    }
+                                    prefs.edit()
+                                        .putString("flutter.pending_widget_logs_json", arr.toString())
+                                        .putString("pending_widget_logs_json", arr.toString())
+                                        .apply()
+                                }
+                            }
+                        } catch (_: Exception) {}
+                    }
                     conn.disconnect()
                 } catch (e: Exception) {
                     Log.w("WidgetQuickLog", "Failed to upload manual log in background: ${e.message}")

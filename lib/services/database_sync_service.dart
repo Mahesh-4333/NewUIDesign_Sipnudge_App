@@ -380,17 +380,13 @@ class DatabaseSyncService {
                 value:
                     "Comparing for $targetDateStr: SQLite consumed=${localSummary?.consumed ?? 'null'} ml vs Server consumed=$consumedVal ml");
 
-            // For TODAY: trust the local BLE bottle data over the server.
-            // The server may have a stale or corrupted value (e.g. from a previous
-            // fallback upload). Only apply the server value if local has no data (0)
-            // — meaning the bottle hasn't reported anything yet today.
             final isToday = targetDateStr == todayLocalDateStr;
             final localConsumed = localSummary?.consumed ?? 0;
-            if (isToday && localConsumed > 0) {
+            if (isToday && localConsumed >= consumedVal) {
               Console.log(
                   tag: "SYNC",
                   value:
-                      "Skipping server update for today ($targetDateStr): local BLE data ($localConsumed ml) takes precedence over server ($consumedVal ml)");
+                      "Skipping server update for today ($targetDateStr): local data ($localConsumed ml) is already >= server ($consumedVal ml)");
               continue;
             }
 

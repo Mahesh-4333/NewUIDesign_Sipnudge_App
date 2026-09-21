@@ -170,90 +170,139 @@ class _LogHydrationWidgetState extends State<LogHydrationWidget> {
 
   bool _isSaving = false;
 
-  _fetchLogs({bool forceServerPull = false}) async {
+  _fetchLogs() async {
     setState(() {
       _isLoadingLogs = true;
     });
     try {
+      // 1. Instantly display local database logs for fast UI rendering
       List<Map<String, dynamic>> logs =
           await DatabaseHelper().getHydrationLogs(date: _selectedDate);
-
-      final hasPulled = await SharedPrefsHelper.hasPulledManualLogs();
-      if ((!hasPulled || forceServerPull) && logs.isEmpty) {
-        final userId = await SharedPrefsHelper.getUserId();
-        final userEmail = await SharedPrefsHelper.getUserEmail();
-        if (userId != null && userEmail != "guest_user") {
-          final dateStr = '${_selectedDate.year.toString().padLeft(4, '0')}-'
-              '${_selectedDate.month.toString().padLeft(2, '0')}-'
-              '${_selectedDate.day.toString().padLeft(2, '0')}';
-          final serverLogs =
-              await ApiService().getManualLogs(userId, date: dateStr);
-
-          if (serverLogs != null && serverLogs.isNotEmpty) {
-            final db = await DatabaseHelper().database;
-            await db.transaction((txn) async {
-              for (final log in serverLogs) {
-                final type = log['type']?.toString() ?? 'Water';
-                final consumed = log['consumed'] != null
-                    ? (double.tryParse(log['consumed'].toString()) ?? 0.0)
-                    : 0.0;
-                final serverId = log['_id']?.toString();
-
-                final rawTimestamp = log['timestamp'];
-                final DateTime parsedTs = rawTimestamp is String
-                    ? (DateTime.tryParse(rawTimestamp)?.toLocal() ??
-                        DateTime.now())
-                    : DateTime.now();
-                final localTimestampStr = parsedTs.toLocal().toIso8601String();
-
-                List<Map<String, dynamic>> matches = [];
-                if (serverId != null) {
-                  matches = await txn.query(
-                    DatabaseHelper.logHydrationTableName,
-                    where: 'server_id = ?',
-                    whereArgs: [serverId],
-                  );
-                }
-                if (matches.isEmpty) {
-                  matches = await txn.query(
-                    DatabaseHelper.logHydrationTableName,
-                    where: 'type = ? AND consumed = ? AND timestamp = ?',
-                    whereArgs: [type, consumed, localTimestampStr],
-                  );
-                }
-
-                if (matches.isEmpty) {
-                  await txn.insert(
-                    DatabaseHelper.logHydrationTableName,
-                    {
-                      'type': type,
-                      'consumed': consumed,
-                      'timestamp': localTimestampStr,
-                      if (serverId != null) 'server_id': serverId,
-                    },
-                  );
-                } else if (serverId != null &&
-                    matches.first['server_id'] == null) {
-                  await txn.update(
-                    DatabaseHelper.logHydrationTableName,
-                    {'server_id': serverId},
-                    where: 'id = ?',
-                    whereArgs: [matches.first['id']],
-                  );
-                }
-              }
-            });
-
-            await SharedPrefsHelper.setHasPulledManualLogs(true);
-            logs = await DatabaseHelper().getHydrationLogs(date: _selectedDate);
-          }
-        }
-      }
 
       if (mounted) {
         setState(() {
           _recentLogs = List<Map<String, dynamic>>.from(logs);
         });
+      }
+
+      // 2. Fetch from server and sync/merge into local DB
+      final userId = await SharedPrefsHelper.getUserId();
+      final userEmail = await SharedPrefsHelper.getUserEmail();
+      if (userId != null && userEmail != "guest_user") {
+        final dateStr = '${_selectedDate.year.toString().padLeft(4, '0')}-'
+            '${_selectedDate.month.toString().padLeft(2, '0')}-'
+            '${_selectedDate.day.toString().padLeft(2, '0')}';
+        final serverLogs =
+            await ApiService().getManualLogs(userId, date: dateStr);
+
+        if (serverLogs != null) {
+          final serverIdSet = serverLogs
+              .map((l) => l['_id']?.toString())
+              .where((id) => id != null)
+              .toSet();
+
+          final db = await DatabaseHelper().database;
+          await db.transaction((txn) async {
+            // Delete locally synced logs for this day if they were deleted on server
+            final startOfDay = DateTime(
+                    _selectedDate.year, _selectedDate.month, _selectedDate.day)
+                .toIso8601String();
+            final endOfDay = DateTime(_selectedDate.year, _selectedDate.month,
+                    _selectedDate.day, 23, 59, 59, 999)
+                .toIso8601String();
+
+            final localSyncedLogs = await txn.query(
+              DatabaseHelper.logHydrationTableName,
+              where:
+                  'timestamp >= ? AND timestamp <= ? AND server_id IS NOT NULL',
+              whereArgs: [startOfDay, endOfDay],
+            );
+
+            for (final local in localSyncedLogs) {
+              final sId = local['server_id']?.toString();
+              if (sId != null && !serverIdSet.contains(sId)) {
+                await txn.delete(
+                  DatabaseHelper.logHydrationTableName,
+                  where: 'id = ?',
+                  whereArgs: [local['id']],
+                );
+              }
+            }
+
+            // Insert or match incoming server logs
+            for (final log in serverLogs) {
+              final type = log['type']?.toString() ?? 'Water';
+              final consumed = log['consumed'] != null
+                  ? (double.tryParse(log['consumed'].toString()) ?? 0.0)
+                  : 0.0;
+              final serverId = log['_id']?.toString();
+
+              final rawTimestamp = log['timestamp'];
+              final DateTime parsedTs = rawTimestamp is String
+                  ? (DateTime.tryParse(rawTimestamp)?.toLocal() ??
+                      DateTime.now())
+                  : DateTime.now();
+              final localTimestampStr = parsedTs.toLocal().toIso8601String();
+
+              List<Map<String, dynamic>> matches = [];
+              if (serverId != null) {
+                matches = await txn.query(
+                  DatabaseHelper.logHydrationTableName,
+                  where: 'server_id = ?',
+                  whereArgs: [serverId],
+                );
+              }
+              if (matches.isEmpty) {
+                matches = await txn.query(
+                  DatabaseHelper.logHydrationTableName,
+                  where: 'type = ? AND consumed = ? AND timestamp = ?',
+                  whereArgs: [type, consumed, localTimestampStr],
+                );
+              }
+              if (matches.isEmpty) {
+                final minTs = parsedTs
+                    .subtract(const Duration(seconds: 5))
+                    .toIso8601String();
+                final maxTs =
+                    parsedTs.add(const Duration(seconds: 5)).toIso8601String();
+                matches = await txn.query(
+                  DatabaseHelper.logHydrationTableName,
+                  where:
+                      'type = ? AND consumed = ? AND timestamp >= ? AND timestamp <= ? AND server_id IS NULL',
+                  whereArgs: [type, consumed, minTs, maxTs],
+                );
+              }
+
+              if (matches.isEmpty) {
+                await txn.insert(
+                  DatabaseHelper.logHydrationTableName,
+                  {
+                    'type': type,
+                    'consumed': consumed,
+                    'timestamp': localTimestampStr,
+                    if (serverId != null) 'server_id': serverId,
+                  },
+                );
+              } else if (serverId != null &&
+                  matches.first['server_id'] == null) {
+                await txn.update(
+                  DatabaseHelper.logHydrationTableName,
+                  {'server_id': serverId},
+                  where: 'id = ?',
+                  whereArgs: [matches.first['id']],
+                );
+              }
+            }
+          });
+
+          await SharedPrefsHelper.setHasPulledManualLogs(true);
+          logs = await DatabaseHelper().getHydrationLogs(date: _selectedDate);
+          if (mounted) {
+            setState(() {
+              _recentLogs = List<Map<String, dynamic>>.from(logs);
+            });
+          }
+        }
       }
     } catch (e) {
       debugPrint("Error fetching logs: $e");

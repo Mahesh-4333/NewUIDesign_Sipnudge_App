@@ -14,10 +14,6 @@ import 'package:hydrify/screens/message_screen.dart';
 import 'package:hydrify/services/api_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:hydrify/constants/assets_path.dart';
-import 'package:showcaseview/showcaseview.dart';
-import 'package:hydrify/helpers/showcase_keys.dart';
-import 'package:hydrify/screens/widgets/custom_showcase.dart';
-
 import 'package:hydrify/l10n/app_localizations.dart';
 
 class GreetingWidget extends StatefulWidget {

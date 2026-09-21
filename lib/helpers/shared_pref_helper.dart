@@ -1002,5 +1002,17 @@ class SharedPrefsHelper {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getString(_keyDeviceOtherDataRaw);
   }
+
+  static const String _keyLastNudgePrefix = 'last_nudge_';
+
+  static Future<int?> getLastNudgeTimestamp(String targetUserId) async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getInt('$_keyLastNudgePrefix$targetUserId');
+  }
+
+  static Future<void> setLastNudgeTimestamp(String targetUserId, int timestamp) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt('$_keyLastNudgePrefix$targetUserId', timestamp);
+  }
 }
 

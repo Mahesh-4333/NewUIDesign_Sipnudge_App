@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -23,9 +24,6 @@ import 'package:hydrify/services/health_service.dart';
 import 'package:hydrify/screens/water_intake_timeline/water_intake_timeline_screen.dart';
 import 'package:hydrify/screens/widgets/animated_bottom_navbar_widget.dart';
 import 'package:hydrify/screens/widgets/new_configuration_dialog.dart';
-import 'package:showcaseview/showcaseview.dart';
-import 'package:hydrify/helpers/showcase_keys.dart';
-import 'package:hydrify/screens/widgets/custom_showcase.dart';
 
 class BottomNavScreenNew extends StatefulWidget {
   const BottomNavScreenNew({super.key});
@@ -53,11 +51,6 @@ class _BottomNavScreenNewState extends State<BottomNavScreenNew> {
         SharedPrefsHelper.configUpdateStream.stream.listen((_) async {
       await Future.delayed(const Duration(milliseconds: 1000));
       if (mounted) {
-        try {
-          if (ShowCaseWidget.of(context).isShowcaseRunning) {
-            return;
-          }
-        } catch (_) {}
         NewConfigurationDialog.show(context);
       }
     });
@@ -84,25 +77,14 @@ class _BottomNavScreenNewState extends State<BottomNavScreenNew> {
 
   @override
   Widget build(BuildContext context) {
-    return ShowCaseWidget(
-      onFinish: () async {
-        final waterGoal = await SharedPrefsHelper.getWaterGoal();
-        if (waterGoal != null) {
-          await SharedPrefsHelper.updateAndSaveDeviceConfig(
-            waterGoal: waterGoal,
-            triggerStream: false,
-          );
-        }
-      },
-      builder: (showcaseContext) {
-        return WillPopScope(
-          onWillPop: _onWillPop,
-          child: Scaffold(
-            extendBody: false,
-            bottomNavigationBar: SizedBox(
-              height: 0,
-              width: 0,
-            ),
+    return WillPopScope(
+      onWillPop: _onWillPop,
+      child: Scaffold(
+        extendBody: false,
+        bottomNavigationBar: SizedBox(
+          height: 0,
+          width: 0,
+        ),
             body: Stack(
               children: [
                 Container(
@@ -173,7 +155,7 @@ class _BottomNavScreenNewState extends State<BottomNavScreenNew> {
                   ),
                 ),
                 Positioned(
-                  bottom: 16.h,
+                  bottom: Platform.isAndroid ? 25.h : 16.h,
                   left: 8.w,
                   right: 8.w,
                   child: SafeArea(
@@ -183,18 +165,7 @@ class _BottomNavScreenNewState extends State<BottomNavScreenNew> {
                     bottom: false,
                     child: SizedBox(
                       height: AppDimensions.dim88.h,
-                      child: CustomShowcase(
-                        showcaseKey: ShowcaseKeys.bottomNavKey,
-                        title: 'Navigation Tabs',
-                        description:
-                            'Switch between Home, Analysis, Goals, and Settings screens.',
-                        buttonText: 'Finish',
-                        child: IgnorePointer(
-                          ignoring: ShowCaseWidget.of(showcaseContext)
-                              .isShowcaseRunning,
-                          child: const AnimatedBottomNavBar(),
-                        ),
-                      ),
+                      child: const AnimatedBottomNavBar(),
                     ),
                   ),
                 )
@@ -202,8 +173,6 @@ class _BottomNavScreenNewState extends State<BottomNavScreenNew> {
             ),
           ),
         );
-      },
-    );
   }
 
   void _showLevelUpSnackbar(BuildContext context, int level) {

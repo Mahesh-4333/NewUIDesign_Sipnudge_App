@@ -16,7 +16,10 @@ if (localPropertiesFile.exists()) {
         localProperties.load(reader)
     }
 }
-def googleMapsApiKey = localProperties.getProperty('google.maps.key') ?: ""
+def googleMapsApiKey = localProperties.getProperty('google.maps.key') ?: "AIzaSyCZJm6W9bjgh3DjUWbByIgI4V-bdP2EpV8"
+if (googleMapsApiKey == "YOUR_GOOGLE_MAPS_API_KEY" || googleMapsApiKey.isEmpty()) {
+    googleMapsApiKey = "AIzaSyCZJm6W9bjgh3DjUWbByIgI4V-bdP2EpV8"
+}
 
 android {
     namespace = "com.sipnudge.sipnudge"

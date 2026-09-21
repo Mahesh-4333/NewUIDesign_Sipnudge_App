@@ -8,24 +8,55 @@ import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
 import android.graphics.Color
+import android.os.Handler
+import android.os.Looper
 import android.text.Html
 import android.util.Log
 import android.widget.RemoteViews
 import org.json.JSONArray
 import org.json.JSONObject
+import java.net.HttpURLConnection
+import java.net.URL
+import java.net.URLEncoder
 import java.text.NumberFormat
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
 import java.util.Locale
+import java.util.TimeZone
+import java.util.concurrent.Executors
+
+data class SlotItem(
+    val label: String,
+    val hour: Int,
+    val minute: Int,
+    val endHour: Int,
+    val endMinute: Int,
+    val target: Int
+)
 
 class HomeWidgetProvider : AppWidgetProvider() {
 
     companion object {
         private const val TAG = "HomeWidgetProvider"
         private const val PREFS_NAME = "FlutterSharedPreferences"
+        private val httpExecutor = Executors.newSingleThreadExecutor()
+        private val mainHandler = Handler(Looper.getMainLooper())
 
-        fun updateAllWidgets(context: Context) {
+        private fun getDefaultSlots(goal: Int): List<SlotItem> {
+            val totalGoal = if (goal > 0) goal else 2500
+            return listOf(
+                SlotItem("Wakeup Time", 7, 0, 9, 0, (totalGoal * 0.20).toInt()),
+                SlotItem("Morning Boost", 9, 0, 11, 30, (totalGoal * 0.16).toInt()),
+                SlotItem("Lunch Time", 11, 30, 14, 0, (totalGoal * 0.16).toInt()),
+                SlotItem("Afternoon Boost", 14, 0, 16, 30, (totalGoal * 0.16).toInt()),
+                SlotItem("Evening Refresh", 16, 30, 19, 0, (totalGoal * 0.14).toInt()),
+                SlotItem("Dinner Time", 19, 0, 21, 0, (totalGoal * 0.12).toInt()),
+                SlotItem("Bedtime", 21, 0, 23, 0, (totalGoal * 0.06).toInt())
+            )
+        }
+
+        fun updateAllWidgets(context: Context, fetchServer: Boolean = true) {
             try {
                 val appWidgetManager = AppWidgetManager.getInstance(context)
                 val componentName = ComponentName(context, HomeWidgetProvider::class.java)
@@ -40,6 +71,114 @@ class HomeWidgetProvider : AppWidgetProvider() {
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "Error in updateAllWidgets: ${e.message}")
+            }
+
+            if (fetchServer) {
+                fetchWidgetDataFromServer(context)
+            }
+        }
+
+        fun fetchWidgetDataFromServer(context: Context) {
+            val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            val userId = getSafeString(prefs, "user_id", null) ?: return
+            if (userId.isEmpty() || userId == "guest_user") return
+
+            val now = Date()
+            val cal = Calendar.getInstance()
+            cal.time = now
+            cal.set(Calendar.HOUR_OF_DAY, 0)
+            cal.set(Calendar.MINUTE, 0)
+            cal.set(Calendar.SECOND, 0)
+            cal.set(Calendar.MILLISECOND, 0)
+            val startOfToday = cal.time
+
+            cal.set(Calendar.HOUR_OF_DAY, 23)
+            cal.set(Calendar.MINUTE, 59)
+            cal.set(Calendar.SECOND, 59)
+            cal.set(Calendar.MILLISECOND, 999)
+            val endOfToday = cal.time
+
+            val isoFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.US).apply {
+                timeZone = TimeZone.getTimeZone("UTC")
+            }
+            val startDateStr = isoFormat.format(startOfToday)
+            val endDateStr = isoFormat.format(endOfToday)
+
+            val sdfToday = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+            val todayStr = sdfToday.format(now)
+
+            httpExecutor.execute {
+                try {
+                    val encodedStart = URLEncoder.encode(startDateStr, "UTF-8")
+                    val encodedEnd = URLEncoder.encode(endDateStr, "UTF-8")
+                    val urlString = "https://api.sipnudge.com/api/database/today-widget-data/$userId?startDate=$encodedStart&endDate=$encodedEnd"
+                    val url = URL(urlString)
+                    val conn = url.openConnection() as HttpURLConnection
+                    conn.requestMethod = "GET"
+                    conn.connectTimeout = 8000
+                    conn.readTimeout = 8000
+
+                    val code = conn.responseCode
+                    if (code == 200) {
+                        val responseText = conn.inputStream.bufferedReader().use { it.readText() }
+                        val json = JSONObject(responseText)
+                        if (json.optBoolean("success", false)) {
+                            val summary = json.optJSONObject("data")
+                            if (summary != null) {
+                                val consumed = summary.optDouble("consumed", summary.optInt("consumed", 0).toDouble()).toInt()
+                                val target = summary.optDouble("target", summary.optInt("target", 2500).toDouble()).toInt()
+                                val coffeeIntake = summary.optInt("coffeeIntake", 0)
+                                val waterIntake = summary.optInt("waterIntake", 0)
+                                val latestDrinkType = summary.optString("latestDrinkType", "")
+                                val latestDrinkAmount = summary.optInt("latestDrinkAmount", 0)
+                                val battery = summary.optInt("battery", 0)
+
+                                val editor = prefs.edit()
+                                editor.putInt("flutter.current_intake", consumed)
+                                editor.putInt("current_intake", consumed)
+
+                                val currentStoredGoal = getSafeInt(prefs, "daily_goal", 0)
+                                if (currentStoredGoal <= 0 && target > 0) {
+                                    editor.putInt("flutter.daily_goal", target)
+                                    editor.putInt("daily_goal", target)
+                                }
+                                editor.putInt("flutter.coffee_intake", coffeeIntake)
+                                editor.putInt("coffee_intake", coffeeIntake)
+                                editor.putInt("flutter.water_intake", waterIntake)
+                                editor.putInt("water_intake", waterIntake)
+                                editor.putString("flutter.latest_drink_type", latestDrinkType)
+                                editor.putString("latest_drink_type", latestDrinkType)
+                                editor.putInt("flutter.latest_drink_amount", latestDrinkAmount)
+                                editor.putInt("latest_drink_amount", latestDrinkAmount)
+
+                                if (battery > 0) {
+                                    editor.putInt("flutter.battery", battery)
+                                    editor.putInt("battery", battery)
+                                }
+
+                                editor.putString("flutter.last_update_date", todayStr)
+                                editor.putString("last_update_date", todayStr)
+                                editor.apply()
+
+                                mainHandler.post {
+                                    val appWidgetManager = AppWidgetManager.getInstance(context)
+                                    val componentName = ComponentName(context, HomeWidgetProvider::class.java)
+                                    val appWidgetIds = appWidgetManager.getAppWidgetIds(componentName)
+                                    if (appWidgetIds != null && appWidgetIds.isNotEmpty()) {
+                                        appWidgetIds.forEach { widgetId ->
+                                            val views = buildRemoteViews(context, prefs)
+                                            appWidgetManager.updateAppWidget(widgetId, views)
+                                        }
+                                        Log.d(TAG, "Refreshed ${appWidgetIds.size} widget(s) after server sync")
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    conn.disconnect()
+                } catch (e: Exception) {
+                    Log.w(TAG, "Failed to fetch widget data from server: ${e.message}")
+                }
             }
         }
 
@@ -96,10 +235,16 @@ class HomeWidgetProvider : AppWidgetProvider() {
             val isNewDay = lastUpdateDate != todayStr && lastUpdateDate.isNotEmpty()
 
             var intake = getSafeInt(widgetData, "current_intake", 0)
-            var goal = getSafeInt(widgetData, "daily_goal", 2500)
+            var goal = getSafeInt(widgetData, "daily_goal", 0)
+            if (goal <= 0) {
+                goal = getSafeInt(widgetData, "water_goal", 2500)
+            }
             if (goal <= 0) goal = 2500
 
-            var battery = getSafeInt(widgetData, "battery", 75)
+            var battery = getSafeInt(widgetData, "battery", 0)
+            if (battery <= 0) {
+                battery = getSafeInt(widgetData, "bottle_percent", 75)
+            }
             if (battery <= 0) battery = 75
 
             var expectedPercent = getSafeDouble(widgetData, "expected_percent", 0.0)
@@ -125,68 +270,95 @@ class HomeWidgetProvider : AppWidgetProvider() {
                 }
             }
 
-            // Dynamic slot schedule calculation from JSON if available
+            // Dynamic slot schedule calculation matching iOS SipnudgeWidget.swift
             val slotsJson = getSafeString(widgetData, "all_slots_json", null)
+            var hasDynamicSlots = false
+            val parsedSlots = mutableListOf<SlotItem>()
 
             if (!slotsJson.isNullOrEmpty()) {
                 try {
                     val slotsArray = JSONArray(slotsJson)
-                    if (slotsArray.length() > 0) {
-                        val cal = Calendar.getInstance()
-                        val nowMinutes = cal.get(Calendar.HOUR_OF_DAY) * 60 + cal.get(Calendar.MINUTE)
-
-                        var foundSlot: JSONObject? = null
-                        var expectedCumulative = 0.0
-                        var totalTarget = 0.0
-
-                        for (i in 0 until slotsArray.length()) {
-                            val slot = slotsArray.getJSONObject(i)
-                            val startHour = slot.optInt("hour", 0)
-                            val startMin = slot.optInt("minute", 0)
-                            val endHour = slot.optInt("endHour", startHour + 2)
-                            val endMin = slot.optInt("endMinute", startMin)
-                            val slotTarget = slot.optInt("target", goal / slotsArray.length())
-
-                            val startTotal = startHour * 60 + startMin
-                            val endTotal = endHour * 60 + endMin
-                            totalTarget += slotTarget
-
-                            if (nowMinutes >= endTotal) {
-                                expectedCumulative += slotTarget
-                            } else if (nowMinutes in startTotal until endTotal) {
-                                val duration = endTotal - startTotal
-                                if (duration > 0) {
-                                    val elapsed = nowMinutes - startTotal
-                                    expectedCumulative += slotTarget * (elapsed.toDouble() / duration.toDouble())
-                                }
-                            }
-
-                            if (foundSlot == null && startTotal > nowMinutes) {
-                                foundSlot = slot
-                            }
-                        }
-
-                        val nextSlot = foundSlot ?: slotsArray.getJSONObject(0)
-                        upcomingSlotName = nextSlot.optString("label", "Upcoming Sip")
-
-                        val nHour = nextSlot.optInt("hour", 8)
-                        val nMin = nextSlot.optInt("minute", 0)
-                        val h12 = if (nHour % 12 == 0) 12 else nHour % 12
-                        val period = if (nHour < 12) "AM" else "PM"
-                        upcomingSlotTime = String.format(Locale.US, "%02d:%02d %s", h12, nMin, period)
-
-                        val baseTotal = if (totalTarget > 0) totalTarget else goal.toDouble()
-                        expectedPercent = if (baseTotal > 0) Math.min(Math.max((expectedCumulative / baseTotal) * 100.0, 0.0), 100.0) else 0.0
+                    for (i in 0 until slotsArray.length()) {
+                        val obj = slotsArray.getJSONObject(i)
+                        parsedSlots.add(
+                            SlotItem(
+                                label = obj.optString("label", "Hydration Slot"),
+                                hour = obj.optInt("hour", 0),
+                                minute = obj.optInt("minute", 0),
+                                endHour = obj.optInt("endHour", 0),
+                                endMinute = obj.optInt("endMinute", 0),
+                                target = obj.optInt("target", 0)
+                            )
+                        )
                     }
                 } catch (_: Exception) {}
             }
 
-            if (upcomingSlotTime == "--:--" || upcomingSlotTime.isEmpty()) {
+            val slotsList = if (parsedSlots.isNotEmpty()) {
+                hasDynamicSlots = true
+                parsedSlots
+            } else {
+                getDefaultSlots(goal)
+            }
+
+            if (slotsList.isNotEmpty()) {
                 val cal = Calendar.getInstance()
-                val nextHour = (cal.get(Calendar.HOUR_OF_DAY) + 1) % 24
-                val h12 = if (nextHour % 12 == 0) 12 else nextHour % 12
-                val period = if (nextHour < 12) "AM" else "PM"
-                upcomingSlotTime = String.format(Locale.US, "%d:00 %s", h12, period)
+                val nowHour = cal.get(Calendar.HOUR_OF_DAY)
+                val nowMinute = cal.get(Calendar.MINUTE)
+                val nowTotalMinutes = nowHour * 60 + nowMinute
+
+                // Sort slots by time
+                val sortedSlots = slotsList.sortedWith(compareBy({ it.hour * 60 + it.minute }))
+
+                // Find first slot that starts after now
+                val upcomingSlot = sortedSlots.firstOrNull { (it.hour * 60 + it.minute) > nowTotalMinutes }
+                    ?: sortedSlots.first()
+
+                upcomingSlotName = upcomingSlot.label
+
+                // Format time string
+                val hour12 = if (upcomingSlot.hour % 12 == 0) 12 else upcomingSlot.hour % 12
+                val period = if (upcomingSlot.hour < 12) "AM" else "PM"
+                val minStr = String.format(Locale.US, "%02d", upcomingSlot.minute)
+                upcomingSlotTime = "$hour12:$minStr $period"
+
+                // Calculate cumulative expected targets at current date/time (Slot-by-slot)
+                val totalSlotsTarget = sortedSlots.sumOf { it.target.toDouble() }
+                var expectedCumulative = 0.0
+                for (slot in sortedSlots) {
+                    val startMin = slot.hour * 60 + slot.minute
+                    val endMin = slot.endHour * 60 + slot.endMinute
+
+                    if (nowTotalMinutes >= endMin) {
+                        // Slot has passed -> add full slot target
+                        expectedCumulative += slot.target.toDouble()
+                    } else if (nowTotalMinutes in startMin until endMin) {
+                        // Currently active slot -> progress smoothly during its active window
+                        val duration = endMin - startMin
+                        if (duration > 0) {
+                            val elapsed = nowTotalMinutes - startMin
+                            expectedCumulative += slot.target.toDouble() * (elapsed.toDouble() / duration.toDouble())
+                        }
+                        break
+                    } else {
+                        // Next slots haven't started yet
+                        break
+                    }
+                }
+
+                val baseTotal = if (totalSlotsTarget > 0) totalSlotsTarget else goal.toDouble()
+                expectedPercent = if (baseTotal > 0) Math.min(Math.max((expectedCumulative / baseTotal) * 100.0, 0.0), 100.0) else 0.0
+            }
+
+            if (!hasDynamicSlots) {
+                if (!isNewDay) {
+                    val fallbackPercent = getSafeDouble(widgetData, "expected_percent", -1.0)
+                    if (fallbackPercent >= 0.0) {
+                        expectedPercent = fallbackPercent
+                    }
+                } else {
+                    expectedPercent = 0.0
+                }
             }
 
             val progress = if (goal > 0) Math.min(intake.toDouble() / goal.toDouble(), 1.0) else 0.0
@@ -208,12 +380,13 @@ class HomeWidgetProvider : AppWidgetProvider() {
 
             val percentageString = "${(progress * 100).toInt()}%"
 
-            // Render high-res gauge bitmap
+            // Render high-res gauge bitmap with Urbanist font and yellow schedule target
             val gaugeBitmap = WidgetRingRenderer.renderGauge(
                 progress = progress,
                 expectedPercent = expectedPercent,
                 percentageString = percentageString,
-                recentAddedAmount = recentAddedAmount
+                recentAddedAmount = recentAddedAmount,
+                context = context
             )
             views.setImageViewBitmap(R.id.widget_gauge_image, gaugeBitmap)
 
@@ -223,9 +396,12 @@ class HomeWidgetProvider : AppWidgetProvider() {
             views.setTextViewText(R.id.widget_heading_text, headingText)
             views.setTextColor(R.id.widget_heading_text, headingColor)
 
-            // Battery
+            // Battery (Dynamic color based on percentage: <20% Red, 20-49% Orange, >=50% Green)
+            val batteryIconBitmap = WidgetRingRenderer.renderBatteryIcon(battery)
+            val batteryBarBitmap = WidgetRingRenderer.renderBatteryBar(battery)
+            views.setImageViewBitmap(R.id.widget_battery_icon, batteryIconBitmap)
+            views.setImageViewBitmap(R.id.widget_battery_bar, batteryBarBitmap)
             views.setTextViewText(R.id.widget_battery_text, "$battery%")
-            views.setProgressBar(R.id.widget_battery_bar, 100, Math.min(battery, 100), false)
 
             // Next Sip & Only Left
             views.setTextViewText(R.id.widget_next_sip_time, upcomingSlotTime)
@@ -284,6 +460,7 @@ class HomeWidgetProvider : AppWidgetProvider() {
             val views = buildRemoteViews(context, prefs)
             appWidgetManager.updateAppWidget(widgetId, views)
         }
+        fetchWidgetDataFromServer(context)
     }
 
     override fun onReceive(context: Context, intent: Intent) {

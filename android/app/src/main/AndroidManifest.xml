@@ -37,7 +37,7 @@
 
     <!-- SipnudgeV2x4 // -->
     <application
-        android:label="NewUI_test_V2x11_New_Sipnudge_V2x11"
+        android:label="Sipnudge"
         android:name="${applicationName}"
         android:allowBackup="false"
         android:icon="@mipmap/launcher_icon">

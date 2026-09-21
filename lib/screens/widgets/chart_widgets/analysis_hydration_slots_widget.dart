@@ -894,13 +894,14 @@ class _AnalysisHydrationSlotsWidgetState
     final startMin = start.hour * 60 + start.minute;
     final endMin = end.hour * 60 + end.minute;
 
-    // Check if within slot
+    // Check if within slot (including full end minute and 1-minute buffer for syncing)
+    final effectiveEnd = endMin + 1;
     bool isInside = false;
-    if (startMin <= endMin) {
-      isInside = sipMin >= startMin && sipMin < endMin;
+    if (startMin <= effectiveEnd) {
+      isInside = sipMin >= startMin && sipMin <= effectiveEnd;
     } else {
       // Midnight overlap
-      isInside = sipMin >= startMin || sipMin < endMin;
+      isInside = sipMin >= startMin || sipMin <= effectiveEnd;
     }
 
     if (isInside) return 0;

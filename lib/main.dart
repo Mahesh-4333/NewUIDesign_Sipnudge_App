@@ -95,6 +95,19 @@ Future<void> main() async {
     apiKey: '4fa9cd3687912a01b9c5c66718b2b99f',
   );
 
+  // Configure edge-to-edge rendering with transparent navigation and status bars
+  // SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+  // SystemChrome.setSystemUIOverlayStyle(
+  //   const SystemUiOverlayStyle(
+  //     statusBarColor: Colors.transparent,
+  //     statusBarIconBrightness: Brightness.dark,
+  //     statusBarBrightness: Brightness.light,
+  //     systemNavigationBarColor: Colors.transparent,
+  //     systemNavigationBarDividerColor: Colors.transparent,
+  //     systemNavigationBarIconBrightness: Brightness.dark,
+  //   ),
+  // );
+
   FlutterBluePlus.setLogLevel(LogLevel.none);
 
   InternetConnectionHelper().initialize();
@@ -201,8 +214,14 @@ class MyApp extends StatelessWidget {
                         theme: ThemeData(
                           appBarTheme: const AppBarTheme(
                             systemOverlayStyle: SystemUiOverlayStyle(
+                              statusBarColor: Colors.transparent,
                               statusBarIconBrightness: Brightness.dark,
                               statusBarBrightness: Brightness.light,
+                              systemNavigationBarColor: Colors.transparent,
+                              systemNavigationBarDividerColor:
+                                  Colors.transparent,
+                              systemNavigationBarIconBrightness:
+                                  Brightness.dark,
                             ),
                             centerTitle: true,
                             iconTheme: IconThemeData(),

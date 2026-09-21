@@ -1028,4 +1028,146 @@ class ApiService {
       return null;
     }
   }
+
+  // ==========================================
+  // Connections APIs
+  // ==========================================
+
+  Future<Map<String, dynamic>?> getConnections(String userId) async {
+    try {
+      final response = await _dio.get('/api/database/connections/$userId');
+      if (response.statusCode == 200 && response.data['success'] == true) {
+        return response.data['data'] as Map<String, dynamic>?;
+      }
+      return null;
+    } on DioException catch (e) {
+      Console.log(tag: "APP", value: "Exception in getConnections: $e");
+      return null;
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> searchUsers({
+    required String query,
+    String? userId,
+  }) async {
+    try {
+      final response = await _dio.get(
+        '/api/database/users-search',
+        queryParameters: {
+          'query': query,
+          if (userId != null) 'userId': userId,
+        },
+      );
+      if (response.statusCode == 200 && response.data['success'] == true) {
+        final List<dynamic> list = response.data['data'] ?? [];
+        return list.map((e) => Map<String, dynamic>.from(e)).toList();
+      }
+      return [];
+    } on DioException catch (e) {
+      Console.log(tag: "APP", value: "Exception in searchUsers: $e");
+      return [];
+    }
+  }
+
+  Future<bool> sendConnectionInvite({
+    required String requesterId,
+    required String recipientId,
+    String relationshipTag = 'Friend',
+    String themeAccentColor = '#F97316',
+    String? aliasName,
+  }) async {
+    try {
+      final response = await _dio.post(
+        '/api/database/connections/invite',
+        data: {
+          'requesterId': requesterId,
+          'recipientId': recipientId,
+          'relationshipTag': relationshipTag,
+          'themeAccentColor': themeAccentColor,
+          if (aliasName != null) 'aliasName': aliasName,
+        },
+      );
+      return response.statusCode == 200 && response.data['success'] == true;
+    } on DioException catch (e) {
+      Console.log(tag: "APP", value: "Exception in sendConnectionInvite: $e");
+      return false;
+    }
+  }
+
+  Future<bool> respondConnectionInvite({
+    required String connectionId,
+    required String action, // 'accept' or 'decline'
+    required String userId,
+  }) async {
+    try {
+      final response = await _dio.post(
+        '/api/database/connections/respond',
+        data: {
+          'connectionId': connectionId,
+          'action': action,
+          'userId': userId,
+        },
+      );
+      return response.statusCode == 200 && response.data['success'] == true;
+    } on DioException catch (e) {
+      Console.log(tag: "APP", value: "Exception in respondConnectionInvite: $e");
+      return false;
+    }
+  }
+
+  Future<bool> customizeConnection({
+    required String connectionId,
+    required String userId,
+    String? relationshipTag,
+    String? themeAccentColor,
+    String? aliasName,
+  }) async {
+    try {
+      final response = await _dio.put(
+        '/api/database/connections/$connectionId/customize',
+        data: {
+          'userId': userId,
+          if (relationshipTag != null) 'relationshipTag': relationshipTag,
+          if (themeAccentColor != null) 'themeAccentColor': themeAccentColor,
+          if (aliasName != null) 'aliasName': aliasName,
+        },
+      );
+      return response.statusCode == 200 && response.data['success'] == true;
+    } on DioException catch (e) {
+      Console.log(tag: "APP", value: "Exception in customizeConnection: $e");
+      return false;
+    }
+  }
+
+  Future<bool> removeConnection(String connectionId) async {
+    try {
+      final response = await _dio.delete('/api/database/connections/$connectionId');
+      return response.statusCode == 200 && response.data['success'] == true;
+    } on DioException catch (e) {
+      Console.log(tag: "APP", value: "Exception in removeConnection: $e");
+      return false;
+    }
+  }
+
+  Future<Map<String, dynamic>> sendNudge({
+    required String senderId,
+    required String targetUserId,
+  }) async {
+    try {
+      final response = await _dio.post(
+        '/api/database/connections/nudge',
+        data: {
+          'senderId': senderId,
+          'targetUserId': targetUserId,
+        },
+      );
+      if (response.statusCode == 200 && response.data is Map) {
+        return Map<String, dynamic>.from(response.data);
+      }
+      return {'success': false, 'message': 'Unexpected response'};
+    } on DioException catch (e) {
+      Console.log(tag: "APP", value: "Exception in sendNudge: $e");
+      return {'success': false, 'message': 'Network error'};
+    }
+  }
 }

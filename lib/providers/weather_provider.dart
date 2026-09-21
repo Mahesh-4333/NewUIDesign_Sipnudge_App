@@ -1,20 +1,29 @@
+import 'dart:async';
+import 'dart:convert';
 import 'package:hydrify/helpers/logger.dart';
-
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../helpers/internet_connection_helper.dart';
 import '../services/location_service.dart';
 import '../services/weather_service.dart';
 import '../helpers/shared_pref_helper.dart';
 import '../services/api_service.dart';
-import 'dart:async';
 
 class WeatherProvider extends ChangeNotifier {
   final WeatherService _weatherService;
   final LocationService _locationService;
   bool _isInternetAvailable = true;
   bool get isInternetAvailable => _isInternetAvailable;
+
+  // 1-hour cache interval to save OpenWeatherMap API quota
+  static const Duration cacheInterval = Duration(hours: 1);
+  static const String _keyCachedWeatherData = 'cached_weather_data_json';
+  static const String _keyLastWeatherFetchTime = 'last_weather_fetch_time_ms';
+
+  DateTime? _lastFetchTime;
+  DateTime? get lastFetchTime => _lastFetchTime;
 
   String get offlineMessage =>
       "Turn on data/Wi-Fi to update weather.\nRemember to stay hydrated throughout the day";
@@ -43,15 +52,66 @@ class WeatherProvider extends ChangeNotifier {
       _permDeniedController.stream;
 
   WeatherProvider(this._weatherService, this._locationService) {
-    // Listen for internet restored events to auto-refresh weather
+    _initWeather();
+
+    // Listen for internet restored events to auto-refresh weather if cache is expired
     InternetConnectionHelper().onInternetStatusChanged.listen((hasInternet) {
-      if (hasInternet && (_error != null || _weatherData == null)) {
+      if (hasInternet && (_weatherData == null || _isCacheExpired())) {
         Console.log(
             tag: "WEATHER",
-            value: "Internet restored, auto-refreshing weather...");
+            value: "Internet restored & cache expired, refreshing weather...");
         fetchWeatherForCurrentLocation();
       }
     });
+  }
+
+  bool _isCacheExpired() {
+    if (_lastFetchTime == null || _weatherData == null) return true;
+    return DateTime.now().difference(_lastFetchTime!) >= cacheInterval;
+  }
+
+  Future<void> _initWeather() async {
+    await _loadCachedWeather();
+    if (_isCacheExpired()) {
+      await fetchWeatherForCurrentLocation();
+    }
+  }
+
+  Future<void> _loadCachedWeather() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final cachedJson = prefs.getString(_keyCachedWeatherData);
+      final lastMs = prefs.getInt(_keyLastWeatherFetchTime);
+
+      if (cachedJson != null && lastMs != null) {
+        final decoded = jsonDecode(cachedJson) as Map<String, dynamic>;
+        _weatherData = WeatherData.fromCacheMap(decoded);
+        _lastFetchTime = DateTime.fromMillisecondsSinceEpoch(lastMs);
+        _error = null;
+        notifyListeners();
+        Console.log(
+          tag: "WEATHER",
+          value:
+              "Loaded cached weather data (${DateTime.now().difference(_lastFetchTime!).inMinutes}m old).",
+        );
+      }
+    } catch (e) {
+      Console.log(tag: "WEATHER", value: "Error loading cached weather: $e");
+    }
+  }
+
+  Future<void> _saveCachedWeather() async {
+    try {
+      if (_weatherData != null && _lastFetchTime != null) {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString(
+            _keyCachedWeatherData, jsonEncode(_weatherData!.toJson()));
+        await prefs.setInt(
+            _keyLastWeatherFetchTime, _lastFetchTime!.millisecondsSinceEpoch);
+      }
+    } catch (e) {
+      Console.log(tag: "WEATHER", value: "Error saving cached weather: $e");
+    }
   }
 
   WeatherData? get weatherData => _weatherData;
@@ -66,14 +126,26 @@ class WeatherProvider extends ChangeNotifier {
   }
 
   // --------------------------------------------------------------------------
-  // 🌤️ Fetch weather data
+  // 🌤️ Fetch weather data (Throttled to 1 hour intervals)
   // --------------------------------------------------------------------------
   Future<bool> _checkInternet() async {
     return await InternetConnectionHelper().hasInternetConnection();
   }
 
-  Future<void> fetchWeatherForCurrentLocation() async {
+  Future<void> fetchWeatherForCurrentLocation({bool force = false}) async {
     if (_isLoading) return;
+
+    // Check 1-hour interval throttle unless force refresh is requested
+    if (!force && !_isCacheExpired()) {
+      final remainingMins = cacheInterval.inMinutes -
+          DateTime.now().difference(_lastFetchTime!).inMinutes;
+      Console.log(
+        tag: "WEATHER",
+        value:
+            "Skipping weather API fetch. 1-hour interval active ($remainingMins mins remaining until next API call).",
+      );
+      return;
+    }
 
     _isLoading = true;
     _error = null;
@@ -83,10 +155,11 @@ class WeatherProvider extends ChangeNotifier {
     _isInternetAvailable = await _checkInternet();
 
     if (!_isInternetAvailable) {
-      // STOP loading and show static UI
+      // STOP loading and show cached data if present, or offline error
       _isLoading = false;
-      _weatherData = null;
-      _error = "No internet connection";
+      if (_weatherData == null) {
+        _error = "No internet connection";
+      }
       notifyListeners();
       return;
     }
@@ -94,10 +167,14 @@ class WeatherProvider extends ChangeNotifier {
     try {
       _currentLocation = await _locationService.getCurrentLocation();
 
-      _weatherData = await _weatherService.getCurrentWeatherByCoordinates(
+      final freshWeather = await _weatherService.getCurrentWeatherByCoordinates(
         _currentLocation!.latitude,
         _currentLocation!.longitude,
       );
+
+      _weatherData = freshWeather;
+      _lastFetchTime = DateTime.now();
+      await _saveCachedWeather();
 
       // Save latitude and longitude in user info and sync with server
       try {
@@ -130,7 +207,9 @@ class WeatherProvider extends ChangeNotifier {
           value:
               "Exception occurred in fetchingWeatherForCurrentLocation ${e.toString()}");
       _isLocationPermanentlyDenied = false;
-      _error = e.toString();
+      if (_weatherData == null) {
+        _error = e.toString();
+      }
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -204,11 +283,13 @@ class WeatherProvider extends ChangeNotifier {
     if (desc.contains('rain')) return 'rainy day';
     if (desc.contains('heavy rain')) return 'heavy rain';
     if (desc.contains('rainstorm')) return 'rainstorm outside — stay safe';
-    if (desc.contains('Heavy Rainstorm'))
+    if (desc.contains('Heavy Rainstorm')) {
       return 'strong rainstorm outside — stay safe';
+    }
     if (desc.contains('wet')) return 'wet day after the rain';
-    if (desc.contains('thunderstorm'))
+    if (desc.contains('thunderstorm')) {
       return 'thunderstorm'; //thunderstorm outside — stay indoors
+    }
     if (desc.contains('light snow')) return 'light snowy day';
     if (desc.contains('snow')) return 'snowy day';
     if (desc.contains('mist')) return ' misty day';

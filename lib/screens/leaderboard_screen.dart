@@ -9,6 +9,7 @@ import 'package:hydrify/constants/assets_path.dart';
 import 'package:hydrify/cubit/bottom_nav/bottom_nav_cubit.dart';
 import 'package:hydrify/helpers/shared_pref_helper.dart';
 import 'package:hydrify/screens/sip_map_screen.dart';
+import 'package:hydrify/screens/connections/social_league_screen.dart';
 import 'package:hydrify/screens/widgets/leaderboard_achievement_badge.dart';
 import 'package:hydrify/services/api_service.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
@@ -281,8 +282,6 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
                                   _buildSocialImpactSection(),
                                   SizedBox(height: AppDimensions.dim24.h),
                                   _buildImpactStorySection(),
-                                  SizedBox(height: AppDimensions.dim24.h),
-                                  _buildSocialLeagueSection(),
                                   SizedBox(
                                       height: widget.showBackButton
                                           ? 120.h
@@ -728,6 +727,91 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
             ),
           ),
         ),
+        SizedBox(height: 14.h),
+        // Social League Capsule Button (Screenshot 1)
+        GestureDetector(
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const SocialLeagueScreen(),
+              ),
+            );
+          },
+          child: Container(
+            width: double.infinity,
+            padding: EdgeInsets.symmetric(
+              horizontal: 16.w,
+              vertical: 12.h,
+            ),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(30.r),
+              border: Border.all(color: Colors.grey.shade200, width: 1.5),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.04),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 44.w,
+                  height: 44.w,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: const Color(0xFFEFF7FF),
+                    border: Border.all(
+                      color: const Color(0xFFD0E2FB),
+                      width: 1,
+                    ),
+                  ),
+                  child: const Center(
+                    child: Icon(
+                      Icons.public_rounded,
+                      color: Color(0xFF007BFF),
+                      size: 24,
+                    ),
+                  ),
+                ),
+                SizedBox(width: 14.w),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        "Social League",
+                        style: TextStyle(
+                          fontSize: 16.sp,
+                          fontFamily: AppFontStyles.urbanistFontFamily,
+                          color: const Color(0xFF003057),
+                          fontVariations: [
+                            AppFontStyles.extraBoldFontVariation
+                          ],
+                        ),
+                      ),
+                      SizedBox(height: 2.h),
+                      Text(
+                        "Global Sippers & Connection",
+                        style: TextStyle(
+                          fontSize: 12.sp,
+                          fontFamily: AppFontStyles.urbanistFontFamily,
+                          color: const Color(0xFF4D758B),
+                          fontVariations: [
+                            AppFontStyles.semiBoldFontVariation
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
       ],
     );
   }
@@ -899,166 +983,6 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
                 ),
               ),
             ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSocialLeagueSection() {
-    final league = (_leaderboardData?['socialLeague'] as List?) ?? [];
-
-    if (league.isEmpty) {
-      return const SizedBox.shrink();
-    }
-
-    final top50League = league.take(50).toList();
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          AppLocalizations.of(context)?.socialLeague ?? "Social League",
-          style: TextStyle(
-              fontSize: 18.sp,
-              fontFamily: AppFontStyles.urbanistFontFamily,
-              color: const Color(0xFF003057),
-              fontVariations: [AppFontStyles.extraBoldFontVariation]),
-        ),
-        SizedBox(height: 12.h),
-        Container(
-          width: double.infinity,
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(20.r),
-            border: Border.all(color: Colors.grey.shade200, width: 1.5),
-          ),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(20.r),
-            child: ConstrainedBox(
-              constraints: BoxConstraints(
-                maxHeight: 330.h, // Height of ~5 items
-              ),
-              child: ListView.builder(
-                padding: EdgeInsets.zero,
-                shrinkWrap: true,
-                physics: const ClampingScrollPhysics(),
-                itemCount: top50League.length,
-                itemBuilder: (context, index) {
-                  final player = top50League[index] as Map<String, dynamic>;
-                  return _buildPlayerRow(player);
-                },
-              ),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildPlayerRow(Map<String, dynamic> player) {
-    final bool isMe = player['isMe'] == true;
-
-    return Container(
-      decoration: BoxDecoration(
-        color: isMe ? const Color(0xFFEDF6FD) : Colors.white,
-        borderRadius: BorderRadius.circular(18.r),
-      ),
-      child: Stack(
-        children: [
-          if (isMe)
-            Positioned(
-              left: 0,
-              top: 0,
-              bottom: 0,
-              child: Container(
-                width: 4.w,
-                decoration: BoxDecoration(
-                  color: const Color(0xFF007BFF),
-                  borderRadius: BorderRadius.only(
-                    topLeft: Radius.circular(18.r),
-                    bottomLeft: Radius.circular(18.r),
-                  ),
-                ),
-              ),
-            ),
-          Padding(
-            padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
-            child: Row(
-              children: [
-                // Rank number
-                SizedBox(
-                  width: 24.w,
-                  child: Text(
-                    "${player['rank']}",
-                    style: TextStyle(
-                      fontSize: 15.sp,
-                      fontFamily: AppFontStyles.urbanistFontFamily,
-                      color: isMe
-                          ? const Color(0xFF007BFF)
-                          : const Color(0xFF003057),
-                      fontWeight: FontWeight.bold,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                ),
-                SizedBox(width: 8.w),
-                // Avatar
-                CircleAvatar(
-                  radius: 20.r,
-                  backgroundColor:
-                      isMe ? const Color(0xFFBBDEFB) : Colors.grey.shade200,
-                  child: isMe
-                      ? const Icon(Icons.person, color: Color(0xFF007BFF))
-                      : Text(
-                          player['name'].substring(0, 1),
-                          style: TextStyle(
-                            fontSize: 14.sp,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.grey.shade700,
-                          ),
-                        ),
-                ),
-                SizedBox(width: 12.w),
-                // Name and title
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        player['name'],
-                        style: TextStyle(
-                          fontSize: 14.sp,
-                          fontFamily: AppFontStyles.urbanistFontFamily,
-                          color: isMe
-                              ? const Color(0xFF007BFF)
-                              : const Color(0xFF003057),
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      Text(
-                        "Level ${player['level']} Hydrator",
-                        style: TextStyle(
-                          fontSize: 11.sp,
-                          fontFamily: AppFontStyles.urbanistFontFamily,
-                          color: Colors.grey.shade600,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                // Points
-                Text(
-                  "${player['points']} pts",
-                  style: TextStyle(
-                    fontSize: 14.sp,
-                    fontFamily: AppFontStyles.urbanistFontFamily,
-                    color: const Color(0xFF003057),
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ],
-            ),
           ),
         ],
       ),
