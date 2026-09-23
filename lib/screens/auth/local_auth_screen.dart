@@ -172,7 +172,7 @@ class _LocalAuthScreenState extends State<LocalAuthScreen>
                   angle: -0.01745, // –1° left (π/180 radians)
                   child: Image.asset(
                     AssetsPath.bottleRingCap,
-                    width: AppDimensions.dim312.w,
+                    width: AppDimensions.dim320.w,
                     height: AppDimensions.dim320.h,
                     fit: BoxFit.cover,
                   ),

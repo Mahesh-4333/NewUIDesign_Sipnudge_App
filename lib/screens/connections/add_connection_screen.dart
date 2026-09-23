@@ -4,12 +4,15 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:hydrify/constants/app_colors.dart';
 import 'package:hydrify/constants/app_dimensions.dart';
 import 'package:hydrify/constants/app_font_styles.dart';
+import 'package:hydrify/constants/app_style.dart';
+import 'package:hydrify/constants/assets_path.dart';
 import 'package:hydrify/helpers/nudge_helper.dart';
 import 'package:hydrify/helpers/shared_pref_helper.dart';
 import 'package:hydrify/models/connection_model.dart';
 import 'package:hydrify/services/api_service.dart';
 import 'package:hydrify/services/firebase_messaging_service.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:hydrify/widgets/animated_nudge_button.dart';
 
 class AddConnectionScreen extends StatefulWidget {
   final VoidCallback? onConnectionChanged;
@@ -222,7 +225,8 @@ class _AddConnectionScreenState extends State<AddConnectionScreen> {
     if (_currentUserId == null) return;
 
     setState(() {
-      _pendingInvitations.removeWhere((i) => i.connectionId == inv.connectionId);
+      _pendingInvitations
+          .removeWhere((i) => i.connectionId == inv.connectionId);
     });
 
     try {
@@ -313,20 +317,13 @@ class _AddConnectionScreenState extends State<AddConnectionScreen> {
                   vertical: 6.h,
                 ),
                 child: Container(
-                  height: 48.h,
+                  height: 40.h,
                   decoration: BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(30.r),
                     border: Border.all(color: const Color(0xFFE2E8F0)),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.03),
-                        blurRadius: 6,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
+                    boxShadow: AppStyle.boxShadowVariation3,
                   ),
-                  padding: EdgeInsets.all(4.w),
                   child: Row(
                     children: [
                       Expanded(
@@ -339,6 +336,16 @@ class _AddConnectionScreenState extends State<AddConnectionScreen> {
                                   ? const Color(0xFF0083FF)
                                   : Colors.transparent,
                               borderRadius: BorderRadius.circular(26.r),
+                              boxShadow: _selectedTabIndex == 0
+                                  ? [
+                                      BoxShadow(
+                                        color: const Color(0xFF0083FF)
+                                            .withOpacity(0.4),
+                                        blurRadius: 8,
+                                        offset: const Offset(0, 2),
+                                      ),
+                                    ]
+                                  : [],
                             ),
                             child: Center(
                               child: Text(
@@ -366,6 +373,16 @@ class _AddConnectionScreenState extends State<AddConnectionScreen> {
                                   ? const Color(0xFF0083FF)
                                   : Colors.transparent,
                               borderRadius: BorderRadius.circular(26.r),
+                              boxShadow: _selectedTabIndex == 1
+                                  ? [
+                                      BoxShadow(
+                                        color: const Color(0xFF0083FF)
+                                            .withOpacity(0.4),
+                                        blurRadius: 8,
+                                        offset: const Offset(0, 2),
+                                      ),
+                                    ]
+                                  : [],
                             ),
                             child: Center(
                               child: Text(
@@ -411,7 +428,7 @@ class _AddConnectionScreenState extends State<AddConnectionScreen> {
       physics: const BouncingScrollPhysics(),
       padding: EdgeInsets.symmetric(
         horizontal: AppDimensions.dim20.w,
-        vertical: 14.h,
+        vertical: 16.h,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -427,13 +444,13 @@ class _AddConnectionScreenState extends State<AddConnectionScreen> {
               ),
               boxShadow: [
                 BoxShadow(
-                  color: const Color(0xFF0083FF).withOpacity(0.06),
+                  color: const Color(0xFF0083FF).withOpacity(0.03),
                   blurRadius: 8,
                   offset: const Offset(0, 2),
                 ),
               ],
             ),
-            padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 2.h),
+            padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
             child: Row(
               children: [
                 const Icon(
@@ -489,8 +506,8 @@ class _AddConnectionScreenState extends State<AddConnectionScreen> {
                 style: TextStyle(
                   fontSize: 12.sp,
                   fontFamily: AppFontStyles.urbanistFontFamily,
-                  color: const Color(0xFF64748B),
-                  fontWeight: FontWeight.bold,
+                  color: AppColors.greyColorText1,
+                  fontVariations: [AppFontStyles.boldFontVariation],
                   letterSpacing: 0.5,
                 ),
               ),
@@ -500,7 +517,7 @@ class _AddConnectionScreenState extends State<AddConnectionScreen> {
                   fontSize: 12.sp,
                   fontFamily: AppFontStyles.urbanistFontFamily,
                   color: const Color(0xFF0083FF),
-                  fontWeight: FontWeight.bold,
+                  fontVariations: [AppFontStyles.boldFontVariation],
                 ),
               ),
             ],
@@ -557,58 +574,55 @@ class _AddConnectionScreenState extends State<AddConnectionScreen> {
     final bool isRequested = user.relationStatus == 'requested';
     final bool isConnected = user.relationStatus == 'connected';
 
-    final Color ringColor = user.name.toLowerCase().contains('name') ||
-            user.name.toLowerCase().contains('riya')
-        ? const Color(0xFFF97316)
-        : const Color(0xFF2563EB);
+    final Color ringColor =
+        isRequested ? const Color(0xFF2563EB) : const Color(0xFFF97316);
 
     return Container(
-      margin: EdgeInsets.only(bottom: 12.h),
-      padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 14.h),
+      margin: EdgeInsets.only(bottom: 10.h),
+      padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 16.h),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16.r),
-        border: Border.all(color: const Color(0xFFE2E8F0), width: 1.2),
+        borderRadius: BorderRadius.circular(14.r),
+        border: Border.all(color: const Color(0xFFE2E8F0), width: 1),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.02),
-            blurRadius: 6,
-            offset: const Offset(0, 2),
+            blurRadius: 4,
+            offset: const Offset(0, 1),
           ),
         ],
       ),
       child: Row(
         children: [
-          // Initials circle
           Container(
-            width: 44.w,
-            height: 44.w,
+            width: 55.w,
+            height: 55.w,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: Colors.white,
+              color: ringColor.withValues(alpha: 0.05),
               border: Border.all(color: ringColor, width: 2),
             ),
             child: Center(
               child: Text(
                 initials.toUpperCase(),
                 style: TextStyle(
-                  fontSize: 14.sp,
+                  fontSize: 13.sp,
                   fontFamily: AppFontStyles.urbanistFontFamily,
-                  fontWeight: FontWeight.bold,
+                  fontWeight: FontWeight.w700,
                   color: ringColor,
                 ),
               ),
             ),
           ),
-          SizedBox(width: 14.w),
+          SizedBox(width: 12.w),
           Expanded(
             child: Text(
               user.name,
               style: TextStyle(
-                fontSize: 15.sp,
+                fontSize: 14.sp,
                 fontFamily: AppFontStyles.urbanistFontFamily,
                 color: const Color(0xFF003057),
-                fontWeight: FontWeight.bold,
+                fontWeight: FontWeight.w600,
               ),
             ),
           ),
@@ -617,24 +631,24 @@ class _AddConnectionScreenState extends State<AddConnectionScreen> {
               padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
               decoration: BoxDecoration(
                 color: const Color(0xFFDCFCE7),
-                borderRadius: BorderRadius.circular(20.r),
+                borderRadius: BorderRadius.circular(16.r),
               ),
               child: Text(
                 "Connected",
                 style: TextStyle(
-                  fontSize: 12.sp,
+                  fontSize: 11.sp,
                   fontFamily: AppFontStyles.urbanistFontFamily,
                   color: const Color(0xFF16A34A),
-                  fontWeight: FontWeight.bold,
+                  fontWeight: FontWeight.w600,
                 ),
               ),
             )
           else if (isRequested)
             Container(
-              padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 6.h),
+              padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
               decoration: BoxDecoration(
                 color: const Color(0xFFF1F5F9),
-                borderRadius: BorderRadius.circular(20.r),
+                borderRadius: BorderRadius.circular(16.r),
                 border: Border.all(color: const Color(0xFFCBD5E1)),
               ),
               child: Row(
@@ -642,18 +656,17 @@ class _AddConnectionScreenState extends State<AddConnectionScreen> {
                 children: [
                   const Icon(
                     Icons.check,
-                    size: 14,
+                    size: 12,
                     color: Color(0xFF64748B),
                   ),
-                  SizedBox(width: 4.w),
+                  SizedBox(width: 3.w),
                   Text(
                     "Requested",
                     style: TextStyle(
-                      fontSize: 12.sp,
-                      fontFamily: AppFontStyles.urbanistFontFamily,
-                      color: const Color(0xFF64748B),
-                      fontWeight: FontWeight.bold,
-                    ),
+                        fontSize: 13.sp,
+                        fontFamily: AppFontStyles.urbanistFontFamily,
+                        color: AppColors.greyColorText1,
+                        fontVariations: [AppFontStyles.boldFontVariation]),
                   ),
                 ],
               ),
@@ -662,26 +675,18 @@ class _AddConnectionScreenState extends State<AddConnectionScreen> {
             GestureDetector(
               onTap: () => _sendInvite(user),
               child: Container(
-                padding: EdgeInsets.symmetric(horizontal: 18.w, vertical: 7.h),
+                padding: EdgeInsets.symmetric(horizontal: 17.w, vertical: 8.h),
                 decoration: BoxDecoration(
                   color: const Color(0xFF0083FF),
-                  borderRadius: BorderRadius.circular(20.r),
-                  boxShadow: [
-                    BoxShadow(
-                      color: const Color(0xFF0083FF).withOpacity(0.3),
-                      blurRadius: 6,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
+                  borderRadius: BorderRadius.circular(16.r),
                 ),
                 child: Text(
                   "+ Invite",
                   style: TextStyle(
-                    fontSize: 13.sp,
-                    fontFamily: AppFontStyles.urbanistFontFamily,
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                  ),
+                      fontSize: 13.sp,
+                      fontFamily: AppFontStyles.urbanistFontFamily,
+                      color: Colors.white,
+                      fontVariations: [AppFontStyles.boldFontVariation]),
                 ),
               ),
             ),
@@ -1055,8 +1060,9 @@ class _AddConnectionScreenState extends State<AddConnectionScreen> {
   }
 
   Widget _buildRecentlyJoinedCard(ConnectionMember member) {
-    final initial = member.name.isNotEmpty
-        ? member.name.substring(0, 1).toUpperCase()
+    final displayName = member.relationshipTag.isNotEmpty ? member.relationshipTag : member.name;
+    final initial = displayName.isNotEmpty
+        ? displayName.substring(0, 1).toUpperCase()
         : 'M';
 
     return Container(
@@ -1075,7 +1081,7 @@ class _AddConnectionScreenState extends State<AddConnectionScreen> {
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               color: Colors.white,
-              border: Border.all(color: const Color(0xFFF97316), width: 2),
+              border: Border.all(color: member.accentColor, width: 2),
             ),
             child: Center(
               child: Text(
@@ -1084,7 +1090,7 @@ class _AddConnectionScreenState extends State<AddConnectionScreen> {
                   fontSize: 16.sp,
                   fontFamily: AppFontStyles.urbanistFontFamily,
                   fontWeight: FontWeight.bold,
-                  color: const Color(0xFFF97316),
+                  color: member.accentColor,
                 ),
               ),
             ),
@@ -1097,7 +1103,7 @@ class _AddConnectionScreenState extends State<AddConnectionScreen> {
                 Row(
                   children: [
                     Text(
-                      member.name,
+                      member.relationshipTag.isNotEmpty ? member.relationshipTag : member.name,
                       style: TextStyle(
                         fontSize: 15.sp,
                         fontFamily: AppFontStyles.urbanistFontFamily,
@@ -1129,8 +1135,7 @@ class _AddConnectionScreenState extends State<AddConnectionScreen> {
                 ),
                 SizedBox(height: 2.h),
                 Text(
-                  member.connectedSubtitle ??
-                      "Connected today · 8-day streak",
+                  member.connectedSubtitle ?? "Connected today · 8-day streak",
                   style: TextStyle(
                     fontSize: 11.sp,
                     fontFamily: AppFontStyles.urbanistFontFamily,
@@ -1140,38 +1145,19 @@ class _AddConnectionScreenState extends State<AddConnectionScreen> {
               ],
             ),
           ),
-          GestureDetector(
+          AnimatedNudgeButton(
             onTap: () async {
               await NudgeHelper.triggerNudge(
                 context: context,
                 currentUserId: _currentUserId,
                 targetUserId: member.userId,
-                targetUserName: member.name,
+                targetUserName: member.relationshipTag.isNotEmpty
+                    ? member.relationshipTag
+                    : member.name,
               );
             },
-            child: Container(
-              padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 7.h),
-              decoration: BoxDecoration(
-                color: const Color(0xFF0083FF),
-                borderRadius: BorderRadius.circular(20.r),
-                boxShadow: [
-                  BoxShadow(
-                    color: const Color(0xFF0083FF).withOpacity(0.3),
-                    blurRadius: 6,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-              ),
-              child: Text(
-                "Nudge",
-                style: TextStyle(
-                  fontSize: 12.sp,
-                  fontFamily: AppFontStyles.urbanistFontFamily,
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
+            horizontalPadding: 16.w,
+            verticalPadding: 7.h,
           ),
         ],
       ),
@@ -1190,10 +1176,10 @@ class _AddConnectionScreenState extends State<AddConnectionScreen> {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Icon(
-            Icons.lightbulb_outline_rounded,
-            color: Color(0xFF0083FF),
-            size: 20,
+          Image.asset(
+            AssetsPath.syncPower,
+            width: 20.w,
+            height: 20.w,
           ),
           SizedBox(width: 10.w),
           Expanded(
@@ -1213,7 +1199,7 @@ class _AddConnectionScreenState extends State<AddConnectionScreen> {
                 Text(
                   "When a connection is accepted, your hydration milestones sync in real-time. Nudge each other to prevent afternoon hydration dips!",
                   style: TextStyle(
-                    fontSize: 11.sp,
+                    fontSize: 12.sp,
                     fontFamily: AppFontStyles.urbanistFontFamily,
                     color: const Color(0xFF475569),
                     height: 1.4,

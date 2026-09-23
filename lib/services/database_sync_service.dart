@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:math';
 import 'package:flutter/widgets.dart';
+import 'package:flutter_timezone/flutter_timezone.dart';
 import 'package:hydrify/helpers/database_helper.dart';
 import 'package:hydrify/helpers/shared_pref_helper.dart';
 import 'package:hydrify/services/achievement_notifier.dart';
@@ -140,28 +141,39 @@ class DatabaseSyncService {
           (userInfo?.waterUnit != null && userInfo!.waterUnit!.isNotEmpty)
               ? userInfo.waterUnit
               : selectedUnit;
-      if (userInfo != null) {
+      String? timezoneId;
+      try {
+        timezoneId = (await FlutterTimezone.getLocalTimezone()).identifier;
+      } catch (_) {
+        timezoneId = null;
+      }
+
+      if (userInfo != null || timezoneId != null) {
         await _apiService.syncUserInfo(userId, {
-          'gender': userInfo.gender?.toString().split('.').last,
-          'height': userInfo.height,
-          'heightUnit': userInfo.heightUnit,
-          'weight': userInfo.weight,
-          'weightUnit': userInfo.weightUnit,
-          'age': userInfo.age,
-          'wakeupHour': userInfo.wakeupHour,
-          'wakeupMinute': userInfo.wakeupMinute,
-          'wakeupPeriod': userInfo.wakeupPeriod,
-          'bedtimeHour': userInfo.bedtimeHour,
-          'bedtimeMinute': userInfo.bedtimeMinute,
-          'bedtimePeriod': userInfo.bedtimePeriod,
-          'activityLevel': userInfo.activityLevel?.toString().split('.').last,
-          'dietType': userInfo.dietType?.toString().split('.').last,
-          'stepGoal': userInfo.stepGoal,
-          'coffeeIntake': userInfo.coffeeIntake?.toString().split('.').last,
-          'teaIntake': userInfo.teaIntake?.toString().split('.').last,
-          'typicalWaterIntake': userInfo.typicalWaterIntake,
-          'waterUnit': effectiveWaterUnit,
-          'userName': userInfo.name,
+          if (userInfo != null) ...{
+            'gender': userInfo.gender?.toString().split('.').last,
+            'height': userInfo.height,
+            'heightUnit': userInfo.heightUnit,
+            'weight': userInfo.weight,
+            'weightUnit': userInfo.weightUnit,
+            'age': userInfo.age,
+            'wakeupHour': userInfo.wakeupHour,
+            'wakeupMinute': userInfo.wakeupMinute,
+            'wakeupPeriod': userInfo.wakeupPeriod,
+            'bedtimeHour': userInfo.bedtimeHour,
+            'bedtimeMinute': userInfo.bedtimeMinute,
+            'bedtimePeriod': userInfo.bedtimePeriod,
+            'activityLevel': userInfo.activityLevel?.toString().split('.').last,
+            'dietType': userInfo.dietType?.toString().split('.').last,
+            'stepGoal': userInfo.stepGoal,
+            'coffeeIntake': userInfo.coffeeIntake?.toString().split('.').last,
+            'teaIntake': userInfo.teaIntake?.toString().split('.').last,
+            'typicalWaterIntake': userInfo.typicalWaterIntake,
+            'waterUnit': effectiveWaterUnit,
+            'userName': userInfo.name,
+          },
+          if (timezoneId != null && timezoneId.isNotEmpty)
+            'timezone': timezoneId,
         });
       }
 

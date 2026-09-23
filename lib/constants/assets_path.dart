@@ -291,4 +291,5 @@ class AssetsPath {
   static const String appleHealthWater = "assets/onboarding/apple_water.png";
   static const String appleHealthSteps = "assets/onboarding/apple_steps.png";
   static const String applePermission = "assets/onboarding/apple_permision.png";
+  static const String syncPower = "assets/sync_power.png";
 }

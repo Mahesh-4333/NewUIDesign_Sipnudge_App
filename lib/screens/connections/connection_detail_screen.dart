@@ -7,6 +7,7 @@ import 'package:hydrify/helpers/nudge_helper.dart';
 import 'package:hydrify/helpers/shared_pref_helper.dart';
 import 'package:hydrify/models/connection_model.dart';
 import 'package:hydrify/services/api_service.dart';
+import 'package:hydrify/widgets/animated_nudge_button.dart';
 
 class ConnectionDetailScreen extends StatefulWidget {
   final ConnectionMember member;
@@ -72,6 +73,91 @@ class _ConnectionDetailScreenState extends State<ConnectionDetailScreen> {
     return match['name'] ?? 'Custom';
   }
 
+  bool get _isCustomTag => !_relationshipTags.contains(_selectedTag);
+
+  void _showCustomTagDialog() {
+    final controller = TextEditingController(text: _isCustomTag ? _selectedTag : '');
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20.r)),
+        title: Text(
+          "Custom Relationship Tag",
+          style: TextStyle(
+            fontFamily: AppFontStyles.urbanistFontFamily,
+            fontWeight: FontWeight.bold,
+            color: const Color(0xFF003057),
+            fontSize: 16.sp,
+          ),
+        ),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          maxLength: 20,
+          textCapitalization: TextCapitalization.words,
+          decoration: InputDecoration(
+            hintText: "e.g. Colleague, Buddy...",
+            counterText: "",
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12.r),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12.r),
+              borderSide: const BorderSide(color: Color(0xFF0083FF), width: 1.5),
+            ),
+          ),
+          style: TextStyle(
+            fontFamily: AppFontStyles.urbanistFontFamily,
+            fontSize: 14.sp,
+          ),
+          onSubmitted: (value) {
+            final tag = value.trim();
+            if (tag.isNotEmpty) {
+              Navigator.pop(ctx);
+              _updateCustomization(newTag: tag);
+            }
+          },
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text(
+              "Cancel",
+              style: TextStyle(
+                fontFamily: AppFontStyles.urbanistFontFamily,
+                color: Colors.grey.shade600,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF0083FF),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10.r),
+              ),
+            ),
+            onPressed: () {
+              final tag = controller.text.trim();
+              if (tag.isNotEmpty) {
+                Navigator.pop(ctx);
+                _updateCustomization(newTag: tag);
+              }
+            },
+            child: Text(
+              "Save",
+              style: TextStyle(
+                fontFamily: AppFontStyles.urbanistFontFamily,
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Future<void> _updateCustomization({String? newTag, String? newHex}) async {
     final updatedTag = newTag ?? _selectedTag;
     final updatedHex = newHex ?? _selectedHexColor;
@@ -107,7 +193,9 @@ class _ConnectionDetailScreenState extends State<ConnectionDetailScreen> {
       context: context,
       currentUserId: await SharedPrefsHelper.getUserId(),
       targetUserId: _member.userId,
-      targetUserName: _member.name,
+      targetUserName: _member.relationshipTag.isNotEmpty
+          ? _member.relationshipTag
+          : _member.name,
       onStateChanged: () {
         if (mounted) setState(() {});
       },
@@ -132,7 +220,7 @@ class _ConnectionDetailScreenState extends State<ConnectionDetailScreen> {
           ),
         ),
         content: Text(
-          "Are you sure you want to remove ${_member.name} from your Social League? This will stop shared hydration sync.",
+          "Are you sure you want to remove ${_member.relationshipTag.isNotEmpty ? _member.relationshipTag : _member.name} from your Social League? This will stop shared hydration sync.",
           style: TextStyle(
             fontFamily: AppFontStyles.urbanistFontFamily,
             fontSize: 14.sp,
@@ -232,7 +320,7 @@ class _ConnectionDetailScreenState extends State<ConnectionDetailScreen> {
                     Expanded(
                       child: Center(
                         child: Text(
-                          _member.name,
+                          _member.relationshipTag.isNotEmpty ? _member.relationshipTag : _member.name,
                           style: TextStyle(
                             fontSize: 22.sp,
                             fontFamily: AppFontStyles.urbanistFontFamily,
@@ -282,21 +370,28 @@ class _ConnectionDetailScreenState extends State<ConnectionDetailScreen> {
   }
 
   Widget _buildProfileHeaderCard() {
-    final initial = _member.name.isNotEmpty
-        ? _member.name.substring(0, 1).toUpperCase()
-        : 'U';
+    // Use relationship tag as alias name, fallback to first letter of name
+    final displayName = _member.relationshipTag.isNotEmpty
+        ? _member.relationshipTag
+        : (_member.name.isNotEmpty ? _member.name : 'U');
+    final initial = displayName.substring(0, 1).toUpperCase();
+    final currentColor = _parseHex(_selectedHexColor);
 
     final bool isOnTrack = _member.status.toLowerCase() == 'on track';
     final bool isAchieved = _member.status.toLowerCase() == 'achieved';
+    final bool isOffTrack = _member.status.toLowerCase() == 'off track';
 
     Color badgeBg = const Color(0xFFDCFCE7);
-    Color badgeText = const Color(0xFF16A34A);
-    if (!isOnTrack && !isAchieved) {
+    Color badgeBorder = const Color(0xFF86EFAC);
+    Color badgeText = const Color(0xFF166534);
+    Color dotColor = const Color(0xFF22C55E);
+    if (isOffTrack) {
+      dotColor = const Color(0xFFEF4444);
+    } else if (isAchieved) {
       badgeBg = const Color(0xFFE0F2FE);
+      badgeBorder = const Color(0xFFBAE6FD);
       badgeText = const Color(0xFF0284C7);
-    } else if (isOnTrack) {
-      badgeBg = const Color(0xFFDCFCE7);
-      badgeText = const Color(0xFF16A34A);
+      dotColor = const Color(0xFF0284C7);
     }
 
     return Container(
@@ -326,7 +421,7 @@ class _ConnectionDetailScreenState extends State<ConnectionDetailScreen> {
                   shape: BoxShape.circle,
                   color: Colors.white,
                   border: Border.all(
-                    color: const Color(0xFFF59E0B),
+                    color: currentColor,
                     width: 2.5,
                   ),
                 ),
@@ -337,7 +432,7 @@ class _ConnectionDetailScreenState extends State<ConnectionDetailScreen> {
                       fontSize: 22.sp,
                       fontFamily: AppFontStyles.urbanistFontFamily,
                       fontWeight: FontWeight.bold,
-                      color: const Color(0xFFD97706),
+                      color: currentColor,
                     ),
                   ),
                 ),
@@ -348,7 +443,7 @@ class _ConnectionDetailScreenState extends State<ConnectionDetailScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      "${_member.name} (${_member.userName.isNotEmpty ? _member.userName : 'user'})",
+                      "${_member.relationshipTag.isNotEmpty ? _member.relationshipTag : _member.name} (${_member.userName.isNotEmpty ? _member.userName : 'user'})",
                       style: TextStyle(
                         fontSize: 16.sp,
                         fontFamily: AppFontStyles.urbanistFontFamily,
@@ -365,15 +460,30 @@ class _ConnectionDetailScreenState extends State<ConnectionDetailScreen> {
                       decoration: BoxDecoration(
                         color: badgeBg,
                         borderRadius: BorderRadius.circular(20.r),
+                        border: Border.all(color: badgeBorder, width: 1),
                       ),
-                      child: Text(
-                        _member.status,
-                        style: TextStyle(
-                          fontSize: 11.sp,
-                          fontFamily: AppFontStyles.urbanistFontFamily,
-                          color: badgeText,
-                          fontWeight: FontWeight.bold,
-                        ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Container(
+                            width: 7.w,
+                            height: 7.w,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: dotColor,
+                            ),
+                          ),
+                          SizedBox(width: 5.w),
+                          Text(
+                            _member.status,
+                            style: TextStyle(
+                              fontSize: 11.sp,
+                              fontFamily: AppFontStyles.urbanistFontFamily,
+                              color: badgeText,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ],
@@ -386,7 +496,7 @@ class _ConnectionDetailScreenState extends State<ConnectionDetailScreen> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                "Last sip: ${_member.lastSipRelative}",
+                "Last sip: ${_member.formattedLastSip}",
                 style: TextStyle(
                   fontSize: 13.sp,
                   fontFamily: AppFontStyles.urbanistFontFamily,
@@ -394,34 +504,9 @@ class _ConnectionDetailScreenState extends State<ConnectionDetailScreen> {
                   fontWeight: FontWeight.w600,
                 ),
               ),
-              GestureDetector(
+              AnimatedNudgeButton(
                 onTap: _sendNudge,
-                child: Container(
-                  padding: EdgeInsets.symmetric(
-                    horizontal: 22.w,
-                    vertical: 8.h,
-                  ),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF0083FF),
-                    borderRadius: BorderRadius.circular(20.r),
-                    boxShadow: [
-                      BoxShadow(
-                        color: const Color(0xFF0083FF).withOpacity(0.3),
-                        blurRadius: 6,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
-                  ),
-                  child: Text(
-                    _isNudging ? "Sending..." : "Nudge",
-                    style: TextStyle(
-                      fontSize: 13.sp,
-                      fontFamily: AppFontStyles.urbanistFontFamily,
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
+                isLoading: _isNudging,
               ),
             ],
           ),
@@ -477,7 +562,7 @@ class _ConnectionDetailScreenState extends State<ConnectionDetailScreen> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      _member.name,
+                      _member.relationshipTag.isNotEmpty ? _member.relationshipTag : _member.name,
                       style: TextStyle(
                         fontSize: 14.sp,
                         fontFamily: AppFontStyles.urbanistFontFamily,
@@ -521,11 +606,27 @@ class _ConnectionDetailScreenState extends State<ConnectionDetailScreen> {
                 SizedBox(height: 12.h),
                 ClipRRect(
                   borderRadius: BorderRadius.circular(10.r),
-                  child: LinearProgressIndicator(
-                    value: progress,
-                    backgroundColor: const Color(0xFFE2E8F0),
-                    valueColor: AlwaysStoppedAnimation<Color>(currentColor),
-                    minHeight: 10.h,
+                  child: Stack(
+                    children: [
+                      Container(
+                        height: 10.h,
+                        color: const Color(0xFFE2E8F0),
+                      ),
+                      FractionallySizedBox(
+                        widthFactor: _member.expectedProgress,
+                        child: Container(
+                          height: 10.h,
+                          color: const Color(0xFFFFC71E),
+                        ),
+                      ),
+                      FractionallySizedBox(
+                        widthFactor: progress,
+                        child: Container(
+                          height: 10.h,
+                          color: currentColor,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ],
@@ -680,14 +781,56 @@ class _ConnectionDetailScreenState extends State<ConnectionDetailScreen> {
           ),
           SizedBox(height: 12.h),
 
-          // Tag chips
+          // Tag chips + Custom button
           Wrap(
             spacing: 8.w,
             runSpacing: 8.h,
-            children: _relationshipTags.map((tag) {
-              final isSelected = _selectedTag == tag;
-              return GestureDetector(
-                onTap: () => _updateCustomization(newTag: tag),
+            children: [
+              ..._relationshipTags.map((tag) {
+                final isSelected = _selectedTag == tag;
+                return GestureDetector(
+                  onTap: () => _updateCustomization(newTag: tag),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    padding: EdgeInsets.symmetric(
+                      horizontal: 18.w,
+                      vertical: 8.h,
+                    ),
+                    decoration: BoxDecoration(
+                      color: isSelected ? const Color(0xFF0083FF) : Colors.white,
+                      borderRadius: BorderRadius.circular(20.r),
+                      border: Border.all(
+                        color: isSelected
+                            ? const Color(0xFF0083FF)
+                            : const Color(0xFFCBD5E1),
+                        width: 1.2,
+                      ),
+                      boxShadow: isSelected
+                          ? [
+                              BoxShadow(
+                                color: const Color(0xFF0083FF).withOpacity(0.25),
+                                blurRadius: 6,
+                                offset: const Offset(0, 2),
+                              ),
+                            ]
+                          : [],
+                    ),
+                    child: Text(
+                      tag,
+                      style: TextStyle(
+                        fontSize: 13.sp,
+                        fontFamily: AppFontStyles.urbanistFontFamily,
+                        color: isSelected ? Colors.white : const Color(0xFF475569),
+                        fontWeight:
+                            isSelected ? FontWeight.bold : FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                );
+              }),
+              // Custom chip — selected if tag is not in predefined list
+              GestureDetector(
+                onTap: _showCustomTagDialog,
                 child: AnimatedContainer(
                   duration: const Duration(milliseconds: 200),
                   padding: EdgeInsets.symmetric(
@@ -695,15 +838,15 @@ class _ConnectionDetailScreenState extends State<ConnectionDetailScreen> {
                     vertical: 8.h,
                   ),
                   decoration: BoxDecoration(
-                    color: isSelected ? const Color(0xFF0083FF) : Colors.white,
+                    color: _isCustomTag ? const Color(0xFF0083FF) : Colors.white,
                     borderRadius: BorderRadius.circular(20.r),
                     border: Border.all(
-                      color: isSelected
+                      color: _isCustomTag
                           ? const Color(0xFF0083FF)
-                          : const Color(0xFFCBD5E1),
+                          : const Color(0xFF0083FF),
                       width: 1.2,
                     ),
-                    boxShadow: isSelected
+                    boxShadow: _isCustomTag
                         ? [
                             BoxShadow(
                               color: const Color(0xFF0083FF).withOpacity(0.25),
@@ -714,18 +857,18 @@ class _ConnectionDetailScreenState extends State<ConnectionDetailScreen> {
                         : [],
                   ),
                   child: Text(
-                    tag,
+                    _isCustomTag ? _selectedTag : "Custom",
                     style: TextStyle(
                       fontSize: 13.sp,
                       fontFamily: AppFontStyles.urbanistFontFamily,
-                      color: isSelected ? Colors.white : const Color(0xFF475569),
+                      color: _isCustomTag ? Colors.white : const Color(0xFF475569),
                       fontWeight:
-                          isSelected ? FontWeight.bold : FontWeight.w600,
+                          _isCustomTag ? FontWeight.bold : FontWeight.w600,
                     ),
                   ),
                 ),
-              );
-            }).toList(),
+              ),
+            ],
           ),
           SizedBox(height: 24.h),
 
@@ -768,7 +911,7 @@ class _ConnectionDetailScreenState extends State<ConnectionDetailScreen> {
           SizedBox(height: 8.h),
           Center(
             child: Text(
-              "Removes ${_member.name} from your Social League and stops shared hydration sync.",
+              "Removes ${_member.relationshipTag.isNotEmpty ? _member.relationshipTag : _member.name} from your Social League and stops shared hydration sync.",
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 11.sp,

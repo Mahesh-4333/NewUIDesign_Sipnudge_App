@@ -12,6 +12,7 @@ import SwiftUI
 struct SipnudgeWidgetBundle: WidgetBundle {
     var body: some Widget {
         SipnudgeWidget()
+        SipnudgeFamilyWidget()
         SipnudgeWidgetControl()
         SipnudgeWidgetLiveActivity()
     }

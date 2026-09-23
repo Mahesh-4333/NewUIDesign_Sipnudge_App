@@ -143,6 +143,9 @@ class WidgetQuickLogReceiver : BroadcastReceiver() {
         editor.putString("pending_widget_logs_json", pendingArray.toString())
         editor.apply()
 
+        // Immediately try to sync the delta to the bottle via BLE if connected
+        BottleBleService.triggerSyncPendingDelta()
+
         // Immediately update all widgets
         HomeWidgetProvider.updateAllWidgets(context)
 

@@ -76,6 +76,11 @@ struct LogDrinkIntent: AppIntent {
         userDefaults?.set(amount, forKey: "recent_added_amount")
         userDefaults?.set(Date().timeIntervalSince1970, forKey: "recent_added_time")
         
+        // Accumulate pending manual delta for BLE characteristic 000A
+        let currentDelta = userDefaults?.integer(forKey: "pending_manual_liquid_delta") ?? 0
+        let newDelta = currentDelta + effectiveWater
+        userDefaults?.set(newDelta, forKey: "pending_manual_liquid_delta")
+        
         let isoFormatter = ISO8601DateFormatter()
         isoFormatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
         let utcTimestamp = isoFormatter.string(from: now)
@@ -331,7 +336,18 @@ struct Provider: TimelineProvider {
             let entryMidnight = self.createEntry(for: midnight, userDefaults: userDefaults)
             entries.append(entryMidnight)
             
-            let nextUpdate = calendar.date(byAdding: .minute, value: 5, to: now) ?? now.addingTimeInterval(300)
+            // Check if BLE data just arrived — refresh in 30 seconds instead of 5 minutes
+            let bleTimestamp = userDefaults?.double(forKey: "ble_update_timestamp") ?? 0
+            let secondsSinceBle = now.timeIntervalSince1970 - bleTimestamp
+            let refreshAfter: TimeInterval
+            if secondsSinceBle >= 0 && secondsSinceBle < 30 {
+                // BLE data just arrived — refresh in 30 seconds to get latest server data
+                refreshAfter = 30
+            } else {
+                // Normal state — refresh every 5 minutes
+                refreshAfter = 300
+            }
+            let nextUpdate = now.addingTimeInterval(refreshAfter)
             return Timeline(entries: entries, policy: .after(nextUpdate))
         }
 

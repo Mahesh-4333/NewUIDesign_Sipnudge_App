@@ -1152,6 +1152,7 @@ class ApiService {
   Future<Map<String, dynamic>> sendNudge({
     required String senderId,
     required String targetUserId,
+    String? senderAlias,
   }) async {
     try {
       final response = await _dio.post(
@@ -1159,6 +1160,8 @@ class ApiService {
         data: {
           'senderId': senderId,
           'targetUserId': targetUserId,
+          if (senderAlias != null && senderAlias.isNotEmpty)
+            'senderAlias': senderAlias,
         },
       );
       if (response.statusCode == 200 && response.data is Map) {

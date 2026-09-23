@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_timezone/flutter_timezone.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:hydrify/helpers/logger.dart';
+import 'package:hydrify/helpers/shared_pref_helper.dart';
+import 'package:hydrify/services/api_service.dart';
 
 class TimezoneChangeDetector extends ChangeNotifier {
   static final TimezoneChangeDetector _instance =
@@ -29,6 +31,7 @@ class TimezoneChangeDetector extends ChangeNotifier {
     if (_storedTimezone == null) {
       _isFirstInstall = true;
       await _saveTimezone(_currentTimezone!);
+      await _syncTimezoneToBackend(_currentTimezone!);
       Console.log(
           tag: "TimezoneDetector",
           value: "First install - Saved timezone: $_currentTimezone");
@@ -79,6 +82,7 @@ class TimezoneChangeDetector extends ChangeNotifier {
     await _saveTimezone(newTimezone);
     _storedTimezone = newTimezone;
     _currentTimezone = newTimezone;
+    await _syncTimezoneToBackend(newTimezone);
 
     Console.log(
         tag: "TimezoneDetector", value: "Timezone updated to $newTimezone");
@@ -88,6 +92,21 @@ class TimezoneChangeDetector extends ChangeNotifier {
   Future<void> _saveTimezone(String timezone) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('stored_timezone', timezone);
+  }
+
+  Future<void> _syncTimezoneToBackend(String timezone) async {
+    try {
+      final userId = await SharedPrefsHelper.getUserId();
+      if (userId == null || userId.isEmpty) return;
+      await ApiService().syncUserInfo(userId, {'timezone': timezone});
+      Console.log(
+          tag: "TimezoneDetector",
+          value: "Synced timezone to backend: $timezone");
+    } catch (e) {
+      Console.log(
+          tag: "TimezoneDetector",
+          value: "Failed to sync timezone to backend: $e");
+    }
   }
 
   Future<void> reset() async {

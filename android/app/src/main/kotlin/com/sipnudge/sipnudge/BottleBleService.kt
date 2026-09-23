@@ -47,6 +47,7 @@ class BottleBleService : Service() {
         // BLE UUIDs
         private val DATA_CHAR_UUID = UUID.fromString("6E400003-B5A3-F393-E0A9-E50E24DCCA9E")
         private val RTC_CHAR_UUID  = UUID.fromString("6E400004-B5A3-F393-E0A9-E50E24DCCA9E")
+        private val CONSUMED_UPDATE_UUID = UUID.fromString("6E40000A-B5A3-F393-E0A9-E50E24DCCA9E")
         private val CCCD_UUID      = UUID.fromString("00002902-0000-1000-8000-00805F9B34FB")
 
         const val ACTION_START_SERVICE = "com.sipnudge.sipnudge.ACTION_START_BLE_SERVICE"
@@ -122,10 +123,20 @@ class BottleBleService : Service() {
                 Log.e(TAG, "Error stopping BottleBleService: ${e.message}")
             }
         }
+
+        /**
+         * Called from WidgetQuickLogReceiver after storing a delta.
+         * Triggers immediate sync if BLE is connected, otherwise delta
+         * will be sent on next connection.
+         */
+        fun triggerSyncPendingDelta() {
+            serviceInstance?.syncPendingManualDelta()
+        }
     }
 
     private var bluetoothGatt: BluetoothGatt? = null
     private var targetDeviceAddress: String? = null
+    private var consumedUpdateChar: BluetoothGattCharacteristic? = null
     private val httpExecutor = Executors.newSingleThreadExecutor()
 
     override fun onBind(intent: Intent?): IBinder? = null
@@ -308,6 +319,13 @@ class BottleBleService : Service() {
             if (status != BluetoothGatt.GATT_SUCCESS) return
 
             for (service in gatt.services) {
+                // Find consumedUpdate characteristic (000A) for manual delta sync
+                val consumedChar = service.getCharacteristic(CONSUMED_UPDATE_UUID)
+                if (consumedChar != null) {
+                    consumedUpdateChar = consumedChar
+                    Log.i(TAG, "Found consumedUpdate char (000A)")
+                }
+
                 val dataChar = service.getCharacteristic(DATA_CHAR_UUID)
                 if (dataChar != null) {
                     gatt.setCharacteristicNotification(dataChar, true)
@@ -320,6 +338,9 @@ class BottleBleService : Service() {
                     }
                 }
             }
+
+            // If no data char found, sync pending delta after services discovered
+            syncPendingManualDelta()
         }
 
         @SuppressLint("MissingPermission")
@@ -333,6 +354,8 @@ class BottleBleService : Service() {
                         break
                     }
                 }
+                // Sync any pending manual delta from widget logs after subscriptions are complete
+                syncPendingManualDelta()
             }
         }
 
@@ -372,6 +395,35 @@ class BottleBleService : Service() {
                 appendAndProcessDataChunk(payload)
             }
         }
+    }
+
+    /**
+     * Sends any accumulated manual liquid delta (from widget logs) to BLE characteristic 000A.
+     * Called after services are discovered and when the app enters foreground.
+     */
+    @SuppressLint("MissingPermission")
+    private fun syncPendingManualDelta() {
+        val char = consumedUpdateChar
+        val gatt = bluetoothGatt
+        if (char == null || gatt == null) return
+
+        val prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        val pendingDelta = prefs.getInt("flutter.pending_manual_liquid_delta", 0)
+            .let { if (it != 0) it else prefs.getInt("pending_manual_liquid_delta", 0) }
+
+        if (pendingDelta == 0) return
+
+        val payload = if (pendingDelta > 0) "+$pendingDelta" else "$pendingDelta"
+        Log.i(TAG, "[BG-BLE] Writing manual liquid delta (000A): $payload")
+
+        char.value = payload.toByteArray(Charsets.UTF_8)
+        char.writeType = BluetoothGattCharacteristic.WRITE_TYPE_NO_RESPONSE
+        gatt.writeCharacteristic(char)
+
+        prefs.edit()
+            .putInt("flutter.pending_manual_liquid_delta", 0)
+            .putInt("pending_manual_liquid_delta", 0)
+            .apply()
     }
 
     private val dataCharBuffer = StringBuilder()
@@ -468,6 +520,8 @@ class BottleBleService : Service() {
         if (isNewDay) {
             prefs.edit().putInt("flutter.coffee_intake", 0).putInt("coffee_intake", 0).apply()
             prefs.edit().putInt("flutter.water_intake", 0).putInt("water_intake", 0).apply()
+            // Clear any pending manual delta from previous day
+            prefs.edit().putInt("flutter.pending_manual_liquid_delta", 0).putInt("pending_manual_liquid_delta", 0).apply()
 
             if (consumed == 0) {
                 baseline = 0

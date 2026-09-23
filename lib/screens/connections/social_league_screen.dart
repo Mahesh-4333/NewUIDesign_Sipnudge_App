@@ -5,6 +5,8 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:hydrify/constants/app_colors.dart';
 import 'package:hydrify/constants/app_dimensions.dart';
 import 'package:hydrify/constants/app_font_styles.dart';
+import 'package:hydrify/constants/app_strings.dart';
+import 'package:hydrify/constants/app_style.dart';
 import 'package:hydrify/cubit/bottom_nav/bottom_nav_cubit.dart';
 import 'package:hydrify/helpers/nudge_helper.dart';
 import 'package:hydrify/helpers/shared_pref_helper.dart';
@@ -13,6 +15,7 @@ import 'package:hydrify/screens/connections/add_connection_screen.dart';
 import 'package:hydrify/screens/connections/connection_detail_screen.dart';
 import 'package:hydrify/services/api_service.dart';
 import 'package:hydrify/services/firebase_messaging_service.dart';
+import 'package:hydrify/widgets/animated_nudge_button.dart';
 
 class SocialLeagueScreen extends StatefulWidget {
   final int initialTabIndex; // 0 for Global, 1 for Connections
@@ -157,7 +160,9 @@ class _SocialLeagueScreenState extends State<SocialLeagueScreen> {
       context: context,
       currentUserId: _currentUserId,
       targetUserId: member.userId,
-      targetUserName: member.name,
+      targetUserName: member.relationshipTag.isNotEmpty
+          ? member.relationshipTag
+          : member.name,
     );
   }
 
@@ -196,141 +201,146 @@ class _SocialLeagueScreenState extends State<SocialLeagueScreen> {
                           context.read<BottomNavCubit>().showBar();
                           Navigator.pop(context);
                         },
-                      child: Container(
-                        padding: EdgeInsets.all(AppDimensions.dim8.w),
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: AppColors.white.withOpacity(0.4),
-                          border: Border.all(
-                            color: Colors.white.withOpacity(0.6),
-                            width: 1,
+                        child: Container(
+                          padding: EdgeInsets.all(AppDimensions.dim8.w),
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: AppColors.white.withOpacity(0.4),
+                            border: Border.all(
+                              color: Colors.white.withOpacity(0.6),
+                              width: 1,
+                            ),
                           ),
-                        ),
-                        child: const Icon(
-                          Icons.arrow_back_ios_new,
-                          color: Color(0xFF003057),
-                          size: 18,
-                        ),
-                      ),
-                    ),
-                    Expanded(
-                      child: Center(
-                        child: Text(
-                          "Social League",
-                          style: TextStyle(
-                            fontSize: 22.sp,
-                            fontFamily: AppFontStyles.urbanistFontFamily,
-                            color: const Color(0xFF003057),
-                            fontVariations: [
-                              AppFontStyles.extraBoldFontVariation
-                            ],
+                          child: const Icon(
+                            Icons.arrow_back_ios_new,
+                            color: Color(0xFF003057),
+                            size: 18,
                           ),
                         ),
                       ),
-                    ),
-                    SizedBox(width: 36.w), // Balance back button
-                  ],
-                ),
-              ),
-
-              // Segmented Toggle Tab Bar [ Global | Connections ]
-              Padding(
-                padding: EdgeInsets.symmetric(
-                  horizontal: AppDimensions.dim20.w,
-                  vertical: 6.h,
-                ),
-                child: Container(
-                  height: 48.h,
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(30.r),
-                    border: Border.all(color: const Color(0xFFE2E8F0)),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.03),
-                        blurRadius: 6,
-                        offset: const Offset(0, 2),
+                      Expanded(
+                        child: Center(
+                          child: Text(
+                            "Social League",
+                            style: TextStyle(
+                              fontSize: 22.sp,
+                              fontFamily: AppFontStyles.urbanistFontFamily,
+                              color: const Color(0xFF003057),
+                              fontVariations: [
+                                AppFontStyles.extraBoldFontVariation
+                              ],
+                            ),
+                          ),
+                        ),
                       ),
+                      SizedBox(width: 36.w), // Balance back button
                     ],
                   ),
-                  padding: EdgeInsets.all(4.w),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: GestureDetector(
-                          onTap: () => setState(() => _selectedTabIndex = 0),
-                          child: AnimatedContainer(
-                            duration: const Duration(milliseconds: 200),
-                            decoration: BoxDecoration(
-                              color: _selectedTabIndex == 0
-                                  ? const Color(0xFF0083FF)
-                                  : Colors.transparent,
-                              borderRadius: BorderRadius.circular(26.r),
-                            ),
-                            child: Center(
-                              child: Text(
-                                "Global",
-                                style: TextStyle(
-                                  fontSize: 14.sp,
-                                  fontFamily: AppFontStyles.urbanistFontFamily,
-                                  color: _selectedTabIndex == 0
-                                      ? Colors.white
-                                      : const Color(0xFF4D758B),
-                                  fontWeight: FontWeight.bold,
+                ),
+
+                // Segmented Toggle Tab Bar [ Global | Connections ]
+                Padding(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: AppDimensions.dim20.w,
+                    vertical: 6.h,
+                  ),
+                  child: Container(
+                    height: 48.h,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(30.r),
+                      border: Border.all(color: const Color(0xFFE2E8F0)),
+                      boxShadow: AppStyle.boxShadowVariation3,
+                    ),
+                    padding: EdgeInsets.all(0.w),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: GestureDetector(
+                            onTap: () => setState(() => _selectedTabIndex = 0),
+                            child: AnimatedContainer(
+                              duration: const Duration(milliseconds: 200),
+                              decoration: BoxDecoration(
+                                color: _selectedTabIndex == 0
+                                    ? const Color(0xFF0083FF)
+                                    : Colors.transparent,
+                                borderRadius: BorderRadius.circular(26.r),
+                                boxShadow: _selectedTabIndex == 0
+                                    ? AppStyle.boxShadowVariation3
+                                    : null,
+                              ),
+                              child: Center(
+                                child: Text(
+                                  "Global",
+                                  style: TextStyle(
+                                      fontSize: 14.sp,
+                                      fontFamily:
+                                          AppFontStyles.urbanistFontFamily,
+                                      color: _selectedTabIndex == 0
+                                          ? Colors.white
+                                          : const Color(0xFF4D758B),
+                                      fontVariations: [
+                                        AppFontStyles.boldFontVariation
+                                      ]),
                                 ),
                               ),
                             ),
                           ),
                         ),
-                      ),
-                      Expanded(
-                        child: GestureDetector(
-                          onTap: () => setState(() => _selectedTabIndex = 1),
-                          child: AnimatedContainer(
-                            duration: const Duration(milliseconds: 200),
-                            decoration: BoxDecoration(
-                              color: _selectedTabIndex == 1
-                                  ? const Color(0xFF0083FF)
-                                  : Colors.transparent,
-                              borderRadius: BorderRadius.circular(26.r),
-                            ),
-                            child: Center(
-                              child: Text(
-                                "Connections",
-                                style: TextStyle(
-                                  fontSize: 14.sp,
-                                  fontFamily: AppFontStyles.urbanistFontFamily,
-                                  color: _selectedTabIndex == 1
-                                      ? Colors.white
-                                      : const Color(0xFF4D758B),
-                                  fontWeight: FontWeight.bold,
+                        Expanded(
+                          child: GestureDetector(
+                            onTap: () => setState(() => _selectedTabIndex = 1),
+                            child: AnimatedContainer(
+                              duration: const Duration(milliseconds: 200),
+                              decoration: BoxDecoration(
+                                color: _selectedTabIndex == 1
+                                    ? const Color(0xFF0083FF)
+                                    : Colors.transparent,
+                                borderRadius: BorderRadius.circular(26.r),
+                                boxShadow: _selectedTabIndex == 1
+                                    ? AppStyle.boxShadowVariation3
+                                    : null,
+                              ),
+                              child: Center(
+                                child: Text(
+                                  "Connections",
+                                  style: TextStyle(
+                                    fontSize: 14.sp,
+                                    fontFamily:
+                                        AppFontStyles.urbanistFontFamily,
+                                    color: _selectedTabIndex == 1
+                                        ? Colors.white
+                                        : AppColors.bluegray,
+                                    fontVariations: [
+                                      AppFontStyles.boldFontVariation
+                                    ],
+                                  ),
                                 ),
                               ),
                             ),
                           ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
-              ),
 
-              // Tab View Content
-              Expanded(
-                child: _isLoading
-                    ? const Center(child: CircularProgressIndicator())
-                    : RefreshIndicator(
-                        onRefresh: _loadData,
-                        child: _selectedTabIndex == 0
-                            ? _buildGlobalTab()
-                            : _buildConnectionsTab(),
-                      ),
-              ),
-            ],
+                // Tab View Content
+                Expanded(
+                  child: _isLoading
+                      ? const Center(child: CircularProgressIndicator())
+                      : RefreshIndicator(
+                          onRefresh: _loadData,
+                          child: _selectedTabIndex == 0
+                              ? _buildGlobalTab()
+                              : _buildConnectionsTab(),
+                        ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
-    ),
     );
   }
 
@@ -348,7 +358,7 @@ class _SocialLeagueScreenState extends State<SocialLeagueScreen> {
         width: double.infinity,
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(24.r),
+          borderRadius: BorderRadius.circular(15.r),
           border: Border.all(color: const Color(0xFFE2E8F0), width: 1.5),
           boxShadow: [
             BoxShadow(
@@ -411,11 +421,10 @@ class _SocialLeagueScreenState extends State<SocialLeagueScreen> {
                   child: Text(
                     "$rank",
                     style: TextStyle(
-                      fontSize: 16.sp,
-                      fontFamily: AppFontStyles.urbanistFontFamily,
-                      color: const Color(0xFF003057),
-                      fontWeight: FontWeight.bold,
-                    ),
+                        fontSize: 16.sp,
+                        fontFamily: AppFontStyles.urbanistFontFamily,
+                        color: const Color(0xFF003057),
+                        fontVariations: [AppFontStyles.boldFontVariation]),
                     textAlign: TextAlign.center,
                   ),
                 ),
@@ -446,7 +455,7 @@ class _SocialLeagueScreenState extends State<SocialLeagueScreen> {
                             style: TextStyle(
                               fontSize: 16.sp,
                               fontFamily: AppFontStyles.urbanistFontFamily,
-                              fontWeight: FontWeight.bold,
+                              fontVariations: [AppFontStyles.boldFontVariation],
                               color: const Color(0xFF475569),
                             ),
                           ),
@@ -462,22 +471,25 @@ class _SocialLeagueScreenState extends State<SocialLeagueScreen> {
                       Text(
                         name,
                         style: TextStyle(
-                          fontSize: 15.sp,
-                          fontFamily: AppFontStyles.urbanistFontFamily,
-                          color: isMe
-                              ? const Color(0xFF0083FF)
-                              : const Color(0xFF003057),
-                          fontWeight: FontWeight.bold,
-                        ),
+                            fontSize: 15.sp,
+                            fontFamily: AppFontStyles.urbanistFontFamily,
+                            color: isMe
+                                ? const Color(0xFF0083FF)
+                                : const Color(0xFF003057),
+                            fontVariations: [
+                              AppFontStyles.extraBoldFontVariation
+                            ]),
                       ),
                       SizedBox(height: 2.h),
                       Text(
                         "Level $level Hydrator",
                         style: TextStyle(
-                          fontSize: 12.sp,
-                          fontFamily: AppFontStyles.urbanistFontFamily,
-                          color: const Color(0xFF64748B),
-                        ),
+                            fontSize: 12.sp,
+                            fontFamily: AppFontStyles.urbanistFontFamily,
+                            color: const Color(0xFF64748B),
+                            fontVariations: [
+                              AppFontStyles.semiBoldFontVariation
+                            ]),
                       ),
                     ],
                   ),
@@ -486,13 +498,13 @@ class _SocialLeagueScreenState extends State<SocialLeagueScreen> {
                 // Points
                 RichText(
                   text: TextSpan(
-                    text: "${points.toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]},')} ",
+                    text:
+                        "${points.toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]},')} ",
                     style: TextStyle(
-                      fontSize: 15.sp,
-                      fontFamily: AppFontStyles.urbanistFontFamily,
-                      color: const Color(0xFF003057),
-                      fontWeight: FontWeight.bold,
-                    ),
+                        fontSize: 15.sp,
+                        fontFamily: AppFontStyles.urbanistFontFamily,
+                        color: const Color(0xFF003057),
+                        fontVariations: [AppFontStyles.boldFontVariation]),
                     children: [
                       TextSpan(
                         text: "pts",
@@ -628,37 +640,56 @@ class _SocialLeagueScreenState extends State<SocialLeagueScreen> {
     final double progress = (member.target > 0)
         ? (member.consumed / member.target).clamp(0.0, 1.0)
         : 0.0;
+    final double expected = member.expectedProgress;
 
     final bool isOffTrack = member.status.toLowerCase() == 'off track';
     final bool isAchieved = member.status.toLowerCase() == 'achieved';
 
-    Color badgeBg = const Color(0xFFE0F2FE);
-    Color badgeText = const Color(0xFF0284C7);
+    // Badge colors — same green pill, only dot color differs
+    Color badgeBg = const Color(0xFFDCFCE7);
+    Color badgeBorder = const Color(0xFF86EFAC);
+    Color badgeText = const Color(0xFF166534);
+    Color dotColor = const Color(0xFF22C55E); // green dot (On Track)
     if (isOffTrack) {
-      badgeBg = const Color(0xFFBAE6FD);
-      badgeText = const Color(0xFF0369A1);
+      dotColor = const Color(0xFFEF4444); // red dot (Off Track)
     } else if (isAchieved) {
-      badgeBg = const Color(0xFFBAE6FD);
+      badgeBg = const Color(0xFFE0F2FE);
+      badgeBorder = const Color(0xFFBAE6FD);
       badgeText = const Color(0xFF0284C7);
+      dotColor = const Color(0xFF0284C7);
     }
 
     final accentColor = member.accentColor;
 
-    return Container(
-      margin: EdgeInsets.only(bottom: 16.h),
-      padding: EdgeInsets.all(18.w),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20.r),
-        border: Border.all(color: const Color(0xFFE2E8F0), width: 1.2),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.04),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
+    void openDetail() {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => ConnectionDetailScreen(
+            member: member,
+            onUpdated: _loadData,
           ),
-        ],
-      ),
+        ),
+      );
+    }
+
+    return GestureDetector(
+      onTap: openDetail,
+      child: Container(
+        margin: EdgeInsets.only(bottom: 16.h),
+        padding: EdgeInsets.all(18.w),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20.r),
+          border: Border.all(color: const Color(0xFFE2E8F0), width: 1.2),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.04),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -667,7 +698,7 @@ class _SocialLeagueScreenState extends State<SocialLeagueScreen> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                member.name,
+                member.relationshipTag.isNotEmpty ? member.relationshipTag : member.name,
                 style: TextStyle(
                   fontSize: 17.sp,
                   fontFamily: AppFontStyles.urbanistFontFamily,
@@ -680,15 +711,30 @@ class _SocialLeagueScreenState extends State<SocialLeagueScreen> {
                 decoration: BoxDecoration(
                   color: badgeBg,
                   borderRadius: BorderRadius.circular(20.r),
+                  border: Border.all(color: badgeBorder, width: 1),
                 ),
-                child: Text(
-                  member.status,
-                  style: TextStyle(
-                    fontSize: 11.sp,
-                    fontFamily: AppFontStyles.urbanistFontFamily,
-                    color: badgeText,
-                    fontWeight: FontWeight.bold,
-                  ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 7.w,
+                      height: 7.w,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: dotColor,
+                      ),
+                    ),
+                    SizedBox(width: 5.w),
+                    Text(
+                      member.status,
+                      style: TextStyle(
+                        fontSize: 11.sp,
+                        fontFamily: AppFontStyles.urbanistFontFamily,
+                        color: badgeText,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ],
@@ -705,7 +751,7 @@ class _SocialLeagueScreenState extends State<SocialLeagueScreen> {
               ),
               SizedBox(width: 4.w),
               Text(
-                "Last Sip: ${member.lastSip}",
+                "Last Sip: ${member.formattedLastSip}",
                 style: TextStyle(
                   fontSize: 12.sp,
                   fontFamily: AppFontStyles.urbanistFontFamily,
@@ -723,7 +769,8 @@ class _SocialLeagueScreenState extends State<SocialLeagueScreen> {
             children: [
               RichText(
                 text: TextSpan(
-                  text: "${member.consumed.toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]},')} ",
+                  text:
+                      "${member.consumed.toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]},')} ",
                   style: TextStyle(
                     fontSize: 15.sp,
                     fontFamily: AppFontStyles.urbanistFontFamily,
@@ -732,7 +779,8 @@ class _SocialLeagueScreenState extends State<SocialLeagueScreen> {
                   ),
                   children: [
                     TextSpan(
-                      text: "/ ${member.target.toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]},')} ml",
+                      text:
+                          "/ ${member.target.toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]},')} ml",
                       style: TextStyle(
                         fontSize: 13.sp,
                         color: const Color(0xFF64748B),
@@ -755,14 +803,33 @@ class _SocialLeagueScreenState extends State<SocialLeagueScreen> {
           ),
           SizedBox(height: 8.h),
 
-          // Progress bar
+          // Progress bar: yellow (expected/schedule) + accent (actual)
           ClipRRect(
             borderRadius: BorderRadius.circular(10.r),
-            child: LinearProgressIndicator(
-              value: progress,
-              backgroundColor: const Color(0xFFE0F2FE),
-              valueColor: AlwaysStoppedAnimation<Color>(accentColor),
-              minHeight: 8.h,
+            child: Stack(
+              children: [
+                // Track background
+                Container(
+                  height: 8.h,
+                  color: const Color(0xFFE0F2FE),
+                ),
+                // Yellow expected progress (schedule-based)
+                FractionallySizedBox(
+                  widthFactor: expected,
+                  child: Container(
+                    height: 8.h,
+                    color: const Color(0xFFFFC71E), // #FFC71E
+                  ),
+                ),
+                // Actual progress on top
+                FractionallySizedBox(
+                  widthFactor: progress,
+                  child: Container(
+                    height: 8.h,
+                    color: accentColor,
+                  ),
+                ),
+              ],
             ),
           ),
           SizedBox(height: 16.h),
@@ -793,38 +860,14 @@ class _SocialLeagueScreenState extends State<SocialLeagueScreen> {
                   ),
                 ),
               ),
-              GestureDetector(
+              AnimatedNudgeButton(
                 onTap: () => _sendNudge(member),
-                child: Container(
-                  padding: EdgeInsets.symmetric(
-                    horizontal: 22.w,
-                    vertical: 7.h,
-                  ),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF0083FF),
-                    borderRadius: BorderRadius.circular(20.r),
-                    boxShadow: [
-                      BoxShadow(
-                        color: const Color(0xFF0083FF).withOpacity(0.3),
-                        blurRadius: 6,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
-                  ),
-                  child: Text(
-                    "Nudge",
-                    style: TextStyle(
-                      fontSize: 13.sp,
-                      fontFamily: AppFontStyles.urbanistFontFamily,
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
+                isLoading: false,
               ),
             ],
           ),
         ],
+      ),
       ),
     );
   }

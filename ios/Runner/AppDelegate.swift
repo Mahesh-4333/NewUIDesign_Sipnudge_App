@@ -390,6 +390,8 @@ class SipnudgeBackgroundBLE: NSObject, CBCentralManagerDelegate, CBPeripheralDel
     private let kServiceUUID       = CBUUID(string: "6E400001-B5A3-F393-E0A9-E50E24DCCA9E")
     /// DATA characteristic — sends real-time sip data including battery % and daily_total_ml
     private let kCharDataUUID      = CBUUID(string: "6E400003-B5A3-F393-E0A9-E50E24DCCA9E")
+    /// CONSUMED UPDATE characteristic — write manual liquid delta to bottle firmware
+    private let kConsumedUpdateUUID = CBUUID(string: "6E40000A-B5A3-F393-E0A9-E50E24DCCA9E")
     private let kRestoreIdentifier = "com.sipnudge.background-ble"
     private let kAppGroupId        = "group.com.sipnudge.sipnudge"
     private let kPrefsDeviceKey    = "flutter.last_device_id"
@@ -397,6 +399,7 @@ class SipnudgeBackgroundBLE: NSObject, CBCentralManagerDelegate, CBPeripheralDel
     private var central: CBCentralManager!
     private var peripheral: CBPeripheral?
     private var charData: CBCharacteristic?
+    private var consumedUpdateChar: CBCharacteristic?
 
     /// Most-recently received battery percentage from the DATA characteristic.
     /// Included in the background upload so the server can track battery health.
@@ -498,6 +501,34 @@ class SipnudgeBackgroundBLE: NSObject, CBCentralManagerDelegate, CBPeripheralDel
         d?.set("[\(ts)] \(value)", forKey: "dbg_\(key)")
     }
 
+    /// Sends any accumulated manual liquid delta (from widget logs) to BLE characteristic 000A.
+    /// Called after services are discovered and when the app enters foreground.
+    func syncPendingManualDelta() {
+        guard let char = consumedUpdateChar,
+              let p = peripheral, p.state == .connected else {
+            return
+        }
+
+        let appDefaults = UserDefaults(suiteName: kAppGroupId)
+        let pendingDelta = appDefaults?.integer(forKey: "pending_manual_liquid_delta") ?? 0
+
+        guard pendingDelta != 0 else { return }
+
+        var payload: String
+        if pendingDelta > 0 {
+            payload = "+\(pendingDelta)"
+        } else {
+            payload = "\(pendingDelta)"
+        }
+
+        NSLog("[BG-BLE] Writing manual liquid delta (000A): \(payload)")
+        let data = payload.data(using: .utf8) ?? Data()
+        p.writeValue(data, for: char, type: .withoutResponse)
+
+        appDefaults?.set(0, forKey: "pending_manual_liquid_delta")
+        appDefaults?.synchronize()
+    }
+
     func enterBackground() {
         inBackground = true
         NSLog("[BG-BLE] Entered background — native manager active")
@@ -514,6 +545,8 @@ class SipnudgeBackgroundBLE: NSObject, CBCentralManagerDelegate, CBPeripheralDel
     func enterForeground() {
         inBackground = false
         NSLog("[BG-BLE] Entered foreground — native manager standing by")
+        // Sync any pending manual delta from widget logs when app comes to foreground
+        syncPendingManualDelta()
     }
 
     // ── CBCentralManagerDelegate ──────────────────────────────────────────────
@@ -531,6 +564,7 @@ class SipnudgeBackgroundBLE: NSObject, CBCentralManagerDelegate, CBPeripheralDel
             // centralManagerDidUpdateState(.poweredOn) will call connectToSavedDevice()
             // when BT is re-enabled.
             charData = nil
+            consumedUpdateChar = nil
             log("[BG-BLE] BT powered off — cleared char refs, will reconnect when BT returns")
         default:
             break
@@ -552,6 +586,7 @@ class SipnudgeBackgroundBLE: NSObject, CBCentralManagerDelegate, CBPeripheralDel
                 for service in p.services ?? [] {
                     if service.uuid == kServiceUUID {
                         var charDataFound = false
+                        var consumedUpdateFound = false
                         for char in service.characteristics ?? [] {
                             if char.uuid == kCharDataUUID {
                                 charData = char
@@ -559,10 +594,18 @@ class SipnudgeBackgroundBLE: NSObject, CBCentralManagerDelegate, CBPeripheralDel
                                 p.setNotifyValue(true, for: char)
                                 log("[BG-BLE] willRestoreState: setNotifyValue(true) for data char")
                             }
+                            if char.uuid == kConsumedUpdateUUID {
+                                consumedUpdateChar = char
+                                consumedUpdateFound = true
+                                log("[BG-BLE] willRestoreState: found consumedUpdate char (000A)")
+                            }
                         }
-                        if !charDataFound {
-                            log("[BG-BLE] willRestoreState: service found but data char missing — discovering characteristics")
-                            p.discoverCharacteristics([kCharDataUUID], for: service)
+                        if !charDataFound || !consumedUpdateFound {
+                            var missing: [CBUUID] = []
+                            if !charDataFound { missing.append(kCharDataUUID) }
+                            if !consumedUpdateFound { missing.append(kConsumedUpdateUUID) }
+                            log("[BG-BLE] willRestoreState: missing chars \(missing) — discovering characteristics")
+                            p.discoverCharacteristics(missing, for: service)
                         }
                     }
                 }
@@ -610,6 +653,7 @@ class SipnudgeBackgroundBLE: NSObject, CBCentralManagerDelegate, CBPeripheralDel
                          didDisconnectPeripheral peripheral: CBPeripheral, error: Error?) {
         log("[BG-BLE] Disconnected from \(peripheral.identifier)")
         self.charData = nil
+        self.consumedUpdateChar = nil
         // Always queue a reconnect immediately.
         // CoreBluetooth queues connection requests even when state is .poweredOff,
         // so that when Bluetooth transitions back to .poweredOn, the connection
@@ -635,7 +679,7 @@ class SipnudgeBackgroundBLE: NSObject, CBCentralManagerDelegate, CBPeripheralDel
         }
         for service in peripheral.services ?? [] {
             if service.uuid == kServiceUUID {
-                peripheral.discoverCharacteristics([kCharDataUUID], for: service)
+                peripheral.discoverCharacteristics([kCharDataUUID, kConsumedUpdateUUID], for: service)
             }
         }
     }
@@ -653,7 +697,13 @@ class SipnudgeBackgroundBLE: NSObject, CBCentralManagerDelegate, CBPeripheralDel
                 peripheral.setNotifyValue(true, for: char)
                 NSLog("[BG-BLE] setNotifyValue(true) called for data char")
             }
+            if char.uuid == kConsumedUpdateUUID {
+                consumedUpdateChar = char
+                NSLog("[BG-BLE] Found consumedUpdate char (000A)")
+            }
         }
+        // Sync any pending manual delta from widget logs after characteristics are discovered
+        syncPendingManualDelta()
     }
 
     func peripheral(_ peripheral: CBPeripheral,
@@ -772,6 +822,8 @@ class SipnudgeBackgroundBLE: NSObject, CBCentralManagerDelegate, CBPeripheralDel
                         // Reset sub-counters for new day
                         appDefaults.set(0, forKey: "coffee_intake")
                         appDefaults.set(0, forKey: "water_intake")
+                        // Clear any pending manual delta from previous day
+                        appDefaults.set(0, forKey: "pending_manual_liquid_delta")
 
                         // Check if bottle hardware reset to 0 at midnight
                         if consumed == 0 {
@@ -854,6 +906,8 @@ class SipnudgeBackgroundBLE: NSObject, CBCentralManagerDelegate, CBPeripheralDel
                     }
                     appDefaults.set(goal, forKey: "daily_goal")
                     appDefaults.set(todayStr, forKey: "last_update_date")
+                    // Flag for widget to refresh immediately (not wait 5 min)
+                    appDefaults.set(Date().timeIntervalSince1970, forKey: "ble_update_timestamp")
                     appDefaults.synchronize()
 
                     DispatchQueue.main.async {
@@ -1113,9 +1167,16 @@ class SipnudgeBackgroundBLE: NSObject, CBCentralManagerDelegate, CBPeripheralDel
     }
 
     private func updateWidget(from payload: String = "") {
-        DispatchQueue.main.asyncAfter(deadline: .now() + 5.0) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) {
             if #available(iOS 14.0, *) {
                 NSLog("[BG-BLE] 🔄 Triggering WidgetCenter.shared.reloadAllTimelines() 3 seconds after API trigger")
+                WidgetCenter.shared.reloadAllTimelines()
+            }
+        }
+        // Second reload after 10 seconds to catch server response
+        DispatchQueue.main.asyncAfter(deadline: .now() + 10.0) {
+            if #available(iOS 14.0, *) {
+                NSLog("[BG-BLE] 🔄 Second WidgetCenter.shared.reloadAllTimelines() 10 seconds after API trigger")
                 WidgetCenter.shared.reloadAllTimelines()
             }
         }

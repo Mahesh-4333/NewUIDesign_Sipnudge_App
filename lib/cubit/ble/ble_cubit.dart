@@ -388,6 +388,9 @@ class BleCubit extends Cubit<BleState>
     // 3️⃣ Clear today's hydration history
     await dbHelper.clearTodayHydrationHistory();
 
+    // 3.5️⃣ Clear any pending manual delta from previous day
+    await SharedPrefsHelper.clearPendingManualDelta();
+
     // 4️⃣ Clear in-memory streams
     _hydrationController.add([]);
 

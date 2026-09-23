@@ -42,6 +42,23 @@ class HomeWidgetService {
   /// Processes logs added interactively in the iOS Widget background
   static Future<void> processPendingWidgetLogs() async {
     try {
+      // On iOS, transfer pending manual delta from App Group to Flutter's SharedPreferences.
+      // On Android, the delta is already in FlutterSharedPreferences (shared with native).
+      if (Platform.isIOS) {
+        final deltaStr =
+            await HomeWidget.getWidgetData<String>('pending_manual_liquid_delta');
+        final platformDelta = int.tryParse(deltaStr ?? '0') ?? 0;
+        if (platformDelta != 0) {
+          await SharedPrefsHelper.addPendingManualDelta(platformDelta);
+          await HomeWidget.saveWidgetData<String>(
+              'pending_manual_liquid_delta', '0');
+          Console.log(
+              tag: "HomeWidget",
+              value:
+                  "Transferred pending manual delta from App Group: $platformDelta ml");
+        }
+      }
+
       final jsonString =
           await HomeWidget.getWidgetData<String>('pending_widget_logs_json');
       if (jsonString != null && jsonString.isNotEmpty && jsonString != '[]') {
@@ -57,15 +74,17 @@ class HomeWidgetService {
                   ? (DateTime.tryParse(timestampStr) ?? DateTime.now())
                   : DateTime.now();
 
+              final serverId = item['server_id'] as String?;
+
+              // Delta is already stored by the native widget code (App Group on iOS,
+              // FlutterSharedPreferences on Android). Do NOT call addPendingManualDelta()
+              // here to avoid double-counting when the native BLE service already sent it.
+              await dbHelper.insertHydrationLog(drinkType, amount, timestamp,
+                  serverId: serverId);
+
               final double coefficient =
                   DatabaseHelper.hydrationCoefficients[drinkType] ?? 1.0;
               final double effectiveWater = amount * coefficient;
-              final serverId = item['server_id'] as String?;
-
-              await SharedPrefsHelper.addPendingManualDelta(
-                  effectiveWater.toInt());
-              await dbHelper.insertHydrationLog(drinkType, amount, timestamp,
-                  serverId: serverId);
               await dbHelper.updateHydrationDaySummary(effectiveWater);
             }
           }
@@ -330,5 +349,40 @@ class HomeWidgetService {
       iOSName: iOSWidgetName,
       qualifiedAndroidName: 'com.sipnudge.sipnudge.HomeWidgetProvider',
     );
+
+    // Sync family members data for the Family widget
+    await _syncFamilyMembersData();
+  }
+
+  static Future<void> _syncFamilyMembersData() async {
+    try {
+      final userId = await SharedPrefsHelper.getUserId();
+      if (userId == null) return;
+
+      final connectionsData = await ApiService().getConnections(userId);
+      if (connectionsData == null) return;
+
+      final parsed = connectionsData['data'] ?? connectionsData;
+      final connectedMembers = parsed['connectedMembers'] as List<dynamic>? ?? [];
+
+      final familyMembers = connectedMembers.take(4).map((member) {
+        return {
+          'name': member['name'] ?? member['userName'] ?? 'Connection',
+          'consumed': member['consumed'] ?? 0,
+          'target': member['target'] ?? 2000,
+          'percentage': member['percentage'] ?? 0,
+          'accentColor': member['themeAccentColor'] ?? '#F97316',
+        };
+      }).toList();
+
+      final familyJson = jsonEncode(familyMembers);
+      await HomeWidget.saveWidgetData<String>('family_members_json', familyJson);
+      Console.log(
+          tag: "HomeWidget",
+          value: "Synced ${familyMembers.length} family members for widget.");
+    } catch (e) {
+      Console.log(
+          tag: "HomeWidget", value: "Error syncing family members: $e");
+    }
   }
 }
